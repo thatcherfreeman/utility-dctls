@@ -13,6 +13,18 @@ Internally, this DCTL converts ACEScc or ACEScct to Linear, and then applies a g
 **Exposure Adjustment**: Specifies the number of stops to increase or decrease (negative) exposure.
 
 
+## Color Ramp DCTL
+Creates a color ramp from 0 to 100% Hue, Saturation, or Luminance. This can be used to monitor the output of your tools and overall node pipeline.
+
+### DCTL Parameters
+**Ramp Type**: Choose from Luminance, Saturation, or Hue ramp.
+
+**Saturation Ramp Hue**: If Saturation ramp is selected, then this controls the hue of the ramp.
+
+**Hue Ramp Saturation**: If Hue ramp is selected, then this controls the saturation of the hue ramp.
+
+
+
 ## Halation DCTL
 DCTL that physically emulates film halation, intended for ACES Linear AP0 images.
 

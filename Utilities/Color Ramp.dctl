@@ -1,0 +1,47 @@
+DEFINE_UI_PARAMS(ramp_opt, Ramp Type, DCTLUI_COMBO_BOX, 0, {LUMINANCE, SATURATION, HUE}, {Luminance, Saturation, Hue})
+DEFINE_UI_PARAMS(sat_hue, Saturation Ramp Hue, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.1)
+DEFINE_UI_PARAMS(hue_sat, Hue Ramp Saturation, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.1)
+
+__DEVICE__ float3 hsl_to_rgb(float h, float s, float l) {
+    float H = _fmod(h * 360.0f, 360.0f);
+    float C = (1.0f - _fabs(2.0f * l - 1.0f)) * s;
+    float X = C * (1 - _fabs(_fmod(H / 60.0f, 2.0f) - 1.0f));
+    float m = l - (C / 2.0f);
+
+    float3 colorp;
+
+    if (0.0f <= H && H < 60.0f) {
+        colorp = make_float3(C, X, 0.0f);
+    } else if (60.0f <= H && H <= 120.0f) {
+        colorp = make_float3(X, C, 0.0f);
+    } else if (120.0f <= H && H <= 180.0f) {
+        colorp = make_float3(0.0f, C, X);
+    } else if (180.0f <= H && H <= 240.0f) {
+        colorp = make_float3(0.0f, X, C);
+    } else if (240.0f <= H && H <= 300.0f) {
+        colorp = make_float3(X, 0.0f, C);
+    } else {
+        colorp = make_float3(C, 0.0f, X);
+    }
+    float3 color = make_float3(colorp.x + m, colorp.y + m, colorp.z + m);
+    return color;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float pos = ((float) p_X) / p_Width;
+    float3 output_color;
+
+    if (ramp_opt == LUMINANCE) {
+        float3 left = hsl_to_rgb(0.0f, 0.0f, 0.0f);
+        float3 right = hsl_to_rgb(0.0f, 0.0f, 1.0f);
+        output_color = _mix(left, right, pos);
+    } else if (ramp_opt == SATURATION) {
+        float3 left = hsl_to_rgb(sat_hue, 0.0f, 0.5f);
+        float3 right = hsl_to_rgb(sat_hue, 1.0f, 0.5f);
+        output_color = _mix(left, right, pos);
+    } else {
+        // ramp_opt == HUE
+        output_color = hsl_to_rgb(pos, hue_sat, 0.5f);
+    }
+    return output_color;
+}
