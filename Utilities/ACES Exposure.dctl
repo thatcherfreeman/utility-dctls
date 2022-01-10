@@ -1,0 +1,89 @@
+DEFINE_UI_PARAMS(curve_opt, ACES Gamma, DCTLUI_COMBO_BOX, 0, {ACES, ACESCC, ACESCCT}, {ACES (Linear), ACEScc, ACEScct})
+DEFINE_UI_PARAMS(exposure, Exposure Adjustment, DCTLUI_SLIDER_FLOAT, 0.0, -8.0, 8.0, 0.333)
+
+// Transforms adapted from:
+// https://github.com/ampas/aces-dev
+
+__DEVICE__ float acescc_to_linear(float in) {
+    if (in < -0.3013698630f) { // (9.72-15)/17.52
+        return (_exp2f(in * 17.52f - 9.72f) - _exp2f(-16.0f)) * 2.0f;
+    } else {
+        return _exp2f(in * 17.52f - 9.72f);
+    }
+}
+
+__DEVICE__ float linear_to_acescc(float in) {
+    if (in <= 0.0f) {
+        return -0.3584474886f; // =(log2( pow(2.,-16.))+9.72)/17.52
+    } else if (in < _exp2f(-15.0f)) {
+        return (_log2f(_exp2f(-16.0f) + in * 0.5f) + 9.72f) / 17.52f;
+    } else {
+        return (_log2f(in) + 9.72f) / 17.52f;
+    }
+}
+
+__DEVICE__ float acescct_to_linear(float in) {
+    const float X_BRK = 0.0078125f;
+    const float Y_BRK = 0.155251141552511f;
+    const float A = 10.5402377416545f;
+    const float B = 0.0729055341958355f;
+    if (in > Y_BRK)
+        return _exp2f(in * 17.52f - 9.72f);
+    else
+        return (in - B) / A;
+}
+
+__DEVICE__ float linear_to_acescct(float in) {
+    const float X_BRK = 0.0078125f;
+    const float Y_BRK = 0.155251141552511f;
+    const float A = 10.5402377416545f;
+    const float B = 0.0729055341958355f;
+    if (in <= X_BRK) {
+        return A * in + B;
+    } else { // (in > X_BRK)
+        return (_log2f(in) + 9.72f) / 17.52f;
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float gain = _exp2f(exposure);
+    float r2;
+    float g2;
+    float b2;
+    float3 rgb = to_float3(p_R, p_G, p_B);
+
+    if (curve_opt == ACES) {
+        // Do nothing
+    } else if (curve_opt == ACESCC) {
+        rgb = to_float3(
+            acescc_to_linear(rgb.x),
+            acescc_to_linear(rgb.y),
+            acescc_to_linear(rgb.z)
+        );
+    } else if (curve_opt == ACESCCT) {
+        rgb = to_float3(
+            acescct_to_linear(rgb.x),
+            acescct_to_linear(rgb.y),
+            acescct_to_linear(rgb.z)
+        );
+    }
+
+    rgb = rgb * gain;
+
+    if (curve_opt == ACES) {
+        // Do nothing
+    } else if (curve_opt == ACESCC) {
+        rgb = to_float3(
+            linear_to_acescc(rgb.x),
+            linear_to_acescc(rgb.y),
+            linear_to_acescc(rgb.z)
+        );
+    } else if (curve_opt == ACESCCT) {
+        rgb = to_float3(
+            linear_to_acescct(rgb.x),
+            linear_to_acescct(rgb.y),
+            linear_to_acescct(rgb.z)
+        );
+    }
+    return rgb;
+}

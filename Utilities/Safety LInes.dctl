@@ -1,0 +1,81 @@
+DEFINE_UI_PARAMS(aspect, Aspect Ratio, DCTLUI_SLIDER_FLOAT, 1.778, 0.2, 4.0, 0.1)
+DEFINE_UI_PARAMS(scale, Scale, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.05)
+DEFINE_UI_PARAMS(alpha, Alpha, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.1)
+DEFINE_UI_PARAMS(thickness, Line Thickness, DCTLUI_SLIDER_FLOAT, 0.002, 0.0, 0.005, 0.001)
+DEFINE_UI_PARAMS(shade_alpha, Shade Darkness, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.1)
+
+
+__DEVICE__ inline int target1d(int x, float target, int radius) {
+    if (x > (target - radius) && x < (target + radius)) {
+        return 1;
+    }
+    return 0;
+}
+
+__DEVICE__ int draw_rectangle(int x, int y, float x1, float x2, float y1, float y2, int thickness) {
+    // check top and bottom
+    if ((target1d(y, y1, thickness) || target1d(y, y2, thickness)) && x >= x1 - thickness && x <= x2 + thickness) {
+        return 1;
+    }
+    // Left and right sides
+    if ((target1d(x, x1, thickness) || target1d(x, x2, thickness)) && y >= y1 - thickness && y <= y2 + thickness) {
+        return 1;
+    }
+    return 0;
+}
+
+__DEVICE__ int shade_outside(int x, int y, float x1, float x2, float y1, float y2, int thickness) {
+    if (x < x1 - thickness || x > x2 + thickness || y < y1 - thickness || y > y2 + thickness) {
+        return 1;
+    }
+
+    return 0;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+
+    float center_x = p_Width * 0.5f;
+    float center_y = p_Height * 0.5f;
+    float image_aspect = (float)p_Width / p_Height;
+    const int radius = (int) (thickness * p_Height);
+    const float3 box_color = make_float3(1.0f, 1.0f, 1.0f);
+    float3 curr_pixel_color = make_float3(p_R, p_G, p_B);
+    float3 new_color = _mix(curr_pixel_color, box_color, alpha);
+    float3 shade_color = _mix(make_float3(0.0f, 0.0f, 0.0f), curr_pixel_color, shade_alpha);
+
+    float major_radius;
+    float minor_radius;
+    if (aspect > image_aspect) {
+        // box is wide, 1.0 scale means that sides of box touch sides of frame
+        major_radius = p_Width * scale * 0.5;
+        minor_radius = major_radius / aspect;
+    } else {
+        minor_radius = p_Height * scale * 0.5;
+        major_radius = minor_radius * aspect;
+    }
+
+    if (draw_rectangle(
+            p_X,
+            p_Y,
+            center_x - major_radius,
+            center_x + major_radius,
+            center_y - minor_radius,
+            center_y + minor_radius,
+            radius
+        )) {
+        return new_color;
+    }
+
+    if (shade_outside(
+            p_X,
+            p_Y,
+            center_x - major_radius,
+            center_x + major_radius,
+            center_y - minor_radius,
+            center_y + minor_radius,
+            radius)) {
+        return shade_color;
+    }
+
+    return curr_pixel_color;
+}
