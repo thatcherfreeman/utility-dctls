@@ -1,0 +1,26 @@
+DEFINE_UI_PARAMS(num_steps, Number of Steps, DCTLUI_SLIDER_INT, 16, 1, 32, 1)
+DEFINE_UI_PARAMS(mid_gray, Middle Gray Value, DCTLUI_SLIDER_FLOAT, 0.18, 0.0, 1.0, 0.001)
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float x = (float) p_X / p_Width;
+    float y = (float) p_Y / p_Height;
+    float step_width = 1.0f / num_steps;
+    int middle_step = num_steps / 2;
+    float3 output_color;
+
+    if (0.25f <= x && x <= 0.75f && 0.25f <= y && y <= 0.75f) {
+        // Middle box
+        output_color = make_float3(mid_gray, mid_gray, mid_gray);
+    } else if (y <= 0.5f) {
+        // Top half of chart, make steps
+        int curr_step = (int) (x / step_width);
+        float val = mid_gray * _exp2f((float) curr_step - middle_step);
+        output_color = make_float3(val, val, val);
+    } else {
+        // bottom half of chart, make linear ramp
+        output_color = make_float3(x, x, x);
+    }
+
+    return output_color;
+}

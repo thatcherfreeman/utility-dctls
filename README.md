@@ -1,6 +1,7 @@
 # Utility DCTLS
 These are DCTLs that I have developed, all in a single folder for convenience.
 
+
 ## Aces Exposure DCTL
 DCTL that allows for adjustment of exposure in ACES. Important: It's probably better to just set your timeline color space to the ACES color space you want to use, and then to use the Exposure slider in the HDR color wheels.
 
@@ -11,6 +12,7 @@ Internally, this DCTL converts ACEScc or ACEScct to Linear, and then applies a g
 **ACES Gamma**: Pulldown menu in which you select from ACES (Linear), ACEScc, and ACEScct. This is where you specify the gamma of the image that is being fed into this DCTL.
 
 **Exposure Adjustment**: Specifies the number of stops to increase or decrease (negative) exposure.
+
 
 
 ## Color Ramp DCTL
@@ -25,8 +27,18 @@ Creates a color ramp from 0 to 100% Hue, Saturation, or Luminance. This can be u
 
 
 
+## Exposure Chart DCTL
+Creates a middle gray exposure chart, a linear ramp, and several gray exposure chips that are an integer number of stops above and below middle gray. This is intended to be used in a linear gamma timeline.
+
+### DCTL Parameters
+**Number of Steps**: Specifies the number of exposure chips to be displayed in the chart. One of the ones in the middle will share its value with middle gray, and each chip to the right will have a code value double of the previous chip.
+
+**Middle Gray Value**: Specifies the desired value of middle gray, which is 18% by default. This controls the brightness of the large chip in the middle too.
+
+
+
 ## Halation DCTL
-DCTL that physically emulates film halation, intended for ACES Linear AP0 images.
+DCTL that physically emulates film halation, intended for ACES Linear AP0 images. This is intended to be used in a linear gamma timeline.
 
 ### How Halation works
 Light passes through three layers of film emulsion and various color filters, ultimately with the bottom channel being Red. Light then passes through the film base and reflects off the back of the film, and this red light then re-exposes the channels in reverse order (red, then green, then blue).
@@ -49,6 +61,7 @@ Light passes through three layers of film emulsion and various color filters, ul
 **Show only halation**: Enabling this checkbox shows what is added (IE arithmetic addition) to the image.
 
 **Blur Type** [NONE, BOX BLUR, TRIANGLE BLUR, FAST BLUR]: Selects the blurring method. None will not apply any blur to the reflected image, Box Blur applies a square convolution of uniform weights, Triangle blur applies a center-weighted blurring with linear falloff, and Fast Blur is essentially a box blur that samples 9 points along the center and perimeter of a square, resulting in great runtime. Box and Triangle blur will run slower with larger blur amounts.
+
 
 
 ## Safety Lines DCTL
