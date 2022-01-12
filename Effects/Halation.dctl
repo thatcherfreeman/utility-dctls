@@ -9,7 +9,7 @@ DEFINE_UI_PARAMS(show_halation, Show only halation, DCTLUI_CHECK_BOX, 0)
 // Halation gamma isn't physically motivated (should be set to 1.0), but this allows
 // for creative control over how much halation is added and to suppress
 // halation in the shadows.
-DEFINE_UI_PARAMS(halation_gamma, Halation gamma, DCTLUI_SLIDER_FLOAT, 2.0, 0.0, 10.0, 0.1)
+DEFINE_UI_PARAMS(halation_gamma, Halation gamma, DCTLUI_SLIDER_FLOAT, -.25, -1.0, 1.0, 0.01)
 
 
 __DEVICE__ int get_coord(float x, int width) {
@@ -121,6 +121,18 @@ __DEVICE__ float3 fast_blur(int boxsize, float x, float y, int p_Width, int p_He
     return curr_val;
 }
 
+__DEVICE__ float convert_gamma(float g) {
+    // Converts -1 to +1 range to an exponent
+    // Essentially what Resolve does with its gamma
+    // correction.
+    float out;
+    if (g <= 0) {
+        out = 1.0f + (-4.0f * g);
+    } else {
+        out = 1.0f / (4.0f * g + 1);
+    }
+    return out;
+}
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB)
 {
@@ -132,6 +144,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float exposure_lost_lin = _exp2f(exposure_lost);
     float green_exposure_lost_lin = _exp2f(green_exposure_lost);
     float blue_exposure_lost_lin = _exp2f(blue_exposure_lost);
+    float adjusted_gamma_value = convert_gamma(halation_gamma);
     int blur_radius = (int)_round((blur_amt / 1000.0f) * p_Width);
 
     float3 scale_color;
@@ -155,9 +168,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     // Red channel re-exposes red channel after bouncing, then
     // it might go far enough as to hit the green channel after passing through
     // the red layer again.
-    curr_color.x += _powf(scale_color.x * exposure_lost_lin, halation_gamma);
-    curr_color.y += _powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin, halation_gamma);
-    curr_color.z += _powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin * blue_exposure_lost_lin, halation_gamma);
+    curr_color.x += _powf(scale_color.x * exposure_lost_lin, adjusted_gamma_value);
+    curr_color.y += _powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin, adjusted_gamma_value);
+    curr_color.z += _powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin * blue_exposure_lost_lin, adjusted_gamma_value);
 
     return curr_color;
 }
