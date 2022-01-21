@@ -1,0 +1,64 @@
+DEFINE_UI_PARAMS(num_steps, Number of Steps, DCTLUI_SLIDER_INT, 7, 1, 32, 1)
+DEFINE_UI_PARAMS(exp, Exposure, DCTLUI_SLIDER_FLOAT, 0.0, -8.0, 8.0, 0.1)
+DEFINE_UI_PARAMS(show_rgb, Show RGB Colors, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(show_cmy, Show CMY Colors, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(show_lum, Show Luminance, DCTLUI_CHECK_BOX, 0)
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float x = (float) p_X / p_Width;
+    float y = (float) p_Y / p_Height;
+    float step_width = 1.0f / num_steps;
+    float3 output_color;
+
+    int curr_step = (int) (y / step_width);
+    float val = _exp2f(exp) * _exp2f((float) -1.0f * curr_step);
+
+    int num_chips = 0;
+    if (show_rgb) {
+        num_chips += 3;
+    }
+    if (show_cmy) {
+        num_chips += 3;
+    }
+    if (show_lum) {
+        num_chips += 1;
+    }
+
+    float chip_width = 1.0f / num_chips;
+
+    int curr_chip_num = _floorf(x / chip_width);
+
+    if (show_rgb) {
+        if (curr_chip_num == (show_cmy + 1) * 0) {
+            output_color = make_float3(val, 0.0f, 0.0f);
+        } else if (curr_chip_num == (show_cmy + 1) * 1) {
+            output_color = make_float3(0.0f, val, 0.0f);
+        } else if (curr_chip_num == (show_cmy + 1) * 2) {
+            output_color = make_float3(0.0f, 0.0f, val);
+        }
+    }
+
+    if (show_cmy) {
+        if (curr_chip_num == (show_rgb + 1) * 0 + show_rgb) {
+            output_color = make_float3(val, val, 0.0f);
+        } else if (curr_chip_num == (show_rgb + 1) * 1 + show_rgb) {
+            output_color = make_float3(0.0f, val, val);
+        } else if (curr_chip_num == (show_rgb + 1) * 2 + show_rgb) {
+            output_color = make_float3(val, 0.0f, val);
+        }
+
+    }
+
+    if (show_lum && curr_chip_num == num_chips - 1) {
+        // Luminance is the last color chip
+        output_color = make_float3(val, val, val);
+    }
+
+    if (num_chips == 0) {
+        // Just do middle gray I guess.
+        output_color = make_float3(0.18f, 0.18f, 0.18f);
+    }
+
+    return output_color;
+}

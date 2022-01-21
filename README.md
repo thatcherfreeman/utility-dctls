@@ -64,6 +64,22 @@ Light passes through three layers of film emulsion and various color filters, ul
 
 
 
+## RGB Chips
+Creates three columns of RGB chips, and optionally CMY and Luminance chips. When the RGB mixer (or any other operation) is used, the extent to which channels have been mixed will be visible in the RGB Parade. Outputs a Linear image.
+
+## DCTL Parameters
+**Number of Steps**: Number of different luminances to display for each chip. Each chip is one stop apart (in linear).
+
+**Exposure**: Amount of gain to be applied to the image, in stops.
+
+**Show RGB Colors**: Displays Red, Green, and Blue charts.
+
+**Show CMY Colors**: Displays Cyan, Magenta, and Yellow charts.
+
+**Show Luminance**: Displays an additionall luminance chart.
+
+
+
 ## Safety Lines DCTL
 DCTL that creates a white frame to indicate safety boundaries for the image.
 
