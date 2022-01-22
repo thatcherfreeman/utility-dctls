@@ -1,10 +1,13 @@
-DEFINE_UI_PARAMS(primary_value, Primary Value, DCTLUI_SLIDER_FLOAT, 0.6, 0.0, 2.0, 0.01)
-DEFINE_UI_PARAMS(secondary_gain, Secondary Gain, DCTLUI_SLIDER_FLOAT, 2.0, 0.0, 5.0, 0.01)
-DEFINE_UI_PARAMS(white_gain, White Gain, DCTLUI_SLIDER_FLOAT, 1.1, 0.0, 5.0, 0.01)
-
+DEFINE_UI_PARAMS(primary_value, Primary Value, DCTLUI_SLIDER_FLOAT, 0.8, 0.0, 2.0, 0.01)
+DEFINE_UI_PARAMS(secondary_gain, Secondary Gain, DCTLUI_SLIDER_FLOAT, 1.4, 0.0, 5.0, 0.01)
 
 inline __DEVICE__ float3 mix(float3 x, float3 y, float a) {
     float3 output = x + (y - x) * a;
+    return output;
+}
+
+inline __DEVICE__ float3 mix2(float3 x, float gain, float a) {
+    float3 output = x + (gain - 1) * a;
     return output;
 }
 
@@ -18,19 +21,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 m_prim = make_float3(secondary_value, 0.0f, secondary_value);
     float3 c_prim = make_float3(0.0f, secondary_value, secondary_value);
 
-    float white_value = secondary_value * white_gain;
-    float3 w_val = make_float3(white_value, white_value, white_value);
-
     // Combine secondaries
-    float3 y = mix(p_R * r_prim + p_G * g_prim, y_prim, p_R * p_G);
-    float3 m = mix(p_R * r_prim + p_B * b_prim, m_prim, p_R * p_B);
-    float3 c = mix(p_G * g_prim + p_B * b_prim, c_prim, p_G * p_B);
-
-    // float3 output_color = (y * y_prim + m * m_prim + c * c_prim) / 3.0f;
-
-    // float3 output_color = mix((y * y_prim + m * m_prim + c * c_prim) / 3.0f, w_val, p_R * p_B * p_G);
-
-    float3 output_color = (y + m + c) / 3.0f;
+    float3 y = mix2(p_R * r_prim + p_G * g_prim, secondary_gain, p_R * p_G);
+    float3 m = mix2(p_R * r_prim + p_B * b_prim, secondary_gain, p_R * p_B);
+    float3 c = mix2(p_G * g_prim + p_B * b_prim, secondary_gain, p_G * p_B);
+    float3 output_color = (y + m + c) / 2.0f;
 
     return output_color;
 }
