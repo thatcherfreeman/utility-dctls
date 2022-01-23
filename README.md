@@ -64,6 +64,11 @@ Light passes through three layers of film emulsion and various color filters, ul
 
 
 
+## Matrix Tester
+Multiplies the RGB values of the input by a 3x3 matrix with the specified entries. Supports negative values.
+
+
+
 ## RGB Chips
 Creates three columns of RGB chips, and optionally CMY and Luminance chips. When the RGB mixer (or any other operation) is used, the extent to which channels have been mixed will be visible in the RGB Parade. Outputs a Linear image.
 
