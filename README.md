@@ -69,6 +69,18 @@ Multiplies the RGB values of the input by a 3x3 matrix with the specified entrie
 
 
 
+## Random Channel Mixer
+Constructs a random RGB matrix that is some distance away from the Identity matrix. Useful when trying out lots of different looks, expects image to be converted to Linear before using.
+
+## DCTL Parameters
+**Eps**: Maximum acceptable entry-delta from the identity matrix. Essentially controls the intensity of the applied effect.
+
+**Seed**: Indicates the random seed used to construct the matrix. Handy if you want to remember the value for later and reproduce a certain look.
+
+**Maintain White**: If checked, scales each row of the RGB matrix to each sum to 1. This helps keep grays neutral in the final result. If unchecked, the image can take on a tint, with luminance maintained by scaling the entire matrix to sum to 3 (but individual rows can sum to values other than 1).
+
+
+
 ## RGB Chips
 Creates three columns of RGB chips, and optionally CMY and Luminance chips. When the RGB mixer (or any other operation) is used, the extent to which channels have been mixed will be visible in the RGB Parade. Outputs a Linear image.
 
