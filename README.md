@@ -83,6 +83,31 @@ Constructs a random RGB matrix that is some distance away from the Identity matr
 
 
 
+## Random Contrast Curve
+Constructs a contrast curve, has the option to procedurally generate one with random parameters so you can try lots of different curves in a moment.
+
+## DCTL Parameters
+**Pivot**: Specify the pivot point, which will remain unchanged in color and value.
+
+**Toe**: Indicates what distance from the pivot to start rolling off the shadows. 0.0 is at the pivot point, 1.0 is near the black point.
+
+**Shoulder**: Indicates what distance from the pivot to start rolling off the highlights. 0.0 is at the pivot point, 1.0 is near the white point.
+
+**Black Point**: Specifies the minimum value in the image.
+
+**White Point**: Specifies the maximum value in the image.
+
+**Pivot Slope**: Specifies the slope of the curve when measured at the pivot point.
+
+**Seed**: Random seed, only used if Randomize box is checked.
+
+**Show Curve**: Check this box to get a graphical display of the curve. Within the gridded area, the x-axis goes from 0.0 to 1.0, negative values are shown to the left and right of the display.
+
+**Randomize**: Check this box to randomly select parameters for the curve (excluding pivot).
+
+**Ungroup RGB**: When checked, if Randomize is also checked, then this will randomize a contrast curve for each of the RGB channels.
+
+
 ## RGB Chips
 Creates three columns of RGB chips, and optionally CMY and Luminance chips. When the RGB mixer (or any other operation) is used, the extent to which channels have been mixed will be visible in the RGB Parade. Outputs a Linear image.
 
@@ -129,3 +154,5 @@ This DCTL converts the input image to HSL or HSV, then applies a Gamma and Gain 
 **Gamma**: This mimics the Gamma control in Resolve's Primaries wheels, applying a power function to the saturation channel. This is applied before Gain.
 
 **Show Saturation**: This checkbox allows you to view just the saturation channel, after the Gain and Gamma adjustments have been made.
+
+**Show Curve**: When checked, this displays the corresponding curves adjustment that's being made to the saturation channel.
