@@ -1,0 +1,34 @@
+DEFINE_UI_PARAMS(bit_depth, Bit Depth, DCTLUI_SLIDER_INT, 8, 1, 16, 1)
+DEFINE_UI_PARAMS(clip, Clip Blacks and Whites, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(rounding_opt, Quantization Method, DCTLUI_COMBO_BOX, 0, {ROUND, TRUNCATE}, {Round, Truncate})
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+
+    float3 output_color = make_float3(p_R, p_G, p_B);
+
+    float values = (float)(1 << (bit_depth - 1));
+    output_color *= values;
+
+    if (rounding_opt == ROUND) {
+        output_color.x = _round(output_color.x);
+        output_color.y = _round(output_color.y);
+        output_color.z = _round(output_color.z);
+    } else {
+        // if (rounding_opt == TRUNCATE)
+        output_color.x = _truncf(output_color.x);
+        output_color.y = _truncf(output_color.y);
+        output_color.z = _truncf(output_color.z);
+    }
+
+    output_color /= values;
+
+    if (clip) {
+        output_color.x = _saturatef(output_color.x);
+        output_color.y = _saturatef(output_color.y);
+        output_color.z = _saturatef(output_color.z);
+    }
+
+    return output_color;
+}
+

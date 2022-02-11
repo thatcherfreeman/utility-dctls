@@ -69,6 +69,18 @@ Multiplies the RGB values of the input by a 3x3 matrix with the specified entrie
 
 
 
+## Quantize
+Simulates the effect of saving the current image at a specified bit depth.
+
+## DCTL Parameters
+**Bit Depth**: The number of bits to be used to represent the current 0->1 value.
+
+**Clip**: Specifies whether to clip values greater than 1.0 or less than 0.0.
+
+**Quantization Method** [ROUND, TRUNCATE]: If set to Round, round each value to the nearest code value, if set to truncate, simply round down to the nearest below code value.
+
+
+
 ## Random Channel Mixer
 Constructs a random RGB matrix that is some distance away from the Identity matrix. Useful when trying out lots of different looks, expects image to be converted to Linear before using.
 
