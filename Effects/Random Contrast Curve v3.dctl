@@ -11,7 +11,6 @@ DEFINE_UI_PARAMS(randomize, Randomize, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(ungroup_rgb, Ungroup RGB, DCTLUI_CHECK_BOX, 0)
 
 
-
 typedef struct {
     float pivot_x, pivot_y;
     float white_x, white_y;
@@ -59,6 +58,33 @@ __DEVICE__ float point_slope(float x, float x1, float y1, float m1) {
 __DEVICE__ float point_slope_inv(float y, float x1, float y1, float m1) {
     return (y - y1) / m1 + x1;
 }
+
+
+__DEVICE__ float cubic_interpolate(float x, float x1, float y1, float m1, float x2, float y2, float m2) {
+    // https://en.wikipedia.org/wiki/Spline_interpolation#Algorithm_to_find_the_interpolating_cubic_spline
+    //
+    // Given lines:
+    // y = (x - x1) * m1 + y1
+    // y = (x - x2) * m2 + y2
+    //
+    // Computes a cubic function that intersects with (x1, y1) with slope m1, and
+    // hits (x2, y2) with slope (m2)
+    float t = (x - x1) / (x2 - x1);
+    float a = m1 * (x2 - x1) - (y2 - y1);
+    float b = -1 * m2 * (x2 - x1) + (y2 - y1);
+    float q = (1 - t) * y1 + t * y2 + t * (1 - t) * ((1 - t) * a + t * b);
+
+    float output;
+    if ((x1 <= x2 && x >= x2) || (x1 >= x2 && x <= x2)) {
+        output = point_slope(x, x2, y2, m2);
+    } else if ((x1 <= x2 && x <= x1) || (x1 >= x2 && x >= x1)) {
+        output = point_slope(x, x1, y1, m1);
+    } else {
+        output = q;
+    }
+    return output;
+}
+
 
 __DEVICE__ float quadratic_interpolate(float x, float x1, float y1, float m1, float x2, float y2, float m2) {
     // Given lines:
@@ -135,8 +161,27 @@ __DEVICE__ float render_contrast_simple_quadratic(contrast_params_t* contrast, f
     return out;
 }
 
+
+__DEVICE__ float render_contrast_simple_cubic(contrast_params_t* contrast, float x) {
+    // piecewise function
+    float m1, m2;
+    float out;
+    if (x < contrast->toe_x) {
+        m1 = contrast->black_slope;
+        m2 = contrast->pivot_slope;
+        out = cubic_interpolate(x, contrast->black_x, contrast->black_y, m1, contrast->toe_x, contrast->toe_y, m2);
+    } else if (contrast->toe_x <= x && x < contrast->shoulder_x) {
+        out = linear_interpolate(x, contrast->toe_x, contrast->toe_y, contrast->shoulder_x, contrast->shoulder_y);
+    } else if (contrast->shoulder_x <= x) {
+        m1 = contrast->pivot_slope;
+        m2 = contrast->white_slope;
+        out = cubic_interpolate(x, contrast->white_x, contrast->white_y, m2, contrast->shoulder_x, contrast->shoulder_y, m1);
+    }
+    return out;
+}
+
 __DEVICE__ float render_contrast(contrast_params_t* contrast, float x) {
-    float c = render_contrast_simple_quadratic(contrast, x);
+    float c = render_contrast_simple_cubic(contrast, x);
     float output = _mix(x, c, contrast->blend);
     return output;
 }
@@ -179,7 +224,6 @@ __DEVICE__ float3 draw_grid_lines(float x, float y, float3 curr_color) {
     }
     return output_color;
 }
-
 __DEVICE__ void randomize_contrast(contrast_params_t* params, uint* seed) {
     params->black_y += randu_bi(seed) * 0.2;
     params->white_y += randu_bi(seed) * 0.2;
@@ -216,23 +260,23 @@ __DEVICE__ void compute_toe_shoulder(contrast_params_t* params) {
         // Low contrast, highlights.
         params->shoulder_x = _mix(params->pivot_x, params->white_x, params->shoulder);
         params->shoulder_y = point_slope(params->shoulder_x, params->pivot_x, params->pivot_y, params->pivot_slope);
-        params->white_slope = 2.0 * (params->white_y - params->shoulder_y) / (params->white_x - params->shoulder_x);
+        params->white_slope = _powf((params->white_y - params->shoulder_y) / (params->white_x - params->shoulder_x), 2.0);
     } else {
         // High contrast, highlights
         params->shoulder_y = _mix(params->pivot_y, params->white_y, params->shoulder);
         params->shoulder_x = point_slope_inv(params->shoulder_y, params->pivot_x, params->pivot_y, params->pivot_slope);
-        params->white_slope = 0.5 * (params->white_y - params->shoulder_y) / (params->white_x - params->shoulder_x);
+        params->white_slope = _powf((params->white_y - params->shoulder_y) / (params->white_x - params->shoulder_x), 2.0);
     }
 
     if (point_slope(params->black_x, params->pivot_x, params->pivot_y, params->pivot_slope) >= params->black_y) {
         // Low contrast, shadows
         params->toe_x = _mix(params->pivot_x, params->black_x, params->toe);
         params->toe_y = point_slope(params->toe_x, params->pivot_x, params->pivot_y, params->pivot_slope);
-        params->black_slope = 2.0 * (params->black_y - params->toe_y) / (params->black_x - params->toe_x);
+        params->black_slope = _powf((params->black_y - params->toe_y) / (params->black_x - params->toe_x), 2.0);
     } else {
         params->toe_y = _mix(params->pivot_y, params->black_y, params->toe);
         params->toe_x = point_slope_inv(params->toe_y, params->pivot_x, params->pivot_y, params->pivot_slope);
-        params->black_slope = 0.5 * (params->black_y - params->toe_y) / (params->black_x - params->toe_x);
+        params->black_slope = _powf((params->black_y - params->toe_y) / (params->black_x - params->toe_x), 2.0);
     }
 }
 
