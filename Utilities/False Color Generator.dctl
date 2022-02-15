@@ -1,6 +1,7 @@
 DEFINE_UI_PARAMS(num_steps, Number of Steps, DCTLUI_SLIDER_INT, 16, 1, 32, 1)
 DEFINE_UI_PARAMS(mid_gray, Middle Gray Value, DCTLUI_SLIDER_FLOAT, 0.18, 0.0, 1.0, 0.001)
 DEFINE_UI_PARAMS(seed, Seed, DCTLUI_SLIDER_INT, 1, 1, 200, 1)
+DEFINE_UI_PARAMS(color_chip_exp, Color Chip Exposure, DCTLUI_SLIDER_FLOAT, 0.0, -5.0, 5.0, 0.01)
 
 __DEVICE__ float randu(uint* seed) {
     // Returns random number in interval [0, 1)
@@ -19,17 +20,21 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     randu(&state);
 
     float curr_lum = p_G * 0.7 + p_R * 0.2 + p_B * 0.1;
+    float color_chip_gain = _exp2f(color_chip_exp);
     int curr_stop = (int)_round(_log2f(curr_lum / mid_gray));
+    float curr_chip_gray = mid_gray * _exp2f(curr_stop);
     float3 output_color;
     if (_fabs(curr_stop) > (num_steps - 1.0) / 2.0) {
         output_color = make_float3(p_R, p_G, p_B);
     } else if (curr_stop == 0) {
         output_color = make_float3(mid_gray, mid_gray, mid_gray);
+        output_color *= color_chip_gain;
     } else {
         state = state + curr_stop;
         output_color = make_float3(randu(&state), randu(&state), randu(&state));
-        float scale = mid_gray / (output_color.x + output_color.y + output_color.z);
+        float scale = curr_chip_gray / (output_color.x + output_color.y + output_color.z);
         output_color *= scale;
+        output_color *= color_chip_gain;
     }
     return output_color;
 }

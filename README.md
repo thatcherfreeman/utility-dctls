@@ -43,7 +43,9 @@ Generates a false color conversion for linear images. Draws middle gray at the s
 ### DCTL Parameters
 **Middle Gray Value**: Middle gray value], 18% by default.
 
-**Number of steps**: Number of steps to convert to false color. Values outside this range will just be passed through.
+**Color Chip Exposure**: Raises or lowers the exposure of the drawn color chips to make them more or less visible.
+
+**Number of Steps**: Number of steps to convert to false color. Values outside this range will just be passed through.
 
 **Seed**: Specifies the random seed used to generate colors
 
