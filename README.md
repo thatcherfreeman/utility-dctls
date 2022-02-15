@@ -37,6 +37,18 @@ Creates a middle gray exposure chart, a linear ramp, and several gray exposure c
 
 
 
+## False Color Generator
+Generates a false color conversion for linear images. Draws middle gray at the specified value and sets a gray color for the values +/- half a stop from middle gray. Then, chooses random colors for each further stop. This allows you to measure contrast ratios in-camera.
+
+### DCTL Parameters
+**Middle Gray Value**: Middle gray value], 18% by default.
+
+**Number of steps**: Number of steps to convert to false color. Values outside this range will just be passed through.
+
+**Seed**: Specifies the random seed used to generate colors
+
+
+
 ## Halation DCTL
 DCTL that physically emulates film halation, intended for ACES Linear AP0 images. This is intended to be used in a linear gamma timeline.
 

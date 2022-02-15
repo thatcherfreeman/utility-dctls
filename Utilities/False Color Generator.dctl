@@ -1,0 +1,35 @@
+DEFINE_UI_PARAMS(num_steps, Number of Steps, DCTLUI_SLIDER_INT, 16, 1, 32, 1)
+DEFINE_UI_PARAMS(mid_gray, Middle Gray Value, DCTLUI_SLIDER_FLOAT, 0.18, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(seed, Seed, DCTLUI_SLIDER_INT, 1, 1, 200, 1)
+
+__DEVICE__ float randu(uint* seed) {
+    // Returns random number in interval [0, 1)
+    uint old_seed = *seed;
+    const uint m = (1 << 31) - 1;
+    const uint a = 48271;
+    uint new_seed = (a * old_seed) % m;
+    *seed = new_seed;
+    return (((float) new_seed) / (float) m);
+}
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+
+    uint state = seed + 500;
+    randu(&state);
+
+    float curr_lum = p_G * 0.7 + p_R * 0.2 + p_B * 0.1;
+    int curr_stop = (int)_round(_log2f(curr_lum / mid_gray));
+    float3 output_color;
+    if (_fabs(curr_stop) > (num_steps - 1.0) / 2.0) {
+        output_color = make_float3(p_R, p_G, p_B);
+    } else if (curr_stop == 0) {
+        output_color = make_float3(mid_gray, mid_gray, mid_gray);
+    } else {
+        state = state + curr_stop;
+        output_color = make_float3(randu(&state), randu(&state), randu(&state));
+        float scale = mid_gray / (output_color.x + output_color.y + output_color.z);
+        output_color *= scale;
+    }
+    return output_color;
+}
