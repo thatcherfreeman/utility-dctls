@@ -7,7 +7,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     float3 output_color = make_float3(p_R, p_G, p_B);
 
-    float values = (float)(1 << (bit_depth - 1));
+    float values = (float)(1 << (bit_depth)) - 1.0;
     output_color *= values;
 
     if (rounding_opt == ROUND) {
