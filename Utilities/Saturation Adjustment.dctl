@@ -67,7 +67,7 @@ __DEVICE__ float3 rgb_to_hsl(float r, float g, float b) {
     if (delta == 0.0f) {
         H = 0.0f;
     } else if (r >= g && r >= b) {
-        H = _fmod((g - b) / delta, (6.0f));
+        H = _fmod((g - b) / delta + 6.0f, (6.0f));
     } else if (g >= r && g >= b) {
         H = (b - r) / delta + (2.0f);
     } else {
@@ -97,7 +97,7 @@ __DEVICE__ float3 rgb_to_hsv(float r, float g, float b) {
     if (delta == 0.0f) {
         H = 0.0f;
     } else if (r >= g && r >= b) {
-        H = _fmod((g - b) / delta, (6.0f));
+        H = _fmod((g - b) / delta + 6.0f, (6.0f));
     } else if (g >= r && g >= b) {
         H = (b - r) / delta + (2.0f);
     } else {
