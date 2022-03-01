@@ -1,0 +1,181 @@
+DEFINE_UI_PARAMS(grain_radius, Grain Radius um, DCTLUI_VALUE_BOX, 10.0)
+DEFINE_UI_PARAMS(film_width, Film Width mm, DCTLUI_VALUE_BOX, 24.0)
+DEFINE_UI_PARAMS(max_grains_per_pixel, Maximum number of grains, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(activation_threshold, Activation Threshold, DCTLUI_VALUE_BOX, 0.2)
+DEFINE_UI_PARAMS(seed, Seed, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(photon_gain, Photon Gain, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(lock_rgb, Monochrome, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(max_illuminant, Maximum Illuminant, DCTLUI_VALUE_BOX, 5.0)
+
+
+typedef ulong rand_state;
+
+__DEVICE__ float _randu_lcg(rand_state* seed) {
+    // Returns random number in interval [0, 1)
+    rand_state old_seed = *seed;
+    const uint m = (~((rand_state)0));
+    const uint a = 48271;
+    rand_state new_seed = (a * old_seed) % m;
+    *seed = new_seed;
+    return (((float) new_seed) / (float) m);
+}
+
+__DEVICE__ float _randu_xorshift(rand_state* seed) {
+    rand_state x = *seed;
+	x ^= (x << 13 | x >> 19);
+	x ^= (x >> 7 | x << 25);
+	x ^= (x << 15 | x >> 15);
+	*seed = x;
+    return (((float) x) / (float) (~((rand_state)0)));
+}
+
+__DEVICE__ inline float randu(rand_state* seed) {
+    return _randu_xorshift(seed);
+}
+
+__DEVICE__ float sample_uniform(float a, float b, rand_state* seed) {
+    float range = b - a;
+    float x = randu(seed);
+    return a + range * x;
+}
+
+__DEVICE__ float standard_norm_inv_cdf(float z) {
+    // Approximation from "Very Simply Explicitly Invertible Approximations of
+    // Normal Cumulative and Normal Quantile Function" by Alessandro Soranzo
+    
+    // CDF
+    // float out = _powf(2.0, -1.0 * _powf(22, 1 - _powf(41, z / 10.0)));
+    float abs_z = _fabs(z - 0.5) + 0.5;
+    float out = 10.0 / _logf(41.0) * _logf(1.0 - (_logf((-1.0 * _logf(abs_z)) / _logf(2.0))) / _logf(22.0));
+    if (abs_z >= 0.995) {
+        out = 2.5758;
+    }
+
+    if (z <= 0.5) {
+        out *= -1.0;
+    }
+    return out;
+}
+
+__DEVICE__ float norm_inv_cdf(float z, float mean, float var) {
+    float out = standard_norm_inv_cdf(z) * _sqrtf(var) + mean;
+    return out;
+}
+
+__DEVICE__ float sample_norm(float mean, float var, rand_state* seed) {
+    float u_sample = randu(seed);
+    float out = norm_inv_cdf(u_sample, mean, var);
+    return out;
+}
+
+__DEVICE__ float sample_poisson(float lambda, rand_state* seed) {
+    // approximate just using normal distribution.
+    return sample_norm(lambda, lambda, seed);
+}
+
+__DEVICE__ float standard_norm_cdf(float z) {
+    // Approximation of Normal CDF function with mean 0 and var 1.
+    const float k = _sqrtf(2.0 / 3.1415926535);
+    float output = 1.0 / (1.0 + _expf(-2.0 * k * z));
+    return output;
+}
+
+__DEVICE__ float norm_cdf(float z, float mean, float var) {
+    float output = standard_norm_cdf((z - mean) / _sqrtf(var));
+    return output;
+}
+
+__DEVICE__ float poisson_cdf(float z, float lambda) {
+    // Approximate poisson distribution with normal distribution
+    float output = norm_cdf(z, lambda, lambda);
+    return output;
+}
+
+__DEVICE__ inline float3 _powf3(float3 base, float gamma) {
+    float3 output = make_float3(_powf(base.x, gamma), _powf(base.y, gamma), _powf(base.z, gamma));
+    return output;
+}
+
+
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    // Output transmitted light, assume a single grain size.
+    rand_state state = *((rand_state *) &seed);
+    // uint state = seed;
+    float val;
+        
+    state ^= p_Width * p_Height;
+    state ^= (p_Width * p_Y + p_X) << 5;
+    val = randu(&state);
+    val = randu(&state);
+    val = randu(&state);
+    val = randu(&state);
+    state = *((rand_state *) &val);
+
+
+    float pixel_width = film_width * 1000.0 / p_Width; // in micrometers.
+    float pixel_area = _powf(pixel_width, 2.0);
+    float grain_area = _powf(grain_radius, 2.0);
+    float grains_per_pixel = pixel_area / grain_area;
+    int max_grains = (int) _round(_fmaxf(grains_per_pixel, max_grains_per_pixel));
+    
+    float3 output_color = make_float3(0.0, 0.0, 0.0);
+    float3 total_areas = make_float3(0.0, 0.0, 0.0);
+    float3 curr_color = make_float3(p_R, p_G, p_B);
+    
+    for (int i = 0; i < max_grains; ++i) {
+        // For each grain, sample a random point in the pixel
+        float x = randu(&state);
+        float y = randu(&state);
+        // float r_R = sample_uniform(0.1, grain_radius, &state);
+        // float r_G = sample_uniform(0.1, grain_radius, &state);
+        // float r_B = sample_uniform(0.1, grain_radius, &state);
+        float r_R = grain_radius;
+        float r_G = grain_radius;
+        float r_B = grain_radius;
+        float area_R = 3.14159256f * _powf(r_R, 2.0);
+        float area_G = 3.14159256f * _powf(r_G, 2.0);
+        float area_B = 3.14159256f * _powf(r_B, 2.0);
+        float3 areas = make_float3(area_R, area_G, area_B);
+        total_areas += areas;
+
+        // Count number of photons hitting the current grain.
+        float3 exp_num_photons = curr_color * photon_gain * areas; // / pixel_area;
+        
+        // Number of photons that actually hits a grain is subject to shot noise.
+        float3 actual_photons;
+
+        if (lock_rgb) {
+            rand_state temp_state1 = state;
+            rand_state temp_state2 = state;
+            rand_state temp_state3 = state;
+            actual_photons = make_float3(
+                sample_poisson(exp_num_photons.x, &temp_state1),
+                sample_poisson(exp_num_photons.y, &temp_state2),
+                sample_poisson(exp_num_photons.z, &temp_state3)
+            );
+        } else {
+            actual_photons = make_float3(
+                sample_poisson(exp_num_photons.x, &state),
+                sample_poisson(exp_num_photons.y, &state),
+                sample_poisson(exp_num_photons.z, &state)
+            );
+        }
+
+        actual_photons /= photon_gain;
+
+
+        // TODO (Thatcher): Threshold the grains so that each grain is cast to
+        // 0 or 100%. Find a methodology such that the expected value
+        // remains unchanged (equal to exp_num_photons).
+
+
+        output_color += actual_photons;
+    }
+
+    output_color /= total_areas;
+
+    return output_color;
+
+}
