@@ -1,0 +1,14 @@
+DEFINE_UI_PARAMS(log_mode, Log Mode, DCTLUI_CHECK_BOX, 1)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    // Invert the image in linear space.
+    float3 input_color = make_float3(p_R, p_G, p_B);
+    float3 output_color;
+    if (log_mode) {
+        // log(1/x) = log 1 - log x
+        output_color = 1.0 - input_color;
+    } else {
+        output_color = 1.0 / input_color;
+    }
+    return output_color;
+}

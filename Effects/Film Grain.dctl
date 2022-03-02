@@ -70,7 +70,23 @@ __DEVICE__ float sample_norm(float mean, float var, rand_state* seed) {
 
 __DEVICE__ float sample_poisson(float lambda, rand_state* seed) {
     // approximate just using normal distribution.
-    return sample_norm(lambda, lambda, seed);
+    float sample = sample_norm(lambda, lambda, seed);
+    return _fmaxf(0.001, sample);
+}
+
+__DEVICE__ float sample_bernoulli(float p, rand_state* seed) {
+    float sample = randu(seed);
+    float out = 0.0;
+    if (sample <= p) {
+        out = 1.0;
+    }
+    return out;
+}
+
+__DEVICE__ float norm_pdf(float z, float mean, float var) {
+    float out = _expf(-0.5 * _exp2f((z - mean)) / var);
+    out *= 1.0 / (_sqrtf(2.0 * 3.1415926535 * var));
+    return out;
 }
 
 __DEVICE__ float standard_norm_cdf(float z) {
@@ -93,6 +109,14 @@ __DEVICE__ float poisson_cdf(float z, float lambda) {
 
 __DEVICE__ inline float3 _powf3(float3 base, float gamma) {
     float3 output = make_float3(_powf(base.x, gamma), _powf(base.y, gamma), _powf(base.z, gamma));
+    return output;
+}
+
+__DEVICE__ inline float3 _threshold3(float3 input, float threshold) {
+    float3 output = make_float3(0.0, 0.0, 0.0);
+    output.x = 1.0 * (input.x >= threshold);
+    output.y = 1.0 * (input.y >= threshold);
+    output.z = 1.0 * (input.z >= threshold);
     return output;
 }
 
@@ -166,10 +190,19 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         actual_photons /= photon_gain;
 
 
+
         // TODO (Thatcher): Threshold the grains so that each grain is cast to
         // 0 or 100%. Find a methodology such that the expected value
         // remains unchanged (equal to exp_num_photons).
 
+        // float3 grain_activations;
+        // // grain_activations = _threshold3(actual_photons, activation_threshold);
+        // grain_activations = make_float3(
+        //     sample_bernoulli(actual_photons.x / (max_illuminant * areas.x), &state),
+        //     sample_bernoulli(actual_photons.y / (max_illuminant * areas.y), &state),
+        //     sample_bernoulli(actual_photons.z / (max_illuminant * areas.z), &state)
+        // );
+        // output_color += grain_activations * max_illuminant * areas;
 
         output_color += actual_photons;
     }

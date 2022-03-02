@@ -78,6 +78,14 @@ Light passes through three layers of film emulsion and various color filters, ul
 
 
 
+## Invert
+Inverts the values in an image.
+
+### DCTL Parameters
+**Log Mode**: When checked, computes the inverse by taking `1 - x`. When unchecked, assumes the image is scene linear and therefore computes `1 / x`.
+
+
+
 ## Matrix Tester
 Multiplies the RGB values of the input by a 3x3 matrix with the specified entries. Supports negative values.
 
@@ -86,7 +94,7 @@ Multiplies the RGB values of the input by a 3x3 matrix with the specified entrie
 ## Quantize
 Simulates the effect of saving the current image at a specified bit depth.
 
-## DCTL Parameters
+### DCTL Parameters
 **Bit Depth**: The number of bits to be used to represent the current 0->1 value.
 
 **Clip**: Specifies whether to clip values greater than 1.0 or less than 0.0.
@@ -98,7 +106,7 @@ Simulates the effect of saving the current image at a specified bit depth.
 ## Random Channel Mixer
 Constructs a random RGB matrix that is some distance away from the Identity matrix. Useful when trying out lots of different looks, expects image to be converted to Linear before using.
 
-## DCTL Parameters
+### DCTL Parameters
 **Eps**: Maximum acceptable entry-delta from the identity matrix. Essentially controls the intensity of the applied effect. In some cases, a value about 0.33 will result in division by zero errors and numerical instability when rows are rescaled.
 
 **Seed**: Indicates the random seed used to construct the matrix. Handy if you want to remember the value for later and reproduce a certain look.
@@ -112,7 +120,7 @@ Constructs a random RGB matrix that is some distance away from the Identity matr
 ## Random Contrast Curve
 Constructs a contrast curve, has the option to procedurally generate one with random parameters so you can try lots of different curves in a moment.
 
-## DCTL Parameters
+### DCTL Parameters
 **Pivot**: Specify the pivot point, which will remain unchanged in color and value.
 
 **Toe**: Indicates what distance from the pivot to start rolling off the shadows. 0.0 is at the pivot point, 1.0 is near the black point.
@@ -137,7 +145,7 @@ Constructs a contrast curve, has the option to procedurally generate one with ra
 ## RGB Chips
 Creates three columns of RGB chips, and optionally CMY and Luminance chips. When the RGB mixer (or any other operation) is used, the extent to which channels have been mixed will be visible in the RGB Parade. Outputs a Linear image.
 
-## DCTL Parameters
+### DCTL Parameters
 **Number of Steps**: Number of different luminances to display for each chip. Each chip is one stop apart (in linear).
 
 **Exposure**: Amount of gain to be applied to the image, in stops.
