@@ -9,16 +9,20 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     int middle_step = num_steps / 2;
     float3 output_color;
 
-    if (0.25f <= x && x <= 0.75f && 0.25f <= y && y <= 0.75f) {
+    if (0.25f <= x && x <= 0.75f && 0.33f <= y && y <= 0.66f) {
         // Middle box
         output_color = make_float3(mid_gray, mid_gray, mid_gray);
-    } else if (y <= 0.5f) {
+    } else if (y <= 0.66f) {
         // Top half of chart, make steps
         int curr_step = (int) (x / step_width);
         float val = mid_gray * _exp2f((float) curr_step - middle_step);
         output_color = make_float3(val, val, val);
+    } else if (y <= 0.84f) {
+        // make exp ramp
+        float val = mid_gray * _exp2f((float) (x / step_width) - 0.5 - middle_step);
+        output_color = make_float3(val, val, val);
     } else {
-        // bottom half of chart, make linear ramp
+        // make linear ramp
         output_color = make_float3(x, x, x);
     }
 

@@ -28,7 +28,7 @@ Creates a color ramp from 0 to 100% Hue, Saturation, or Luminance. This can be u
 
 
 ## Exposure Chart DCTL
-Creates a middle gray exposure chart, a linear ramp, and several gray exposure chips that are an integer number of stops above and below middle gray. This is intended to be used in a linear gamma timeline.
+Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and several gray exposure chips that are an integer number of stops above and below middle gray. This is intended to be used in a linear gamma timeline.
 
 ### DCTL Parameters
 **Number of Steps**: Specifies the number of exposure chips to be displayed in the chart. One of the ones in the middle will share its value with middle gray, and each chip to the right will have a code value double of the previous chip.
