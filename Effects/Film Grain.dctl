@@ -83,6 +83,14 @@ __DEVICE__ float sample_bernoulli(float p, rand_state* seed) {
     return out;
 }
 
+__DEVICE__ float sample_binomial(float n, float p, rand_state* seed) {
+    // Approximation of binomial distribution using a normal distribution
+    // requires that n * p  and n * (1 - p) is bigger than like 5.
+    float cont_sample = sample_norm(n * p, n * p * (1.0 - p), seed);
+    float out = _roundf(cont_sample);
+    return out;
+}
+
 __DEVICE__ float norm_pdf(float z, float mean, float var) {
     float out = _expf(-0.5 * _exp2f((z - mean)) / var);
     out *= 1.0 / (_sqrtf(2.0 * 3.1415926535 * var));
