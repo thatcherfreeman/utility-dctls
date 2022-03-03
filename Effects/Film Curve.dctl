@@ -1,0 +1,236 @@
+DEFINE_UI_PARAMS(grain_radius, Grain Radius um, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(film_width, Film Width mm, DCTLUI_VALUE_BOX, 24.0)
+DEFINE_UI_PARAMS(max_grains_per_pixel, Maximum number of grains, DCTLUI_VALUE_BOX, 1000.0)
+DEFINE_UI_PARAMS(activation_threshold, Activation Threshold, DCTLUI_VALUE_BOX, 0.1)
+DEFINE_UI_PARAMS(seed, Seed, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(pre_gain, Exposure Gain, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(shot_noise, Shot Noise, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(output_log, Output Log Image, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(output_exp, Output Exp Image, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(output_gain, Output Gain, DCTLUI_VALUE_BOX, 1.0)
+
+/////////////////////////////////////////////
+// PDFs and CDFs
+/////////////////////////////////////////////
+
+__DEVICE__ float standard_norm_cdf(float z) {
+    // Approximation of Normal CDF function with mean 0 and var 1.
+    const float k = _sqrtf(2.0 / 3.1415926535);
+    float output = 1.0 / (1.0 + _expf(-2.0 * k * z));
+    return output;
+}
+
+__DEVICE__ float norm_cdf(float z, float mean, float var) {
+    float output = standard_norm_cdf((z - mean) / _sqrtf(var));
+    return output;
+}
+
+__DEVICE__ float standard_norm_inv_cdf(float z) {
+    // Approximation from "Very Simply Explicitly Invertible Approximations of
+    // Normal Cumulative and Normal Quantile Function" by Alessandro Soranzo
+    // CDF
+    // float out = _powf(2.0, -1.0 * _powf(22, 1 - _powf(41, z / 10.0)));
+    float abs_z = _fabs(z - 0.5) + 0.5;
+    float out = 10.0 / _logf(41.0) * _logf(1.0 - (_logf((-1.0 * _logf(abs_z)) / _logf(2.0))) / _logf(22.0));
+    if (abs_z >= 0.995) {
+        out = 2.5758;
+    }
+
+    if (z <= 0.5) {
+        out *= -1.0;
+    }
+    return out;
+}
+
+__DEVICE__ float norm_inv_cdf(float z, float mean, float var) {
+    float out = standard_norm_inv_cdf(z) * _sqrtf(var) + mean;
+    return out;
+}
+
+__DEVICE__ float norm_pdf(float z, float mean, float var) {
+    float out = _expf(-0.5 * _exp2f((z - mean)) / var);
+    out *= 1.0 / (_sqrtf(2.0 * 3.1415926535 * var));
+    return out;
+}
+
+__DEVICE__ float poisson_cdf(float z, float lambda) {
+    // Approximate poisson distribution with normal distribution
+    float output = norm_cdf(z, lambda, lambda);
+    return output;
+}
+
+__DEVICE__ float binomial_cdf(float z, float n, float p) {
+    float out = norm_cdf(z, n*p, n*p*(1.0-p));
+    return out;
+}
+
+
+/////////////////////////////////////////////
+// Random Number Generator
+/////////////////////////////////////////////
+
+typedef ulong rand_state;
+
+__DEVICE__ float _randu_xorshift(rand_state* seed) {
+    rand_state x = *seed;
+	x ^= (x << 13 | x >> 19);
+	x ^= (x >> 7 | x << 25);
+	x ^= (x << 15 | x >> 15);
+	*seed = x;
+    return (((float) x) / (float) (~((rand_state)0)));
+}
+
+__DEVICE__ inline float randu(rand_state* seed) {
+    return _randu_xorshift(seed);
+}
+
+
+/////////////////////////////////////////////
+// Distribution Sampling functions
+/////////////////////////////////////////////
+
+__DEVICE__ float sample_uniform(float a, float b, rand_state* seed) {
+    float range = b - a;
+    float x = randu(seed);
+    return a + range * x;
+}
+
+__DEVICE__ float sample_norm(float mean, float var, rand_state* seed) {
+    float u_sample = randu(seed);
+    float out = norm_inv_cdf(u_sample, mean, var);
+    return out;
+}
+
+__DEVICE__ float sample_poisson(float lambda, rand_state* seed) {
+    // approximate just using normal distribution.
+    float sample = sample_norm(lambda, lambda, seed);
+    return _fmaxf(0.001, sample);
+}
+
+__DEVICE__ float sample_bernoulli(float p, rand_state* seed) {
+    float sample = randu(seed);
+    float out = 0.0;
+    if (sample <= p) {
+        out = 1.0;
+    }
+    return out;
+}
+
+__DEVICE__ float sample_binomial(float n, float p, rand_state* seed) {
+    // Approximation of binomial distribution using a normal distribution
+    // requires that n * p  and n * (1 - p) is bigger than like 5.
+    float cont_sample = sample_norm(n * p, n * p * (1.0 - p), seed);
+    float out = _round(cont_sample);
+    return out;
+}
+
+__DEVICE__ float sample_binomial_continuous(float n, float p, rand_state* seed) {
+    float cont_sample = sample_norm(n * p, n * p * (1.0 - p), seed);
+    return cont_sample;
+}
+
+
+/////////////////////////////////////////////
+// Utilities for float3
+/////////////////////////////////////////////
+
+__DEVICE__ inline float3 _powf3(float3 base, float gamma) {
+    float3 output = make_float3(_powf(base.x, gamma), _powf(base.y, gamma), _powf(base.z, gamma));
+    return output;
+}
+
+__DEVICE__ inline float3 _threshold3(float3 input, float threshold) {
+    float3 output = make_float3(0.0, 0.0, 0.0);
+    output.x = 1.0 * (input.x >= threshold);
+    output.y = 1.0 * (input.y >= threshold);
+    output.z = 1.0 * (input.z >= threshold);
+    return output;
+}
+
+
+
+/////////////////////////////////////////////
+// Density Calculation
+/////////////////////////////////////////////
+
+__DEVICE__ float convert_photons_to_density(float pixel_photons, float threshold, float num_grains, float grain_area, float pixel_area, bool shot_noise, rand_state* seed) {
+    // Number of photons that hit each grain.
+    if (shot_noise) {
+        pixel_photons = sample_poisson(pixel_photons, seed);
+    }
+    float grain_photons = pixel_photons * grain_area / pixel_area;
+
+
+
+    // Probability of a grain being activated, given its threshold
+    // P(activated) = P(x >= threshold) = 1 - P(x <= threshold)
+    float activation_prob = 1.0 - poisson_cdf(threshold, grain_photons);
+
+    // Number of grains that get activated
+    float num_activated_grains;
+    if (shot_noise & 0  ) {
+        num_activated_grains = sample_binomial_continuous(num_grains, activation_prob, seed);
+    } else {
+        // Just take expected number of activated grains
+        num_activated_grains = num_grains * activation_prob;
+    }
+
+    // Compute density from proportion of grains that got activated
+    // and therefore are black.
+    // I_t = I_0 * (1 - (activations / num_grains))
+    // density = log_10 (I_0 / I_t)
+    // exp density = I_0 / I_t = 1 / (1 - activations / num_grains)
+    float exp_density = 1.0 / (1.0 - (num_activated_grains / num_grains));
+    // return exp_density;
+
+    return num_activated_grains / num_grains;
+}
+
+
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    // Initialize Random State
+    rand_state state = *((rand_state *) &seed);
+    float val;
+    state ^= p_Width * p_Height;
+    state ^= (p_Width * p_Y + p_X) << 5; // Unique random state for each pixel
+    val = randu(&state);
+    val = randu(&state);
+    val = randu(&state);
+    val = randu(&state);
+    state = *((rand_state *) &val);
+
+    // Compute grain and pixel area.
+    float pixel_width = film_width * 1000.0 / p_Width; // in micrometers.
+    float pixel_area = _powf(pixel_width, 2.0);
+    float grain_area = 3.1415926535 * _powf(grain_radius, 2.0);
+    float grains_per_pixel = pixel_area / grain_area;
+    int max_grains = (int) _round(_fminf(grains_per_pixel, max_grains_per_pixel));
+
+    // Initialize color counters
+    float3 output_color = make_float3(0.0, 0.0, 0.0);
+    float3 curr_color = make_float3(p_R, p_G, p_B) * pre_gain;
+
+    // Simulate grains.
+    output_color.x = convert_photons_to_density(curr_color.x, activation_threshold, max_grains, grain_area, pixel_area, shot_noise, &state);
+    output_color.y = convert_photons_to_density(curr_color.y, activation_threshold, max_grains, grain_area, pixel_area, shot_noise, &state);
+    output_color.z = convert_photons_to_density(curr_color.z, activation_threshold, max_grains, grain_area, pixel_area, shot_noise, &state);
+
+    if (output_log) {
+        output_color.x = _log10f(output_color.x);
+        output_color.y = _log10f(output_color.y);
+        output_color.z = _log10f(output_color.z);
+    }
+
+    if (output_exp) {
+        output_color.x = _exp10f(output_color.x);
+        output_color.y = _exp10f(output_color.y);
+        output_color.z = _exp10f(output_color.z);
+    }
+
+    output_color *= output_gain;
+
+    return output_color;
+
+}
