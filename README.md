@@ -86,6 +86,14 @@ Inverts the values in an image.
 
 
 
+## Log
+For each pixel and channel, takes the logarithm.
+
+### DCTL Parameters
+**Log Base**: The base of the logarithm, 10.0 by default.
+
+
+
 ## Matrix Tester
 Multiplies the RGB values of the input by a 3x3 matrix with the specified entries. Supports negative values.
 

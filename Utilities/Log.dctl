@@ -1,0 +1,10 @@
+DEFINE_UI_PARAMS(log_base, Log Base, DCTLUI_VALUE_BOX, 10.0)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 input_color = make_float3(p_R, p_G, p_B);
+    float3 output_color = make_float3(0.0, 0.0, 0.0);
+    output_color.x = _logf(input_color.x) / _logf(log_base);
+    output_color.y = _logf(input_color.y) / _logf(log_base);
+    output_color.z = _logf(input_color.z) / _logf(log_base);
+    return output_color;
+}
