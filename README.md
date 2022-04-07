@@ -86,6 +86,15 @@ Inverts the values in an image.
 
 
 
+## Levels Converter
+Converts between full and (0-1023) legal levels (64-940)
+
+### DCTL Parameters
+**Mode**: Indicates whether to convert to Legal or to Full levels (the direction of the transform)
+
+**Clip**: Indicates whether to clip extreme values. If Mode is set to `Full to Legal`, then Clip will clip values outside of the range 64-940. Otherwise, clip will clip values outside of the range 0-1023.
+
+
 ## Log
 For each pixel and channel, takes the logarithm.
 
