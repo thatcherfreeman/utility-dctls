@@ -1,10 +1,10 @@
-DEFINE_UI_PARAMS(grain_diameter, Grain Diameter um, DCTLUI_VALUE_BOX, 10.0)
-DEFINE_UI_PARAMS(film_thickness, Film Thickness mm, DCTLUI_VALUE_BOX, 0.20)
-DEFINE_UI_PARAMS(film_width, Film Width mm, DCTLUI_VALUE_BOX, 24.0)
 DEFINE_UI_PARAMS(dmax, D Max, DCTLUI_VALUE_BOX, 4.0)
-DEFINE_UI_PARAMS(activation_threshold, Activation Threshold, DCTLUI_VALUE_BOX, 0.2)
+DEFINE_UI_PARAMS(num_grains_per_pixel, Number of Grains Per Pixel, DCTLUI_VALUE_BOX, 20)
+DEFINE_UI_PARAMS(num_layers, Number of layers of grains, DCTLUI_VALUE_BOX, 5)
+DEFINE_UI_PARAMS(activation_threshold, Activation Threshold, DCTLUI_VALUE_BOX, 0.05)
+DEFINE_UI_PARAMS(photon_gain, Photon Gain, DCTLUI_VALUE_BOX, 1)
 DEFINE_UI_PARAMS(seed, Seed, DCTLUI_VALUE_BOX, 0.0)
-DEFINE_UI_PARAMS(photon_gain, Photon Gain, DCTLUI_VALUE_BOX, 1.0)
+
 
 
 /////////////////////////////////////////////
@@ -162,16 +162,15 @@ __DEVICE__ inline float3 _threshold3(float3 input, float threshold) {
 // Density Calculation
 /////////////////////////////////////////////
 
-__DEVICE__ float convert_photons_to_transmittance(float pixel_photons, float threshold, float num_grains, float grain_area, float pixel_area, float num_layers, float dmax, rand_state* seed) {
-
-    float photons_per_grain = pixel_photons * grain_area / pixel_area;
+__DEVICE__ float convert_photons_to_transmittance(float pixel_photons, float threshold, float num_grains, float num_layers, float dmax, rand_state* seed) {
 
     // Probability of a grain being activated, given its threshold
     // P(activated) = P(x >= threshold) = 1 - P(x <= threshold)
-    float p = 1.0 - poisson_cdf(threshold, photons_per_grain);
+    float p = 1.0 - poisson_cdf(threshold, pixel_photons);
 
     float T = 1.0;
-    float grain_absorption = _powf(_powf(10.0, -1.0 * dmax), 1.0/num_layers);
+
+    float grain_absorption = 1 - _powf(_powf(10.0, -1.0 * dmax), 1.0/num_layers);
 
     for (int i = 0; i < num_layers; ++i) {
         float N = sample_binomial_continuous(num_grains, p, seed);
@@ -185,8 +184,8 @@ __DEVICE__ float convert_photons_to_transmittance(float pixel_photons, float thr
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     // Output transmitted light, assume a single grain size.
-    rand_state* state;
-    *state = (rand_state) seed;
+    rand_state state_value = *((rand_state *)&seed);
+    rand_state* state = &state_value;
 
     float val;
     *state ^= p_Width * p_Height;
@@ -195,20 +194,20 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     val = randu(state);
     val = randu(state);
     val = randu(state);
-    *state = val;
+    *state = *((rand_state*) &val);
 
-    float pixel_width = film_width * 1000.0 / p_Width; // in micrometers.
-    float pixel_area = _powf(pixel_width, 2.0);
-    float grain_area = _powf(grain_diameter, 2.0);
-    float num_layers = film_thickness * 1000.0 / grain_diameter; // m
-    float grains_per_pixel = pixel_area / grain_area; // n
+    // float pixel_width = film_width * 1000.0 / p_Width; // in micrometers.
+    // float pixel_area = _powf(pixel_width, 2.0);
+    // float grain_area = _powf(grain_diameter, 2.0);
+    // float num_layers = film_thickness * 1000.0 / grain_diameter; // m
+    // float grains_per_pixel = pixel_area / grain_area; // n
 
     float3 output_color = make_float3(0.0, 0.0, 0.0);
     float3 curr_color = make_float3(p_R, p_G, p_B) * photon_gain;
 
-    output_color.x = convert_photons_to_transmittance(curr_color.x, activation_threshold, grains_per_pixel, grain_area, pixel_area, num_layers, dmax, state);
-    output_color.y = convert_photons_to_transmittance(curr_color.y, activation_threshold, grains_per_pixel, grain_area, pixel_area, num_layers, dmax, state);
-    output_color.z = convert_photons_to_transmittance(curr_color.z, activation_threshold, grains_per_pixel, grain_area, pixel_area, num_layers, dmax, state);
+    output_color.x = convert_photons_to_transmittance(curr_color.x, activation_threshold, num_grains_per_pixel, num_layers, dmax, state);
+    output_color.y = convert_photons_to_transmittance(curr_color.y, activation_threshold, num_grains_per_pixel, num_layers, dmax, state);
+    output_color.z = convert_photons_to_transmittance(curr_color.z, activation_threshold, num_grains_per_pixel, num_layers, dmax, state);
 
     return output_color;
 }
