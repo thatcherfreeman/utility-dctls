@@ -126,17 +126,18 @@ __DEVICE__ float sample_bernoulli(float p, rand_state* seed) {
     return out;
 }
 
+__DEVICE__ float sample_binomial_continuous(float n, float p, rand_state* seed) {
+    float cont_sample = sample_norm(n * p, n * p * (1.0 - p), seed);
+    cont_sample = _clampf(cont_sample, 0, n);
+    return cont_sample;
+}
+
 __DEVICE__ float sample_binomial(float n, float p, rand_state* seed) {
     // Approximation of binomial distribution using a normal distribution
     // requires that n * p  and n * (1 - p) is bigger than like 5.
-    float cont_sample = sample_norm(n * p, n * p * (1.0 - p), seed);
+    float cont_sample = sample_binomial_continuous(n, p, seed);
     float out = _round(cont_sample);
     return out;
-}
-
-__DEVICE__ float sample_binomial_continuous(float n, float p, rand_state* seed) {
-    float cont_sample = sample_norm(n * p, n * p * (1.0 - p), seed);
-    return cont_sample;
 }
 
 
