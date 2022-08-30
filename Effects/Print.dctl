@@ -1,10 +1,6 @@
 DEFINE_UI_PARAMS(primary_value, Primary Value, DCTLUI_SLIDER_FLOAT, 0.6, 0.0, 2.0, 0.01)
 DEFINE_UI_PARAMS(secondary_gain, Secondary Gain, DCTLUI_SLIDER_FLOAT, 0.9, 0.0, 1.0, 0.01)
 
-inline __DEVICE__ float3 mix(float3 x, float3 y, float a) {
-    float3 output = x + (y - x) * a;
-    return output;
-}
 
 inline __DEVICE__ float3 mix2(float3 x, float3 mask, float gain, float a) {
     float3 output = x + mask * (gain - 1) * a;
@@ -16,12 +12,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 g_prim = make_float3(0.0f, primary_value, 0.0f);
     float3 b_prim = make_float3(0.0f, 0.0f, primary_value);
 
-    float secondary_value = primary_value * secondary_gain;
+    // float secondary_value = primary_value * secondary_gain;
     // float3 y_prim = make_float3(secondary_value, secondary_value, 0.0f);
     // float3 m_prim = make_float3(secondary_value, 0.0f, secondary_value);
     // float3 c_prim = make_float3(0.0f, secondary_value, secondary_value);
 
-    
+
     float3 y_prim = make_float3(1.0, 1.0, 0.0f);
     float3 m_prim = make_float3(1.0, 0.0f, 1.0);
     float3 c_prim = make_float3(0.0f, 1.0, 1.0);
