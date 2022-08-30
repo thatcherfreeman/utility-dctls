@@ -108,6 +108,16 @@ Multiplies the RGB values of the input by a 3x3 matrix with the specified entrie
 
 
 
+## Print
+Skews the RGB cube so that CMY colors are brighter and more saturated than the RGB colors.
+
+### DCTL Parameters
+**Primary Value**: Indicates what value 100% red, green, or blue should be mapped to. IE if this is 0.6, then `f(1, 0, 0) = (0.6, 0, 0)`
+
+**Secondary Gain**: Indicates how much brighter/saturated the CMY colors should be than their RGB counterparts. Loosely speaking, `f(1, 1, 0)` is proportional to `secondary_gain * (f(1, 0, 0) + f(0, 1, 0))`
+
+
+
 ## Quantize
 Simulates the effect of saving the current image at a specified bit depth.
 
