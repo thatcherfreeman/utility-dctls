@@ -1,0 +1,16 @@
+DEFINE_UI_PARAMS(clamp_min, Min Clamp, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 5.0, 0.0)
+DEFINE_UI_PARAMS(clamp_max, Max Clamp, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 100.0, 0.0)
+DEFINE_UI_PARAMS(clamp_min_check, Clamp Min, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(clamp_max_check, Clamp Max, DCTLUI_CHECK_BOX, 1)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float3 curr_color = make_float3(p_R, p_G, p_B);
+    if (clamp_max_check) {
+        curr_color = make_float3(_fminf(curr_color.x, clamp_max), _fminf(curr_color.y, clamp_max), _fminf(curr_color.z, clamp_max));
+    }
+    if (clamp_min_check) {
+        curr_color = make_float3(_fmaxf(curr_color.x, clamp_min), _fmaxf(curr_color.y, clamp_min), _fmaxf(curr_color.z, clamp_min));
+    }
+    return curr_color;
+}

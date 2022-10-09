@@ -14,6 +14,18 @@ Internally, this DCTL converts ACEScc or ACEScct to Linear, and then applies a g
 **Exposure Adjustment**: Specifies the number of stops to increase or decrease (negative) exposure.
 
 
+## Clamp DCTL
+Clamps the code values of the current frame to the specified Min and Max values, such that for any `x`, we will then have `clamp_min <= x <= clamp_max`
+
+## DCTL Parameters
+**Min Clamp**: Specifies the value at which we will set `x = max(x, Min Clamp)`
+
+**Max Clamp**: Specifies the value at which we will set `x = min(x, Max Clamp)`
+
+**Clamp Min (Checkbox)**: Uncheck to bypass the Min Clamping step.
+
+**Clamp Max (Checkbox)**: Uncheck to bypass the Max Clamping step.
+
 
 ## Color Ramp DCTL
 Creates a color ramp from 0 to 100% Hue, Saturation, or Luminance. This can be used to monitor the output of your tools and overall node pipeline.
@@ -183,6 +195,28 @@ Creates three columns of RGB chips, and optionally CMY and Luminance chips. When
 
 **Show Luminance**: Displays an additionall luminance chart.
 
+
+## RGB Linear Contrast DCTL
+Applies a power function to the RGB channels, keeping 0.18 unchanged. This DCTL expects a scene linear image.
+
+### How it works
+The DCTL works in three steps:
+1. Apply gain to shift Middle gray to 1.0
+2. Raise the code values to the power of `Neutral Gamma * Color Gamma` if Ungroup RGB is checked, otherwise `Neutral Gamma`
+3. Revert the gain done in step 1 (divide by that scaling rather than multiply)
+
+### DCTL Parameters
+**Red Gamma**: Gamma to be applied only to the Red Channel (if Ungroup RGB is checked)
+
+**Green Gamma**: Gamma to be applied only to the Green Channel (if Ungroup RGB is checked)
+
+**Blue Gamma**: Gamma to be applied only to the Blue Channel (if Ungroup RGB is checked)
+
+**Neutral Gamma**: Gamma applied to all channels, regardless of Ungroup RGB
+
+**Mid Gray**: Specifies the middle gray code value.
+
+**Ungroup RGB**: If unchecked, only applies the Neutral Gamma, otherwise applies both Neutral gamma and the Color Gamma, multiplying together those two powers.
 
 
 ## Safety Lines DCTL
