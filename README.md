@@ -86,6 +86,8 @@ Light passes through three layers of film emulsion and various color filters, ul
 
 **Show only halation**: Enabling this checkbox shows what is added (IE arithmetic addition) to the image.
 
+**Correct for Red shift**: Because Halation re-exposes the red channel first, it will make the exposed negative more red than it originally was. Checking this box applies a correction that neutralizes this red shift so the halation effect will only have an effect at the edges. As a colorist would neutralize an image with a red balance, checking this box applies that correction in-line.
+
 **Blur Type** [NONE, BOX BLUR, TRIANGLE BLUR, FAST BLUR]: Selects the blurring method. None will not apply any blur to the reflected image, Box Blur applies a square convolution of uniform weights, Triangle blur applies a center-weighted blurring with linear falloff, and Fast Blur is essentially a box blur that samples 9 points along the center and perimeter of a square, resulting in great runtime. Box and Triangle blur will run slower with larger blur amounts.
 
 

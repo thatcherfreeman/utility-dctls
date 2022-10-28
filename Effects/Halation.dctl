@@ -6,10 +6,11 @@ DEFINE_UI_PARAMS(blue_exposure_lost, Blue exposure lost, DCTLUI_SLIDER_FLOAT, -1
 DEFINE_UI_PARAMS(blur_type, Blur Type, DCTLUI_COMBO_BOX, 3, {NO_BLUR, BOX, TRIANGLE, FAST}, {None, Box Blur, Triangle Blur, Fast Blur})
 DEFINE_UI_PARAMS(blur_amt, Blur Amount, DCTLUI_SLIDER_FLOAT, 3.0, 0.0, 30.0, 1.0)
 DEFINE_UI_PARAMS(show_halation, Show only halation, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(correct_red_shift, Correct for Red Shift, DCTLUI_CHECK_BOX, 1)
 // Halation gamma isn't physically motivated (should be set to 1.0), but this allows
 // for creative control over how much halation is added and to suppress
 // halation in the shadows.
-DEFINE_UI_PARAMS(halation_gamma, Halation gamma, DCTLUI_SLIDER_FLOAT, -.25, -1.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(halation_gamma, Halation gamma, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.01)
 
 
 __DEVICE__ int get_coord(float x, int width) {
@@ -155,7 +156,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     } else if (blur_type == FAST){
         scale_color = fast_blur(blur_radius, X * scale, Y * scale, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
     } else if (blur_type == NO_BLUR) {
-         scale_color = sample_point_bilinear(X * scale, Y * scale, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
+        scale_color = sample_point_bilinear(X * scale, Y * scale, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
     }
 
     float3 curr_color;
@@ -168,9 +169,22 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     // Red channel re-exposes red channel after bouncing, then
     // it might go far enough as to hit the green channel after passing through
     // the red layer again.
-    curr_color.x += _powf(scale_color.x * exposure_lost_lin, adjusted_gamma_value);
-    curr_color.y += _powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin, adjusted_gamma_value);
-    curr_color.z += _powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin * blue_exposure_lost_lin, adjusted_gamma_value);
+    if (correct_red_shift) {
+        // The same modeled physical process as below, but I've applied a white balance to avoid color shifting
+        // the whole frame.
+        float a = exposure_lost_lin;
+        float b = exposure_lost_lin * green_exposure_lost_lin;
+        float c = exposure_lost_lin * green_exposure_lost_lin * blue_exposure_lost_lin;
+        curr_color.x += _powf((scale_color.x - curr_color.x) * (a / (a + 1)), adjusted_gamma_value);
+        curr_color.y += _powf((scale_color.x - curr_color.y) * (b / (a + 1)), adjusted_gamma_value);
+        curr_color.z += _powf((scale_color.x - curr_color.z) * (c / (a + 1)), adjusted_gamma_value);
+    } else {
+        // The modeled physical process:
+        // C_out = C_in + (red_scaled_blurred * exp)
+        curr_color.x += _powf(scale_color.x * exposure_lost_lin, adjusted_gamma_value);
+        curr_color.y += _powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin, adjusted_gamma_value);
+        curr_color.z += _powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin * blue_exposure_lost_lin, adjusted_gamma_value);
+    }
 
     return curr_color;
 }
