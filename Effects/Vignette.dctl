@@ -1,0 +1,33 @@
+DEFINE_UI_PARAMS(a, Vignette Amount, DCTLUI_SLIDER_FLOAT, 0.0, -6.0, 6.0, 0.0)
+DEFINE_UI_PARAMS(show_vignette, Show Vignette, DCTLUI_CHECK_BOX, 0)
+
+
+
+__DEVICE__ float estimated_vignetted(float x, float y, float vignette_parameter) {
+    float r2 = x*x + y*y;
+    float out = 1.0 + vignette_parameter * r2;
+    return out;
+}
+
+__DEVICE__ float3 correct_vignette(float vignette_est, float3 curr_color) {
+    float correction = 1.0 / vignette_est;
+    float3 output_color = curr_color * correction;
+    return output_color;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float x = (float)p_X / (float)p_Width - 0.5;
+    float y = (float)p_Y / (float)p_Height - 0.5;
+    float aspect = ((float)p_Width) / ((float)p_Height);
+    x = x * aspect;
+
+    float3 curr_color = make_float3(p_R, p_G, p_B);
+
+    float vignette_amt = estimated_vignetted(x, y, a);
+    float3 out = correct_vignette(vignette_amt, curr_color);
+    if (show_vignette) {
+        out = make_float3(vignette_amt, vignette_amt, vignette_amt);
+    }
+    return out;
+}

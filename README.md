@@ -253,3 +253,12 @@ This DCTL converts the input image to HSL or HSV, then applies a Gamma and Gain 
 **Show Saturation**: This checkbox allows you to view just the saturation channel, after the Gain and Gamma adjustments have been made.
 
 **Show Curve**: When checked, this displays the corresponding curves adjustment that's being made to the saturation channel.
+
+
+## Vignette DCTL
+Corrects for a vignette in the image, only handles circular vignettes for now, expects a scene linear image.
+
+## DCTL Parameters
+**Vignette Amount**: Uses a model of `1 + ar^2` to determine the amount of vignetting, then multiplies by the reciprocal to correct the image. Vignette amount controls the value of `a`.
+
+**Show Vignette**: If checked, outputs the image that is multiplied by the source image.
