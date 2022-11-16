@@ -66,9 +66,9 @@ Generates a false color conversion for linear images. Draws middle gray at the s
 Applies a power function with the reciprocal of the specified exponent.
 
 ### DCTL Parmaeters
-**Gamma**: Given some number $$\gamma$$, raise each of the RGB components to the power of $$1 / \gamma$$
+**Gamma**: Given some number $\gamma$, raise each of the RGB components to the power of $1 / \gamma$
 
-**Inverse Function**: If checked, instead raises each RGB component to the power of $$\gamma$$.
+**Inverse Function**: If checked, instead raises each RGB component to the power of $\gamma$.
 
 
 ## Halation DCTL
