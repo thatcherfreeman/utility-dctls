@@ -53,7 +53,7 @@ Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and se
 Generates a false color conversion for linear images. Draws middle gray at the specified value and sets a gray color for the values +/- half a stop from middle gray. Then, chooses random colors for each further stop. This allows you to measure contrast ratios in-camera.
 
 ### DCTL Parameters
-**Middle Gray Value**: Middle gray value], 18% by default.
+**Middle Gray Value**: Middle gray value, 18% by default.
 
 **Color Chip Exposure**: Raises or lowers the exposure of the drawn color chips to make them more or less visible.
 
@@ -61,6 +61,14 @@ Generates a false color conversion for linear images. Draws middle gray at the s
 
 **Seed**: Specifies the random seed used to generate colors
 
+
+## Gamma Function
+Applies a power function with the reciprocal of the specified exponent.
+
+### DCTL Parmaeters
+**Gamma**: Given some number $$\gamma$$, raise each of the RGB components to the power of $$1 / \gamma$$
+
+**Inverse Function**: If checked, instead raises each RGB component to the power of $$\gamma$$.
 
 
 ## Halation DCTL

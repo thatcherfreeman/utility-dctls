@@ -1,0 +1,15 @@
+DEFINE_UI_PARAMS(gamma, Gamma, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(invert, Inverse Function, DCTLUI_CHECK_BOX, 0)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float power = 1.0 / gamma;
+    if (invert) {
+        power = gamma;
+    }
+    float r = _powf(p_R, power);
+    float g = _powf(p_G, power);
+    float b = _powf(p_B, power);
+    float3 output = make_float3(r, g, b);
+    return output;
+}
