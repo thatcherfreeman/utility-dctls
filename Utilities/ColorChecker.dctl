@@ -1,0 +1,95 @@
+DEFINE_UI_PARAMS(exposure, Exposure Adjustment, DCTLUI_SLIDER_FLOAT, 0.0, -8.0, 8.0, 0.333)
+DEFINE_UI_PARAMS(outer_border_width, Outer Border Width, DCTLUI_SLIDER_FLOAT, 0.05, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(inner_border_width, Inner Border Width, DCTLUI_SLIDER_FLOAT, 0.05, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(convert_illuminant, Convert Illuminant C to D65, DCTLUI_CHECK_BOX, 1)
+
+
+
+__CONSTANT__ float colors[24][3] = {
+    // xyY coordinates of the 24 color chips.
+    {0.4002, 0.3504, 0.1005}, // Dark Skin
+    {0.3773, 0.3446, 0.3582}, // Light skin
+    {0.2470, 0.2514, 0.1933}, // blue sky
+    {0.3372, 0.4220, 0.1329}, // foliage
+    {0.2651, 0.2400, 0.2427}, // blue flower
+    {0.2608, 0.3430, 0.4306}, // bluish green
+    {0.5060, 0.4070, 0.3005}, // orange
+    {0.2110, 0.1750, 0.1200}, // purplish blue
+    {0.4533, 0.3058, 0.1977}, // moderate red
+    {0.2845, 0.2020, 0.0656}, // purple
+    {0.3800, 0.4887, 0.4429}, // yellow green
+    {0.4729, 0.4375, 0.4306}, // orange yellow
+    {0.1866, 0.1285, 0.0611}, // blue
+    {0.3046, 0.4782, 0.2339}, // green
+    {0.5385, 0.3129, 0.1200}, // red
+    {0.4480, 0.4703, 0.5910}, // yellow
+    {0.3635, 0.2325, 0.1977}, // magenta
+    {0.1958, 0.2519, 0.1977}, // cyan
+    {0.3101, 0.3163, 0.9001}, // white
+    {0.3101, 0.3163, 0.5910}, // neutral 8
+    {0.3101, 0.3163, 0.3620}, // neutral 6.5
+    {0.3101, 0.3163, 0.1977}, // neutral 5
+    {0.3101, 0.3163, 0.0900}, // neutral 3.5
+    {0.3101, 0.3163, 0.0313}, // black
+};
+
+// Bradford chromatic adaptation matrix from Illuminant C XYZ to D65 XYZ
+__CONSTANT__ float ca_matrix[3][3] = {
+    { 0.9904476, -0.0071683, -0.0116156},
+    {-0.0123712,  1.0155950, -0.0029282},
+    {-0.0035635,  0.0067697,  0.9181569},
+};
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float x = (float)p_X / (float)p_Width;
+    float y = (float)p_Y / (float)p_Height;
+
+    float3 output = make_float3(0.0, 0.0, 0.0);
+
+    float usable_area = 1.0 - 2 * outer_border_width;
+    float col = ((x - 0.5)/usable_area + 0.5) * 6.0;
+    float row = ((y - 0.5)/usable_area + 0.5) * 4.0;
+
+    if (col < 0 || row < 0 || col >= 6 || row >= 4) {
+        return output;
+    }
+    float inner_posx = _fmod(col, 1.0);
+    float inner_posy = _fmod(row, 1.0);
+    if (
+        inner_posx < inner_border_width
+        || inner_posy < inner_border_width
+        || inner_posx >= 1.0 - inner_border_width
+        || inner_posy >= 1.0 - inner_border_width
+    ) {
+        return output;
+    }
+
+    int idx = (int)col + ((int)row * 6);
+
+    float3 tile_color_xyY = make_float3(colors[idx][0], colors[idx][1], colors[idx][2]);
+
+    float3 tile_color_XYZ = make_float3(
+        tile_color_xyY.x * tile_color_xyY.z / tile_color_xyY.y,
+        tile_color_xyY.z,
+        ((1 - tile_color_xyY.x - tile_color_xyY.y) * tile_color_xyY.z) / (tile_color_xyY.y)
+    );
+
+    float3 adapted_colors = tile_color_XYZ;
+    if (convert_illuminant) {
+        // convert from Illuminant C to D65, still XYz though.
+        adapted_colors.x = ca_matrix[0][0] * tile_color_XYZ.x + ca_matrix[0][1] * tile_color_XYZ.y + ca_matrix[0][2] * tile_color_XYZ.z;
+        adapted_colors.y = ca_matrix[1][0] * tile_color_XYZ.x + ca_matrix[1][1] * tile_color_XYZ.y + ca_matrix[1][2] * tile_color_XYZ.z;
+        adapted_colors.z = ca_matrix[2][0] * tile_color_XYZ.x + ca_matrix[2][1] * tile_color_XYZ.y + ca_matrix[2][2] * tile_color_XYZ.z;
+    }
+
+    float exposure_gain = _powf(2.0, exposure);
+    adapted_colors.x *= exposure_gain;
+    adapted_colors.y *= exposure_gain;
+    adapted_colors.z *= exposure_gain;
+
+    output = adapted_colors;
+    return output;
+
+}
