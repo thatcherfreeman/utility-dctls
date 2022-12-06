@@ -1,0 +1,10 @@
+DEFINE_UI_PARAMS(base, Base, DCTLUI_VALUE_BOX, 1.0)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float r = _powf(base, p_R);
+    float g = _powf(base, p_G);
+    float b = _powf(base, p_B);
+    float3 output = make_float3(r, g, b);
+    return output;
+}

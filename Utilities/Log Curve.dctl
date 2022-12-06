@@ -1,0 +1,57 @@
+DEFINE_UI_PARAMS(base, Base, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(offset, Offset, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(scale, Scale, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(slope, Slope, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(intercept, Intercept, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(cut, Cut, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(gain, Linear Gain, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {LOG2LIN, LIN2LOG}, {Log to Lin, Lin to Log})
+
+typedef struct {
+    float base, offset, scale, slope, intercept, cut;
+} log_params_t;
+
+
+__DEVICE__ float log2lin(float x, log_params_t* params) {
+    if (x < params->cut) {
+        return params->slope * x + params->intercept;
+    } else {
+        return _powf(params->base, x) * params->scale + params->offset;
+    }
+}
+
+__DEVICE__ float lin2log(float y, log_params_t* params) {
+    float y_cut = params->slope * params->cut + params->intercept;
+    if (y < y_cut) {
+        return (y - params->intercept) / params->slope;
+    } else {
+        return _log10f((y - params->offset) / params->scale) / _log10f(params->base);
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    log_params_t params;
+    params.base = base;
+    params.offset = offset;
+    params.scale = scale;
+    params.slope = slope;
+    params.intercept = intercept;
+    params.cut = cut;
+
+    float3 output;
+    if (direction == LOG2LIN) {
+        output = make_float3(
+            gain * log2lin(p_R, &params),
+            gain * log2lin(p_G, &params),
+            gain * log2lin(p_B, &params)
+        );
+    } else if (direction == LIN2LOG) {
+        output = make_float3(
+            lin2log(p_R / gain, &params),
+            lin2log(p_G / gain, &params),
+            lin2log(p_B / gain, &params)
+        );
+    }
+    return output;
+}
