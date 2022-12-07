@@ -52,6 +52,14 @@ Creates a color ramp from 0 to 100% Hue, Saturation, or Luminance. This can be u
 **Hue Ramp Saturation**: If Hue ramp is selected, then this controls the saturation of the hue ramp.
 
 
+## Cube Rotate DCTL
+Takes the specified vector and rotates the RGB cube (around 0,0,0) so that the given vector is now achromatic.
+
+### DCTL Parameters
+**Color R, Color G, Color B**: The RGB components of the vector that will be rotated gray.
+
+**Inverse**: Rotates the cube the opposite angle, so that the currently white vector rotates to the direction of the specified vector, therefore doing the opposite of the normal version.
+
 
 ## Exposure Chart DCTL
 Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and several gray exposure chips that are an integer number of stops above and below middle gray. This is intended to be used in a linear gamma timeline.
