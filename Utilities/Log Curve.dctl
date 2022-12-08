@@ -12,20 +12,20 @@ typedef struct {
 } log_params_t;
 
 
-__DEVICE__ float log2lin(float x, log_params_t* params) {
-    if (x < params->cut) {
-        return params->slope * x + params->intercept;
+__DEVICE__ float log2lin(float x, log_params_t params) {
+    if (x < params.cut) {
+        return params.slope * x + params.intercept;
     } else {
-        return _powf(params->base, x) * params->scale + params->offset;
+        return _powf(params.base, x) * params.scale + params.offset;
     }
 }
 
-__DEVICE__ float lin2log(float y, log_params_t* params) {
-    float y_cut = params->slope * params->cut + params->intercept;
+__DEVICE__ float lin2log(float y, log_params_t params) {
+    float y_cut = params.slope * params.cut + params.intercept;
     if (y < y_cut) {
-        return (y - params->intercept) / params->slope;
+        return (y - params.intercept) / params.slope;
     } else {
-        return _log10f((y - params->offset) / params->scale) / _log10f(params->base);
+        return _log10f((y - params.offset) / params.scale) / _log10f(params.base);
     }
 }
 
@@ -42,15 +42,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 output;
     if (direction == LOG2LIN) {
         output = make_float3(
-            gain * log2lin(p_R, &params),
-            gain * log2lin(p_G, &params),
-            gain * log2lin(p_B, &params)
+            gain * log2lin(p_R, params),
+            gain * log2lin(p_G, params),
+            gain * log2lin(p_B, params)
         );
     } else if (direction == LIN2LOG) {
         output = make_float3(
-            lin2log(p_R / gain, &params),
-            lin2log(p_G / gain, &params),
-            lin2log(p_B / gain, &params)
+            lin2log(p_R / gain, params),
+            lin2log(p_G / gain, params),
+            lin2log(p_B / gain, params)
         );
     }
     return output;
