@@ -12,12 +12,16 @@ __DEVICE__ float3 cross_product(float3 a, float3 b) {
     return out;
 }
 
+__DEVICE__ float pow(float x, float y) {
+    return _powf(_fabs(x), y);
+}
+
 __DEVICE__ float dot_product(float3 a, float3 b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
 __DEVICE__ float3 unit_vec(float3 a) {
-    float norm = _powf(_powf(a.x, 2.0) + _powf(a.y, 2.0) + _powf(a.z, 2.0), 0.5);
+    float norm = pow(pow(a.x, 2.0) + pow(a.y, 2.0) + pow(a.z, 2.0), 0.5);
     float3 out = make_float3(
         a.x / norm,
         a.y / norm,
@@ -26,36 +30,36 @@ __DEVICE__ float3 unit_vec(float3 a) {
     return out;
 }
 
-__DEVICE__ float3 mv_33_3(float m[3][3], float3 v) {
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
     float3 out = make_float3(
-        m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z,
-        m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z,
-        m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z
+        mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+        mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+        mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z
     );
     return out;
 }
 
-__DEVICE__ void make_rotation_mat_axis_angle(float m[3][3], float3 axis, float angle) {
+__DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float angle) {
     // Axis assumed to be unit vector, angle assuemd to be in radians
     float c = _cosf(angle);
     float s = _sinf(angle);
 
-    m[0][0] = c + _powf(axis.x, 2.0) * (1.0 - c);
-    m[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
-    m[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
-    m[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
-    m[1][1] = c + _powf(axis.y, 2.0) * (1.0 - c);
-    m[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
-    m[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
-    m[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
-    m[2][2] = c + _powf(axis.z, 2.0) * (1.0 - c);
+    mat[0][0] = c + pow(axis.x, 2.0) * (1.0 - c);
+    mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
+    mat[1][1] = c + pow(axis.y, 2.0) * (1.0 - c);
+    mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
+    mat[2][2] = c + pow(axis.z, 2.0) * (1.0 - c);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
     float3 output;
     float3 curr_color = make_float3(p_R, p_G, p_B);
-    float mat[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+    float mat[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
 
     float3 axis = unit_vec(make_float3(1.0, 1.0, 1.0));
     float3 other_axis = unit_vec(make_float3(color_r, color_g, color_b));
@@ -66,8 +70,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
     float3 orth = unit_vec(cross_product(other_axis, axis));
     make_rotation_mat_axis_angle(mat, orth, angle);
-    output = mv_33_3(mat, curr_color);
 
+    output = mv_33_3(mat, curr_color);
     return output;
 }
 
