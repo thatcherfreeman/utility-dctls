@@ -1,0 +1,137 @@
+DEFINE_UI_PARAMS(gamut_choice, Color Gamut, DCTLUI_COMBO_BOX, 3, {AP0, AP1, DWG, REC709, REC2020, CUSTOM}, {ACES AP0, ACES AP1, DaVinci Wide Gamut, Rec 709, Rec 2020, Custom})
+DEFINE_UI_PARAMS(red_x, Red x, DCTLUI_VALUE_BOX, 0.64)
+DEFINE_UI_PARAMS(red_y, Red y, DCTLUI_VALUE_BOX, 0.33)
+DEFINE_UI_PARAMS(green_x, Green x, DCTLUI_VALUE_BOX, 0.30)
+DEFINE_UI_PARAMS(green_y, Green y, DCTLUI_VALUE_BOX, 0.60)
+DEFINE_UI_PARAMS(blue_x, Blue x, DCTLUI_VALUE_BOX, 0.15)
+DEFINE_UI_PARAMS(blue_y, Blue y, DCTLUI_VALUE_BOX, 0.06)
+DEFINE_UI_PARAMS(white_x, White x, DCTLUI_VALUE_BOX, 0.3127)
+DEFINE_UI_PARAMS(white_y, White y, DCTLUI_VALUE_BOX, 0.3290)
+DEFINE_UI_PARAMS(show_lum_vec, Show Luminance Vector, DCTLUI_CHECK_BOX, 0)
+
+
+typedef struct {
+    float red_x, red_y;
+    float green_x, green_y;
+    float blue_x, blue_y;
+    float white_x, white_y;
+} gamut_t;
+
+__DEVICE__ void copy_mat_33(float from[3][3], float to[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            to[i][j] = from[i][j];
+        }
+    }
+}
+
+__DEVICE__ void mat_inverse_33(float m[3][3]) {
+    // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
+    float inv_buf[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+                - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+                + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+    inv_buf[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
+    inv_buf[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det;
+    inv_buf[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
+    inv_buf[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det;
+    inv_buf[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
+    inv_buf[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det;
+    inv_buf[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
+    inv_buf[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det;
+    inv_buf[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
+    copy_mat_33(inv_buf, m);
+}
+
+__DEVICE__ float3 xy_to_XYZ(float x, float y) {
+    float3 out = make_float3(
+        x/y,
+        1.0,
+        (1 - x - y) / y
+    );
+    return out;
+}
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    // matrix * vector multiplication
+    float3 out = make_float3(
+        mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+        mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+        mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z
+    );
+    return out;
+}
+
+__DEVICE__ float dot_product(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__DEVICE__ void rgb_to_XYZ_mat_from_gamut(float m[3][3], gamut_t gamut) {
+    // From http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
+    float3 red_xyz = xy_to_XYZ(gamut.red_x, gamut.red_y);
+    float3 green_xyz = xy_to_XYZ(gamut.green_x, gamut.green_y);
+    float3 blue_xyz = xy_to_XYZ(gamut.blue_x, gamut.blue_y);
+    float3 white_xyz = xy_to_XYZ(gamut.white_x, gamut.white_y);
+
+    float temp[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+    temp[0][0] = red_xyz.x;
+    temp[1][0] = red_xyz.y;
+    temp[2][0] = red_xyz.z;
+    temp[0][1] = green_xyz.x;
+    temp[1][1] = green_xyz.y;
+    temp[2][1] = green_xyz.z;
+    temp[0][2] = blue_xyz.x;
+    temp[1][2] = blue_xyz.y;
+    temp[2][2] = blue_xyz.z;
+    copy_mat_33(temp, m); // m is now cols of { red_xyz, green_xyz, blue_xyz }
+    mat_inverse_33(temp);
+
+    float3 s = mv_33_3(temp, white_xyz);
+    for (int r = 0; r < 3; ++r) {
+        m[r][0] *= s.x;
+        m[r][1] *= s.y;
+        m[r][2] *= s.z;
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+
+    float3 output;
+    float3 curr_color = make_float3(p_R, p_G, p_B);
+
+    gamut_t gamut;
+    if (gamut_choice == AP0) {
+        gamut_t temp = {0.7347, 0.2653, 0.0, 1.0, 0.0001, -0.077, 0.32168, 0.33767};
+        gamut = temp;
+    } else if (gamut_choice == AP1) {
+        gamut_t temp = {0.713, 0.293, 0.165, 0.83, 0.128, 0.044, 0.32168, 0.33767};
+        gamut = temp;
+    } else if (gamut_choice == DWG) {
+        gamut_t temp = {0.8000, 0.3130, 0.1682, 0.9877, 0.0790, -0.1155, 0.3127, 0.3290};
+        gamut = temp;
+    } else if (gamut_choice == REC709) {
+        gamut_t temp = {0.64, 0.33, 0.3, 0.6, 0.15, 0.06, 0.3127, 0.3290};
+        gamut = temp;
+    } else if (gamut_choice == REC2020) {
+        gamut_t temp = {0.708, 0.292, 0.170, 0.797, 0.131, 0.046, 0.3127, 0.3290};
+        gamut = temp;
+    } else {
+        // if (gamut_choice == CUSTOM)
+        gamut_t temp = {red_x, red_y, green_x, green_y, blue_x, blue_y, white_x, white_y};
+        gamut = temp;
+    }
+
+    float mat[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+
+    rgb_to_XYZ_mat_from_gamut(mat, gamut);
+    float3 lum_vec = make_float3(mat[1][0], mat[1][1], mat[1][2]);
+    float lum = dot_product(lum_vec, curr_color);
+    output = make_float3(lum, lum, lum);
+
+    if (show_lum_vec) {
+        output = lum_vec;
+    }
+    return output;
+}

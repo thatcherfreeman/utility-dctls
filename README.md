@@ -170,6 +170,17 @@ def linear2log(y):
 **Direction**: This allows you to specify whether to convert Log to Linear, or Linear to Log.
 
 
+## Luminance
+Given a color gamut, compute the luminance channel associated with those primaries (IE the Y channel after converting to CIE XYZ). Expects the image to be in a Linear state.
+
+### DCTL Parameters
+**Color Gamut**: Select a pre-configured color gamut, or choose Custom. If Custom is selected, then the _x,y_ parameters are used to specify the gamut.
+
+**Red/Green/Blue/White x/y**: CIEXYZ _xy_ chromaticity coordinates of the four primary values.
+
+**Show Luminance Vector**: If checked, just outputs the RGB weights of the generated luminance vector, you can take the dot product of this color and your input color to compute the luminance.
+
+
 ## Matrix Tester
 Multiplies the RGB values of the input by a 3x3 matrix with the specified entries. Supports negative values.
 
