@@ -12,8 +12,8 @@ __DEVICE__ float3 cross_product(float3 a, float3 b) {
     return out;
 }
 
-__DEVICE__ float pow(float x, float y) {
-    return _powf(_fabs(x), y);
+__DEVICE__ inline float pow2f(float base) {
+    return base * base;
 }
 
 __DEVICE__ float dot_product(float3 a, float3 b) {
@@ -21,7 +21,7 @@ __DEVICE__ float dot_product(float3 a, float3 b) {
 }
 
 __DEVICE__ float3 unit_vec(float3 a) {
-    float norm = pow(pow(a.x, 2.0) + pow(a.y, 2.0) + pow(a.z, 2.0), 0.5);
+    float norm = _sqrtf(pow2f(a.x) + pow2f(a.y) + pow2f(a.z));
     float3 out = make_float3(
         a.x / norm,
         a.y / norm,
@@ -44,15 +44,15 @@ __DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float
     float c = _cosf(angle);
     float s = _sinf(angle);
 
-    mat[0][0] = c + pow(axis.x, 2.0) * (1.0 - c);
+    mat[0][0] = c + pow2f(axis.x) * (1.0 - c);
     mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
     mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
     mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
-    mat[1][1] = c + pow(axis.y, 2.0) * (1.0 - c);
+    mat[1][1] = c + pow2f(axis.y) * (1.0 - c);
     mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
     mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
     mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
-    mat[2][2] = c + pow(axis.z, 2.0) * (1.0 - c);
+    mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
