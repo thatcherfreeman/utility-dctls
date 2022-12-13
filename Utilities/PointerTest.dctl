@@ -1,0 +1,30 @@
+DEFINE_UI_PARAMS(value, Value, DCTLUI_VALUE_BOX, 0.5)
+DEFINE_UI_PARAMS(method, Method, DCTLUI_COMBO_BOX, 0, {A, S}, {Array, Struct})
+
+typedef struct {
+    float value;
+} params_t;
+
+__DEVICE__ void copy_value_to_param(params_t params, float value) {
+    params.value = value;
+}
+
+__DEVICE__ void copy_value_to_array(float array[1], float value) {
+    array[0] = value;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    params_t params = {0.25};
+    float arr[1] = {0.25};
+    float3 output;
+
+    if (method == A) {
+        copy_value_to_array(arr, value);
+        output = make_float3(arr[0], arr[0], arr[0]);
+    } else if (method == S) {
+        copy_value_to_param(params, value);
+        output = make_float3(params.value, params.value, params.value);
+    }
+    return output;
+}
