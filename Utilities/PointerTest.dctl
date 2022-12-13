@@ -1,5 +1,5 @@
 DEFINE_UI_PARAMS(value, Value, DCTLUI_VALUE_BOX, 0.5)
-DEFINE_UI_PARAMS(method, Method, DCTLUI_COMBO_BOX, 0, {A, S, SA1, SA2}, {Array, Struct, Struct Array V1, Struct Array V2})
+DEFINE_UI_PARAMS(method, Method, DCTLUI_COMBO_BOX, 0, {A, S, SA}, {Array, Struct, Struct Array})
 
 typedef struct {
     float value;
@@ -29,10 +29,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 {
     params_t params = {0.0};
     float arr1[1] = {0.0};
-
-    // The below line is equivalent to:
-    // params_t arr2[1] = { {0.0} };
-    params_t arr2[1] = { params }; // note that: arr2 != &params
+    params_t arr2[1] = { {0.0} };
 
     float3 output;
     if (method == A) {
@@ -44,11 +41,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         // instead of as a reference
         copy_value_to_param(params, value);
         output = make_float3(params.value, params.value, params.value);
-    } else if (method == SA1) {
-        // Doesn't work because arr2[0] doesn't point to params.
-        copy_value_to_param_array(arr2, value);
-        output = make_float3(params.value, params.value, params.value);
-    } else if (method == SA2) {
+    } else if (method == SA) {
         // Works for same reason as the first case.
 
         // If this is allowed and works as it should, why does
