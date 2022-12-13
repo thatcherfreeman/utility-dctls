@@ -27,11 +27,11 @@ __DEVICE__ void copy_value_to_param_array(params_t arr[1], float value) {
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
-    params_t params = {0.25};
-    float arr1[1] = {0.25};
+    params_t params = {0.0};
+    float arr1[1] = {0.0};
 
     // The below line is equivalent to:
-    // params_t arr2[1] = { {0.25} };
+    // params_t arr2[1] = { {0.0} };
     params_t arr2[1] = { params }; // note that: arr2 != &params
 
     float3 output;
