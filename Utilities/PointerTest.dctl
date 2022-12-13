@@ -1,5 +1,5 @@
 DEFINE_UI_PARAMS(value, Value, DCTLUI_VALUE_BOX, 0.5)
-DEFINE_UI_PARAMS(method, Method, DCTLUI_COMBO_BOX, 0, {A, S}, {Array, Struct})
+DEFINE_UI_PARAMS(method, Method, DCTLUI_COMBO_BOX, 0, {A, S, SA1, SA2}, {Array, Struct, Struct Array V1, Struct Array V2})
 
 typedef struct {
     float value;
@@ -13,18 +13,51 @@ __DEVICE__ void copy_value_to_array(float array[1], float value) {
     array[0] = value;
 }
 
+__DEVICE__ void copy_value_to_param_array(params_t arr[1], float value) {
+    arr[0].value = value;
+}
+
+// Macbook wouldn't like anything that looks like these
+// __DEVICE__ void copy_value_to_param_pointer(params_t* params, float value) {
+//     params->value = value;
+// }
+// __DEVICE__ void copy_value_to_param_pointer(__CONSTANTREF__ params_t* params, float value) {
+//     params->value = value;
+// }
+
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
     params_t params = {0.25};
-    float arr[1] = {0.25};
-    float3 output;
+    float arr1[1] = {0.25};
 
+    // The below line is equivalent to:
+    // params_t arr2[1] = { {0.25} };
+    params_t arr2[1] = { params }; // note that: arr2 != &params
+
+    float3 output;
     if (method == A) {
-        copy_value_to_array(arr, value);
-        output = make_float3(arr[0], arr[0], arr[0]);
+        // Works, the arr is effectively a pointer.
+        copy_value_to_array(arr1, value);
+        output = make_float3(arr1[0], arr1[0], arr1[0]);
     } else if (method == S) {
+        // Doesn't work, obviously because params is passed in as a value
+        // instead of as a reference
         copy_value_to_param(params, value);
         output = make_float3(params.value, params.value, params.value);
+    } else if (method == SA1) {
+        // Doesn't work because arr2[0] doesn't point to params.
+        copy_value_to_param_array(arr2, value);
+        output = make_float3(params.value, params.value, params.value);
+    } else if (method == SA2) {
+        // Works for same reason as the first case.
+
+        // If this is allowed and works as it should, why does
+        // the documentation suggest that all pointer parameters
+        // have to be read-only? The compiler should just translate
+        // any `params_t* foo` to `params_t foo[1]` and it'll have full
+        // functionality.
+        copy_value_to_param_array(arr2, value);
+        output = make_float3(arr2[0].value, arr2[0].value, arr2[0].value);
     }
     return output;
 }
