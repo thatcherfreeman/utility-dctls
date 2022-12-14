@@ -26,7 +26,7 @@ typedef struct {
 } contrast_params_t;
 
 
-__DEVICE__ float randu(uint* seed) {
+__DEVICE__ float randu(__PRIVATE__ uint* seed) {
     // Returns random number in interval [0, 1)
     uint old_seed = *seed;
     const uint m = (1 << 31) - 1;
@@ -36,7 +36,7 @@ __DEVICE__ float randu(uint* seed) {
     return (((float) new_seed) / (float) m);
 }
 
-__DEVICE__ float randu_bi(uint* seed) {
+__DEVICE__ float randu_bi(__PRIVATE__ uint* seed) {
     // Returns random number in interval (-1, +1)
     return randu(seed) * 2.0 - 1.0;
 }
@@ -100,7 +100,7 @@ __DEVICE__ float quadratic_interpolate(float x, float x1, float y1, float m1, fl
     return output;
 }
 
-__DEVICE__ float render_contrast_simple_quadratic(contrast_params_t* contrast, float x) {
+__DEVICE__ float render_contrast_simple_quadratic(__PRIVATE__ contrast_params_t* contrast, float x) {
     // piecewise function
     float m1, m2;
     float out;
@@ -135,20 +135,20 @@ __DEVICE__ float render_contrast_simple_quadratic(contrast_params_t* contrast, f
     return out;
 }
 
-__DEVICE__ float render_contrast(contrast_params_t* contrast, float x) {
+__DEVICE__ float render_contrast(__PRIVATE__ contrast_params_t* contrast, float x) {
     float c = render_contrast_simple_quadratic(contrast, x);
     float output = _mix(x, c, contrast->blend);
     return output;
 }
 
-__DEVICE__ float3 render_contrast_3ch(contrast_params_t* contrast_r, contrast_params_t* contrast_g, contrast_params_t* contrast_b, float3 c) {
+__DEVICE__ float3 render_contrast_3ch(__PRIVATE__ contrast_params_t* contrast_r, __PRIVATE__ contrast_params_t* contrast_g, __PRIVATE__ contrast_params_t* contrast_b, float3 c) {
     c.x = render_contrast(contrast_r, c.x);
     c.y = render_contrast(contrast_g, c.y);
     c.z = render_contrast(contrast_b, c.z);
     return c;
 }
 
-__DEVICE__ float3 draw_contrast_curve(contrast_params_t* contrast_r, contrast_params_t* contrast_g, contrast_params_t* contrast_b, float x, float y, float3 curr_color) {
+__DEVICE__ float3 draw_contrast_curve(__PRIVATE__ contrast_params_t* contrast_r, __PRIVATE__ contrast_params_t* contrast_g, __PRIVATE__ contrast_params_t* contrast_b, float x, float y, float3 curr_color) {
     float3 y_val = render_contrast_3ch(contrast_r, contrast_g, contrast_b, make_float3(x, x, x));
     float3 output_color = curr_color;
     float3 diff = make_float3(_fabs(y_val.x - y), _fabs(y_val.y - y), _fabs(y_val.z - y));
@@ -180,7 +180,7 @@ __DEVICE__ float3 draw_grid_lines(float x, float y, float3 curr_color) {
     return output_color;
 }
 
-__DEVICE__ void randomize_contrast(contrast_params_t* params, uint* seed) {
+__DEVICE__ void randomize_contrast(__PRIVATE__ contrast_params_t* params, __PRIVATE__ uint* seed) {
     params->black_y += randu_bi(seed) * 0.2;
     params->white_y += randu_bi(seed) * 0.2;
     params->pivot_slope += randu_bi(seed) * 0.4;
@@ -191,7 +191,7 @@ __DEVICE__ void randomize_contrast(contrast_params_t* params, uint* seed) {
     params->shoulder = _saturatef(params->shoulder);
 }
 
-__DEVICE__ void unify_rgb_contrasts(contrast_params_t* params_r, contrast_params_t* params_g, contrast_params_t* params_b) {
+__DEVICE__ void unify_rgb_contrasts(__PRIVATE__ __PRIVATE__ contrast_params_t* params_r, __PRIVATE__ __PRIVATE__ contrast_params_t* params_g, __PRIVATE__ __PRIVATE__ contrast_params_t* params_b) {
     // Unify black point and white point
     params_g->black_y = params_r->black_y;
     params_b->black_y = params_r->black_y;
@@ -210,7 +210,7 @@ __DEVICE__ void unify_rgb_contrasts(contrast_params_t* params_r, contrast_params
 
 }
 
-__DEVICE__ void compute_toe_shoulder(contrast_params_t* params) {
+__DEVICE__ void compute_toe_shoulder(__PRIVATE__ contrast_params_t* params) {
 
     if (point_slope(params->white_x, params->pivot_x, params->pivot_y, params->pivot_slope) <= params->white_y) {
         // Low contrast, highlights.

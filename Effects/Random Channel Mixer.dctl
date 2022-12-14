@@ -11,7 +11,7 @@ typedef struct
     float c20, c21, c22;
 } Matrix;
 
-__DEVICE__ float random(uint* seed) {
+__DEVICE__ float random(__PRIVATE__ uint* seed) {
     uint old_seed = *seed;
     const uint m = (1 << 31) - 1;
     const uint a = 48271;
@@ -20,7 +20,7 @@ __DEVICE__ float random(uint* seed) {
     return (((float) new_seed) / (float) m) * 2.0 - 1.0;
 }
 
-__DEVICE__ float3 matmul(Matrix* A, float3 rgb) {
+__DEVICE__ float3 matmul(__PRIVATE__ Matrix* A, float3 rgb) {
     float3 output = make_float3(0.0, 0.0, 0.0);
     output.x = A->c00 * rgb.x + A->c01 * rgb.y + A->c02 * rgb.z;
     output.y = A->c10 * rgb.x + A->c11 * rgb.y + A->c12 * rgb.z;
@@ -28,11 +28,11 @@ __DEVICE__ float3 matmul(Matrix* A, float3 rgb) {
     return output;
 }
 
-__DEVICE__ float matrix_sum(Matrix* A) {
+__DEVICE__ float matrix_sum(__PRIVATE__ Matrix* A) {
     return A->c00 + A->c01 + A->c02 + A->c10 + A->c11 + A->c12 + A->c20 + A->c21 + A->c22;
 }
 
-__DEVICE__ void scale_matrix_rows_to_1(Matrix* A) {
+__DEVICE__ void scale_matrix_rows_to_1(__PRIVATE__ Matrix* A) {
     float r0_sum = A->c00 + A->c01 + A->c02;
     float r1_sum = A->c10 + A->c11 + A->c12;
     float r2_sum = A->c20 + A->c21 + A->c22;
@@ -47,7 +47,7 @@ __DEVICE__ void scale_matrix_rows_to_1(Matrix* A) {
     A->c22 /= r2_sum;
 }
 
-__DEVICE__ void scale_matrix(Matrix* A, float c) {
+__DEVICE__ void scale_matrix(__PRIVATE__ Matrix* A, float c) {
     A->c00 *= c;
     A->c01 *= c;
     A->c02 *= c;
@@ -59,7 +59,7 @@ __DEVICE__ void scale_matrix(Matrix* A, float c) {
     A->c22 *= c;
 }
 
-__DEVICE__ float get_mat_value(Matrix* A, float x, float y) {
+__DEVICE__ float get_mat_value(__PRIVATE__ Matrix* A, float x, float y) {
     float out;
     if (x < 1.0 / 3.0) {
         if (y < 1.0 / 3.0) {

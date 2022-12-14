@@ -3,7 +3,7 @@ DEFINE_UI_PARAMS(mid_gray, Middle Gray Value, DCTLUI_SLIDER_FLOAT, 0.18, 0.0, 1.
 DEFINE_UI_PARAMS(seed, Seed, DCTLUI_SLIDER_INT, 1, 1, 200, 1)
 DEFINE_UI_PARAMS(color_chip_exp, Color Chip Exposure, DCTLUI_SLIDER_FLOAT, 0.0, -5.0, 5.0, 0.01)
 
-__DEVICE__ float randu(uint* seed) {
+__DEVICE__ float randu(__PRIVATE__ uint* seed) {
     // Returns random number in interval [0, 1)
     uint old_seed = *seed;
     const uint m = (1 << 31) - 1;

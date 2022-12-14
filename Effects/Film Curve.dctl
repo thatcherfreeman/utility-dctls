@@ -71,7 +71,7 @@ __DEVICE__ float binomial_cdf(float z, float n, float p) {
 
 typedef ulong rand_state;
 
-__DEVICE__ float _randu_xorshift(rand_state* seed) {
+__DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
     rand_state x = *seed;
 	x ^= (x << 13 | x >> 19);
 	x ^= (x >> 7 | x << 25);
@@ -80,7 +80,7 @@ __DEVICE__ float _randu_xorshift(rand_state* seed) {
     return (((float) x) / (float) (~((rand_state)0)));
 }
 
-__DEVICE__ inline float randu(rand_state* seed) {
+__DEVICE__ inline float randu(__PRIVATE__ rand_state* seed) {
     return _randu_xorshift(seed);
 }
 
@@ -89,25 +89,25 @@ __DEVICE__ inline float randu(rand_state* seed) {
 // Distribution Sampling functions
 /////////////////////////////////////////////
 
-__DEVICE__ float sample_uniform(float a, float b, rand_state* seed) {
+__DEVICE__ float sample_uniform(float a, float b, __PRIVATE__ rand_state* seed) {
     float range = b - a;
     float x = randu(seed);
     return a + range * x;
 }
 
-__DEVICE__ float sample_norm(float mean, float var, rand_state* seed) {
+__DEVICE__ float sample_norm(float mean, float var, __PRIVATE__ rand_state* seed) {
     float u_sample = randu(seed);
     float out = norm_inv_cdf(u_sample, mean, var);
     return out;
 }
 
-__DEVICE__ float sample_poisson(float lambda, rand_state* seed) {
+__DEVICE__ float sample_poisson(float lambda, __PRIVATE__ rand_state* seed) {
     // approximate just using normal distribution.
     float sample = sample_norm(lambda, lambda, seed);
     return _fmaxf(0.001, sample);
 }
 
-__DEVICE__ float sample_bernoulli(float p, rand_state* seed) {
+__DEVICE__ float sample_bernoulli(float p, __PRIVATE__ rand_state* seed) {
     float sample = randu(seed);
     float out = 0.0;
     if (sample <= p) {
@@ -116,7 +116,7 @@ __DEVICE__ float sample_bernoulli(float p, rand_state* seed) {
     return out;
 }
 
-__DEVICE__ float sample_binomial(float n, float p, rand_state* seed) {
+__DEVICE__ float sample_binomial(float n, float p, __PRIVATE__ rand_state* seed) {
     // Approximation of binomial distribution using a normal distribution
     // requires that n * p  and n * (1 - p) is bigger than like 5.
     float cont_sample = sample_norm(n * p, n * p * (1.0 - p), seed);
@@ -124,7 +124,7 @@ __DEVICE__ float sample_binomial(float n, float p, rand_state* seed) {
     return out;
 }
 
-__DEVICE__ float sample_binomial_continuous(float n, float p, rand_state* seed) {
+__DEVICE__ float sample_binomial_continuous(float n, float p, __PRIVATE__ rand_state* seed) {
     float cont_sample = sample_norm(n * p, n * p * (1.0 - p), seed);
     return cont_sample;
 }
@@ -153,7 +153,7 @@ __DEVICE__ inline float3 _threshold3(float3 input, float threshold) {
 // Density Calculation
 /////////////////////////////////////////////
 
-__DEVICE__ float convert_photons_to_density(float pixel_photons, float threshold, float num_grains, float grain_area, float pixel_area, bool shot_noise, rand_state* seed) {
+__DEVICE__ float convert_photons_to_density(float pixel_photons, float threshold, float num_grains, float grain_area, float pixel_area, bool shot_noise, __PRIVATE__ rand_state* seed) {
     // Number of photons that hit each grain.
     if (shot_noise) {
         pixel_photons = sample_poisson(pixel_photons, seed);
@@ -191,7 +191,7 @@ __DEVICE__ float convert_photons_to_density(float pixel_photons, float threshold
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     // Initialize Random State
-    rand_state state = *((rand_state *) &seed);
+    rand_state state = *((__PRIVATE__ rand_state*) &seed);
     float val;
     state ^= p_Width * p_Height;
     state ^= (p_Width * p_Y + p_X) << 5; // Unique random state for each pixel
@@ -199,7 +199,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     val = randu(&state);
     val = randu(&state);
     val = randu(&state);
-    state = *((rand_state *) &val);
+    state = *((__PRIVATE__ rand_state*) &val);
 
     // Compute grain and pixel area.
     float pixel_width = film_width * 1000.0 / p_Width; // in micrometers.

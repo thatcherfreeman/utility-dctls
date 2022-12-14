@@ -137,12 +137,12 @@ __DEVICE__ inline float3 _max3(float3 x, float3 y) {
     return output;
 }
 
-__DEVICE__ inline float apply_saturation_curve(saturation_params_t* params, float s) {
+__DEVICE__ inline float apply_saturation_curve(__PRIVATE__ saturation_params_t* params, float s) {
     float out = _powf(s, convert_gamma(params->gamma)) * params->gain;
     return out;
 }
 
-__DEVICE__ float3 draw_curve(saturation_params_t* params, float x, float y, float3 curr_color) {
+__DEVICE__ float3 draw_curve(__PRIVATE__ saturation_params_t* params, float x, float y, float3 curr_color) {
     float y_val = apply_saturation_curve(params, x);
     float3 output_color = curr_color;
     float diff = _fabs(y_val - y);
