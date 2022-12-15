@@ -1,0 +1,13 @@
+DEFINE_UI_PARAMS(all_add, Global Offset, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(red_add, Red Offset, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(green_add, Green Offset, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(blue_add, Blue Offset, DCTLUI_VALUE_BOX, 0.0)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 output = make_float3(
+        p_R + all_add + red_add,
+        p_G + all_add + green_add,
+        p_B + all_add + blue_add
+    );
+    return output;
+}

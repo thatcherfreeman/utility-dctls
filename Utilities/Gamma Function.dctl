@@ -1,15 +1,36 @@
 DEFINE_UI_PARAMS(gamma, Gamma, DCTLUI_VALUE_BOX, 1.0)
-DEFINE_UI_PARAMS(invert, Inverse Function, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(invert, Use Reciprocal: 1 / Gamma, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(version, Negative Values:, DCTLUI_COMBO_BOX, 0, {CLIP, Y_EQ_X_LINEAR, SLOPE_MATCH_LINEAR, REFLECT, SIGN_MATCH}, {Clip 0, y=x, y=x/gamma, Positive Reflection, Sign Match Reflection})
+
+__DEVICE__ float powf(float base, float exp, int version) {
+    if (base > 0.0) {
+        return _powf(base, exp);
+    }
+    float out;
+    // base <= 0.0:
+    if (version == CLIP) {
+        out = 0.0;
+    } else if (version == Y_EQ_X_LINEAR) {
+        out = base;
+    } else if (version == SLOPE_MATCH_LINEAR) {
+        out = base / exp;
+    } else if (version == REFLECT) {
+        out = _powf(_fabs(base), exp);
+    } else if (version == SIGN_MATCH) {
+        out = _copysignf(_powf(_fabs(base), exp), base);
+    }
+    return out;
+}
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
-    float power = 1.0 / gamma;
+    float power = gamma;
     if (invert) {
-        power = gamma;
+        power = 1.0 / gamma;
     }
-    float r = _powf(p_R, power);
-    float g = _powf(p_G, power);
-    float b = _powf(p_B, power);
+    float r = powf(p_R, power, version);
+    float g = powf(p_G, power, version);
+    float b = powf(p_B, power, version);
     float3 output = make_float3(r, g, b);
     return output;
 }

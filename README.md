@@ -14,6 +14,10 @@ Internally, this DCTL converts ACEScc or ACEScct to Linear, and then applies a g
 **Exposure Adjustment**: Specifies the number of stops to increase or decrease (negative) exposure.
 
 
+## Addition Function DCTL
+Adds a value to each channel. The channels are computed by $\text{Red}_{\text{out}} = \text{Red}_{\text{in}} + \text{Global Offset} + \text{Red Offset}$ and likewise for the other two channels.
+
+
 ## Clamp DCTL
 Clamps the code values of the current frame to the specified Min and Max values, such that for any `x`, we will then have `clamp_min <= x <= clamp_max`
 
@@ -88,9 +92,16 @@ Generates a false color conversion for linear images. Draws middle gray at the s
 Applies a power function with the reciprocal of the specified exponent.
 
 ### DCTL Parmaeters
-**Gamma**: Given some number $\gamma$, raise each of the RGB components to the power of $1 / \gamma$
+**Gamma**: Given some number $\gamma$, raise each of the RGB components to the power of $\gamma$
 
-**Inverse Function**: If checked, instead raises each RGB component to the power of $\gamma$.
+**Use Reciprocal**: If checked, instead raises each RGB component to the power of $1 / \gamma$.
+
+**Negative Values**: For a negative input color component $x$, choose from:
+* Clip 0 - returns $y = 0$
+* y=x - Returns $y = x$
+* y=x/gamma - Returns $y = x / \gamma$ so the slope somewhat scales according to the choice of exponent.
+* Positive Reflection - Returns $y = \lvert x \rvert^\gamma$
+* Sign Match Reflection - Returns $y = -\lvert x \rvert^\gamma$, returning a negative result if $x$ is negative.
 
 
 ## Halation DCTL
@@ -190,6 +201,10 @@ Computes the function $\texttt{base}^x$.
 
 ### DCTL Parameters
 **Base** The base of the exponent, raised to the power of the input pixel.
+
+
+## Multiplication Function DCTL
+Multiplies each channel by a value. The channels are computed by $\text{Red}_{\text{out}} = \text{Red}_{\text{in}} * \text{Global Gain} + \text{Red Gain}$ and likewise for the other two channels.
 
 
 ## Print
