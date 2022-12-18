@@ -346,6 +346,8 @@ Converts between linear and my super cool, fully-logarithmic curve. Spec for thi
 ### DCTL Parameters
 **Stops of Dynamic Range**: Indicates the value of `num_stops`, number of stops between 100% and 0%.
 
+**Exposure Compensation**: Applies this many stops of gain prior to a lin2log conversion, and removes this many stops of gain after a log2lin conversion. Convenient if you want to map a tone other than 18% gray to 50IRE, but typically you should leave this at 0.
+
 **Direction**: Indicates whether to convert linear to tlog, or from tlog to linear.
 
 
