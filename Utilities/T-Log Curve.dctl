@@ -1,0 +1,37 @@
+DEFINE_UI_PARAMS(num_stops, Stops of Dynamic Range, DCTLUI_SLIDER_INT, 16, 2, 40, 1)
+DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {LIN2LOG, LOG2LIN}, {Lin to Log, Log to Lin})
+
+__DEVICE__ float linear_to_tlog(float x, float stops) {
+    float l = _fmaxf(x, 0.0) * 1.0 / 0.18; // scale middle gray to 1.0
+    float lin_max = _exp2f(stops / 2.0);
+    float lin_min = _exp2f(-1.0 * stops / 2.0);
+
+    return (_log2f(l) - _log2f(lin_min)) / (_log2f(lin_max) - _log2f(lin_min));
+}
+
+__DEVICE__ float tlog_to_linear(float y, float stops) {
+    float lin_max = _exp2f(stops / 2.0);
+    float lin_min = _exp2f(-1.0 * stops / 2.0);
+    float l = _exp2f(y * (_log2f(lin_max) - _log2f(lin_min)) + _log2f(lin_min));
+    float x = l * 0.18; // scale 1.0 to middle gray
+    return x;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 output;
+    if (direction == LIN2LOG) {
+        output = make_float3(
+            linear_to_tlog(p_R, (float)num_stops),
+            linear_to_tlog(p_G, (float)num_stops),
+            linear_to_tlog(p_B, (float)num_stops)
+        );
+    } else {
+        // direction == LOG2LIN
+        output = make_float3(
+            tlog_to_linear(p_R, (float)num_stops),
+            tlog_to_linear(p_G, (float)num_stops),
+            tlog_to_linear(p_B, (float)num_stops)
+        );
+    }
+    return output;
+}

@@ -340,10 +340,19 @@ This DCTL converts the input image to HSL or HSV, then applies a Gamma and Gain 
 **Show Curve**: When checked, this displays the corresponding curves adjustment that's being made to the saturation channel.
 
 
+## T-Log Curve
+Converts between linear and my super cool, fully-logarithmic curve. Spec for this curve is 18% gray maps to 50 IRE, then 100% IRE is middle gray plus `num_stops/2`, and 0% is middle gray minus `num_stops/2`. Every stop of dynamic range has an equal number of code values given by `100% / num_stops`. You probably want to clamp the linear inputs to be >= 0.0 before convertign to T-log to avoid NaNs.
+
+### DCTL Parameters
+**Stops of Dynamic Range**: Indicates the value of `num_stops`, number of stops between 100% and 0%.
+
+**Direction**: Indicates whether to convert linear to tlog, or from tlog to linear.
+
+
 ## Vignette DCTL
 Corrects for a vignette in the image, only handles circular vignettes for now, expects a scene linear image.
 
-## DCTL Parameters
+### DCTL Parameters
 **Vignette Amount**: Uses a model of `1 + ar^2` to determine the amount of vignetting, then multiplies by the reciprocal to correct the image. Vignette amount controls the value of `a`.
 
 **Show Vignette**: If checked, outputs the image that is multiplied by the source image.
