@@ -1,0 +1,26 @@
+DEFINE_UI_PARAMS(norm_type, Norm Type, DCTLUI_COMBO_BOX, 1, {L1, L2, LP, MAX, AVG, MIN}, {L1 Norm, L2 Norm, Lp Norm, Maximum, Average, Minimum})
+DEFINE_UI_PARAMS(p, P-Norm Power, DCTLUI_VALUE_BOX, 2.0)
+
+__DEVICE__ float lp_norm(float3 in, float p) {
+    return _powf((_powf(_fabs(in.x), p) + _powf(_fabs(in.y), p) + _powf(_fabs(in.z), p)), 1.0 / p);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 vec = make_float3(p_R, p_G, p_B);
+    float norm;
+    if (norm_type == L1) {
+        norm = lp_norm(vec, 1.0);
+    } else if (norm_type == L2) {
+        norm = lp_norm(vec, 2.0);
+    } else if (norm_type == MAX) {
+        norm = _fmaxf(vec.x, _fmaxf(vec.y, vec.z));
+    } else if (norm_type == LP) {
+        norm = lp_norm(vec, p);
+    } else if (norm_type == AVG) {
+        norm = (vec.x + vec.y + vec.z) / 3.0;
+    } else if (norm_type == MIN) {
+        norm = _fminf(vec.x, _fminf(vec.y, vec.z));
+    }
+    float3 out = make_float3(norm, norm, norm);
+    return out;
+}

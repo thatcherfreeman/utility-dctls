@@ -1,0 +1,8 @@
+DEFINE_UI_PARAMS(r, Red, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(g, Green, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(b, Blue, DCTLUI_VALUE_BOX, 0.0)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float out = p_R * r + p_G * g + p_B * b;
+    return make_float3(out, out, out);
+}
