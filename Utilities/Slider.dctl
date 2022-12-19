@@ -1,0 +1,6 @@
+DEFINE_UI_PARAMS(exposure, Exposure Adjustment, DCTLUI_SLIDER_FLOAT, 0.0, -8.0, 8.0, 0.333)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 rgb = make_float3(p_R, p_G, p_B) * _exp2f(exposure);
+    return rgb;
+}
