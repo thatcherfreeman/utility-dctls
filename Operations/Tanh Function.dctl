@@ -1,0 +1,13 @@
+DEFINE_UI_PARAMS(horizontal_offset, Horizontal Offset, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(coefficient, Contrast, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(gain, Output White, DCTLUI_VALUE_BOX, 1.0)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 output = make_float3(
+        _tanhf(coefficient * (p_R - horizontal_offset)),
+        _tanhf(coefficient * (p_G - horizontal_offset)),
+        _tanhf(coefficient * (p_B - horizontal_offset))
+    );
+    output *= gain;
+    return output;
+}

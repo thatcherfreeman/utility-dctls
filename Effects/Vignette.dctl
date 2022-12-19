@@ -10,8 +10,7 @@ __DEVICE__ float estimated_vignetted(float x, float y, float vignette_parameter)
 }
 
 __DEVICE__ float3 correct_vignette(float vignette_est, float3 curr_color) {
-    float correction = 1.0 / vignette_est;
-    float3 output_color = curr_color * correction;
+    float3 output_color = curr_color * vignette_est;
     return output_color;
 }
 

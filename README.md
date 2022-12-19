@@ -65,6 +65,10 @@ Takes the specified vector and rotates the RGB cube (around 0,0,0) so that the g
 **Inverse**: Rotates the cube the opposite angle, so that the currently white vector rotates to the direction of the specified vector, therefore doing the opposite of the normal version.
 
 
+## Dot Product DCTL
+Takes the dot product of the current color and the specified `(r, g, b)` value.
+
+
 ## Exposure Chart DCTL
 Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and several gray exposure chips that are an integer number of stops above and below middle gray. This is intended to be used in a linear gamma timeline.
 
@@ -340,6 +344,30 @@ This DCTL converts the input image to HSL or HSV, then applies a Gamma and Gain 
 **Show Curve**: When checked, this displays the corresponding curves adjustment that's being made to the saturation channel.
 
 
+## Sigmoid Function DCTL
+Applies the sigmoid function to the inputs. Computes $b + (w-b)\frac{1}{1 + e^{-c(x-d)}}$.
+
+### DCTL Parameters
+**X Midpoint**: Controls the value of $d$. Vanilla sigmoid has this set to 0.0.
+
+**Contrast**: Controls the value of $c$. Vanilla sigmoid has this set to 1.0.
+
+**Output White**: Controls the value of $w$. Vanilla sigmoid has this set to 1.0.
+
+**Output Black**: Controls the value of $b$. Vanilla sigmoid has this set to 1.0.
+
+
+## Tanh Function DCTL
+Computes a tanh of the input via $g \tanh(c (x - b))$.
+
+### DCTL Parameters
+**Horizontal Offset**: Controls the value of $b$. Vanilla tanh has this set to 0.0.
+
+**Contrast**: Controls the value of $c$. Vanilla tanh has this set to 1.0.
+
+**Output White**: Controls the value of $g$. Vanilla tanh has this set to 1.0.
+
+
 ## T-Log Curve
 Converts between linear and my super cool, fully-logarithmic curve. Spec for this curve is 18% gray maps to 50 IRE, then 100% IRE is middle gray plus `num_stops/2`, and 0% is middle gray minus `num_stops/2`. Every stop of dynamic range has an equal number of code values given by `100% / num_stops`. Also clamps the linear input to be >= 0.0 to avoid NaNs.
 
@@ -351,10 +379,22 @@ Converts between linear and my super cool, fully-logarithmic curve. Spec for thi
 **Direction**: Indicates whether to convert linear to tlog, or from tlog to linear.
 
 
+## Unit Length DCTL
+Takes the current `(r, g, b)` color value, computes the L2 norm, and divides each component by the norm to convert the vector to unit length.
+
+## Vector Norm DCTL
+Computes various norms of the given vector.
+
+### DCTL Parameters
+**Norm Type**: Choose between `L1 Norm, L2 Norm, Lp Norm, Maximum, Average, Minimum` to choose the norm type.
+
+**P-Norm Power**: If `Lp Norm` is selected for the norm type, this selects the value of `p`. Lp norm is computed by $(\lvert r \rvert^p + \lvert g \rvert^p + \lvert b \rvert^p)^{1/p}$, and L1 and L2 norm are special cases of this.
+
+
 ## Vignette DCTL
 Corrects for a vignette in the image, only handles circular vignettes for now, expects a scene linear image.
 
 ### DCTL Parameters
-**Vignette Amount**: Uses a model of `1 + ar^2` to determine the amount of vignetting, then multiplies by the reciprocal to correct the image. Vignette amount controls the value of `a`.
+**Vignette Amount**: Uses a model of `1 + ar^2` to determine the amount of vignetting, then multiplies to vignette the image. Vignette amount controls the value of `a`.
 
 **Show Vignette**: If checked, outputs the image that is multiplied by the source image.
