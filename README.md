@@ -18,10 +18,37 @@ Internally, this DCTL converts ACEScc or ACEScct to Linear, and then applies a g
 Adds a value to each channel. The channels are computed by $\text{Red}_{\text{out}} = \text{Red}_{\text{in}} + \text{Global Offset} + \text{Red Offset}$ and likewise for the other two channels.
 
 
+## Blanking Checker DCTL
+Helps you spot pixels with NaN, infinity, negative, zero, or superwhite channels. Pixels with certain conditions are replaced by a specified highlight color. Optionally, the highlight can be a checkerboard shape.
+
+### DCTL Parameters
+**Highlight Color Red**: Red component of the highlight color.
+
+**Highlight Color Green**: Green component of the highlight color.
+
+**Highlight Color Blue**: Blue component of the highlight color.
+
+**Checkerboard Size**: Square size of the generated checkerboard, if set to zero, just uses the Highlight Color.
+
+**Highlight NaNs**: Highlights pixels with a NaN channel.
+
+**Highlight -Inf**: Highlights pixels with -infinity as at least one channel
+
+**Highlight < 0.0**: Highlights pixels with negative real values.
+
+**Highlight == 0.0**: Highlights pixels that have a channel equal to zero.
+
+**Highlight == 1.0**: Highlights pixels that have a channel equal to 1.0.
+
+**Highlight > 1.0**: Highlights pixels that have a channel that exceeds 1.0.
+
+**Highlight +Inf**: Highlights pixels with +infinity as at least one channel.
+
+
 ## Clamp DCTL
 Clamps the code values of the current frame to the specified Min and Max values, such that for any `x`, we will then have `clamp_min <= x <= clamp_max`
 
-## DCTL Parameters
+### DCTL Parameters
 **Min Clamp**: Specifies the value at which we will set `x = max(x, Min Clamp)`
 
 **Max Clamp**: Specifies the value at which we will set `x = min(x, Max Clamp)`

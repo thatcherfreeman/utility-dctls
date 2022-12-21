@@ -1,0 +1,77 @@
+DEFINE_UI_PARAMS(highlight_r, Highlight Color Red, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(highlight_g, Highlight Color Green, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(highlight_b, Highlight Color Blue, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(checker_size, Checkerboard Square Size, DCTLUI_SLIDER_INT, 0, 0, 1000, 1)
+DEFINE_UI_PARAMS(highlight_nans, Highlight NaNs, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(highlight_ninfs, Highlight -Inf, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(highlight_negatives, Highlight < 0.0, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(highlight_zeros, Highlight == 0.0, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(highlight_ones, Highlight == 1.0, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(highlight_gt_ones, Highlight > 1.0, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(highlight_pinfs, Highlight +Inf, DCTLUI_CHECK_BOX, 1)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 curr_color = make_float3(p_R, p_G, p_B);
+    float3 output = curr_color;
+    bool flag = 0;
+
+    if (highlight_gt_ones) {
+        if (curr_color.x > 1.0 || curr_color.y > 1.0 || curr_color.z > 1.0) {
+            output = make_float3(highlight_r, highlight_g, highlight_b);
+            flag = 1;
+        }
+    }
+
+    if (highlight_ones) {
+        if (curr_color.x == 1.0 || curr_color.y == 1.0 || curr_color.z == 1.0) {
+            output = make_float3(highlight_r, highlight_g, highlight_b);
+            flag = 1;
+        }
+    }
+
+    if (highlight_negatives) {
+        if (curr_color.x < 0.0 || curr_color.y < 0.0 || curr_color.z < 0.0) {
+            output = make_float3(highlight_r, highlight_g, highlight_b);
+            flag = 1;
+        }
+    }
+
+    if (highlight_zeros) {
+        if (curr_color.x == 0.0 || curr_color.y == 0.0 || curr_color.z == 0.0) {
+            output = make_float3(highlight_r, highlight_g, highlight_b);
+            flag = 1;
+        }
+    }
+
+    if (highlight_nans) {
+        if (isnan(curr_color.x) || isnan(curr_color.y) || isnan(curr_color.z)) {
+            output = make_float3(highlight_r, highlight_g, highlight_b);
+            flag = 1;
+        }
+    }
+
+    if (highlight_ninfs) {
+        if ((isinf(curr_color.x) && curr_color.x < 0.0) ||
+            (isinf(curr_color.y) && curr_color.y < 0.0) ||
+            (isinf(curr_color.z) && curr_color.z < 0.0)) {
+            output = make_float3(highlight_r, highlight_g, highlight_b);
+            flag = 1;
+        }
+    }
+
+    if (highlight_pinfs) {
+        if ((isinf(curr_color.x) && curr_color.x > 0.0) ||
+            (isinf(curr_color.y) && curr_color.y > 0.0) ||
+            (isinf(curr_color.z) && curr_color.z > 0.0)) {
+            output = make_float3(highlight_r, highlight_g, highlight_b);
+            flag = 1;
+        }
+    }
+
+    if (checker_size) {
+        if ((p_X / checker_size + p_Y / checker_size) % 2 == 0 && flag) {
+            output = make_float3(1.0 - highlight_r, 1.0 - highlight_g, 1.0 - highlight_b);
+        }
+    }
+    return output;
+}
