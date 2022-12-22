@@ -122,6 +122,8 @@ Generates a false color conversion for linear images. Draws middle gray at the s
 ## Film Curve DCTL
 Assumes the scene is a linear image, then converts to log10 exposure values, applies a sigmoid characteristic curve to get density, then computes transmittance. Parametric over each of the three channels.
 
+In practice, you should use the following pipeline: `1. Clamp 0+ ==> 2. Film Curve (to simulate the negative) ==> 3. Color Gain ==> 4. Film Curve (to simulate the print) ==> 5. Gain (if you want white to not be 100%) ==> 6. Display Encoding`. (3) represents your printer lights and should make it so that middle gray is preserved at 0.18 from (1) to (4).
+
 ### DCTL Parameters
 **Red/Green/Blue Gamma**: Film gamma for each channel.
 
