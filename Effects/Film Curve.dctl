@@ -1,5 +1,3 @@
-DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
-DEFINE_UI_PARAMS(exposure, Exposure Gain, DCTLUI_VALUE_BOX, 0.1)
 DEFINE_UI_PARAMS(gamma_r, Red Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.01)
 DEFINE_UI_PARAMS(gamma_g, Green Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.01)
 DEFINE_UI_PARAMS(gamma_b, Blue Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.01)
@@ -13,25 +11,88 @@ DEFINE_UI_PARAMS(offset_r, Red Offset, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(offset_g, Green Offset, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(offset_b, Blue Offset, DCTLUI_VALUE_BOX, 0.0)
 
+DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(exposure, Exposure Gain, DCTLUI_VALUE_BOX, 1.0)
+
 DEFINE_UI_PARAMS(lin_to_exp, Linear to Exposure, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(exp_to_log_exp, Exposure to Log10 Exposure, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(log_exp_to_density, Characteristic Curve, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(density_to_transmittance, Density to Transmittance, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(show_curve, Draw Characteristic Curve, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(curve_type, Curve Type, DCTLUI_COMBO_BOX, 0, {SIGMOID, QUAD_SIGMOID}, {Sigmoid, Quadratic Sigmoid})
 
+
+typedef struct {
+    float gamma;
+    float dmin, dmax;
+    float offset;
+    int curve_type;
+} characteristic_params_t;
 
 __DEVICE__ float sigmoid(float x) {
     return 1.0 / (1.0 + _expf(-1.0 * x));
 }
 
-__DEVICE__ float characteristic_curve(float x, float gamma, float dmin, float dmax, float offset) {
-    float coeff = gamma / 0.25;
-    float out = sigmoid(coeff * (x + offset)) * (dmax - dmin) + dmin;
+__DEVICE__ float smoothrelu(float x, float window) {
+    if (x <= -1.0 * window) {
+        return 0.0;
+    } else if (-1.0 * window <= x && x <= window) {
+        float coeff = window / _powf(window * 2.0, 2.0);
+        return coeff * (x + window) * (x + window);
+    } else {
+        return x;
+    }
+}
+
+__DEVICE__ float quadratic_sigmoid(float x) {
+    // Similar to sigmoid, but just a piecewise function with some hard borders.
+    if (x < 0.0) {
+        return smoothrelu(x + 0.5, 0.1);
+    } else {
+        // x >= 0.0
+        return 1.0 - smoothrelu(-1.0 * x + 0.5, 0.1);
+    }
+}
+
+__DEVICE__ float characteristic_curve(float x, __PRIVATE__ characteristic_params_t* params) {
+    float out, coeff;
+    if (params->curve_type == SIGMOID) {
+        coeff = params->gamma / (0.25 * (params->dmax - params->dmin));
+        out = sigmoid(coeff * (x + params->offset)) * (params->dmax - params->dmin) + params->dmin;
+    } else if (params->curve_type == QUAD_SIGMOID){
+        coeff = params->gamma / (params->dmax - params->dmin);
+        out = quadratic_sigmoid(coeff * (x + params->offset)) * (params->dmax - params->dmin) + params->dmin;
+    }
     return out;
 }
 
+__DEVICE__ float3 draw_grid_lines(float x, float y, float3 curr_color) {
+    float major_line_x = _fabs(_fmod(_fabs(x) + 0.1, 1.0) - 0.1);
+    float zero_line_x = _fabs(x - 0.0);
+    float major_line_y = _fabs(_fmod(y, 1.0));
+    float3 output_color = curr_color;
+    if (-4.0 < x && x < 4.0 && 0.0 < y && y < 6.0 && (major_line_x <= 0.02 || major_line_y <= 0.02 || zero_line_x <= 0.05)) {
+        output_color += 0.1;
+    }
+    return output_color;
+}
+
+__DEVICE__ float3 draw_curve(float x, float y, float3 replacement_color, __PRIVATE__ characteristic_params_t* params) {
+    float y_val = characteristic_curve(x, params);
+    float diff = _fabs(y_val - y);
+    float3 output_color = make_float3(0.0, 0.0, 0.0);
+    if (diff <= 0.01) {
+        output_color = replacement_color;
+    }
+    return output_color;
+}
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 curr_color = make_float3(p_R, p_G, p_B);
+    characteristic_params_t red_curve, green_curve, blue_curve;
+    red_curve = {gamma_r, dmin_r, dmax_r, offset_r, curve_type};
+    green_curve = {gamma_g, dmin_g, dmax_g, offset_g, curve_type};
+    blue_curve = {gamma_b, dmin_b, dmax_b, offset_b, curve_type};
 
     if (lin_to_exp) {
         curr_color *= exposure;
@@ -49,9 +110,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     if (log_exp_to_density) {
         curr_color = make_float3(
-            characteristic_curve(curr_color.x, gamma_r, dmin_r, dmax_r, offset_r),
-            characteristic_curve(curr_color.y, gamma_g, dmin_g, dmax_g, offset_g),
-            characteristic_curve(curr_color.z, gamma_b, dmin_b, dmax_b, offset_b)
+            characteristic_curve(curr_color.x, &red_curve),
+            characteristic_curve(curr_color.y, &green_curve),
+            characteristic_curve(curr_color.z, &blue_curve)
         );
     }
 
@@ -61,6 +122,18 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             _exp10f(-1.0 * curr_color.y),
             _exp10f(-1.0 * curr_color.z)
         );
+    }
+
+    if (show_curve) {
+        float x = (float)p_X / p_Width;
+        x = (x - 0.5) * p_Width / p_Height + 0.5;
+        float y = 1.0 - (float)p_Y / p_Height;
+        x = _mix(-4.0, 4.0, x);
+        y = _mix(0.0, 6.0, y);
+        curr_color = draw_grid_lines(x, y, curr_color);
+        curr_color += draw_curve(x, y, make_float3(1.0, 0.0, 0.0), &red_curve);
+        curr_color += draw_curve(x, y, make_float3(0.0, 1.0, 0.0), &green_curve);
+        curr_color += draw_curve(x, y, make_float3(0.0, 0.0, 1.0), &blue_curve);
     }
 
     return curr_color;

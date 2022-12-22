@@ -119,6 +119,36 @@ Generates a false color conversion for linear images. Draws middle gray at the s
 **Seed**: Specifies the random seed used to generate colors
 
 
+## Film Curve DCTL
+Assumes the scene is a linear image, then converts to log10 exposure values, applies a sigmoid characteristic curve to get density, then computes transmittance. Parametric over each of the three channels.
+
+### DCTL Parameters
+**Red/Green/Blue Gamma**: Film gamma for each channel.
+
+**Red/Green/Blue D_MIN**: Minimum density for each channel.
+
+**Red/Green/Blue D_MAX**: Maximum density for each channel.
+
+**Red/Green/Blue Offset**: indicates how far to the left to move each characteristic curve in the Density vs Log10 Exposure chart.
+
+**Mid Gray**: Indicates the mid gray value in the input image.
+
+**Exposure Gain**: Increase or decrease the incoming exposure.
+
+**Linear to Exposure**: Check to apply the Exposure Gain to convert from scene illuminance to Exposure value
+
+**Exposure to Log10 Exposure**: Check to apply a Log10 Function to the Exposure value
+
+**Characteristic Curve**: Check to apply the Sigmoid that converts from Log10 Exposure to Density
+
+**Density to Transmittance**: Check to convert computed Density to Transmittance.
+
+**Draw Characteristic Curve**: Draws the characteristic curve on-screen. The fat line in the middle is Lux-Seconds = 0.0, each vertical line is 1.0 Log10 exposure. The horizontal lines represent density in 1.0 increments.
+
+**Curve Type**: allows you to use Sigmoid of "Quadratic Sigmoid", which follows a similar shape but has a more a brupt rolloff.
+
+
+
 ## Gamma Function
 Applies a power function with the reciprocal of the specified exponent.
 
