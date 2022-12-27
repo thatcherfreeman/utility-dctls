@@ -6,86 +6,45 @@ FuRegisterClass("MTFCurve",
     }
 )
 
+-- You can change this value to increase the number of bands.
 num_bands = 5
 
 function Create()
-    GateWidth = self:AddInput("Gate Width", "GateWidth", {
+    GateWidth = self:AddInput("Gate Width (mm)", "GateWidth", {
         LINKID_DataType = "Number",
         INPID_InputControl = "ScrewControl",
         INP_MinScale = 0.0,
         INP_MaxScale = 100.0,
         INP_Default = 24.0,
     })
-    Lpm1 = self:AddInput("Band 1 LP/mm", "Band1LPpmm", {
-        LINKID_DataType = "Number",
-        INPID_InputControl = "SliderControl",
-        INP_MinScale = 0.0,
-        INP_MaxScale = 200.0,
-        INP_Default = 3.0,
-    })
-    Lpm2 = self:AddInput("Band 2 LP/mm", "Band2LPpmm", {
-        LINKID_DataType = "Number",
-        INPID_InputControl = "SliderControl",
-        INP_MinScale = 0.0,
-        INP_MaxScale = 200.0,
-        INP_Default = 8.0,
-    })
-    Lpm3 = self:AddInput("Band 3 LP/mm", "Band3LPpmm", {
-        LINKID_DataType = "Number",
-        INPID_InputControl = "SliderControl",
-        INP_MinScale = 0.0,
-        INP_MaxScale = 200.0,
-        INP_Default = 15.0,
-    })
-    Lpm4 = self:AddInput("Band 4 LP/mm", "Band4LPpmm", {
-        LINKID_DataType = "Number",
-        INPID_InputControl = "SliderControl",
-        INP_MinScale = 0.0,
-        INP_MaxScale = 200.0,
-        INP_Default = 25.0,
-    })
-    Lpm5 = self:AddInput("Band 5 LP/mm", "Band5LPpmm", {
-        LINKID_DataType = "Number",
-        INPID_InputControl = "SliderControl",
-        INP_MinScale = 0.0,
-        INP_MaxScale = 200.0,
-        INP_Default = 50.0,
-    })
-    Gain1 = self:AddInput("Band 1 Contrast", "Band1Gain", {
-        LINKID_DataType = "Number",
-        INPID_InputControl = "SliderControl",
-        INP_MinScale = 0.0,
-        INP_MaxScale = 1.2,
-        INP_Default = 1.0,
-    })
-    Gain2 = self:AddInput("Band 2 Contrast", "Band2Gain", {
-        LINKID_DataType = "Number",
-        INPID_InputControl = "SliderControl",
-        INP_MinScale = 0.0,
-        INP_MaxScale = 1.2,
-        INP_Default = 1.0,
-    })
-    Gain3 = self:AddInput("Band 3 Contrast", "Band3Gain", {
-        LINKID_DataType = "Number",
-        INPID_InputControl = "SliderControl",
-        INP_MinScale = 0.0,
-        INP_MaxScale = 1.2,
-        INP_Default = 1.0,
-    })
-    Gain4 = self:AddInput("Band 4 Contrast", "Band4Gain", {
-        LINKID_DataType = "Number",
-        INPID_InputControl = "SliderControl",
-        INP_MinScale = 0.0,
-        INP_MaxScale = 1.2,
-        INP_Default = 1.0,
-    })
-    Gain5 = self:AddInput("Band 5 Contrast", "Band5Gain", {
-        LINKID_DataType = "Number",
-        INPID_InputControl = "SliderControl",
-        INP_MinScale = 0.0,
-        INP_MaxScale = 1.2,
-        INP_Default = 1.0,
-    })
+    Lpms = {}
+    Gains = {}
+    for i = 1, num_bands do
+        Lpms[i] = self:AddInput(
+            string.format("Band %d LP/mm", i),
+            string.format("Band%dLPpmm", i),
+            {
+                LINKID_DataType = "Number",
+                INPID_InputControl = "SliderControl",
+                INP_MinScale = 0.0,
+                INP_MaxScale = 200.0,
+                INP_Default = math.pow(2.0, i),
+            }
+        )
+    end
+    for i = 1, num_bands do
+        Gains[i] = self:AddInput(
+            string.format("Band %d Contrast", i),
+            string.format("Band%dGain", i),
+            {
+                LINKID_DataType = "Number",
+                INPID_InputControl = "SliderControl",
+                INP_MinScale = 0.0,
+                INP_MaxScale = 1.2,
+                INP_Default = 1.0,
+            }
+        )
+    end
     DebugMode = self:AddInput("Debug Mode", "DebugMode", {
         LINKID_DataType = "Number",
         INPID_InputControl = "ComboControl",
@@ -102,7 +61,7 @@ function Create()
         INP_Integer = true,
         INP_MinScale = 1,
         INP_MaxScale = num_bands,
-        INP_Default = 1,
+        INP_Default = num_bands,
     })
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
@@ -126,38 +85,19 @@ function Process(req)
     local debug_mode = DebugMode:GetValue(req).Value
     local debug_band = DebugBand:GetValue(req).Value
 
-    local lpm1 = Lpm1:GetValue(req).Value
-    local lpm2 = Lpm2:GetValue(req).Value
-    local lpm3 = Lpm3:GetValue(req).Value
-    local lpm4 = Lpm4:GetValue(req).Value
-    local lpm5 = Lpm5:GetValue(req).Value
-
-    local gain1 = Gain1:GetValue(req).Value
-    local gain2 = Gain2:GetValue(req).Value
-    local gain3 = Gain3:GetValue(req).Value
-    local gain4 = Gain4:GetValue(req).Value
-    local gain5 = Gain5:GetValue(req).Value
-
     local WIDTH = img.Width
     local HEIGHT = img.Height
 
-    local widths = {
-        compute_scale(gate_width, lpm1),
-        compute_scale(gate_width, lpm2),
-        compute_scale(gate_width, lpm3),
-        compute_scale(gate_width, lpm4),
-        compute_scale(gate_width, lpm5)
-    }
+    local gains = {}
+    local widths = {}
     local heights = {}
-    local gains = {
-        gain1, gain2, gain3, gain4, gain5
-    }
-
     local upres = {}
     local edges = {}
 
     -- Rescale images to eliminate high frequency information
     for i = 1, num_bands do
+        widths[i] = compute_scale(gate_width, Lpms[i]:GetValue(req).Value)
+        gains[i] = Gains[i]:GetValue(req).Value
         heights[i] = widths[i] * HEIGHT / WIDTH
         downres = img:Resize(nil, {RSZ_Filter = 'BiCubic', RSZ_Width = widths[i], RSZ_Height = heights[i]})
         upres[i] = downres:Resize(nil, {RSZ_Filter = 'BiCubic', RSZ_Width = WIDTH, RSZ_Height = HEIGHT})
