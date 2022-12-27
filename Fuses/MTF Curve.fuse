@@ -21,7 +21,7 @@ function Create()
     Gains = {}
     for i = 1, num_bands do
         Lpms[i] = self:AddInput(
-            string.format("Band %d LP/mm", i),
+            string.format("Band %d: LP/mm", i),
             string.format("Band%dLPpmm", i),
             {
                 LINKID_DataType = "Number",
@@ -99,6 +99,10 @@ function Process(req)
         widths[i] = compute_scale(gate_width, Lpms[i]:GetValue(req).Value)
         gains[i] = Gains[i]:GetValue(req).Value
         heights[i] = widths[i] * HEIGHT / WIDTH
+        -- Avoid scaling the image larger than the original size.
+        -- Doing so would give no further control and waste memory.
+        widths[i] = math.min(widths[i], WIDTH)
+        heights[i] = math.min(heights[i], HEIGHT)
         downres = img:Resize(nil, {RSZ_Filter = 'BiCubic', RSZ_Width = widths[i], RSZ_Height = heights[i]})
         upres[i] = downres:Resize(nil, {RSZ_Filter = 'BiCubic', RSZ_Width = WIDTH, RSZ_Height = HEIGHT})
     end
@@ -132,7 +136,7 @@ function Process(req)
         OutImage:Set(req, edges[debug_band])
     elseif debug_mode == 3 then
         local gray = Pixel({R = 0.5, G = 0.5, B=0.5, A=1.0})
-        local gray_img = Image({IMG_LIKE = edges[debug_band]})
+        local gray_img = Image({IMG_LIKE = edges[debug_band], IMG_Width = WIDTH, IMG_Height = HEIGHT})
         gray_img:Fill(gray)
         OutImage:Set(req, edges[debug_band]:ChannelOpOf("Add", gray_img, {R="Fg.R", G="Fg.G", B="Fg.B", A=0.0}))
     else
