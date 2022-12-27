@@ -1,0 +1,201 @@
+FuRegisterClass("MTFCurve",
+    CT_Tool, {
+        REGS_Category = "Fuses\\Texture",
+        REGS_OpIconString = "MTF",
+        REGS_OpDescription = "Gives control over an MTF curve"
+    }
+)
+
+num_bands = 5
+
+function Create()
+    GateWidth = self:AddInput("Gate Width", "GateWidth", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ScrewControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 100.0,
+        INP_Default = 24.0,
+    })
+    Lpm1 = self:AddInput("Band 1 LP/mm", "Band1LPpmm", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 200.0,
+        INP_Default = 3.0,
+    })
+    Lpm2 = self:AddInput("Band 2 LP/mm", "Band2LPpmm", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 200.0,
+        INP_Default = 8.0,
+    })
+    Lpm3 = self:AddInput("Band 3 LP/mm", "Band3LPpmm", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 200.0,
+        INP_Default = 15.0,
+    })
+    Lpm4 = self:AddInput("Band 4 LP/mm", "Band4LPpmm", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 200.0,
+        INP_Default = 25.0,
+    })
+    Lpm5 = self:AddInput("Band 5 LP/mm", "Band5LPpmm", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 200.0,
+        INP_Default = 50.0,
+    })
+    Gain1 = self:AddInput("Band 1 Contrast", "Band1Gain", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 1.2,
+        INP_Default = 1.0,
+    })
+    Gain2 = self:AddInput("Band 2 Contrast", "Band2Gain", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 1.2,
+        INP_Default = 1.0,
+    })
+    Gain3 = self:AddInput("Band 3 Contrast", "Band3Gain", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 1.2,
+        INP_Default = 1.0,
+    })
+    Gain4 = self:AddInput("Band 4 Contrast", "Band4Gain", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 1.2,
+        INP_Default = 1.0,
+    })
+    Gain5 = self:AddInput("Band 5 Contrast", "Band5Gain", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 1.2,
+        INP_Default = 1.0,
+    })
+    DebugMode = self:AddInput("Debug Mode", "DebugMode", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ComboControl",
+        INP_Default = 0,
+        INP_Integer = true,
+        {CCS_AddString = "None"},
+        {CCS_AddString = "Low Pass Mode"},
+        {CCS_AddString = "High Pass Mode"},
+        {CCS_AddString = "High Pass Gray Mode"},
+    })
+    DebugBand = self:AddInput("Debug Band", "DebugBand", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_Integer = true,
+        INP_MinScale = 1,
+        INP_MaxScale = num_bands,
+        INP_Default = 1,
+    })
+    InImage = self:AddInput("Input", "Input", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+end
+
+
+function compute_scale(gate_width, lpmm)
+    return lpmm * gate_width * 2.0
+end
+
+function Process(req)
+    -- Get values from the UI Tools
+    local img = InImage:GetValue(req)
+    local gate_width = GateWidth:GetValue(req).Value
+    local debug_mode = DebugMode:GetValue(req).Value
+    local debug_band = DebugBand:GetValue(req).Value
+
+    local lpm1 = Lpm1:GetValue(req).Value
+    local lpm2 = Lpm2:GetValue(req).Value
+    local lpm3 = Lpm3:GetValue(req).Value
+    local lpm4 = Lpm4:GetValue(req).Value
+    local lpm5 = Lpm5:GetValue(req).Value
+
+    local gain1 = Gain1:GetValue(req).Value
+    local gain2 = Gain2:GetValue(req).Value
+    local gain3 = Gain3:GetValue(req).Value
+    local gain4 = Gain4:GetValue(req).Value
+    local gain5 = Gain5:GetValue(req).Value
+
+    local WIDTH = img.Width
+    local HEIGHT = img.Height
+
+    local widths = {
+        compute_scale(gate_width, lpm1),
+        compute_scale(gate_width, lpm2),
+        compute_scale(gate_width, lpm3),
+        compute_scale(gate_width, lpm4),
+        compute_scale(gate_width, lpm5)
+    }
+    local heights = {}
+    local gains = {
+        gain1, gain2, gain3, gain4, gain5
+    }
+
+    local upres = {}
+    local edges = {}
+
+    -- Rescale images to eliminate high frequency information
+    for i = 1, num_bands do
+        heights[i] = widths[i] * HEIGHT / WIDTH
+        downres = img:Resize(nil, {RSZ_Filter = 'BiCubic', RSZ_Width = widths[i], RSZ_Height = heights[i]})
+        upres[i] = downres:Resize(nil, {RSZ_Filter = 'BiCubic', RSZ_Width = WIDTH, RSZ_Height = HEIGHT})
+    end
+
+    -- Take difference between images of different resolutions to capture the
+    -- information that was added by the higher resolution version.
+    for i = 1, num_bands-1 do
+        edges[i] = upres[i+1]:ChannelOpOf("Subtract", upres[i], { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = 0.0 })
+    end
+    edges[num_bands] = img:ChannelOpOf("Subtract", upres[num_bands], { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = 0.0 })
+
+    -- Apply gain control to each version.
+    local result = upres[1]
+    for i = 1, num_bands do
+        local thisedge = edges[i]:CopyOf()
+        thisedge:Gain(gains[i], gains[i], gains[i], 1.0)
+        result = result:ChannelOpOf(
+            "Add",
+            thisedge,
+            { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = 0.0 }
+        )
+    end
+
+    if debug_mode == 0 then
+        --Output the image
+        OutImage:Set(req, result)
+    elseif debug_mode == 1 then
+        -- output the upres version
+        OutImage:Set(req, upres[debug_band])
+    elseif debug_mode == 2 then
+        OutImage:Set(req, edges[debug_band])
+    elseif debug_mode == 3 then
+        local gray = Pixel({R = 0.5, G = 0.5, B=0.5, A=1.0})
+        local gray_img = Image({IMG_LIKE = edges[debug_band]})
+        gray_img:Fill(gray)
+        OutImage:Set(req, edges[debug_band]:ChannelOpOf("Add", gray_img, {R="Fg.R", G="Fg.G", B="Fg.B", A=0.0}))
+    else
+        error("Invalid debug mode.")
+    end
+end

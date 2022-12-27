@@ -1,0 +1,16 @@
+DEFINE_UI_PARAMS(gate_width, Gate Width mm, DCTLUI_SLIDER_FLOAT, 35.0, 0.0, 100.0, 0.1)
+DEFINE_UI_PARAMS(line_pairs_pmm, Line Pairs per mm, DCTLUI_SLIDER_FLOAT, 50.0, 1.0, 200.0, 1.0)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float x = (float)p_X / (float)p_Width;
+    int number_of_pairs = line_pairs_pmm * gate_width;
+    float pair_width = (float)p_Width / (float)number_of_pairs;
+    float band_position = (_fmod((float)p_X, pair_width)) / (float)pair_width;
+    float3 out;
+    if (band_position > 0.5) {
+        out = make_float3(0.0, 0.0, 0.0);
+    } else {
+        out = make_float3(1.0, 1.0, 1.0);
+    }
+    return out;
+}
