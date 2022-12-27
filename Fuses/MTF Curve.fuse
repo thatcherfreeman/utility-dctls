@@ -63,6 +63,14 @@ function Create()
         INP_MaxScale = num_bands,
         INP_Default = num_bands,
     })
+    PerformanceMode = self:AddInput("Performance Mode", "PerformanceMode", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ComboControl",
+        INP_Default = 0,
+        INP_Integer = true,
+        {CCS_AddString = "Quality"},
+        {CCS_AddString = "Performance"},
+    })
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
         LINK_Main = 1,
@@ -85,8 +93,20 @@ function Process(req)
     local debug_mode = DebugMode:GetValue(req).Value
     local debug_band = DebugBand:GetValue(req).Value
 
+    local performance_mode = PerformanceMode:GetValue(req).Value
+
     local WIDTH = img.Width
     local HEIGHT = img.Height
+
+    local first_band = 1
+    local down_filter = "BiCubic"
+    local up_filter = "BiCubic"
+
+    if performance_mode == 1 then
+        first_band = num_bands - 1
+        down_filter = "Linear"
+        up_filter = "Quadratic"
+    end
 
     local gains = {}
     local widths = {}
@@ -95,7 +115,7 @@ function Process(req)
     local edges = {}
 
     -- Rescale images to eliminate high frequency information
-    for i = 1, num_bands do
+    for i = first_band, num_bands do
         widths[i] = compute_scale(gate_width, Lpms[i]:GetValue(req).Value)
         gains[i] = Gains[i]:GetValue(req).Value
         heights[i] = widths[i] * HEIGHT / WIDTH
@@ -103,20 +123,25 @@ function Process(req)
         -- Doing so would give no further control and waste memory.
         widths[i] = math.min(widths[i], WIDTH)
         heights[i] = math.min(heights[i], HEIGHT)
-        downres = img:Resize(nil, {RSZ_Filter = 'BiCubic', RSZ_Width = widths[i], RSZ_Height = heights[i]})
-        upres[i] = downres:Resize(nil, {RSZ_Filter = 'BiCubic', RSZ_Width = WIDTH, RSZ_Height = HEIGHT})
+
+        if widths[i] == WIDTH then
+            upres[i] = img
+        else
+            downres = img:Resize(nil, {RSZ_Filter = down_filter, RSZ_Width = widths[i], RSZ_Height = heights[i]})
+            upres[i] = downres:Resize(nil, {RSZ_Filter = up_filter, RSZ_Width = WIDTH, RSZ_Height = HEIGHT})
+        end
     end
 
     -- Take difference between images of different resolutions to capture the
     -- information that was added by the higher resolution version.
-    for i = 1, num_bands-1 do
+    for i = first_band, num_bands-1 do
         edges[i] = upres[i+1]:ChannelOpOf("Subtract", upres[i], { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = 0.0 })
     end
     edges[num_bands] = img:ChannelOpOf("Subtract", upres[num_bands], { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = 0.0 })
 
     -- Apply gain control to each version.
-    local result = upres[1]
-    for i = 1, num_bands do
+    local result = upres[first_band]
+    for i = first_band, num_bands do
         local thisedge = edges[i]:CopyOf()
         thisedge:Gain(gains[i], gains[i], gains[i], 1.0)
         result = result:ChannelOpOf(
