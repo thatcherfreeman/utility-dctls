@@ -1,12 +1,12 @@
-DEFINE_UI_PARAMS(gamma_r, Red Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.01)
-DEFINE_UI_PARAMS(gamma_g, Green Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.01)
-DEFINE_UI_PARAMS(gamma_b, Blue Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.01)
-DEFINE_UI_PARAMS(dmin_r, Red D_MIN, DCTLUI_SLIDER_FLOAT, 0.01, 0.0, 10.0, 0.01)
-DEFINE_UI_PARAMS(dmin_g, Green D_MIN, DCTLUI_SLIDER_FLOAT, 0.01, 0.0, 10.0, 0.01)
-DEFINE_UI_PARAMS(dmin_b, Blue D_MIN, DCTLUI_SLIDER_FLOAT, 0.01, 0.0, 10.0, 0.01)
-DEFINE_UI_PARAMS(dmax_r, Red D_MAX, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 10.0, 0.01)
-DEFINE_UI_PARAMS(dmax_g, Green D_MAX, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 10.0, 0.01)
-DEFINE_UI_PARAMS(dmax_b, Blue D_MAX, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 10.0, 0.01)
+DEFINE_UI_PARAMS(gamma_r, Red Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.0001)
+DEFINE_UI_PARAMS(gamma_g, Green Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.0001)
+DEFINE_UI_PARAMS(gamma_b, Blue Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.0001)
+DEFINE_UI_PARAMS(dmin_r, Red D_MIN, DCTLUI_SLIDER_FLOAT, 0.01, 0.0, 10.0, 0.0001)
+DEFINE_UI_PARAMS(dmin_g, Green D_MIN, DCTLUI_SLIDER_FLOAT, 0.01, 0.0, 10.0, 0.0001)
+DEFINE_UI_PARAMS(dmin_b, Blue D_MIN, DCTLUI_SLIDER_FLOAT, 0.01, 0.0, 10.0, 0.0001)
+DEFINE_UI_PARAMS(dmax_r, Red D_MAX, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 10.0, 0.0001)
+DEFINE_UI_PARAMS(dmax_g, Green D_MAX, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 10.0, 0.0001)
+DEFINE_UI_PARAMS(dmax_b, Blue D_MAX, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 10.0, 0.0001)
 DEFINE_UI_PARAMS(offset_r, Red Offset, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(offset_g, Green Offset, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(offset_b, Blue Offset, DCTLUI_VALUE_BOX, 0.0)
@@ -89,10 +89,10 @@ __DEVICE__ float3 draw_curve(float x, float y, float3 replacement_color, __PRIVA
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 curr_color = make_float3(p_R, p_G, p_B);
-    characteristic_params_t red_curve, green_curve, blue_curve;
-    red_curve = {gamma_r, dmin_r, dmax_r, offset_r, curve_type};
-    green_curve = {gamma_g, dmin_g, dmax_g, offset_g, curve_type};
-    blue_curve = {gamma_b, dmin_b, dmax_b, offset_b, curve_type};
+
+    characteristic_params_t red_curve = {gamma_r, dmin_r, dmax_r, offset_r, curve_type};
+    characteristic_params_t green_curve = {gamma_g, dmin_g, dmax_g, offset_g, curve_type};
+    characteristic_params_t blue_curve = {gamma_b, dmin_b, dmax_b, offset_b, curve_type};
 
     if (lin_to_exp) {
         curr_color *= exposure;
