@@ -13,6 +13,11 @@ DEFINE_UI_PARAMS(correct_red_shift, Correct for Red Shift, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(halation_gamma, Halation gamma, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.01)
 
 
+__DEVICE__ float powf(float base, float exp) {
+    float out = _copysignf(_powf(_fabs(base), exp), base);
+    return out;
+}
+
 __DEVICE__ int get_coord(float x, int width) {
     return (int)_round((x + 0.5f) * width);
 }
@@ -175,15 +180,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         float a = exposure_lost_lin;
         float b = exposure_lost_lin * green_exposure_lost_lin;
         float c = exposure_lost_lin * green_exposure_lost_lin * blue_exposure_lost_lin;
-        curr_color.x += _powf((scale_color.x - curr_color.x) * (a / (a + 1)), adjusted_gamma_value);
-        curr_color.y += _powf((scale_color.x - curr_color.y) * (b / (a + 1)), adjusted_gamma_value);
-        curr_color.z += _powf((scale_color.x - curr_color.z) * (c / (a + 1)), adjusted_gamma_value);
+        curr_color.x += powf((scale_color.x - curr_color.x) * (a / (a + 1)), adjusted_gamma_value);
+        curr_color.y += powf((scale_color.x - curr_color.y) * (b / (a + 1)), adjusted_gamma_value);
+        curr_color.z += powf((scale_color.x - curr_color.z) * (c / (a + 1)), adjusted_gamma_value);
     } else {
         // The modeled physical process:
         // C_out = C_in + (red_scaled_blurred * exp)
-        curr_color.x += _powf(scale_color.x * exposure_lost_lin, adjusted_gamma_value);
-        curr_color.y += _powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin, adjusted_gamma_value);
-        curr_color.z += _powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin * blue_exposure_lost_lin, adjusted_gamma_value);
+        curr_color.x += powf(scale_color.x * exposure_lost_lin, adjusted_gamma_value);
+        curr_color.y += powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin, adjusted_gamma_value);
+        curr_color.z += powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin * blue_exposure_lost_lin, adjusted_gamma_value);
     }
 
     return curr_color;
