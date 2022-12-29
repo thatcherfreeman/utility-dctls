@@ -101,8 +101,6 @@ __DEVICE__ float sample_point_bicubic_1ch(const float pX, const float pY, const 
 
     const int iX = (int)(_floor(pX / scale_round) * scale_round);
     const int iY = (int)(_floor(pY / scale_round) * scale_round);
-    // const int iX = (int)(pX - (scale_round / 2));
-    // const int iY = (int)(pY - (scale_round / 2));
     const float dX = (pX - iX);
     const float dY = (pY - iY);
     const float vecX[] = {scale_round + dX, dX, scale_round - dX, 2 * scale_round - dX};
