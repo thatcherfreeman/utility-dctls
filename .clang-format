@@ -1,0 +1,13 @@
+AccessModifierOffset: 0
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortFunctionsOnASingleLine: false
+BinPackParameters: false
+BinPackArguments: false
+ColumnLimit: 140
+DerivePointerAlignment: false
+PointerAlignment: Left
+IndentAccessModifiers: true
+IndentWidth: 4
+PPIndentWidth: 4
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
