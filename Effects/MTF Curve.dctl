@@ -159,16 +159,13 @@ __DEVICE__ float3 reduce_resolution(int x,
     } else {
         // init_width > new_width
         float3 out = make_float3(0.0, 0.0, 0.0);
-        switch (resize_mode) {
-        case NN:
+        if (resize_mode == NN) {
             out = sample_point_nn_3ch(p_x * init_width, p_y * init_height, pr, pg, pb, (float)init_width / (float)new_width);
-            break;
-        case LINEAR:
+        } else if (resize_mode == LINEAR) {
             out = sample_point_bilinear_3ch(p_x * init_width, p_y * init_height, pr, pg, pb, (float)init_width / (float)new_width);
-            break;
-        case CUBIC:
+        } else {
+            // resize_mode == CUBIC
             out = sample_point_bicubic_3ch(p_x * init_width, p_y * init_height, pr, pg, pb, (float)init_width / (float)new_width);
-            break;
         }
         return out;
     }
