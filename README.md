@@ -1,6 +1,33 @@
 # Utility DCTLS
-These are DCTLs that I have developed, all in a single folder for convenience.
+These are DCTLs that I have developed.
 
+
+# Installation
+DCTLs should be placed in the following folder:
+
+**MacOS**: `/Library/Application Support/Blackmagic Design/DaVinci Resolve/LUT`
+
+**Windows**: `C:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\LUT`
+
+Fuses should be placed in the following folder to install them into the Fusion page of DaVinci Resolve:
+
+**MacOS**: `/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Fuses`
+
+**Windows**: `C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\Fuses`
+
+Fuses should also be placed in the following folder to install them for Fusion Studio:
+
+**MacOS**: `/Library/Application Support/Blackmagic Design/Fusion/Fuses`
+
+**Windows**: `C:\ProgramData\Blackmagic Design\Fusion\Fuses`
+
+If a DCTL is not working, you can usually find logs in these directories. If you find that there is a problem, make an Issue on Github with your OS and Resolve version so I can fix it.
+**MacOS (Apple Silicon)**: `~/Library/Application Support/Blackmagic Design/DaVinci Resolve/logs/davinci_resolve.log`
+**MacOS (Intel)**: `/Library/Application Support/Blackmagic Design/DaVinci Resolve/logs/davinci_resolve.log`
+**Windows**: `C:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\logs\davinci_resolve.log`
+
+
+# The DCTLs:
 
 ## Aces Exposure DCTL
 DCTL that allows for adjustment of exposure in ACES. Important: It's probably better to just set your timeline color space to the ACES color space you want to use, and then to use the Exposure slider in the HDR color wheels.
