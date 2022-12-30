@@ -315,7 +315,7 @@ Gives you control over a MTF-like curve. Internally makes passes of different fr
 
 
 ## Multiplication Function DCTL
-Multiplies each channel by a value. The channels are computed by $$\text{Red}_{\text{out}} = \text{Red}_{\text{in}} * \text{Global Gain} + \text{Red Gain}$$ and likewise for the other two channels.
+Multiplies each channel by a value. The channels are computed by $\text{Red}_{\text{out}} = \text{Red}_{\text{in}} * \text{Global Gain} + \text{Red Gain}$ and likewise for the other two channels.
 
 
 ## Print
@@ -452,16 +452,16 @@ This DCTL converts the input image to HSL or HSV, then applies a Gamma and Gain 
 
 
 ## Sigmoid Function DCTL
-Applies the sigmoid function to the inputs. Computes $$b + (w-b)\frac{1}{1 + e^{-c(x-d)}}$$.
+Applies the sigmoid function to the inputs. Computes $b + (w-b)\frac{1}{1 + e^{-c(x-d)}}$.
 
 ### DCTL Parameters
-**X Midpoint**: Controls the value of $$d$$. Vanilla sigmoid has this set to 0.0.
+**X Midpoint**: Controls the value of $d$. Vanilla sigmoid has this set to 0.0.
 
-**Contrast**: Controls the value of $$c$$. Vanilla sigmoid has this set to 1.0.
+**Contrast**: Controls the value of $c$. Vanilla sigmoid has this set to 1.0.
 
-**Output White**: Controls the value of $$w$$. Vanilla sigmoid has this set to 1.0.
+**Output White**: Controls the value of $w$. Vanilla sigmoid has this set to 1.0.
 
-**Output Black**: Controls the value of $$b$$. Vanilla sigmoid has this set to 1.0.
+**Output Black**: Controls the value of $b$. Vanilla sigmoid has this set to 1.0.
 
 
 ## Tanh Function DCTL
