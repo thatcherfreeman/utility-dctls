@@ -296,21 +296,17 @@ Computes the function $\texttt{base}^x$.
 **Base** The base of the exponent, raised to the power of the input pixel.
 
 
-## MTF Curve
+## MTF Curve DCTL
 Gives you control over a MTF-like curve. Internally makes passes of different frequencies which can be increased or reduced in gain before combining them back together.
 
 ### DCTL Parameters
 **Gate Width mm**: Width of the sensor in mm.
 
-**Band 1-4 LPpmm**: Specify the bottom of each of the four controllable frequency bands. Each band goes from the specified "Line Pairs per mm" to the start of the following band.
-
-**Band 1-4 Contrast**: Applies a gain to the information captured only by this band. Set to 0 to soften the image and raise up to 2 to increase sharpness.
+**Band 16-1:1 Contrast**: Applies a gain to the information captured only by this band. Set to 0 to soften the image and raise up to 2 to increase sharpness. The bands are relative to the timeline resolution, with a 16:1 blur, 8:1 blur, 4:1 blur, and 2:1 blur.
 
 **Debug Band**: Specifies which band is viewed when the Debug Mode isn't None.
 
 **Debug Mode**: Allows you to see the low pass and high pass modes. The Contrast is applied to what you see in the "High Pass Mode". The Low Pass mode shows you the content removed from the selected band.
-
-**Resize Mode**: Specifies the resizing method. BiCubic is highest quality, but bilinear and nearest neighbors look terrible and run faster.
 
 
 
