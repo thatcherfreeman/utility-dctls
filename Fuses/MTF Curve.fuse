@@ -40,7 +40,7 @@ function Create()
                 LINKID_DataType = "Number",
                 INPID_InputControl = "SliderControl",
                 INP_MinScale = 0.0,
-                INP_MaxScale = 1.2,
+                INP_MaxScale = 2.0,
                 INP_Default = 1.0,
             }
         )
@@ -71,6 +71,14 @@ function Create()
         {CCS_AddString = "Quality"},
         {CCS_AddString = "Performance"},
     })
+    Method = self:AddInput("Method", "Method", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ComboControl",
+        INP_Default = 0,
+        INP_Integer = true,
+        {CCS_AddString = "Quotient"},
+        {CCS_AddString = "Difference"},
+    })
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
         LINK_Main = 1,
@@ -94,6 +102,7 @@ function Process(req)
     local debug_band = DebugBand:GetValue(req).Value
 
     local performance_mode = PerformanceMode:GetValue(req).Value
+    local method = Method:GetValue(req).Value
 
     local WIDTH = img.Width
     local HEIGHT = img.Height
@@ -101,6 +110,9 @@ function Process(req)
     local first_band = 1
     local down_filter = "BiCubic"
     local up_filter = "BiCubic"
+    local edge_channelop = "Subtract"
+    local combine_channelop = "Add"
+    local alpha = 0.0
 
     if performance_mode == 1 then
         first_band = num_bands - 1
@@ -108,11 +120,18 @@ function Process(req)
         up_filter = "Quadratic"
     end
 
+    if method == 0 then
+        edge_channelop = "Divide"
+        combine_channelop = "Multiply"
+        alpha = 1.0
+    end
+
     local gains = {}
     local widths = {}
     local heights = {}
     local upres = {}
     local edges = {}
+
 
     -- Rescale images to eliminate high frequency information
     for i = first_band, num_bands do
@@ -127,6 +146,7 @@ function Process(req)
         if widths[i] == WIDTH then
             upres[i] = img
         else
+            -- Two resizes is faster than one blurring, gives similar results.
             downres = img:Resize(nil, {RSZ_Filter = down_filter, RSZ_Width = widths[i], RSZ_Height = heights[i]})
             upres[i] = downres:Resize(nil, {RSZ_Filter = up_filter, RSZ_Width = WIDTH, RSZ_Height = HEIGHT})
         end
@@ -135,19 +155,23 @@ function Process(req)
     -- Take difference between images of different resolutions to capture the
     -- information that was added by the higher resolution version.
     for i = first_band, num_bands-1 do
-        edges[i] = upres[i+1]:ChannelOpOf("Subtract", upres[i], { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = 0.0 })
+        edges[i] = upres[i+1]:ChannelOpOf(edge_channelop, upres[i], { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = 0.0 })
     end
-    edges[num_bands] = img:ChannelOpOf("Subtract", upres[num_bands], { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = 0.0 })
+    edges[num_bands] = img:ChannelOpOf(edge_channelop, upres[num_bands], { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = 0.0 })
 
     -- Apply gain control to each version.
     local result = upres[first_band]
     for i = first_band, num_bands do
         local thisedge = edges[i]:CopyOf()
-        thisedge:Gain(gains[i], gains[i], gains[i], 1.0)
+        if method == 0 then
+            thisedge:Gamma(1.0 / gains[i], 1.0 / gains[i], 1.0 / gains[i], 1.0)
+        else
+            thisedge:Gain(gains[i], gains[i], gains[i], 1.0)
+        end
         result = result:ChannelOpOf(
-            "Add",
+            combine_channelop,
             thisedge,
-            { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = 0.0 }
+            { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = alpha }
         )
     end
 
