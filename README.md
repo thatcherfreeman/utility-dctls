@@ -297,7 +297,7 @@ Computes the function $\texttt{base}^x$.
 
 
 ## MTF Curve DCTL
-Gives you control over a MTF-like curve. Internally makes passes of different frequencies which can be increased or reduced in gain before combining them back together.
+Gives you control over a MTF-like curve. Internally makes passes of different frequencies which can be increased or reduced in gain before combining them back together. Highly recommend using the Quotient method and feeding this DCTL a log image.
 
 ### DCTL Parameters
 **Gate Width mm**: Width of the sensor in mm.
@@ -307,6 +307,8 @@ Gives you control over a MTF-like curve. Internally makes passes of different fr
 **Debug Band**: Specifies which band is viewed when the Debug Mode isn't None.
 
 **Debug Mode**: Allows you to see the low pass and high pass modes. The Contrast is applied to what you see in the "High Pass Mode". The Low Pass mode shows you the content removed from the selected band.
+
+**Method**: Allows you to choose between Quotient and Difference, which correspond to different ways to compute the frequency bands. One computes the difference between the blurred images and the other computes the quotient. With the Difference method, the contrast is controlled by applying gain to each difference, and in the Quotient mode, contrast is applied by raising the quotient to a power.
 
 
 
