@@ -1,21 +1,11 @@
 // clang-format off
-DEFINE_UI_PARAMS(gate_width, Gate Width mm, DCTLUI_SLIDER_FLOAT, 24.0, 0.0, 100.0, 0.1)
-DEFINE_UI_PARAMS(lpm1, Band 1 LPpmm, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 200.0, 0.1)
-DEFINE_UI_PARAMS(lpm2, Band 2 LPpmm, DCTLUI_SLIDER_FLOAT, 8.0, 0.0, 200.0, 0.1)
-DEFINE_UI_PARAMS(lpm3, Band 3 LPpmm, DCTLUI_SLIDER_FLOAT, 16.0, 0.0, 200.0, 0.1)
-DEFINE_UI_PARAMS(lpm4, Band 4 LPpmm, DCTLUI_SLIDER_FLOAT, 32.0, 0.0, 200.0, 0.1)
-DEFINE_UI_PARAMS(gain1, Band 1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
-DEFINE_UI_PARAMS(gain2, Band 2 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
-DEFINE_UI_PARAMS(gain3, Band 3 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
-DEFINE_UI_PARAMS(gain4, Band 4 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
+DEFINE_UI_PARAMS(gain1, Band 16:1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
+DEFINE_UI_PARAMS(gain2, Band 6:1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
+DEFINE_UI_PARAMS(gain3, Band 4:1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
+DEFINE_UI_PARAMS(gain4, Band 2:1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
 DEFINE_UI_PARAMS(debug_mode, Debug Mode, DCTLUI_COMBO_BOX, 0, {NONE, LP, HP, HPG}, {None, Low Pass Mode, High Pass Mode, High Pass Gray Mode})
-DEFINE_UI_PARAMS(resize_mode, Resize Mode, DCTLUI_COMBO_BOX, 2, {NN, LINEAR, CUBIC}, {Nearest Neighbors, BiLinear, BiCubic})
 DEFINE_UI_PARAMS(debug_band, Debug Band, DCTLUI_SLIDER_INT, 4, 1, 4, 1)
 // clang-format on
-
-__DEVICE__ float get_coord_float(float x, int width) {
-    return (x * (float)width);
-}
 
 __DEVICE__ float3 get_color(int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     float r = _tex2D(p_TexR, p_X, p_Y);
@@ -23,39 +13,6 @@ __DEVICE__ float3 get_color(int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_
     float b = _tex2D(p_TexB, p_X, p_Y);
 
     return make_float3(r, g, b);
-}
-
-///////////////////////////////
-// Bilinear sampling
-//////////////////////////////
-
-__DEVICE__ float sample_point_bilinear_1ch(float x, float y, __TEXTURE__ tex, float scale) {
-    const float scale_round = _round(scale);
-    const int iX = (int)(_floor(x / scale_round) * scale_round);
-    const int iY = (int)(_floor(y / scale_round) * scale_round);
-
-    int x_low = (int)(iX);
-    int x_high = (int)(iX + scale_round);
-    int y_low = (int)(iY);
-    int y_high = (int)(iY + scale_round);
-
-    float c_ll = _tex2D(tex, x_low, y_low);
-    float c_lh = _tex2D(tex, x_low, y_high);
-    float c_hl = _tex2D(tex, x_high, y_low);
-    float c_hh = _tex2D(tex, x_high, y_high);
-
-    float c_l = _mix(c_ll, c_hl, (x - x_low) / (x_high - x_low));
-    float c_h = _mix(c_lh, c_hh, (x - x_low) / (x_high - x_low));
-    float c = _mix(c_l, c_h, (y - y_low) / (y_high - y_low));
-    return c;
-}
-
-__DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
-    float3 out = make_float3(0.0, 0.0, 0.0);
-    out.x = sample_point_bilinear_1ch(x, y, p_TexR, scale);
-    out.y = sample_point_bilinear_1ch(x, y, p_TexG, scale);
-    out.z = sample_point_bilinear_1ch(x, y, p_TexB, scale);
-    return out;
 }
 
 ///////////////////////////////
@@ -78,54 +35,120 @@ __DEVICE__ float3 sample_point_nn_3ch(float x, float y, __TEXTURE__ p_TexR, __TE
     return out;
 }
 
-/////////////////////////////////
-// Bicubic Sampling
-/////////////////////////////////
+//////////////////////////
+// Fast Blur method
+//////////////////////////
 
-// Adapted from
-// https://github.com/roukou3/DCTL/blob/master/defisheye.h
-__DEVICE__ float bicubic_h(const float t, const float scale) {
-    const float x = _fabs(t / scale);
-    const float B = 1.0;
-    const float C = 0.0;
-    if (x <= 1.0) {
-        return (2.0 - 1.5 * B - C) * _powf(x, 3.0) + (-3.0 + 2.0 * B + C) * _powf(x, 2.0) + (1.0 - (B / 3.0));
-    } else if (x <= 2.0) {
-        return (-B / 6.0 - C) * _powf(x, 3.0) + (B + 5.0 * C) * _powf(x, 2.0) + (-2.0 * B - 8.0 * C) * x + (4.0 / 3.0 * B + 4.0 * C);
+// Sampling Kernel
+// Lower left 0 is the (0,0) coordinate.
+// Number indicates the band, takes 64 samples
+// and constructs a box blur of varying qualities
+// of edge size 2, 4, 8, 16
+
+// - - - - 3 - - - 3 - - - 3 - - -
+// - - - - - - - - - - - - - - - -
+// - - 3 - - - 3 - - - 3 - - 3 - -
+// 3 - - - - - - - - - - - - - - -
+// - - - - - 2 - 2 - 2 - 2 - - - 3
+// - - 3 - 2 - 2 - 2 - 2 - - - - -
+// - - - - - 2 1 1 1 1 - 2 - 3 - -
+// 3 - - - 2 - 1 0 0 1 2 - - - - -
+// - - - - - 2 1 0 0 1 - 2 - - - 3
+// - - 3 - 2 - 1 1 1 1 2 - - - - -
+// - - - - - 2 - 2 - 2 - 2 - 3 - -
+// 3 - - - 2 - 2 - 2 - 2 - - - - -
+// - - - - - - - - - - - - - - - 3
+// - - 3 - - 3 - - - 3 - - - 3 - -
+// - - - - - - - - - - - - - - - -
+// - - - 3 - - - 3 - - - 3 - - - -
+
+
+
+__CONSTANT__ int band0_idxs[4][2] = {
+    {0, 0},
+    {0, 1},
+    {1, 0},
+    {1, 1},
+};
+
+__CONSTANT__ int band1_idxs[12][2] = {
+    {-1, -1},
+    {-1, 0},
+    {-1, 1},
+    {-1, 2},
+    {0, 2},
+    {1, 2},
+    {2, 2},
+    {2, 1},
+    {2, 0},
+    {2, -1},
+    {1, -1},
+    {0, -1},
+};
+
+__CONSTANT__ int band2_idxs[24][2] = {
+    {-2, -2}, {-2, 0}, {-2, 2}, {-1, 3}, {1, 3}, {3, 3}, {3, 1}, {3, -1}, {2, -2}, {0, -2}, {-3, -3}, {-3, -1},
+    {-3, 1},  {-3, 3}, {-2, 4}, {0, 4},  {2, 4}, {4, 4}, {4, 2}, {4, 0},  {4, -2}, {3, -3}, {1, -3},  {-1, -3},
+};
+
+__CONSTANT__ int band3_idxs[24][2] = {
+    {-5, -5},                    // *
+    {-5, -1}, {-5, 3},  {-5, 6}, // *
+    {-1, 6},  {3, 6},   {6, 6},  // *
+    {6, 2},   {6, -2},  {6, -5}, // *
+    {2, -5},  {-2, -5}, {-7, -4}, {-7, 1}, {-7, 5}, {-3, 8}, {1, 8}, {5, 8}, {8, 4}, {8, 0}, {8, -4}, {4, -7}, {0, -7}, {-4, -7},
+};
+
+__DEVICE__ void get_blur_bands(int px, int py, __TEXTURE__ pr, __TEXTURE__ pg, __TEXTURE__ pb, float scale, float3 ret[4]) {
+    // Blurs the image by four different amounts, returns each one in ret.
+    // Least blurred band is ret[3], most blurred is ret[0]
+    ret[0] = make_float3(0.0, 0.5, 0.0);
+    ret[1] = make_float3(0.5, 0.5, 0.0);
+    ret[2] = make_float3(0.0, 0.5, 0.5);
+    ret[3] = make_float3(0.5, 0.5, 0.5);
+
+    float3 total = make_float3(0.0, 0.0, 0.0);
+    float coeff = 0.0;
+    float coeff_sum = 0.0;
+    float3 value;
+    float x, y;
+    scale = _fmaxf(1.0, scale);
+    for (int i = 0; i < 4; ++i) {
+        x = px + ((float)band0_idxs[i][0] - 0.5) * scale;
+        y = py + ((float)band0_idxs[i][1] - 0.5) * scale;
+        value = sample_point_nn_3ch(x, y, pr, pg, pb, 1.0);
+        coeff = 1.0;
+        total += value * coeff;
+        coeff_sum += coeff;
     }
-    return 0.0;
-}
-
-__DEVICE__ float sample_point_bicubic_1ch(const float pX, const float pY, const __TEXTURE__ p_Tex, const float scale) {
-    const float scale_round = _round(scale);
-
-    const int iX = (int)(_floor(pX / scale_round) * scale_round);
-    const int iY = (int)(_floor(pY / scale_round) * scale_round);
-    const float dX = (pX - iX);
-    const float dY = (pY - iY);
-    const float vecX[] = {scale_round + dX, dX, scale_round - dX, 2 * scale_round - dX};
-    const float vecY[] = {scale_round + dY, dY, scale_round - dY, 2 * scale_round - dY};
-
-    float sum = 0;
-    float coef = 0;
-    for (int i = 0; i < 4; i++) {
-        float hX = bicubic_h(vecX[i], scale_round);
-        for (int j = 0; j < 4; j++) {
-            float hY = bicubic_h(vecY[j], scale_round);
-            // Could also consider bilinear sampling here or something.
-            sum += hY * hX * sample_point_nn_1ch(iX + (int)((i - 1) * scale_round), iY + (int)((j - 1) * scale_round), p_Tex, 1.0);
-            coef += hY * hX;
-        }
+    ret[3] = total / coeff_sum;
+    for (int i = 0; i < 12; ++i) {
+        x = px + ((float)band1_idxs[i][0] - 0.5) * scale;
+        y = py + ((float)band1_idxs[i][1] - 0.5) * scale;
+        value = sample_point_nn_3ch(x, y, pr, pg, pb, 1.0);
+        coeff = 1.0;
+        total += value * coeff;
+        coeff_sum += coeff;
     }
-    return sum / coef;
-}
-
-__DEVICE__ float3 sample_point_bicubic_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
-    float3 out = make_float3(0.0, 0.0, 0.0);
-    out.x = sample_point_bicubic_1ch(x, y, p_TexR, scale);
-    out.y = sample_point_bicubic_1ch(x, y, p_TexG, scale);
-    out.z = sample_point_bicubic_1ch(x, y, p_TexB, scale);
-    return out;
+    ret[2] = total / coeff_sum;
+    for (int i = 0; i < 24; ++i) {
+        x = px + ((float)band2_idxs[i][0] - 0.5) * scale;
+        y = py + ((float)band2_idxs[i][1] - 0.5) * scale;
+        value = sample_point_nn_3ch(x, y, pr, pg, pb, 1.0);
+        coeff = 1.0;
+        total += value * coeff;
+        coeff_sum += coeff;
+    }
+    ret[1] = total / coeff_sum;
+    for (int i = 0; i < 24; ++i) {
+        x = px + ((float)band3_idxs[i][0] - 0.5) * scale;
+        y = py + ((float)band3_idxs[i][1] - 0.5) * scale;
+        value = sample_point_nn_3ch(x, y, pr, pg, pb, scale);
+        coeff = 1.5;
+        total += value * coeff;
+        coeff_sum += coeff;
+    }
+    ret[0] = total / coeff_sum;
 }
 
 // Return the minimum new_width that would resolve the line pairs.
@@ -135,65 +158,18 @@ __DEVICE__ int compute_scale(float gate_width, float lpmm) {
     return new_width;
 }
 
-// Identify the pixel in the current image (pr, pg, pb), dimensions (init_width,
-// init_height) at location (x,y) Return the pixel value if the image had been
-// rescaled to (new_width, new_height)
-__DEVICE__ float3 reduce_resolution(int x,
-                                    int y,
-                                    int init_width,
-                                    int init_height,
-                                    int new_width,
-                                    int new_height,
-                                    __TEXTURE__ pr,
-                                    __TEXTURE__ pg,
-                                    __TEXTURE__ pb,
-                                    int resize_mode) {
-    float p_x = (float)x / (float)init_width;
-    float p_y = (float)y / (float)init_height;
-
-    if (init_width <= new_width) {
-        // New image is larger than the original one, we can't really make an image
-        // larger than p_Width and p_Height, so we'll just cap the resolution at the
-        // image res.
-        return get_color(x, y, pr, pg, pb);
-    } else {
-        // init_width > new_width
-        float3 out = make_float3(0.0, 0.0, 0.0);
-        if (resize_mode == NN) {
-            out = sample_point_nn_3ch(p_x * init_width, p_y * init_height, pr, pg, pb, (float)init_width / (float)new_width);
-        } else if (resize_mode == LINEAR) {
-            out = sample_point_bilinear_3ch(p_x * init_width, p_y * init_height, pr, pg, pb, (float)init_width / (float)new_width);
-        } else {
-            // resize_mode == CUBIC
-            out = sample_point_bicubic_3ch(p_x * init_width, p_y * init_height, pr, pg, pb, (float)init_width / (float)new_width);
-        }
-        return out;
-    }
-}
-
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
-    float aspect = (float)p_Height / (float)p_Width;
-    int widths[4] = {
-        compute_scale(gate_width, lpm1),
-        compute_scale(gate_width, lpm2),
-        compute_scale(gate_width, lpm3),
-        compute_scale(gate_width, lpm4),
-    };
-    int heights[4] = {
-        (int)(widths[0] * aspect),
-        (int)(widths[1] * aspect),
-        (int)(widths[2] * aspect),
-        (int)(widths[3] * aspect),
-    };
-
-    float3 downres[4] = {
-        reduce_resolution(p_X, p_Y, p_Width, p_Height, widths[0], heights[0], p_TexR, p_TexG, p_TexB, resize_mode),
-        reduce_resolution(p_X, p_Y, p_Width, p_Height, widths[1], heights[1], p_TexR, p_TexG, p_TexB, resize_mode),
-        reduce_resolution(p_X, p_Y, p_Width, p_Height, widths[2], heights[2], p_TexR, p_TexG, p_TexB, resize_mode),
-        reduce_resolution(p_X, p_Y, p_Width, p_Height, widths[3], heights[3], p_TexR, p_TexG, p_TexB, resize_mode),
-    };
-
     float3 curr_color = get_color(p_X, p_Y, p_TexR, p_TexG, p_TexB);
+    // float scale = (float)p_Width / (float)compute_scale(gate_width, lpm4);
+    float scale = 2.0; // doesn't look great with larger values.
+    float3 downres[4] = {
+        make_float3(0.0, 0.0, 0.0),
+        make_float3(0.0, 0.0, 0.0),
+        make_float3(0.0, 0.0, 0.0),
+        make_float3(0.0, 0.0, 0.0),
+    };
+
+    get_blur_bands(p_X, p_Y, p_TexR, p_TexG, p_TexB, scale, downres);
 
     float3 edges[4] = {
         downres[1] - downres[0],

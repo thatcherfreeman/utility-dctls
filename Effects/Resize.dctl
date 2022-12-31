@@ -1,0 +1,162 @@
+// Just a DCTL to save my resize algorithm code. I wouldn't recommend using this for anything other than demos.
+// clang-format off
+DEFINE_UI_PARAMS(scale, Scaling, DCTLUI_VALUE_BOX, 2.0)
+DEFINE_UI_PARAMS(resize_mode, Resize Mode, DCTLUI_COMBO_BOX, 3, {NN, LINEAR, CUBIC}, {Nearest Neighbors, BiLinear, BiCubic})
+// clang-format on
+
+
+__DEVICE__ float3 get_color(int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    float r = _tex2D(p_TexR, p_X, p_Y);
+    float g = _tex2D(p_TexG, p_X, p_Y);
+    float b = _tex2D(p_TexB, p_X, p_Y);
+
+    return make_float3(r, g, b);
+}
+
+///////////////////////////////
+// Bilinear sampling
+//////////////////////////////
+
+__DEVICE__ float sample_point_bilinear_1ch(float x, float y, __TEXTURE__ tex, float scale) {
+    const float scale_round = _round(scale);
+    const int iX = (int)(_floor(x / scale_round) * scale_round);
+    const int iY = (int)(_floor(y / scale_round) * scale_round);
+
+    int x_low = (int)(iX);
+    int x_high = (int)(iX + scale_round);
+    int y_low = (int)(iY);
+    int y_high = (int)(iY + scale_round);
+
+    float c_ll = _tex2D(tex, x_low, y_low);
+    float c_lh = _tex2D(tex, x_low, y_high);
+    float c_hl = _tex2D(tex, x_high, y_low);
+    float c_hh = _tex2D(tex, x_high, y_high);
+
+    float c_l = _mix(c_ll, c_hl, (x - x_low) / (x_high - x_low));
+    float c_h = _mix(c_lh, c_hh, (x - x_low) / (x_high - x_low));
+    float c = _mix(c_l, c_h, (y - y_low) / (y_high - y_low));
+    return c;
+}
+
+__DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
+    float3 out = make_float3(0.0, 0.0, 0.0);
+    out.x = sample_point_bilinear_1ch(x, y, p_TexR, scale);
+    out.y = sample_point_bilinear_1ch(x, y, p_TexG, scale);
+    out.z = sample_point_bilinear_1ch(x, y, p_TexB, scale);
+    return out;
+}
+
+///////////////////////////////
+// Nearest Neighbors sampling
+//////////////////////////////
+
+__DEVICE__ float sample_point_nn_1ch(float x, float y, __TEXTURE__ tex, float scale) {
+    const float scale_round = _round(scale);
+    const int iX = (int)(_round(x / scale_round) * scale_round);
+    const int iY = (int)(_round(y / scale_round) * scale_round);
+    float c = _tex2D(tex, iX, iY);
+    return c;
+}
+
+__DEVICE__ float3 sample_point_nn_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
+    float3 out = make_float3(0.0, 0.0, 0.0);
+    out.x = sample_point_nn_1ch(x, y, p_TexR, scale);
+    out.y = sample_point_nn_1ch(x, y, p_TexG, scale);
+    out.z = sample_point_nn_1ch(x, y, p_TexB, scale);
+    return out;
+}
+
+/////////////////////////////////
+// Bicubic Sampling
+/////////////////////////////////
+
+// Adapted from
+// https://github.com/roukou3/DCTL/blob/master/defisheye.h
+__DEVICE__ float bicubic_h(const float t, const float scale) {
+    const float x = _fabs(t / scale);
+    const float B = 1.0;
+    const float C = 0.0;
+    if (x <= 1.0) {
+        return (2.0 - 1.5 * B - C) * _powf(x, 3.0) + (-3.0 + 2.0 * B + C) * _powf(x, 2.0) + (1.0 - (B / 3.0));
+    } else if (x <= 2.0) {
+        return (-B / 6.0 - C) * _powf(x, 3.0) + (B + 5.0 * C) * _powf(x, 2.0) + (-2.0 * B - 8.0 * C) * x + (4.0 / 3.0 * B + 4.0 * C);
+    }
+    return 0.0;
+}
+
+__DEVICE__ float sample_point_bicubic_1ch(const float pX, const float pY, const __TEXTURE__ p_Tex, const float scale) {
+    const float scale_round = _round(scale);
+
+    const int iX = (int)(_floor(pX / scale_round) * scale_round);
+    const int iY = (int)(_floor(pY / scale_round) * scale_round);
+    const float dX = (pX - iX);
+    const float dY = (pY - iY);
+    const float vecX[] = {scale_round + dX, dX, scale_round - dX, 2 * scale_round - dX};
+    const float vecY[] = {scale_round + dY, dY, scale_round - dY, 2 * scale_round - dY};
+
+    float sum = 0;
+    float coef = 0;
+    for (int i = 0; i < 4; i++) {
+        float hX = bicubic_h(vecX[i], scale_round);
+        for (int j = 0; j < 4; j++) {
+            float hY = bicubic_h(vecY[j], scale_round);
+            // Could also consider bilinear sampling here or something.
+            sum += hY * hX * sample_point_nn_1ch(iX + (int)((i - 1) * scale_round), iY + (int)((j - 1) * scale_round), p_Tex, 1.0);
+            coef += hY * hX;
+        }
+    }
+    return sum / coef;
+}
+
+__DEVICE__ float3 sample_point_bicubic_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
+    float3 out = make_float3(0.0, 0.0, 0.0);
+    out.x = sample_point_bicubic_1ch(x, y, p_TexR, scale);
+    out.y = sample_point_bicubic_1ch(x, y, p_TexG, scale);
+    out.z = sample_point_bicubic_1ch(x, y, p_TexB, scale);
+    return out;
+}
+
+// Identify the pixel in the current image (pr, pg, pb), dimensions (init_width,
+// init_height) at location (x,y) Return the pixel value if the image had been
+// rescaled to (new_width, new_height)
+__DEVICE__ void reduce_resolution(int x,
+                                    int y,
+                                    int init_width,
+                                    int init_height,
+                                    int new_width,
+                                    int new_height,
+                                    __TEXTURE__ pr,
+                                    __TEXTURE__ pg,
+                                    __TEXTURE__ pb,
+                                    int resize_mode,
+                                    __PRIVATE__ float3* ret) {
+    float p_x = (float)x / (float)init_width;
+    float p_y = (float)y / (float)init_height;
+    float3 out = make_float3(0.0, 0.0, 0.0);
+    if (init_width <= new_width) {
+        // New image is larger than the original one, we can't really make an image
+        // larger than p_Width and p_Height, so we'll just cap the resolution at the
+        // image res.
+        out = get_color(x, y, pr, pg, pb);
+    } else {
+        // init_width > new_width
+        if (resize_mode == NN) {
+            out = sample_point_nn_3ch(p_x * init_width, p_y * init_height, pr, pg, pb, (float)init_width / (float)new_width);
+        } else if (resize_mode == LINEAR) {
+            out = sample_point_bilinear_3ch(p_x * init_width, p_y * init_height, pr, pg, pb, (float)init_width / (float)new_width);
+        } else {
+            // resize_mode == CUBIC
+            out = sample_point_bicubic_3ch(p_x * init_width, p_y * init_height, pr, pg, pb, (float)init_width / (float)new_width);
+        }
+    }
+    *ret = out;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    int new_width = p_Width / scale;
+    int new_height = p_Height / scale;
+
+    float3 downres = make_float3(0.0, 0.0, 0.0);
+    reduce_resolution(p_X, p_Y, p_Width, p_Height, new_width, new_height, p_TexR, p_TexG, p_TexB, resize_mode, &downres);
+    return downres;
+}
