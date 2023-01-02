@@ -1,0 +1,20 @@
+DEFINE_UI_PARAMS(k, Distortion Parameter k, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.01)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    float aspect = (float)p_Width / (float)p_Height;
+    float x = ((float)p_X / (float)p_Width - 0.5) * aspect;
+    float y = (float)p_Y / (float)p_Height - 0.5;
+
+    float r_d = _sqrtf(_powf(_fabs(x), 2.0) + _powf(_fabs(y), 2.0));
+    float r_u = r_d * (1.0 + k * _powf(_fabs(r_d), 2.0));
+
+    float new_x = x * (r_u / r_d) / aspect;
+    float new_y = y * (r_u / r_d);
+
+    // sample textures at new_x, new_y
+    float3 output = make_float3(0.0, 0.0, 0.0);
+    output.x = _tex2D(p_TexR, (int)((new_x + 0.5) * p_Width), (int)((new_y + 0.5) * p_Height));
+    output.y = _tex2D(p_TexG, (int)((new_x + 0.5) * p_Width), (int)((new_y + 0.5) * p_Height));
+    output.z = _tex2D(p_TexB, (int)((new_x + 0.5) * p_Width), (int)((new_y + 0.5) * p_Height));
+    return output;
+}

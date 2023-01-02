@@ -112,7 +112,6 @@ function Process(req)
     local up_filter = "BiCubic"
     local edge_channelop = "Subtract"
     local combine_channelop = "Add"
-    local alpha = 0.0
 
     if performance_mode == 1 then
         first_band = num_bands - 1
@@ -155,9 +154,9 @@ function Process(req)
     -- Take difference between images of different resolutions to capture the
     -- information that was added by the higher resolution version.
     for i = first_band, num_bands-1 do
-        edges[i] = upres[i+1]:ChannelOpOf(edge_channelop, upres[i], { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = 0.0 })
+        edges[i] = upres[i+1]:ChannelOpOf(edge_channelop, upres[i], { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = nil })
     end
-    edges[num_bands] = img:ChannelOpOf(edge_channelop, upres[num_bands], { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = 0.0 })
+    edges[num_bands] = img:ChannelOpOf(edge_channelop, upres[num_bands], { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = nil })
 
     -- Apply gain control to each version.
     local result = upres[first_band]
@@ -171,7 +170,7 @@ function Process(req)
         result = result:ChannelOpOf(
             combine_channelop,
             thisedge,
-            { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = alpha }
+            { R = "Fg.R", G = "Fg.G", B = "Fg.B", A = nil }
         )
     end
 
@@ -187,7 +186,7 @@ function Process(req)
         local gray = Pixel({R = 0.5, G = 0.5, B=0.5, A=1.0})
         local gray_img = Image({IMG_LIKE = edges[debug_band], IMG_Width = WIDTH, IMG_Height = HEIGHT})
         gray_img:Fill(gray)
-        OutImage:Set(req, edges[debug_band]:ChannelOpOf("Add", gray_img, {R="Fg.R", G="Fg.G", B="Fg.B", A=0.0}))
+        OutImage:Set(req, edges[debug_band]:ChannelOpOf(combine_channelop, gray_img, {R="Fg.R", G="Fg.G", B="Fg.B", A=nil}))
     else
         error("Invalid debug mode.")
     end
