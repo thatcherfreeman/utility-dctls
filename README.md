@@ -232,7 +232,11 @@ Inverts the values in an image.
 ### DCTL Parameters
 **Log Mode**: When checked, computes the inverse by taking `1 - x`. When unchecked, assumes the image is scene linear and therefore computes `1 / x`.
 
+## Lens Distortion DCTL
+Applies a basic lens distortion model.
 
+### DCTL Parameters
+**Distortion Parameter k**: Chooses the value of $k$ in $r_u = r_d (1 + k r_d^2)$, the model.
 
 ## Levels Converter
 Converts between full and (0-1023) legal levels (64-940)
