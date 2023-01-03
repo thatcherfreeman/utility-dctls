@@ -8,7 +8,6 @@ DEFINE_UI_PARAMS(debug_mode, Debug Mode, DCTLUI_COMBO_BOX, 0, {NONE, LP, HP, HPG
 DEFINE_UI_PARAMS(method, Method, DCTLUI_COMBO_BOX, 0, {QUOTIENT, DIFFERENCE}, {Quotient, Difference})
 // clang-format on
 
-
 __DEVICE__ float powf(float base, float exp) {
     float out = _copysignf(_powf(_fabs(base), exp), base);
     return out;
@@ -41,7 +40,6 @@ __DEVICE__ float3 sample_point_nn_3ch(float x, float y, __TEXTURE__ p_TexR, __TE
     out.z = sample_point_nn_1ch(x, y, p_TexB, scale);
     return out;
 }
-
 
 //////////////////////////
 // Fast Blur method
@@ -93,59 +91,17 @@ __CONSTANT__ int band1_idxs[12][2] = {
 };
 
 __CONSTANT__ int band2_idxs[24][2] = {
-    {-2, -2},
-    {-2, 0},
-    {-2, 2},
-    {-1, 3},
-    {1, 3},
-    {3, 3},
-    {3, 1},
-    {3, -1},
-    {2, -2},
-    {0, -2},
-    {-3, -3},
-    {-3, -1},
-    {-3, 1},
-    {-3, 3},
-    {-2, 4},
-    {0, 4},
-    {2, 4},
-    {4, 4},
-    {4, 2},
-    {4, 0},
-    {4, -2},
-    {3, -3},
-    {1, -3},
-    {-1, -3},
+    {-2, -2}, {-2, 0}, {-2, 2}, {-1, 3}, {1, 3}, {3, 3}, {3, 1}, {3, -1}, {2, -2}, {0, -2}, {-3, -3}, {-3, -1},
+    {-3, 1},  {-3, 3}, {-2, 4}, {0, 4},  {2, 4}, {4, 4}, {4, 2}, {4, 0},  {4, -2}, {3, -3}, {1, -3},  {-1, -3},
 };
 
 __CONSTANT__ int band3_idxs[24][2] = {
-    {-5, -5}, // *
-    {-5, -1},
-    {-5, 3},
-    {-5, 6}, // *
-    {-1, 6},
-    {3, 6},
-    {6, 6}, // *
-    {6, 2},
-    {6, -2},
-    {6, -5}, // *
-    {2, -5},
-    {-2, -5},
-    {-7, -4},
-    {-7, 1},
-    {-7, 5},
-    {-3, 8},
-    {1, 8},
-    {5, 8},
-    {8, 4},
-    {8, 0},
-    {8, -4},
-    {4, -7},
-    {0, -7},
-    {-4, -7},
+    {-5, -5},                    // *
+    {-5, -1}, {-5, 3},  {-5, 6}, // *
+    {-1, 6},  {3, 6},   {6, 6},  // *
+    {6, 2},   {6, -2},  {6, -5}, // *
+    {2, -5},  {-2, -5}, {-7, -4}, {-7, 1}, {-7, 5}, {-3, 8}, {1, 8}, {5, 8}, {8, 4}, {8, 0}, {8, -4}, {4, -7}, {0, -7}, {-4, -7},
 };
-
 
 __DEVICE__ void get_blur_bands(int px, int py, __TEXTURE__ pr, __TEXTURE__ pg, __TEXTURE__ pb, float scale, float3 ret[4]) {
     // Blurs the image by four different amounts, returns each one in ret.
@@ -193,14 +149,12 @@ __DEVICE__ void get_blur_bands(int px, int py, __TEXTURE__ pr, __TEXTURE__ pg, _
     ret[0] = total / coeff_sum;
 }
 
-
 // Return the minimum new_width that would resolve the line pairs.
 __DEVICE__ int compute_scale(float gate_width, float lpmm) {
     // By nyquist, x line pairs requires 2x samples to resolve. Thus:
     int new_width = (int)(lpmm * gate_width * 2.0);
     return new_width;
 }
-
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     float3 curr_color = get_color(p_X, p_Y, p_TexR, p_TexG, p_TexB);
