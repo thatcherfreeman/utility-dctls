@@ -42,9 +42,34 @@ __DEVICE__ float3 sample_point_nn_3ch(float x, float y, __TEXTURE__ p_TexR, __TE
     return out;
 }
 
+
 //////////////////////////
 // Fast Blur method
 //////////////////////////
+
+// Sampling Kernel
+// Lower left 0 is the (0,0) coordinate.
+// Number indicates the band, takes 64 samples
+// and constructs a box blur of varying qualities
+// of edge size 2, 4, 8, 16
+
+// - - - - 3 - - - 3 - - - 3 - - -
+// - - - - - - - - - - - - - - - -
+// - - 3 - - - 3 - - - 3 - - 3 - -
+// 3 - - - - - - - - - - - - - - -
+// - - - - - 2 - 2 - 2 - 2 - - - 3
+// - - 3 - 2 - 2 - 2 - 2 - - - - -
+// - - - - - 2 1 1 1 1 - 2 - 3 - -
+// 3 - - - 2 - 1 0 0 1 2 - - - - -
+// - - - - - 2 1 0 0 1 - 2 - - - 3
+// - - 3 - 2 - 1 1 1 1 2 - - - - -
+// - - - - - 2 - 2 - 2 - 2 - 3 - -
+// 3 - - - 2 - 2 - 2 - 2 - - - - -
+// - - - - - - - - - - - - - - - 3
+// - - 3 - - 3 - - - 3 - - - 3 - -
+// - - - - - - - - - - - - - - - -
+// - - - 3 - - - 3 - - - 3 - - - -
+
 __CONSTANT__ int band0_idxs[4][2] = {
     {0, 0},
     {0, 1},
