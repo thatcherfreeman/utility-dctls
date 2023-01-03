@@ -124,11 +124,6 @@ __CONSTANT__ int band3_idxs[24][2] = {
 
 __DEVICE__ void get_blur_bands(int px, int py, __TEXTURE__ pr, __TEXTURE__ pg, __TEXTURE__ pb, float scale, float3 ret[4]) {
     // Blurs the image by four different amounts, returns each one in ret.
-    ret[0] = make_float3(0.0, 0.5, 0.0);
-    ret[1] = make_float3(0.5, 0.5, 0.0);
-    ret[2] = make_float3(0.0, 0.5, 0.5);
-    ret[3] = make_float3(0.5, 0.5, 0.5);
-
     float3 total = make_float3(0.0, 0.0, 0.0);
     float coeff = 0.0;
     float coeff_sum = 0.0;
