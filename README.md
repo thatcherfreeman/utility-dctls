@@ -29,10 +29,39 @@ If a DCTL is not working, you can usually find logs in these directories. If you
 
 **Windows**: `C:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\logs\davinci_resolve.log`
 
+# The Fuses
+
+## MTF Curve Fuse
+This is a higher quality version of the MTF Curve DCTL. Here, we provide 5 frequency bands in which the lower end number of line-pairs per mm can be specified, and the computation of the frequency bands is done in a higher quality way. Importantly, this Fuse requires that your input image is a Float16 or Float32 type image, and it works best on a Log state image. I do not recommend using it with a Linear state image, and I would also recommend clamping the input to be non-negative. This Fuse works using several different discrete frequency bands rather than via a fourier transform, but it largely gives good looking results regardless.
+
+### Parameters
+**Gate Width**: The mm width of your frame.
+
+**Band 1-5 LP/mm**: This indicates where the frequency band should start for bands 1-5. Technically the resizing operation is imperfect, so if you're trying to match a chart, lower each value slightly. IE if you have a chart with 20 LP/mm on it, set the band to start early at about 5 LP/mm below the value you're trying to target.
+
+**Band 1-5 Contrast**: This allows you to control the contrast level of each band on a scale from 0 to 2. 1.0 is neutral, and higher is more contrast.
+
+**Debug Mode**: This pull-down allows you to figure out what each band targets. You can choose from None (runs the plugin normally), Low Pass Mode (shows you the information that's too low frequency to be captured in this band), High Pass Mode (shows the information that's in this band), and High Pass Gray Mode (Same as High Pass mode, but normalized to 0.5 so that the frequency data in this band is more visible).
+
+**Debug Band**: Allows you to choose which band will be shown in the Debug mode.
+
+**Performance Mode**: Quality does the right thing, but if you find that it's too slow, you can change this to Performance. Performance uses a lower quality computation for the low frequency information, and importantly it disables all bands except for the last two.
+
+**Method**: Choose between Quotient and Difference. In most real-world scenarios, the Quotient method provides better looking results, but the Difference method performs more accurately on zebra striped test charts. Here's the math:
+```
+quotient_out := (input_value / low_pass5)^band5_contrast * (low_pass5 / low_pass4)^band4_contrast * ... * low_pass1
+difference_out := (input_value - low_pass5)*band5_contrast + (low_pass5 - low_pass4)*band4_contrast + ... + low_pass1
+```
+
+## Linear Exposure Fuse
+Simply multiplies the input values by `2^x`, where `x` is the specified Exposure (Stops) value. Expects a Linear input.
+
+### Parameters
+**Exposure (Stops)**: Exposure compensation to make in stops.
 
 # The DCTLs:
 
-## Aces Exposure DCTL
+## ACES Exposure DCTL
 DCTL that allows for adjustment of exposure in ACES. Important: It's probably better to just set your timeline color space to the ACES color space you want to use, and then to use the Exposure slider in the HDR color wheels.
 
 ### How it works
@@ -304,16 +333,17 @@ Computes the function $\texttt{base}^x$.
 Gives you control over a MTF-like curve. Internally makes passes of different frequencies which can be increased or reduced in gain before combining them back together. Highly recommend using the Quotient method and feeding this DCTL a log image.
 
 ### DCTL Parameters
-**Gate Width mm**: Width of the sensor in mm.
-
 **Band 16-1:1 Contrast**: Applies a gain to the information captured only by this band. Set to 0 to soften the image and raise up to 2 to increase sharpness. The bands are relative to the timeline resolution, with a 16:1 blur, 8:1 blur, 4:1 blur, and 2:1 blur.
 
 **Debug Band**: Specifies which band is viewed when the Debug Mode isn't None.
 
-**Debug Mode**: Allows you to see the low pass and high pass modes. The Contrast is applied to what you see in the "High Pass Mode". The Low Pass mode shows you the content removed from the selected band.
+**Debug Mode**: This pull-down allows you to figure out what each band targets. You can choose from None (runs the plugin normally), Low Pass Mode (shows you the information that's too low frequency to be captured in this band), High Pass Mode (shows the information that's in this band), and High Pass Gray Mode (Same as High Pass mode, but normalized to 0.5 so that the frequency data in this band is more visible).
 
-**Method**: Allows you to choose between Quotient and Difference, which correspond to different ways to compute the frequency bands. One computes the difference between the blurred images and the other computes the quotient. With the Difference method, the contrast is controlled by applying gain to each difference, and in the Quotient mode, contrast is applied by raising the quotient to a power.
-
+**Method**: Allows you to choose between Quotient and Difference, which correspond to different ways to compute the frequency bands. In most real-world scenarios, the Quotient method provides better looking results, but the Difference method performs more accurately on zebra striped test charts. Here's the math:
+```
+quotient_out := (input_value / low_pass5)^band5_contrast * (low_pass5 / low_pass4)^band4_contrast * ... * low_pass1
+difference_out := (input_value - low_pass5)*band5_contrast + (low_pass5 - low_pass4)*band4_contrast + ... + low_pass1
+```
 
 
 ## Multiplication Function DCTL
