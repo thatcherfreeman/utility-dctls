@@ -104,6 +104,17 @@ Helps you spot pixels with NaN, infinity, negative, zero, or superwhite channels
 **Highlight +Inf**: Highlights pixels with +infinity as at least one channel.
 
 
+## Bleach Bypass DCTL
+Applies a beach bypass look to the image. Expects a Linear image. Uses a custom Overlay implementation designed for Linear images.
+
+### DCTL Parameters
+**Saturation**: Indicates how saturated or desaturated the result should be.
+
+**Gamma**: Controls the contrast of the image.
+
+**Middle Gray**: Indicates the middle gray value that will be preserved.
+
+
 ## Clamp DCTL
 Clamps the code values of the current frame to the specified Min and Max values, such that for any `x`, we will then have `clamp_min <= x <= clamp_max`
 
