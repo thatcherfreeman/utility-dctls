@@ -524,6 +524,8 @@ Computes a tanh of the input via $g \tanh(c (x - b))$.
 
 **Output White**: Controls the value of $g$. Vanilla tanh has this set to 1.0.
 
+**Maintain Contrast**: If checked, then the Contrast control controls the derivative at x=0 even if the output white is changed (IE $c$ is scaled by $1/g$).
+
 
 ## T-Log Curve
 Converts between linear and my super cool, fully-logarithmic curve. Spec for this curve is 18% gray maps to 50 IRE, then 100% IRE is middle gray plus `num_stops/2`, and 0% is middle gray minus `num_stops/2`. Every stop of dynamic range has an equal number of code values given by `100% / num_stops`. Also clamps the linear input to be >= 0.0 to avoid NaNs.
