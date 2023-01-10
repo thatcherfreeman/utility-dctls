@@ -1,0 +1,109 @@
+// clang-format off
+DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
+// clang-format on
+
+#define PI 3.1415926535897932384626
+
+__DEVICE__ float3 cross_product(float3 a, float3 b) {
+    float3 out = make_float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+    return out;
+}
+
+__DEVICE__ inline float pow2f(float base) {
+    return base * base;
+}
+
+__DEVICE__ float dot_product(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__DEVICE__ float norm_f3(float3 a) {
+    return _sqrtf(pow2f(a.x) + pow2f(a.y) + pow2f(a.z));
+}
+
+__DEVICE__ float3 unit_vec(float3 a) {
+    float norm = norm_f3(a);
+    float3 out = make_float3(a.x / norm, a.y / norm, a.z / norm);
+    return out;
+}
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float angle) {
+    // Axis assumed to be unit vector, angle assuemd to be in radians
+    float c = _cosf(angle);
+    float s = _sinf(angle);
+
+    mat[0][0] = c + pow2f(axis.x) * (1.0 - c);
+    mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
+    mat[1][1] = c + pow2f(axis.y) * (1.0 - c);
+    mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
+    mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
+}
+
+__DEVICE__ float3 rgb_to_spherical(float3 x) {
+    const float3 achromatic = make_float3(1.0, 1.0, 1.0);
+    const float3 red_axis = make_float3(1.0, 0.0, 0.0);
+    const float scale = norm_f3(achromatic);
+    float rot_mat[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    float rot_mat2[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+
+    // Moves the achromatic axis to the red axis.
+    make_rotation_mat_axis_angle(
+        rot_mat, unit_vec(cross_product(red_axis, achromatic)), -1.0 * _acosf(dot_product(red_axis, unit_vec(achromatic))));
+    // Rotates around (1, 0, 0) so that the old red vector points to (1, 0, 0).
+    make_rotation_mat_axis_angle(rot_mat2, red_axis, 3.0 * PI / 4.0);
+
+    float3 rotated_color = mv_33_3(rot_mat, x);
+    rotated_color = mv_33_3(rot_mat2, rotated_color) / scale;
+    float theta = _atan2f(rotated_color.z, rotated_color.y) / (2.0 * PI);
+
+    float3 out = make_float3(0.0, 0.0, 0.0);
+    out.x = norm_f3(rotated_color);
+    out.y = theta < 0.0 ? theta + 1.0 : theta;
+    out.z = _atan2f(norm_f3(make_float3(rotated_color.y, rotated_color.z, 0.0)), rotated_color.x) / (0.5 * PI);
+    return out;
+}
+
+__DEVICE__ float3 spherical_to_rgb(float3 in) {
+    const float3 achromatic = make_float3(1.0, 1.0, 1.0);
+    const float3 red_axis = make_float3(1.0, 0.0, 0.0);
+    const float scale = norm_f3(achromatic);
+
+    float rot_mat_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    float rot_mat2_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    make_rotation_mat_axis_angle(
+        rot_mat_inv, unit_vec(cross_product(red_axis, achromatic)), _acosf(dot_product(red_axis, unit_vec(achromatic))));
+    make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0 * PI / 4.0);
+
+    float3 in_rads = make_float3(in.x, (in.y > 0.5 ? in.y - 1.0 : in.y) * 2.0 * PI, in.z * 0.5 * PI);
+
+    float3 direction = make_float3(1.0, 1.0, 1.0);
+    direction.x = in_rads.x * _cosf(in_rads.z);
+    direction.y = in_rads.x * _cosf(in_rads.y) * _sinf(in_rads.z);
+    direction.z = in_rads.x * _sinf(in_rads.y) * _sinf(in_rads.z);
+
+    float3 x = mv_33_3(rot_mat2_inv, direction * scale);
+    x = mv_33_3(rot_mat_inv, x);
+    return x;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 curr_color = make_float3(p_R, p_G, p_B);
+    float3 output;
+    if (invert) {
+        output = spherical_to_rgb(curr_color);
+    } else {
+        output = rgb_to_spherical(curr_color);
+    }
+    return output;
+}

@@ -507,6 +507,13 @@ Applies the sigmoid function to the inputs. Computes $b + (w-b)\frac{1}{1 + e^{-
 **Output Black**: Controls the value of $b$. Vanilla sigmoid has this set to 1.0.
 
 
+## Spherical Color Space DCTL
+between RGB and a spherical color space. Outputs a 3-channel image, $(\rho, \theta, \phi)$. $\rho$ represents the radius, $\theta$ is scaled 0-1 and represents the hue, and $\phi$ represents saturation and is scaled from 0 to $\pi / 2$.
+
+### DCTL Parameters
+**Invert**: When unchecked, converts from RGB to spherical, and when checked, converts from spherical to RGB.
+
+
 ## Tanh Function DCTL
 Computes a tanh of the input via $g \tanh(c (x - b))$.
 
