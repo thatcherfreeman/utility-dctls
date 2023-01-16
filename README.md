@@ -557,3 +557,28 @@ Corrects for a vignette in the image, only handles circular vignettes for now, e
 **Vignette Amount**: Uses a model of `1 + ar^2` to determine the amount of vignetting, then multiplies to vignette the image. Vignette amount controls the value of `a`.
 
 **Show Vignette**: If checked, outputs the image that is multiplied by the source image.
+
+
+## Waveform Guides
+Adds a border to the image and draws on the border so that the luma waveform has a luminance scale drawn on it. Put this **after** your ODT.
+
+### DCTL Parameters
+**Minor Line Width**: Indicates how wide the narrow dashes on the left side of the waveform are.
+
+**Line Thickness**: How wide you want the lines on the waveform to appear.
+
+**Text Size**: Height of characters written on the left margin.
+
+**Margin for Text**: How much horizontal space is allocated to the characters on the left margin
+
+**Graticule Brightness**: Allows you to increase the brightness of the drawn graticule by repeating the drawn lines and characters.
+
+**BT1886 White Point**: If BT.1886 Annex 1 is selected as the Waveform scale, this controls the white point parameter, specified by $L_W$ in the official recommendation.
+
+**BT1886 Black Point**: If BT.1886 Annex 1 is selected as the Waveform scale, this controls the black point parameter, specified by $L_B$ in the official recommendation. If set to 0, then this is effectively just a gamma function.
+
+**BT1886 Gamma**: Specifies the gamma curve, the recommendation says to fix this at 2.4.
+
+**Rescale Mode**: Choose from None, Fill, or Aspect. As the drawn stuff in the margins changes the remaining space in the viewer, this chooses whether to just crop in on the iamge (None), to scale the image to fill the remaining space (Fill), or to scale the image while preserving its aspect ratio.
+
+**Waveform Scale**: Choose how the horizontal guides in the waveform are calculated. If Gamma2.4 is selected, it's equivalent to BT.1886 Annex 1 with $L_W = 100$, $L_B = 0.0$, and $\gamma = 2.4$.
