@@ -1,0 +1,35 @@
+DEFINE_UI_PARAMS(gain, Fill Gain, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 5.0, 0.01)
+DEFINE_UI_PARAMS(num_bounces, Number of Bounces, DCTLUI_SLIDER_INT, 1, 0, 10, 1)
+DEFINE_UI_PARAMS(light_luminance, Light Luminance, DCTLUI_VALUE_BOX, 1.0)
+
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    // Model the image as p_R, p_G, p_B represent the input color after one bounce
+    // from a neutral energy white light. Thus, the input color gives us the RGB reflectance
+    // of the surface at the pixel (times the luminance of the input light at that point).
+    float3 first_bounce = make_float3(p_R, p_G, p_B);
+    float3 reflectance = first_bounce / light_luminance;
+
+    float3 curr_color = first_bounce;
+    float net_gain = 0.0;
+    for (int i = 0; i < num_bounces; ++i) {
+        // We'll then imagine a fill card which happens to be the same color as the
+        // original reflected material.
+        float bounce_gain = powf(gain, i+1);
+        float3 fill = bounce_gain * (curr_color / _fmaxf(_fmaxf(curr_color.x, curr_color.y), curr_color.z));
+
+        // the fill light is colored and bounces off the same objects again
+        float3 bounce = reflectance * fill;
+        curr_color = (curr_color + bounce) / (1.0 + bounce_gain);
+        net_gain += bounce_gain;
+    }
+    // float3 output = curr_color / (1.0 + net_gain);
+    float3 output = curr_color;
+
+    return output;
+}
