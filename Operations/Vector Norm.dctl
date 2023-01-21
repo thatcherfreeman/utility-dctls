@@ -1,4 +1,4 @@
-DEFINE_UI_PARAMS(norm_type, Norm Type, DCTLUI_COMBO_BOX, 1, {L1, L2, LP, MAX, AVG, MIN}, {L1 Norm, L2 Norm, Lp Norm, Maximum, Average, Minimum})
+DEFINE_UI_PARAMS(norm_type, Norm Type, DCTLUI_COMBO_BOX, 1, {L1, L2, LP, MAX, MIN, AVG, GEOM, HARMONIC}, {L1 Norm, L2 Norm, Lp Norm, Maximum, Minimum, Arithmetic Mean, Geometric Mean, Harmonic Mean})
 DEFINE_UI_PARAMS(p, P-Norm Power, DCTLUI_VALUE_BOX, 2.0)
 
 __DEVICE__ float lp_norm(float3 in, float p) {
@@ -20,6 +20,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         norm = (vec.x + vec.y + vec.z) / 3.0;
     } else if (norm_type == MIN) {
         norm = _fminf(vec.x, _fminf(vec.y, vec.z));
+    } else if (norm_type == GEOM) {
+        norm = _powf(_fabs(vec.x * vec.y * vec.z), 1.0 / 3.0);
+    } else if (norm_type == HARMONIC) {
+        norm = 3.0 / (1.0 / vec.x + 1.0 / vec.y + 1.0 / vec.z);
     }
     float3 out = make_float3(norm, norm, norm);
     return out;

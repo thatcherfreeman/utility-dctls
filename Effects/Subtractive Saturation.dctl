@@ -1,0 +1,94 @@
+DEFINE_UI_PARAMS(gamma_all, Color Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.01)
+DEFINE_UI_PARAMS(gamma_r, Cyan Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.01)
+DEFINE_UI_PARAMS(gamma_g, Magenta Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.01)
+DEFINE_UI_PARAMS(gamma_b, Yellow Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.01)
+DEFINE_UI_PARAMS(density, Density, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+// MAKE SURE THESE OPERATIONS REMAIN IN THE SAME ORDER.
+DEFINE_UI_PARAMS(value_switcher, Value Calculation, DCTLUI_COMBO_BOX, 5, {MAX, MIN, GEOM, MEAN, HARMONIC, L2_NORM}, {Maximum Channel (Value), Minimum Channel, Geometric Mean, Arithmetic Mean, Harmonic Mean, L2 Norm})
+DEFINE_UI_PARAMS(density_switcher, Density Calculation, DCTLUI_COMBO_BOX, 4, {MAX2, MIN2, GEOM2, MEAN2, HARMONIC2, L2_NORM2}, {Maximum Channel (Value), Minimum Channel, Geometric Mean, Arithmetic Mean, Harmonic Mean, L2 Norm})
+
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+__DEVICE__ float pow2f(float base) {
+    return _powf(_fabs(base), 2.0);
+}
+
+__DEVICE__ float maxf3(float3 x) {
+    return _fmaxf(_fmaxf(x.x, x.y), x.z);
+}
+
+__DEVICE__ float minf3(float3 x) {
+    return _fminf(_fminf(x.x, x.y), x.z);
+}
+
+__DEVICE__ float3 powf3(float3 base, float exp) {
+    return make_float3(
+        powf(base.x, exp),
+        powf(base.y, exp),
+        powf(base.z, exp)
+    );
+}
+__DEVICE__ float3 powf3_f3(float3 base, float3 exp) {
+    return make_float3(
+        powf(base.x, exp.x),
+        powf(base.y, exp.y),
+        powf(base.z, exp.z)
+    );
+}
+
+typedef struct {
+    int value_switcher;
+    int density_switcher;
+    float density_mixer;
+} density_params_t;
+
+__DEVICE__ float compute_norm(float3 input_rgb, int switcher) {
+    float lum;
+    if (switcher == GEOM) {
+        lum = powf(input_rgb.x * input_rgb.y * input_rgb.z, 1.0 / 3.0);
+    } else if (switcher == MEAN) {
+        lum = (input_rgb.x + input_rgb.y + input_rgb.z) / 3.0;
+    } else if (switcher == MAX) {
+        lum = maxf3(input_rgb);
+    } else if (switcher == MIN) {
+        lum = minf3(input_rgb);
+    } else if (switcher == HARMONIC) {
+        lum = 3.0 / ((1.0 / input_rgb.x) + (1.0 / input_rgb.y) + (1.0 / input_rgb.z));
+    } else if (switcher == L2_NORM) {
+        lum = _sqrtf(input_rgb.x * input_rgb.x + input_rgb.y * input_rgb.y + input_rgb.z * input_rgb.z);
+    }
+    return lum;
+}
+
+__DEVICE__ float3 saturate(float3 input_rgb, float3 gamma, density_params_t params) {
+    float input_value = compute_norm(input_rgb, params.value_switcher);
+    float3 input_color = input_rgb / input_value;
+
+    float density = compute_norm(input_rgb, params.density_switcher);
+    density = _mix(input_value, density, params.density_mixer);
+    float3 output = density * powf3_f3(input_color, gamma);
+    return output;
+}
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float3 gamma = make_float3(
+        gamma_all * gamma_r,
+        gamma_all * gamma_g,
+        gamma_all * gamma_b
+    );
+    float3 input_rgb = make_float3(p_R, p_G, p_B);
+    density_params_t params = {
+        value_switcher,
+        density_switcher,
+        density,
+    };
+
+    float3 initial_output = saturate(input_rgb, gamma, params);
+    float3 white_output = saturate(make_float3(1.0, 1.0, 1.0), gamma, params);
+    float3 output = initial_output / white_output;
+    return output;
+}
