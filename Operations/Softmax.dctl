@@ -1,0 +1,15 @@
+DEFINE_UI_PARAMS(temperature, Temperature, DCTLUI_VALUE_BOX, 1.0)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 output = make_float3(
+        _expf(temperature * p_R),
+        _expf(temperature * p_G),
+        _expf(temperature * p_B)
+    );
+    float sum = output.x + output.y + output.z;
+    output = output / sum;
+    if (sum == 0) {
+        output = make_float3(0.0, 0.0, 0.0);
+    }
+    return output;
+}

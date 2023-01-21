@@ -507,11 +507,40 @@ Applies the sigmoid function to the inputs. Computes $b + (w-b)\frac{1}{1 + e^{-
 **Output Black**: Controls the value of $b$. Vanilla sigmoid has this set to 1.0.
 
 
+## Softmax DCTL
+Applies a Softmax function, with Temperature. Outputs in the 0-1 range for all real inputs.
+
+### DCTL Parameters
+**Temperature**: Scales the input values, so larger values will result in a more extreme output.
+
+
 ## Spherical Color Space DCTL
-between RGB and a spherical color space. Outputs a 3-channel image, $(\rho, \theta, \phi)$. $\rho$ represents the radius, $\theta$ is scaled 0-1 and represents the hue, and $\phi$ represents saturation and is scaled from 0 to $\pi / 2$.
+Converts between RGB and a spherical color space. Outputs a 3-channel image, $(\rho, \theta, \phi)$. $\rho$ represents the radius, $\theta$ is scaled 0-1 and represents the hue, and $\phi$ represents saturation and is scaled from 0 to $\pi / 2$.
 
 ### DCTL Parameters
 **Invert**: When unchecked, converts from RGB to spherical, and when checked, converts from spherical to RGB.
+
+
+## Subtractive Saturation DCTL
+Computes saturation in a way that adds "density" to more saturated colors, making them darker.
+
+### How it works
+Suppose a pixel is a color `input`. The DCTL will first compute a `Value` (IE luminance) of that pixel using one of many methods, and from there it can compute the input's `Color` by taking `input / Value`. The color is saturated or desaturated using the Gamma controls (we raise each channel of the `Color` to a power). From there, we multiply the `Color` by a different luminance called `Density` that's calculated using the method specified by the second dropdown menu. The result is scaled so that white is preserved.
+
+### DCTL Parameters
+**Color Gamma**: Controls the saturation of the image.
+
+**Cyan Gamma**: Saturation slider that's combined with the Color Gamma slider, moving this to the right will make the image more cyan.
+
+**Magenta Gamma**: Similar to Cyan Gamma slider.
+
+**Yellow Gamma**: Similar to Cyan Gamma slider.
+
+**Density**: Allows you to control how much density is added, on a scale of 0 (`Density` is computed using the same method as `Value`), to 1 (`Density` is computed using the specified method). The floating scale effectively lets you choose the strength of the specified method.
+
+**Value Calculation**: Allows you to select how the `Value` is computed. I don't recommend the Max or Min methods, and you should generally choose a method that runs large (Arithmetic Mean, Geometric Mean, and L2 Norm are recommended).
+
+**Density Calculation**: Allows you to choose how the `Density` is computed. Again, I don't recommend the Max or Min methods, and you should choose a method that runs small (Harmonic Mean is recommended.)
 
 
 ## Tanh Function DCTL
@@ -545,7 +574,7 @@ Takes the current `(r, g, b)` color value, computes the L2 norm, and divides eac
 Computes various norms of the given vector.
 
 ### DCTL Parameters
-**Norm Type**: Choose between `L1 Norm, L2 Norm, Lp Norm, Maximum, Average, Minimum` to choose the norm type.
+**Norm Type**: Choose between `L1 Norm, L2 Norm, Lp Norm, Maximum, Minimum, Arithmetic Mean, Geometric Mean, Harmonic Mean` to choose the norm type.
 
 **P-Norm Power**: If `Lp Norm` is selected for the norm type, this selects the value of `p`. Lp norm is computed by $(\lvert r \rvert^p + \lvert g \rvert^p + \lvert b \rvert^p)^{1/p}$, and L1 and L2 norm are special cases of this.
 
