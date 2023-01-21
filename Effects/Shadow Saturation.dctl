@@ -1,35 +1,48 @@
-DEFINE_UI_PARAMS(gain, Fill Gain, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 5.0, 0.01)
-DEFINE_UI_PARAMS(num_bounces, Number of Bounces, DCTLUI_SLIDER_INT, 1, 0, 10, 1)
-DEFINE_UI_PARAMS(light_luminance, Light Luminance, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(gain, Fill Gain, DCTLUI_SLIDER_FLOAT, 0.8, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(num_bounces, Num Bounces, DCTLUI_SLIDER_INT, 3, 1, 10, 1)
 
 
 __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
 }
 
+__DEVICE__ float maxf3(float3 x) {
+    return _fmaxf(_fmaxf(x.x, x.y), x.z);
+}
+
+__DEVICE__ float minf3(float3 x) {
+    return _fminf(_fminf(x.x, x.y), x.z);
+}
+
+__DEVICE__ float3 powf3(float3 base, float exp) {
+    return make_float3(
+        powf(base.x, exp),
+        powf(base.y, exp),
+        powf(base.z, exp)
+    );
+}
+
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
-    // Model the image as p_R, p_G, p_B represent the input color after one bounce
-    // from a neutral energy white light. Thus, the input color gives us the RGB reflectance
-    // of the surface at the pixel (times the luminance of the input light at that point).
-    float3 first_bounce = make_float3(p_R, p_G, p_B);
-    float3 reflectance = first_bounce / light_luminance;
+    float3 input_rgb = make_float3(p_R, p_G, p_B);
+    float3 input_value_max = maxf3(input_rgb);
+    float3 input_color_max = input_rgb / input_value_max;
+    float3 input_value_min = minf3(input_rgb);
+    float3 input_color_min = input_rgb / input_value_min;
 
-    float3 curr_color = first_bounce;
-    float net_gain = 0.0;
-    for (int i = 0; i < num_bounces; ++i) {
-        // We'll then imagine a fill card which happens to be the same color as the
-        // original reflected material.
-        float bounce_gain = powf(gain, i+1);
-        float3 fill = bounce_gain * (curr_color / _fmaxf(_fmaxf(curr_color.x, curr_color.y), curr_color.z));
-
-        // the fill light is colored and bounces off the same objects again
-        float3 bounce = reflectance * fill;
-        curr_color = (curr_color + bounce) / (1.0 + bounce_gain);
-        net_gain += bounce_gain;
+    float3 surface_reflectance = gain * input_color_max;
+    float3 aggregator = input_color_max;
+    float total = 1.0;
+    for (int i = 1; i <= num_bounces; ++i) {
+        aggregator += powf3(surface_reflectance, i);
+        total += maxf3(powf3(surface_reflectance, i));
     }
-    // float3 output = curr_color / (1.0 + net_gain);
-    float3 output = curr_color;
+    aggregator = aggregator / total;
+    float3 output = input_value_max * aggregator;
 
+    // float3 fill_light = gain * input_color_max;
+    // float3 bounce_light = input_value_min * powf3(input_color_max, gamma1) * fill_light;
+    // float3 cumulative = input_rgb + bounce_light;
+    // float3 output = cumulative / (1.0 + gain);
     return output;
 }
