@@ -348,6 +348,8 @@ Gives you control over a MTF-like curve. Internally makes passes of different fr
 
 **Debug Band**: Specifies which band is viewed when the Debug Mode isn't None.
 
+**Ignore Black**: If checked, ignore black pixels from the blurring calculations. This can be used to avoid nasty artifacts when you have black bars on the top and bottom of the frame, but your bars do have to be set to (0, 0, 0) right before this DCTL.
+
 **Debug Mode**: This pull-down allows you to figure out what each band targets. You can choose from None (runs the plugin normally), Low Pass Mode (shows you the information that's too low frequency to be captured in this band), High Pass Mode (shows the information that's in this band), and High Pass Gray Mode (Same as High Pass mode, but normalized to 0.5 so that the frequency data in this band is more visible).
 
 **Method**: Allows you to choose between Quotient and Difference, which correspond to different ways to compute the frequency bands. In most real-world scenarios, the Quotient method provides better looking results, but the Difference method performs more accurately on zebra striped test charts. Here's the math:

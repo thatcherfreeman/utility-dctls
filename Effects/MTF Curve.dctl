@@ -1,11 +1,12 @@
 // clang-format off
 DEFINE_UI_PARAMS(gain1, Band 16:1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
-DEFINE_UI_PARAMS(gain2, Band 6:1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
+DEFINE_UI_PARAMS(gain2, Band 8:1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
 DEFINE_UI_PARAMS(gain3, Band 4:1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
 DEFINE_UI_PARAMS(gain4, Band 2:1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
 DEFINE_UI_PARAMS(debug_band, Debug Band, DCTLUI_SLIDER_INT, 4, 1, 4, 1)
 DEFINE_UI_PARAMS(debug_mode, Debug Mode, DCTLUI_COMBO_BOX, 0, {NONE, LP, HP, HPG}, {None, Low Pass Mode, High Pass Mode, High Pass Gray Mode})
 DEFINE_UI_PARAMS(method, Method, DCTLUI_COMBO_BOX, 0, {QUOTIENT, DIFFERENCE}, {Quotient, Difference})
+DEFINE_UI_PARAMS(black_bars, Ignore Black, DCTLUI_CHECK_BOX, 1)
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {
@@ -103,7 +104,7 @@ __CONSTANT__ int band3_idxs[24][2] = {
     {2, -5},  {-2, -5}, {-7, -4}, {-7, 1}, {-7, 5}, {-3, 8}, {1, 8}, {5, 8}, {8, 4}, {8, 0}, {8, -4}, {4, -7}, {0, -7}, {-4, -7},
 };
 
-__DEVICE__ void get_blur_bands(int px, int py, __TEXTURE__ pr, __TEXTURE__ pg, __TEXTURE__ pb, float scale, float3 ret[4]) {
+__DEVICE__ void get_blur_bands(int px, int py, __TEXTURE__ pr, __TEXTURE__ pg, __TEXTURE__ pb, float scale, int black_bars, float3 ret[4]) {
     // Blurs the image by four different amounts, returns each one in ret.
     float3 total = make_float3(0.0, 0.0, 0.0);
     float coeff = 0.0;
@@ -115,36 +116,44 @@ __DEVICE__ void get_blur_bands(int px, int py, __TEXTURE__ pr, __TEXTURE__ pg, _
         x = px + ((float)band0_idxs[i][0] - 0.5) * scale;
         y = py + ((float)band0_idxs[i][1] - 0.5) * scale;
         value = sample_point_nn_3ch(x, y, pr, pg, pb, 1.0);
-        coeff = 1.0;
-        total += value * coeff;
-        coeff_sum += coeff;
+        if (!black_bars || (value.x != 0.0 && value.y != 0.0 && value.z != 0.0)) {
+            coeff = 1.0;
+            total += value * coeff;
+            coeff_sum += coeff;
+        }
     }
     ret[3] = total / coeff_sum;
     for (int i = 0; i < 12; ++i) {
         x = px + ((float)band1_idxs[i][0] - 0.5) * scale;
         y = py + ((float)band1_idxs[i][1] - 0.5) * scale;
         value = sample_point_nn_3ch(x, y, pr, pg, pb, 1.0);
-        coeff = 1.0;
-        total += value * coeff;
-        coeff_sum += coeff;
+        if (!black_bars || (value.x != 0.0 && value.y != 0.0 && value.z != 0.0)) {
+            coeff = 1.0;
+            total += value * coeff;
+            coeff_sum += coeff;
+        }
     }
     ret[2] = total / coeff_sum;
     for (int i = 0; i < 24; ++i) {
         x = px + ((float)band2_idxs[i][0] - 0.5) * scale;
         y = py + ((float)band2_idxs[i][1] - 0.5) * scale;
         value = sample_point_nn_3ch(x, y, pr, pg, pb, 1.0);
-        coeff = 1.0;
-        total += value * coeff;
-        coeff_sum += coeff;
+        if (!black_bars || (value.x != 0.0 && value.y != 0.0 && value.z != 0.0)) {
+            coeff = 1.0;
+            total += value * coeff;
+            coeff_sum += coeff;
+        }
     }
     ret[1] = total / coeff_sum;
     for (int i = 0; i < 24; ++i) {
         x = px + ((float)band3_idxs[i][0] - 0.5) * scale;
         y = py + ((float)band3_idxs[i][1] - 0.5) * scale;
-        value = sample_point_nn_3ch(x, y, pr, pg, pb, scale);
-        coeff = 1.5;
-        total += value * coeff;
-        coeff_sum += coeff;
+        value = sample_point_nn_3ch(x, y, pr, pg, pb, 1.0);
+        if (!black_bars || (value.x != 0.0 && value.y != 0.0 && value.z != 0.0)) {
+            coeff = 1.5;
+            total += value * coeff;
+            coeff_sum += coeff;
+        }
     }
     ret[0] = total / coeff_sum;
 }
@@ -174,7 +183,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     };
     float gains[4] = {gain1, gain2, gain3, gain4};
 
-    get_blur_bands(p_X, p_Y, p_TexR, p_TexG, p_TexB, scale, downres);
+    get_blur_bands(p_X, p_Y, p_TexR, p_TexG, p_TexB, scale, black_bars, downres);
 
     float3 result = downres[0];
     if (method == QUOTIENT) {
