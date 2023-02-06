@@ -7,9 +7,6 @@ FuRegisterClass("LinearExposure",
     }
 )
 
--- You can change this value to increase the number of bands.
-num_bands = 5
-
 function Create()
     Exp = self:AddInput("Exposure (Stops)", "ExpAdjustment", {
         LINKID_DataType = "Number",
