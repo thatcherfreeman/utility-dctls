@@ -141,6 +141,12 @@ Generates a colorchecker image based on the original specification (you can find
 **Convert Illuminant C to D65**: The xyY values used are copied from the spec, which assumed the Standard Illuminant C illuminant. As most electronics use a D65 illuminant, check this box to use a bradford chromatic adaptation matrix to best approximate what the chart would look like under a D65 illuminant.
 
 
+## Color Generator DCTL
+Generates the specified RGB value across the whole frame.
+
+### DCTL Parameters
+**Red/Green/Blue**: the Red/Green/Blue value that will be returned.
+
 
 ## Color Ramp DCTL
 Creates a color ramp from 0 to 100% Hue, Saturation, or Luminance. This can be used to monitor the output of your tools and overall node pipeline.
