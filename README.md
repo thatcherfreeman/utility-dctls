@@ -396,16 +396,6 @@ difference_out := (input_value - low_pass5)*band5_contrast + (low_pass5 - low_pa
 Multiplies each channel by a value. The channels are computed by $\text{Red}_{\text{out}} = \text{Red}_{\text{in}} * \text{Global Gain} + \text{Red Gain}$ and likewise for the other two channels.
 
 
-## Print
-Skews the RGB cube so that CMY colors are brighter and more saturated than the RGB colors.
-
-### DCTL Parameters
-**Primary Value**: Indicates what value 100% red, green, or blue should be mapped to. IE `f(1, 0, 0) = (primary_value, 0, 0)`
-
-**Secondary Gain**: Indicates how much brighter/saturated the CMY colors should be than their RGB counterparts. Loosely speaking, `f(1, 1, 0)` is proportional to `secondary_gain * (f(1, 0, 0) + f(0, 1, 0))`
-
-
-
 ## Quantize
 Simulates the effect of saving the current image at a specified bit depth.
 
