@@ -255,6 +255,24 @@ In practice, you should use the following pipeline: `1. Clamp 0+ ==> 2. Film Cur
 **Curve Type**: allows you to use Sigmoid of "Quadratic Sigmoid", which follows a similar shape but has a more a brupt rolloff.
 
 
+## Film Grain DCTL
+Creates a random noise, inspired by statistical film models. You'll need to pass in a linear image and use two of these DCTLs in a pipeline, one for the Neg stock and one for the print stock, as each one returns the Transmittance of the film stock.
+
+### DCTL Parameters
+**D MAX**: Maximum density
+
+**Number of Grains Per Pixel**: Should control the variance of the noise. More grains results in a finer image.
+
+**Number of layers of grains**: Should contribute towards controlling the gamma of the film. Essentially controls how thick the emulsion layer is.
+
+**Activation Threshold**: Controls the amount of light needed for a grain to be activated.
+
+**Photon Gain**: Exposure increase applied to the incoming light.
+
+**Seed Pixel Position X/Y**: Indicates where in the image to pull a pixel to start the random seed. Change this if the noise is fixed.
+
+**Noise Mode**: Indicates a different noise mode. In RGB, noise is computed on each channel independently, in VALUE, the max of the three channels is used to figure out input energy and transmittance is applied to each channel using math, and Luminance is the same as Value but the channels are averaged when computing the noise.
+
 
 ## Gamma Function
 Applies a power function with the reciprocal of the specified exponent.
