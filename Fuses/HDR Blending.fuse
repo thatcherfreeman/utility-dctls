@@ -1,0 +1,110 @@
+FuRegisterClass("HDRBlending",
+    CT_Tool, {
+        REGS_Name = "HDR Blending",
+        REGS_Category = "Fuses\\Photometric",
+        REGS_OpIconString = "HDRb",
+        REGS_OpDescription = "Composites one image onto another where it exceeds a certain value."
+    }
+)
+
+function Create()
+    Threshold = self:AddInput("Foreground Threshold", "threshold", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 8.0,
+        INP_Default = 1.0,
+    })
+    FeatherThreshold = self:AddInput("Feather Threshold", "feather", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 8.0,
+        INP_Default = 0.8,
+    })
+    BlurAmt = self:AddInput("Blur Amount", "blur", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 8.0,
+        INP_Default = 0.0,
+    })
+    ShowMask = self:AddInput("Show Mask", "showMask", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "CheckboxControl",
+        INP_Integer = true,
+        INP_Default = 0.0,
+        ICD_Width = 1.0,
+    })
+    BgImage = self:AddInput("Input Background", "InputBg", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+    FgImage = self:AddInput("Input Foreground", "InputFg", {
+        LINKID_DataType = "Image",
+        LINK_Main = 2,
+    })
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+end
+
+local computemask = function(x, y, p1)
+    if threshold > feather then
+        p1.R = (math.max(math.min(p1.R, threshold), feather) - feather) / (threshold - feather)
+        p1.G = (math.max(math.min(p1.G, threshold), feather) - feather) / (threshold - feather)
+        p1.B = (math.max(math.min(p1.B, threshold), feather) - feather) / (threshold - feather)
+    else
+        p1.R = p1.R > threshold and 1.0 or 0.0
+        p1.G = p1.G > threshold and 1.0 or 0.0
+        p1.B = p1.B > threshold and 1.0 or 0.0
+    end
+    return p1
+end
+
+local blendfunc = function (x, y, p1, p2, pmask, pones)
+    -- pones is needed because Fuses has a bug where the 1.0 constant
+    -- appears to be interpreted as nan or something, not sure why.
+    p1.R = pmask.R * p2.R + (pones.R - pmask.R) * p1.R
+    p1.G = pmask.G * p2.G + (pones.G - pmask.G) * p1.G
+    p1.B = pmask.B * p2.B + (pones.B - pmask.B) * p1.B
+    return p1
+end
+
+function Process(req)
+    -- Get values from the UI Tools
+    local bg = BgImage:GetValue(req)
+    local fg = FgImage:GetValue(req)
+    local threshold = Threshold:GetValue(req).Value
+    local feather = FeatherThreshold:GetValue(req).Value
+    local blur_strength = BlurAmt:GetValue(req).Value
+    local show_mask = ShowMask:GetValue(req).Value
+
+    local out = Image({IMG_Like = bg})
+    local mask = Image({IMG_Like = bg})
+    local ones = Image({IMG_Like = bg})
+    ones:Fill(Pixel({R = 1.0, G = 1.0, B = 1.0, A = 1.0}))
+    if (bg.Width == fg.Width) and (bg.Height == fg.
+        Height) then
+        mask:MultiProcessPixels(nil, {threshold=threshold, feather=feather}, 0, 0, bg.Width, bg.Height, bg, computemask)
+        if blur_strength > 0 then
+            mask = mask:Blur(nil, {
+                BLUR_Type = "Gaussian",
+                BLUR_Red = true,
+                BLUR_Green = true,
+                BLUR_Blue = true,
+                BLUR_Alpha = false,
+                BLUR_XSize = blur_strength / 720.0,
+                BLUR_YSize = blur_strength * (mask.Height / mask.Width) / 720.0,
+            })
+        end
+
+        out:MultiProcessPixels(nil, {threshold=threshold, feather=feather}, 0, 0, bg.Width, bg.Height, bg, fg, mask, ones, blendfunc)
+        if show_mask > 0.5 then
+            out = mask
+        end
+    end
+
+    OutImage:Set(req, out)
+end

@@ -31,6 +31,30 @@ If a DCTL is not working, you can usually find logs in these directories. If you
 
 # The Fuses
 
+## HDR Blending Fuse
+For the purpose of stitching HDR (multiple exposure composites) images.
+
+### How to use
+1. Take two images of the same scene at different exposures.
+2. Load the images into post and correct the exposures to match.
+3. Take the image with the lower clipping point and connect it to the background of this Fuse. Connect the other image with the highlight detail to the foreground of the fuse
+4. Set the threshold in the Fuse to just below the clipping point in the background image, set the feathering to be around 10% lower than that. Consider bumping the Blur to 1.0 to account for slight misalignment between the images.
+
+### Parameters
+**Foreground Threshold**: Threshold above which the foreground image is copied in.
+
+**Feather Threshold**: For background code values between Feather Threshold and Foreground Threshold, the two layers are blended together.
+
+**Blur Amount**: Indicates how much to blur the mask resulting from the above two thresholds.
+
+**Show Mask**: Shows the mask used. Each of the three channels is masked individually.
+
+## Linear Exposure Fuse
+Simply multiplies the input values by `2^x`, where `x` is the specified Exposure (Stops) value. Expects a Linear input.
+
+### Parameters
+**Exposure (Stops)**: Exposure compensation to make in stops.
+
 ## MTF Curve Fuse
 This is a higher quality version of the MTF Curve DCTL. Here, we provide 5 frequency bands in which the lower end number of line-pairs per mm can be specified, and the computation of the frequency bands is done in a higher quality way. Importantly, this Fuse requires that your input image is a Float16 or Float32 type image, and it works best on a Log state image. I do not recommend using it with a Linear state image, and I would also recommend clamping the input to be non-negative. This Fuse works using several different discrete frequency bands rather than via a fourier transform, but it largely gives good looking results regardless.
 
@@ -52,12 +76,6 @@ This is a higher quality version of the MTF Curve DCTL. Here, we provide 5 frequ
 quotient_out := (input_value / low_pass5)^band5_contrast * (low_pass5 / low_pass4)^band4_contrast * ... * low_pass1
 difference_out := (input_value - low_pass5)*band5_contrast + (low_pass5 - low_pass4)*band4_contrast + ... + low_pass1
 ```
-
-## Linear Exposure Fuse
-Simply multiplies the input values by `2^x`, where `x` is the specified Exposure (Stops) value. Expects a Linear input.
-
-### Parameters
-**Exposure (Stops)**: Exposure compensation to make in stops.
 
 # The DCTLs:
 
