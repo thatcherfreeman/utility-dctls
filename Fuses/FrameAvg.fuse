@@ -12,11 +12,11 @@ function Create()
     NumFrames = self:AddInput("Number of Frames", "FramesNum", {
         LINKID_DataType = "Number",
         INPID_InputControl = "SliderControl",
-        INP_MinScale = 0.0,
+        INP_MinScale = 1.0,
         INP_MaxScale = 10.0,
-        INP_Default = 0.0,
+        INP_Default = 1.0,
         INP_INTEGER = true,
-        INP_MinAllowed = 0.0,
+        INP_MinAllowed = 1.0,
         IC_DisplayedPrecision = 0,
     })
     Modulus = self:AddInput("Frame Hold", "FrameHold", {
@@ -45,15 +45,15 @@ function Process(req)
     local mod_frames = Modulus:GetValue(req).Value
     local img = InImage:GetValue(req):Copy()
 
-    if num_frames == 0.0 and mod_frames == 1.0 then
+    if num_frames == 1 and mod_frames == 1 then
         OutImage:Set(req, img)
     else
         img:Fill(Pixel({R = 0.0, G = 0.0, B = 0.0, A = 1.0}))
-        for i=0,num_frames do
+        local gain = 1.0 / num_frames
+        for i = 0, num_frames-1 do
             local thisFrame = InImage:GetSource(mod_frames * math.floor(req.Time / mod_frames) + i)
             img = img:ChannelOpOf("Add", thisFrame, {R = "fg.R", G = "fg.G", B = "fg.B", A = nil})
         end
-        local gain = 1.0 / (num_frames + 1.0)
         img:Gain(gain, gain, gain, 1.0)
         OutImage:Set(req, img)
     end
