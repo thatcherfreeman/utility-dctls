@@ -4,8 +4,8 @@ DEFINE_UI_PARAMS(num_layers, Number of layers of grains, DCTLUI_VALUE_BOX, 5)
 DEFINE_UI_PARAMS(activation_threshold, Activation Threshold, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(photon_gain, Photon Gain, DCTLUI_VALUE_BOX, 0.2)
 DEFINE_UI_PARAMS(noise_mode, Noise Mode, DCTLUI_COMBO_BOX, 1, {RGB, VALUE, LUM}, {RGB Noise, Value Noise, Luminance Noise})
-DEFINE_UI_PARAMS(seed_position_x, Seed Pixel Position X, DCTLUI_VALUE_BOX, 500)
-DEFINE_UI_PARAMS(seed_position_y, Seed Pixel Position Y, DCTLUI_VALUE_BOX, 500)
+DEFINE_UI_PARAMS(seed_position_x, Seed Position X, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(seed_position_y, Seed Position Y, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
 
 /////////////////////////////////////////////
 // PDFs and CDFs
@@ -180,9 +180,9 @@ __DEVICE__ float convert_photons_to_transmittance(
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
 
-    float seed = _tex2D(p_TexR, (int)seed_position_x, (int)seed_position_y);
-    seed += _tex2D(p_TexG, (int)seed_position_x, (int)seed_position_y) * 20.0;
-    seed += _tex2D(p_TexB, (int)seed_position_x, (int)seed_position_y) * 400.0;
+    float seed = _tex2D(p_TexR, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height));
+    seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0;
+    seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0;
 
     // Output transmitted light, assume a single grain size.
     rand_state state_value = *((__PRIVATE__ rand_state*)&seed);

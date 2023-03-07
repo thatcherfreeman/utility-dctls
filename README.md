@@ -269,7 +269,7 @@ Creates a random noise, inspired by statistical film models. You'll need to pass
 
 **Photon Gain**: Exposure increase applied to the incoming light.
 
-**Seed Pixel Position X/Y**: Indicates where in the image to pull a pixel to start the random seed. Change this if the noise is fixed.
+**Seed Position X/Y**: Indicates where in the image to pull a pixel to start the random seed. Change this if the noise is fixed.
 
 **Noise Mode**: Indicates a different noise mode. In RGB, noise is computed on each channel independently, in VALUE, the max of the three channels is used to figure out input energy and transmittance is applied to each channel using math, and Luminance is the same as Value but the channels are averaged when computing the noise.
 
@@ -384,6 +384,15 @@ Given a color gamut, compute the luminance channel associated with those primari
 
 ## Matrix Tester
 Multiplies the RGB values of the input by a 3x3 matrix with the specified entries. Supports negative values.
+
+
+## Photon Noise DCTL
+Helps simulate the effect of photon noise, a noise that's approximately poisson distributed, where the variance is proportional to the intensity of the signal. Apply this to a linear image.
+
+### DCTL Parameters
+**Photon Gain**: Multiplied by the input signal to compute the variance
+
+**Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
 
 
 ## Power Function

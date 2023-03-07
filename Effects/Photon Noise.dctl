@@ -1,0 +1,122 @@
+DEFINE_UI_PARAMS(photon_gain, Photon Gain, DCTLUI_VALUE_BOX, 0.005)
+DEFINE_UI_PARAMS(seed_position_x, Seed Position X, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(seed_position_y, Seed Position Y, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
+
+/////////////////////////////////////////////
+// PDFs and CDFs
+/////////////////////////////////////////////
+
+__DEVICE__ float standard_norm_cdf(float z) {
+    // Approximation of Normal CDF function with mean 0 and var 1.
+    const float k = _sqrtf(2.0 / 3.1415926535);
+    float output = 1.0 / (1.0 + _expf(-2.0 * k * z));
+    return output;
+}
+
+__DEVICE__ float norm_cdf(float z, float mean, float var) {
+    float output = standard_norm_cdf((z - mean) / _sqrtf(var));
+    return output;
+}
+
+__DEVICE__ float standard_norm_inv_cdf(float z) {
+    // Approximation from "Very Simply Explicitly Invertible Approximations of
+    // Normal Cumulative and Normal Quantile Function" by Alessandro Soranzo
+
+    // CDF
+    // float out = _powf(2.0, -1.0 * _powf(22, 1 - _powf(41, z / 10.0)));
+    float abs_z = _fabs(z - 0.5) + 0.5;
+    float out = 10.0 / _logf(41.0) * _logf(1.0 - (_logf((-1.0 * _logf(abs_z)) / _logf(2.0))) / _logf(22.0));
+    if (abs_z >= 0.995) {
+        out = 2.5758;
+    }
+
+    if (z <= 0.5) {
+        out *= -1.0;
+    }
+    return out;
+}
+
+__DEVICE__ float norm_inv_cdf(float z, float mean, float var) {
+    float out = standard_norm_inv_cdf(z) * _sqrtf(var) + mean;
+    return out;
+}
+
+__DEVICE__ float norm_pdf(float z, float mean, float var) {
+    float out = _expf(-0.5 * _exp2f((z - mean)) / var);
+    out *= 1.0 / (_sqrtf(2.0 * 3.1415926535 * var));
+    return out;
+}
+
+/////////////////////////////////////////////
+// Random Number Generator
+/////////////////////////////////////////////
+
+typedef ulong rand_state;
+
+__DEVICE__ float _randu_lcg(__PRIVATE__ rand_state* seed) {
+    // Returns random number in interval [0, 1)
+    rand_state old_seed = *seed;
+    const rand_state m = (~((rand_state)0));
+    const rand_state a = 48271;
+    rand_state new_seed = (a * old_seed) % m;
+    *seed = new_seed;
+    return (((float)new_seed) / (float)m);
+}
+
+__DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
+    rand_state x = *seed;
+    x ^= (x << 13 | x >> 19);
+    x ^= (x >> 7 | x << 25);
+    x ^= (x << 15 | x >> 15);
+    *seed = x;
+    return (((float)x) / (float)(~((rand_state)0)));
+}
+
+__DEVICE__ inline float randu(__PRIVATE__ rand_state* seed) {
+    return _randu_xorshift(seed);
+}
+
+/////////////////////////////////////////////
+// Distribution Sampling functions
+/////////////////////////////////////////////
+
+__DEVICE__ float sample_uniform(float a, float b, __PRIVATE__ rand_state* seed) {
+    float range = b - a;
+    float x = randu(seed);
+    return a + range * x;
+}
+
+__DEVICE__ float sample_norm(float mean, float var, __PRIVATE__ rand_state* seed) {
+    float u_sample = randu(seed);
+    float out = norm_inv_cdf(u_sample, mean, var);
+    return out;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    // Obtain random seed.
+    float seed = _tex2D(p_TexR, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height));
+    seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0;
+    seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0;
+    rand_state state_value = *((__PRIVATE__ rand_state*)&seed);
+    __PRIVATE__ rand_state* state = &state_value;
+
+    float val;
+    *state ^= p_Width * p_Height;
+    *state ^= (p_Width * p_Y + p_X) << 5;
+    val = randu(state);
+    val = randu(state);
+    val = randu(state);
+    val = randu(state);
+    *state = *((__PRIVATE__ rand_state*)&val);
+
+    // Apply noise.
+    float3 output_color = make_float3(0.0, 0.0, 0.0);
+    float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+
+    output_color.x = sample_norm(curr_color.x, curr_color.x * photon_gain, state);
+    output_color.y = sample_norm(curr_color.y, curr_color.y * photon_gain, state);
+    output_color.z = sample_norm(curr_color.z, curr_color.z * photon_gain, state);
+
+    return output_color;
+}
