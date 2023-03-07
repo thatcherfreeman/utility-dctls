@@ -1,7 +1,31 @@
 DEFINE_UI_PARAMS(bit_depth, Bit Depth, DCTLUI_SLIDER_INT, 8, 1, 24, 1)
 DEFINE_UI_PARAMS(clip, Clip Blacks and Whites, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(rounding_opt, Quantization Method, DCTLUI_COMBO_BOX, 0, {ROUND, TRUNCATE}, {Round, Truncate})
+DEFINE_UI_PARAMS(rounding_opt, Quantization Method, DCTLUI_COMBO_BOX, 0, {ROUND, TRUNCATE, STOCHASTIC}, {Round, Truncate, Stochastic})
 
+
+typedef ulong rand_state;
+__DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
+    rand_state x = *seed;
+    x ^= (x << 13 | x >> 19);
+    x ^= (x >> 7 | x << 25);
+    x ^= (x << 15 | x >> 15);
+    *seed = x;
+    return (((float)x) / (float)(~((rand_state)0)));
+}
+__DEVICE__ inline float randu(__PRIVATE__ rand_state* seed) {
+    return _randu_xorshift(seed);
+}
+
+__DEVICE__ float stochastic_round(float in, __PRIVATE__ rand_state* seed) {
+    float threshold = in - _floorf(in);
+    float out;
+    if (randu(seed) > threshold) {
+        out = _floorf(in);
+    } else {
+        out = _ceilf(in);
+    }
+    return out;
+}
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
 
@@ -14,11 +38,27 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         output_color.x = _round(output_color.x);
         output_color.y = _round(output_color.y);
         output_color.z = _round(output_color.z);
-    } else {
-        // if (rounding_opt == TRUNCATE)
+    } else if (rounding_opt == TRUNCATE) {
         output_color.x = _truncf(output_color.x);
         output_color.y = _truncf(output_color.y);
         output_color.z = _truncf(output_color.z);
+    } else if (rounding_opt == STOCHASTIC) {
+        // initialize seed.
+        float val;
+        float seed = 420.69;
+        rand_state state_value = *((__PRIVATE__ rand_state*)&seed);
+        __PRIVATE__ rand_state* state = &state_value;
+        *state ^= p_Width * p_Height;
+        *state ^= (p_Width * p_Y + p_X) << 5;
+        val = randu(state);
+        val = randu(state);
+        val = randu(state);
+        val = randu(state);
+        *state = *((__PRIVATE__ rand_state*)&val);
+
+        output_color.x = stochastic_round(output_color.x, state);
+        output_color.y = stochastic_round(output_color.y, state);
+        output_color.z = stochastic_round(output_color.z, state);
     }
 
     output_color /= values;

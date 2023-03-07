@@ -431,8 +431,7 @@ Simulates the effect of saving the current image at a specified bit depth.
 
 **Clip**: Specifies whether to clip values greater than 1.0 or less than 0.0.
 
-**Quantization Method** [ROUND, TRUNCATE]: If set to Round, round each value to the nearest code value, if set to truncate, simply round down to the nearest below code value.
-
+**Quantization Method** [ROUND, TRUNCATE, STOCHASTIC]: If set to Round, round each value to the nearest code value, if set to truncate, simply round down to the nearest below code value. If set to Stochastic, round up or round down with a probability equal to how close the value is to the nearest integer.
 
 
 ## Random Channel Mixer
