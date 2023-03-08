@@ -1,4 +1,4 @@
-DEFINE_UI_PARAMS(photon_gain, Photon Gain, DCTLUI_VALUE_BOX, 0.005)
+DEFINE_UI_PARAMS(photon_exp, Photon Exposure, DCTLUI_VALUE_BOX, -9.0)
 DEFINE_UI_PARAMS(seed_position_x, Seed Position X, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(seed_position_y, Seed Position Y, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
 
@@ -111,6 +111,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     *state = *((__PRIVATE__ rand_state*)&val);
 
     // Apply noise.
+    float photon_gain = _exp2f(photon_exp);
     float3 output_color = make_float3(0.0, 0.0, 0.0);
     float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
 

@@ -427,7 +427,7 @@ Multiplies the RGB values of the input by a 3x3 matrix with the specified entrie
 Helps simulate the effect of photon noise, a noise that's approximately poisson distributed, where the variance is proportional to the intensity of the signal. Apply this to a linear image.
 
 ### DCTL Parameters
-**Photon Gain**: Multiplied by the input signal to compute the variance
+**Photon Exposure** (stops): The input signal is multiplied by `_exp2f(photon exposure)`to compute the variance
 
 **Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
 
