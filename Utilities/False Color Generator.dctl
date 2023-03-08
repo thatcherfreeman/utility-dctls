@@ -1,40 +1,92 @@
-DEFINE_UI_PARAMS(num_steps, Number of Steps, DCTLUI_SLIDER_INT, 16, 1, 32, 1)
-DEFINE_UI_PARAMS(mid_gray, Middle Gray Value, DCTLUI_SLIDER_FLOAT, 0.18, 0.0, 1.0, 0.001)
-DEFINE_UI_PARAMS(seed, Seed, DCTLUI_SLIDER_INT, 1, 1, 200, 1)
-DEFINE_UI_PARAMS(color_chip_exp, Color Chip Exposure, DCTLUI_SLIDER_FLOAT, 0.0, -5.0, 5.0, 0.01)
+DEFINE_UI_PARAMS(black_hue, Black Hue Angle, DCTLUI_SLIDER_FLOAT, 270.0, 0.0, 360.0, 0.1)
+DEFINE_UI_PARAMS(dark_hue, Near Black Hue Angle, DCTLUI_SLIDER_FLOAT, 240.0, 0.0, 360.0, 0.1)
+DEFINE_UI_PARAMS(shadow_hue, Shadow Hue Angle, DCTLUI_SLIDER_FLOAT, 120.0, 0.0, 360.0, 0.1)
+DEFINE_UI_PARAMS(highlight_hue, Highlight Hue Angle, DCTLUI_SLIDER_FLOAT, 60.0, 0.0, 360.0, 0.1)
+DEFINE_UI_PARAMS(bright_hue, Near White Hue Angle, DCTLUI_SLIDER_FLOAT, 300.0, 0.0, 360.0, 0.1)
+DEFINE_UI_PARAMS(clip_hue, Clipped White Hue Angle, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 360.0, 0.1)
 
-__DEVICE__ float randu(__PRIVATE__ uint* seed) {
-    // Returns random number in interval [0, 1)
-    uint old_seed = *seed;
-    const uint m = (1 << 31) - 1;
-    const uint a = 48271;
-    uint new_seed = (a * old_seed) % m;
-    *seed = new_seed;
-    return (((float) new_seed) / (float) m);
+DEFINE_UI_PARAMS(black_stop, Black Cutoff, DCTLUI_SLIDER_INT, -5, -16, 0, 1)
+DEFINE_UI_PARAMS(shadow_stop, Shadow Stop, DCTLUI_SLIDER_INT, -3, -16, 0, 1)
+DEFINE_UI_PARAMS(highlight_stop, Highlight Stop, DCTLUI_SLIDER_INT, 3, 0, 16, 1)
+DEFINE_UI_PARAMS(white_stop, White Cutoff, DCTLUI_SLIDER_INT, 5, 0, 16, 1)
+DEFINE_UI_PARAMS(mid_gray, Middle Gray Value, DCTLUI_SLIDER_FLOAT, 0.18, 0.0, 1.0, 0.001)
+
+DEFINE_UI_PARAMS(log_output, Log Output, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(brightness_mode, Brightness Mode, DCTLUI_COMBO_BOX, 0, {LUM, VALUE}, {Luminance, Value})
+
+__DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
+    // assume hue is in degrees
+    hue = _fmod(hue, 360.0);
+    float c = val * sat;
+    float x = c * (1.0 - _fabs(_fmod(hue / 60.0, 2.0) - 1.0));
+    float m = val - c;
+    float3 rgbp;
+    if (0.0 <= hue && hue < 60.0) {
+        rgbp = make_float3(c, x, 0.0);
+    } else if (60.0 <= hue && hue < 120.0) {
+        rgbp = make_float3(x, c, 0.0);
+    } else if (120.0 <= hue && hue < 180.0) {
+        rgbp = make_float3(0.0, c, x);
+    } else if (180.0 <= hue && hue < 240.0) {
+        rgbp = make_float3(0.0, x, c);
+    } else if (240.0 <= hue && hue < 300.0) {
+        rgbp = make_float3(x, 0.0, c);
+    } else if (300.0 < hue && hue < 360.0) {
+        rgbp = make_float3(c, 0.0, x);
+    }
+    return rgbp + m;
 }
 
+__DEVICE__ float linear_to_tlog(float x, float stops, float exp) {
+    float l = _fmaxf(x, 0.0) * (1.0 / 0.18) * _exp2f(exp); // scale middle gray to 1.0
+    float lin_max = _exp2f(stops / 2.0);
+    float lin_min = _exp2f(-1.0 * stops / 2.0);
+
+    return (_log2f(l) - _log2f(lin_min)) / (_log2f(lin_max) - _log2f(lin_min));
+}
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
 
-    uint state = seed + 500;
-    randu(&state);
-
-    float curr_lum = p_G * 0.7 + p_R * 0.2 + p_B * 0.1;
-    float color_chip_gain = _exp2f(color_chip_exp);
-    int curr_stop = (int)_round(_log2f(curr_lum / mid_gray));
-    float curr_chip_gray = mid_gray * _exp2f(curr_stop);
-    float3 output_color;
-    if (_fabs(curr_stop) > (num_steps - 1.0) / 2.0) {
-        output_color = make_float3(p_R, p_G, p_B);
-    } else if (curr_stop == 0) {
-        output_color = make_float3(mid_gray, mid_gray, mid_gray);
-        output_color *= color_chip_gain;
-    } else {
-        state = state + curr_stop;
-        output_color = make_float3(randu(&state), randu(&state), randu(&state));
-        float scale = curr_chip_gray / (output_color.x + output_color.y + output_color.z);
-        output_color *= scale;
-        output_color *= color_chip_gain;
+    float curr_lum;
+    if (brightness_mode == LUM) {
+        curr_lum = p_G * 0.7 + p_R * 0.2 + p_B * 0.1;
+    } else if (brightness_mode == VALUE) {
+        curr_lum = _fmaxf(p_R, _fmaxf(p_G, p_B));
     }
+    int curr_stop = (int)_round(_log2f(curr_lum / mid_gray));
+
+    float3 linear_output_color;
+    if (curr_stop == 0) {
+        linear_output_color = make_float3(mid_gray, mid_gray, mid_gray);
+
+    } else if (curr_stop < black_stop) {
+        linear_output_color = hsv_to_rgb(black_hue, 1.0, mid_gray * _exp2f(black_stop - curr_stop + 1));
+
+    } else if (black_stop <= curr_stop && curr_stop < shadow_stop) {
+        linear_output_color = hsv_to_rgb(dark_hue, 1.0, mid_gray * _exp2f(curr_stop - black_stop));
+
+    } else if (shadow_stop <= curr_stop && curr_stop < 0) {
+        linear_output_color = hsv_to_rgb(shadow_hue, 1.0, mid_gray * _exp2f(curr_stop - shadow_stop));
+
+    } else if (0 < curr_stop && curr_stop <= highlight_stop) {
+        linear_output_color = hsv_to_rgb(highlight_hue, 1.0, mid_gray * _exp2f(curr_stop));
+
+    } else if (highlight_stop < curr_stop && curr_stop <= white_stop) {
+        linear_output_color = hsv_to_rgb(bright_hue, 1.0, mid_gray * _exp2f(curr_stop - highlight_stop));
+
+    } else if (white_stop < curr_stop) {
+        linear_output_color = hsv_to_rgb(clip_hue, 1.0, mid_gray * _exp2f(curr_stop - white_stop + 1));
+    }
+
+    float stops = 40.0;
+    float3 output_color;
+    if (log_output) {
+        output_color = make_float3(linear_to_tlog(linear_output_color.x, stops, 0.0),
+                                   linear_to_tlog(linear_output_color.y, stops, 0.0),
+                                   linear_to_tlog(linear_output_color.z, stops, 0.0));
+    } else {
+        output_color = linear_output_color;
+    }
+
     return output_color;
 }

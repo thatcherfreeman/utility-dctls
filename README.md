@@ -212,16 +212,53 @@ Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and se
 
 
 ## False Color Generator
-Generates a false color conversion for linear images. Draws middle gray at the specified value and sets a gray color for the values +/- half a stop from middle gray. Then, chooses random colors for each further stop. This allows you to measure contrast ratios in-camera.
+Generates a false color conversion for linear images. Allows you to assign colors to specific regions of the image, in one-stop increments. You set a black point, a shadow point, mid gray, a highlight point, and a white point, and you can assign colors to all regions between and outside of those bounds.
+
+### How to use
+#### Option 1:
+1. Load in a clip from your camera
+2. Apply a CST converting from your camera's color space to Linear
+3. Apply this DCTL after the CST
+4. Set the White Cutoff to capture the white point of your camera.
+5. Set the shadow/highlight stops to the points you feel appropriate
+6. Set the Black cutoff where the black point is in your clip.
+7. Set the Brightness Mode to Value to use the max of the three channels as the input to the false color.
+8. Convert this pipeline into a LUT. "Generate LUT" actually won't work, so you'll have to use an alternative method. Kaur Hendrikson has a great [video](https://www.youtube.com/watch?v=EAHzZH_tdHQ) on how to do this.
+
+#### Option 2:
+1. Load in a clip from your camera and go to the Fusion page.
+2. Create a LUTCubeCreator node
+3. Pipe that node into a CST converting from your camera's color space to Linear
+4. Pipe the CST into this DCTL
+5. Set the parameters using the same approach from Option 1.
+6. Pipe the DCTL into a LutCubeAnalyzer node and choose CUBE as the type and save it somewhere.
 
 ### DCTL Parameters
-**Middle Gray Value**: Middle gray value, 18% by default.
+**Black Hue Angle**: Hue of colors below the Black Cutoff
 
-**Color Chip Exposure**: Raises or lowers the exposure of the drawn color chips to make them more or less visible.
+**Near Black Hue Angle**: Hue of colors between Black Cutoff and Shadow Stop
 
-**Number of Steps**: Number of steps to convert to false color. Values outside this range will just be passed through.
+**Shadow Hue Angle**: Hue of colors between shadow stop and mid gray
 
-**Seed**: Specifies the random seed used to generate colors
+**Highlight Hue Angle**: Hue of colors between mid gray and Highlight Stop
+
+**Near white Hue Angle**: Hue of colors between Highlight Stop and White Cutoff
+
+**Clipped White Hue Angle**: Hue of colors brighter than the White Cutoff point
+
+**Black Cutoff**: Number of stops below middle gray below which we'll consider Black.
+
+**Shadow Stop**: Number of stops below middle gray we'll color with the Shadow Hue Angle
+
+**Highlight Stop**: Number of stops above middle gray we'll color the Highlight Hue Angle
+
+**White Cutoff**: Number of stops above middle gray after which we'll consider clipped.
+
+**Middle Gray Value**: Indicates the Linear value we consider to be middle gray.
+
+**Log Output**: Check this box if this DCTL isn't going into another CST that converts to a display or log color space.
+
+**Brightness Mode**: If Luminance, then we simply take a weighted average of the RGB channels. If Value, then we take the channel with the maximum value before comparing it to any of the cutoffs or mid gray.
 
 
 ## Film Curve DCTL
