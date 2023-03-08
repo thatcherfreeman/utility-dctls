@@ -211,7 +211,7 @@ Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and se
 
 
 
-## False Color Generator
+## False Color Generator DCTL
 Generates a false color conversion for linear images. Allows you to assign colors to specific regions of the image, in one-stop increments. You set a black point, a shadow point, mid gray, a highlight point, and a white point, and you can assign colors to all regions between and outside of those bounds.
 
 ### How to use
