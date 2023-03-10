@@ -1,10 +1,12 @@
+// clang-format off
 DEFINE_UI_PARAMS(xoffset, X Offset, DCTLUI_SLIDER_INT, 0, 0, 3, 1)
 DEFINE_UI_PARAMS(yoffset, Y Offset, DCTLUI_SLIDER_INT, 0, 0, 1, 1)
 DEFINE_UI_PARAMS(convert_to_ycbcr, Convert to YCbCr, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(subsampling_type, Chroma Subsampling Type, DCTLUI_COMBO_BOX, 0, {CS444, CS440, CS422, CS420, CS411, CS410}, {4:4:4, 4:4:0, 4:2:2, 4:2:0, 4:1:1, 4:1:0})
+// clang-format on
 
 typedef struct {
-    int j, a, b;
+        int j, a, b;
 } chroma_subsample_params_t;
 
 __DEVICE__ float3 average(float3 a, float3 b) {
@@ -31,7 +33,8 @@ __DEVICE__ float3 ycrcb_to_rgb(float3 ycrcb) {
 }
 
 __DEVICE__ float3 chroma_subsample(chroma_subsample_params_t cs, float3 region[2][4], int rx, int ry) {
-    float3 output_region[2][4] = {{{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}, {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}};
+    float3 output_region[2][4] = {{{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}},
+                                  {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}};
 
     int new_rx = rx, new_ry = ry;
     if (cs.a == 1) {
@@ -67,23 +70,20 @@ __DEVICE__ float3 chroma_subsample(chroma_subsample_params_t cs, float3 region[2
     return output_color;
 }
 
-
-
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     int rx = (p_X + xoffset) % 4;
     int ry = (p_Y + yoffset) % 2;
     int r_orig_x = p_X - rx;
     int r_orig_y = p_Y - ry;
 
-    float3 region[2][4] = {{{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}, {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}};
+    float3 region[2][4] = {{{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}},
+                           {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}};
 
     for (int r = 0; r < 2; ++r) {
         for (int c = 0; c < 4; ++c) {
-            float3 color = make_float3(
-                    _tex2D(p_TexR, r_orig_x + c, r_orig_y + r),
-                    _tex2D(p_TexG, r_orig_x + c, r_orig_y + r),
-                    _tex2D(p_TexB, r_orig_x + c, r_orig_y + r)
-            );
+            float3 color = make_float3(_tex2D(p_TexR, r_orig_x + c, r_orig_y + r),
+                                       _tex2D(p_TexG, r_orig_x + c, r_orig_y + r),
+                                       _tex2D(p_TexB, r_orig_x + c, r_orig_y + r));
             if (convert_to_ycbcr) {
                 color = rgb_to_ycrcb(color);
             }
@@ -93,31 +93,31 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     chroma_subsample_params_t params;
     params.j = 4;
-    switch(subsampling_type) {
-        case CS410:
-            params.a = 1;
-            params.b = 0;
-            break;
-        case CS411:
-            params.a = 1;
-            params.b = 1;
-            break;
-        case CS420:
-            params.a = 2;
-            params.b = 0;
-            break;
-        case CS422:
-            params.a = 2;
-            params.b = 2;
-            break;
-        case CS440:
-            params.a = 4;
-            params.b = 0;
-            break;
-        case CS444:
-            params.a = 4;
-            params.b = 4;
-            break;
+    switch (subsampling_type) {
+    case CS410:
+        params.a = 1;
+        params.b = 0;
+        break;
+    case CS411:
+        params.a = 1;
+        params.b = 1;
+        break;
+    case CS420:
+        params.a = 2;
+        params.b = 0;
+        break;
+    case CS422:
+        params.a = 2;
+        params.b = 2;
+        break;
+    case CS440:
+        params.a = 4;
+        params.b = 0;
+        break;
+    case CS444:
+        params.a = 4;
+        params.b = 4;
+        break;
     }
     float3 output_color_ycrcb = chroma_subsample(params, region, rx, ry);
     float3 output_color;
