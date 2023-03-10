@@ -143,6 +143,16 @@ Applies a beach bypass look to the image. Expects a Linear image. Uses a custom 
 
 **Middle Gray**: Indicates the middle gray value that will be preserved.
 
+## Chroma Subsampling DCTL
+Applies chroma subsampling to an image by converting to YCbCr, downsampling the Cb and Cr channels via box averaging, then converting back to RGB.
+
+### DCTL Parameters
+**X/Y Offset**: Allows you to offset the 2x4 filter box.
+
+**Convert to YCbCr**: Check this box to have the DCTL bookend itself with a conversion from RGB Rec709 gamut to Y'CbCr. If unchecked, that means you're doing your own conversion before and after the DCTL and this will downsample channels 2 and 3.
+
+**Chroma Subsampling Type**: Allows you to choose which kind of chroma subsampling to use.
+
 
 ## Clamp DCTL
 Clamps the code values of the current frame to the specified Min and Max values, such that for any `x`, we will then have `clamp_min <= x <= clamp_max`

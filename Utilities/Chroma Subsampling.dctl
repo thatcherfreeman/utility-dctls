@@ -1,0 +1,139 @@
+DEFINE_UI_PARAMS(xoffset, X Offset, DCTLUI_SLIDER_INT, 0, 0, 3, 1)
+DEFINE_UI_PARAMS(yoffset, Y Offset, DCTLUI_SLIDER_INT, 0, 0, 1, 1)
+DEFINE_UI_PARAMS(convert_to_ycbcr, Convert to YCbCr, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(subsampling_type, Chroma Subsampling Type, DCTLUI_COMBO_BOX, 0, {CS444, CS440, CS422, CS420, CS411, CS410}, {4:4:4, 4:4:0, 4:2:2, 4:2:0, 4:1:1, 4:1:0})
+
+typedef struct {
+    int j, a, b;
+} chroma_subsample_params_t;
+
+__DEVICE__ float3 average(float3 a, float3 b) {
+    return make_float3(a.x + b.x, a.y + b.y, a.z + b.z) * 0.5;
+}
+
+__DEVICE__ float3 rgb_to_ycrcb(float3 rgb) {
+    float kr = 0.2126, kg = 0.7152, kb = 0.0722;
+    float yp = rgb.x * kr + rgb.y * kg + rgb.z * kb;
+    float pb = 0.5 * (rgb.b - yp) / (1.0 - kb);
+    float pr = 0.5 * (rgb.r - yp) / (1.0 - kr);
+
+    float3 ycrcb = make_float3(yp, pb, pr);
+    return ycrcb;
+}
+
+__DEVICE__ float3 ycrcb_to_rgb(float3 ycrcb) {
+    float kr = 0.2126, kg = 0.7152, kb = 0.0722;
+    float r = ycrcb.x + (2.0 - (2.0 * kr)) * ycrcb.z;
+    float g = ycrcb.x - (kb / kg) * (2.0 - (2.0 * kb)) * ycrcb.y - (kr / kg) * (2.0 - (2.0 * kr)) * ycrcb.z;
+    float b = ycrcb.x + (2.0 - (2.0 * kb)) * ycrcb.y;
+    float3 rgb = make_float3(r, g, b);
+    return rgb;
+}
+
+__DEVICE__ float3 chroma_subsample(chroma_subsample_params_t cs, float3 region[2][4], int rx, int ry) {
+    float3 output_region[2][4] = {{{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}, {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}};
+
+    int new_rx = rx, new_ry = ry;
+    if (cs.a == 1) {
+        output_region[0][0] = average(average(region[0][0], region[0][1]), average(region[0][2], region[0][3]));
+        output_region[1][0] = average(average(region[1][0], region[1][1]), average(region[1][2], region[1][3]));
+        // for (int i = 1; i < 4; ++i) {
+        //     output_region[0][i] = output_region[0][0];
+        //     output_region[1][i] = output_region[1][0];
+        // }
+        new_rx = 0;
+    } else if (cs.a == 2) {
+        output_region[0][0] = average(region[0][0], region[0][1]);
+        // output_region[0][1] = output_region[0][0];
+        output_region[0][1] = average(region[0][2], region[0][3]);
+        // output_region[0][3] = output_region[0][2];
+        output_region[1][0] = average(region[1][0], region[1][1]);
+        // output_region[1][1] = output_region[1][0];
+        output_region[1][1] = average(region[1][2], region[1][3]);
+        // output_region[1][3] = output_region[1][2];
+        new_rx = rx / 2;
+    } else if (cs.a == 4) {
+        for (int i = 0; i < 2; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                output_region[i][j] = region[i][j];
+            }
+        }
+        new_rx = rx;
+    }
+    if (cs.b == 0) {
+        for (int i = 0; i < 4; ++i) {
+            float3 avg = average(output_region[0][i], output_region[1][i]);
+            output_region[0][i] = avg;
+            // output_region[1][i] = avg;
+        }
+        new_ry = 0;
+    } else if (cs.b == cs.a) {
+        // do nothing.
+        new_ry = ry;
+    }
+    float3 output_color = output_region[new_ry][new_rx];
+    output_color.x = region[ry][rx].x;
+    return output_color;
+}
+
+
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    int rx = (p_X + xoffset) % 4;
+    int ry = (p_Y + yoffset) % 2;
+    int r_orig_x = p_X - rx;
+    int r_orig_y = p_Y - ry;
+
+    float3 region[2][4] = {{{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}, {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}};
+
+    for (int r = 0; r < 2; ++r) {
+        for (int c = 0; c < 4; ++c) {
+            float3 color = make_float3(
+                    _tex2D(p_TexR, r_orig_x + c, r_orig_y + r),
+                    _tex2D(p_TexG, r_orig_x + c, r_orig_y + r),
+                    _tex2D(p_TexB, r_orig_x + c, r_orig_y + r)
+            );
+            if (convert_to_ycbcr) {
+                color = rgb_to_ycrcb(color);
+            }
+            region[r][c] = color;
+        }
+    }
+
+    chroma_subsample_params_t params;
+    params.j = 4;
+    switch(subsampling_type) {
+        case CS410:
+            params.a = 1;
+            params.b = 0;
+            break;
+        case CS411:
+            params.a = 1;
+            params.b = 1;
+            break;
+        case CS420:
+            params.a = 2;
+            params.b = 0;
+            break;
+        case CS422:
+            params.a = 2;
+            params.b = 2;
+            break;
+        case CS440:
+            params.a = 4;
+            params.b = 0;
+            break;
+        case CS444:
+            params.a = 4;
+            params.b = 4;
+            break;
+    }
+    float3 output_color_ycrcb = chroma_subsample(params, region, rx, ry);
+    float3 output_color;
+    if (convert_to_ycbcr) {
+        output_color = ycrcb_to_rgb(output_color_ycrcb);
+    } else {
+        output_color = output_color_ycrcb;
+    }
+    return output_color;
+}
