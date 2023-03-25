@@ -706,6 +706,8 @@ Adds a border to the image and draws on the border so that the luma waveform has
 
 **BT1886 Gamma**: Specifies the gamma curve, the recommendation says to fix this at 2.4.
 
+**Mid Gray Nits**: Specifies the target brightness mid gray on your monitor, as a neutral point for the Stops modes.
+
 **Rescale Mode**: Choose from None, Fill, or Aspect. As the drawn stuff in the margins changes the remaining space in the viewer, this chooses whether to just crop in on the iamge (None), to scale the image to fill the remaining space (Fill), or to scale the image while preserving its aspect ratio.
 
-**Waveform Scale**: Choose how the horizontal guides in the waveform are calculated. If Gamma2.4 is selected, it's equivalent to BT.1886 Annex 1 with $L_W = 100$, $L_B = 0.0$, and $\gamma = 2.4$.
+**Waveform Scale**: Choose how the horizontal guides in the waveform are calculated. If Gamma2.4 is selected, it's equivalent to BT.1886 Annex 1 with $L_W = 100$, $L_B = 0.0$, and $\gamma = 2.4$. If you choose the ones that end in "Stops", then the vertical units are in stops above/below mid gray, and if you choose "Nits", then the units are in nits assuming that your display is calibrated for the specified function.

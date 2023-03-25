@@ -8,8 +8,10 @@ DEFINE_UI_PARAMS(bt1886_lw, BT1886 White Point, DCTLUI_VALUE_BOX, 100)
 DEFINE_UI_PARAMS(bt1886_lb, BT1886 Black Point, DCTLUI_VALUE_BOX, 1)
 DEFINE_UI_PARAMS(bt1886_g, BT1886 Gamma, DCTLUI_VALUE_BOX, 2.4)
 
+DEFINE_UI_PARAMS(mid_gray, Mid Gray Nits, DCTLUI_VALUE_BOX, 18)
+
 DEFINE_UI_PARAMS(rescale_image, Rescale Mode, DCTLUI_COMBO_BOX, 1, {NONE, FILL, ASPECT}, {None, Fill, Aspect})
-DEFINE_UI_PARAMS(waveform_scale, Waveform Scale, DCTLUI_COMBO_BOX, 0, {GAMMA24_NITS, BT1886_NITS}, {Gamma 2.4 Nits, BT.1886 Annex 1 Nits})
+DEFINE_UI_PARAMS(waveform_scale, Waveform Scale, DCTLUI_COMBO_BOX, 0, {GAMMA24_NITS, GAMMA24_STOPS, BT1886_NITS, BT1886_STOPS}, {Gamma 2.4 Nits, Gamma 2.4 Stops, BT.1886 Annex 1 Nits, BT.1886 Annex 1 Stops})
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {
@@ -268,6 +270,20 @@ __DEVICE__ float bt1886_nits_to_cv(float l, float lw, float lb, float gamma) {
     return v;
 }
 
+#define copy_array(source, dest, num_entries)                                                                                              \
+    for (int i = 0; i < num_entries; ++i) {                                                                                                \
+        dest[i] = source[i];                                                                                                               \
+    }
+#define copy_2d_array(source, dest, num_rows, num_cols)                                                                                    \
+    for (int i = 0; i < num_rows; ++i) {                                                                                                   \
+        for (int j = 0; j < num_cols; ++j) {                                                                                               \
+            dest[i][j] = source[i][j];                                                                                                     \
+        }                                                                                                                                  \
+    }
+
+/////////////////////////////
+// DRAW WAVEFORM           //
+/////////////////////////////
 __DEVICE__ void draw_waveform(float major_cvs[],
                               char nits_names[][10],
                               int num_major_axes,
@@ -354,22 +370,67 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     working_area_t working_area = {0.0, 0.0, 1.0, 1.0};
     float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
 
-    const int num_major_axes = 5;
-    const int num_minor_axes = 41;
-    float major_nits[5] = {0.0, 0.1, 1.0, 10.0, 100.0};
-    char nits_names[5][10] = {"0", "0.1", "1", "10", "100"};
-    float minor_nits[41] = {0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1,  0.2,  0.3,
-                            0.4, 0.5,  0.6,  0.7,  0.8,  0.9,  1.0,  2.0,  3.0,  4.0,  5.0,  6.0,  7.0,
-                            8.0, 9.0,  10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0};
+    int num_major_axes;
+    int num_minor_axes;
+    float major_nits[10] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    char nits_names[10][10] = {"0", "0", "0", "0", "0", "0", "0", "0", "0", "0"};
+    float minor_nits[50] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-    if (waveform_scale == GAMMA24_NITS) {
+    if (waveform_scale == GAMMA24_NITS || waveform_scale == BT1886_NITS) {
+        num_major_axes = 5;
+        num_minor_axes = 41;
+        float major_nits2[5] = {0.0, 0.1, 1.0, 10.0, 100.0};
+        copy_array(major_nits2, major_nits, num_major_axes);
+        char nits_names2[5][10] = {"0", "0.1", "1", "10", "100"};
+        copy_2d_array(nits_names2, nits_names, num_major_axes, 10);
+        float minor_nits2[41] = {0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1,  0.2,  0.3,
+                                 0.4, 0.5,  0.6,  0.7,  0.8,  0.9,  1.0,  2.0,  3.0,  4.0,  5.0,  6.0,  7.0,
+                                 8.0, 9.0,  10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0};
+        copy_array(minor_nits2, minor_nits, num_minor_axes);
+    } else if (waveform_scale == GAMMA24_STOPS || waveform_scale == BT1886_STOPS) {
+        num_major_axes = 7;
+        num_minor_axes = 19;
+        float major_nits2[7] = {mid_gray * _exp2f(-3.0),
+                                mid_gray * _exp2f(-2.0),
+                                mid_gray * _exp2f(-1.0),
+                                mid_gray,
+                                mid_gray * _exp2f(1.0),
+                                mid_gray * _exp2f(2.0),
+                                mid_gray * _exp2f(3.0)};
+        copy_array(major_nits2, major_nits, num_major_axes);
+        char nits_names2[7][10] = {"-3", "-2", "-1", "MID", "1", "2", "3"};
+        copy_2d_array(nits_names2, nits_names, num_major_axes, 10);
+        float minor_nits2[19] = {mid_gray * _exp2f(-3.0),
+                                 mid_gray * _exp2f(-2.6666),
+                                 mid_gray * _exp2f(-2.3333),
+                                 mid_gray * _exp2f(-2.0),
+                                 mid_gray * _exp2f(-1.66666),
+                                 mid_gray * _exp2f(-1.33333),
+                                 mid_gray * _exp2f(-1.0),
+                                 mid_gray * _exp2f(-0.66666),
+                                 mid_gray * _exp2f(-0.33333),
+                                 mid_gray,
+                                 mid_gray * _exp2f(0.33333),
+                                 mid_gray * _exp2f(0.66666),
+                                 mid_gray * _exp2f(1.0),
+                                 mid_gray * _exp2f(1.33333),
+                                 mid_gray * _exp2f(1.66666),
+                                 mid_gray * _exp2f(2.0),
+                                 mid_gray * _exp2f(2.33333),
+                                 mid_gray * _exp2f(2.66666),
+                                 mid_gray * _exp2f(3.0)};
+        copy_array(minor_nits2, minor_nits, num_minor_axes);
+    }
+    if (waveform_scale == GAMMA24_NITS || waveform_scale == GAMMA24_STOPS) {
         for (int i = 0; i < num_major_axes; ++i) {
             major_nits[i] = gamma_24_nits_to_cv(major_nits[i]);
         }
         for (int i = 0; i < num_minor_axes; ++i) {
             minor_nits[i] = gamma_24_nits_to_cv(minor_nits[i]);
         }
-    } else if (waveform_scale == BT1886_NITS) {
+    } else if (waveform_scale == BT1886_NITS || waveform_scale == BT1886_STOPS) {
         for (int i = 0; i < num_major_axes; ++i) {
             major_nits[i] = bt1886_nits_to_cv(major_nits[i], bt1886_lw, bt1886_lb, bt1886_g);
         }
