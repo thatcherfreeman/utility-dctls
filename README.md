@@ -470,6 +470,32 @@ difference_out := (input_value - low_pass5)*band5_contrast + (low_pass5 - low_pa
 Multiplies each channel by a value. The channels are computed by $\text{Red}_{\text{out}} = \text{Red}_{\text{in}} * \text{Global Gain} + \text{Red Gain}$ and likewise for the other two channels.
 
 
+
+## Polynomial Kernel DCTL
+For each of $x_i \in \{r, g, b\}$, computes $(x_i \cdot x_j)^p$ and allows you to shuffle a linear combination of those into each of the r, g, b channels
+
+### How it works
+One of the tricks with SVMs is the Polynomial kernel, where you extend your feature vector with $k(x_i, x_j) = (x_i * x_j)^d$ for some integer $d$, and for all $x_i$ or $x_j$ in your original input feature vector. This results in a higher dimensional input (in this case, 9 unique dimensions) where the dimensions are as follows: $r, g, b, k(r, r), k(g, g), k(b, b), k(r, g), k(r, b), k(g, b)$
+
+Now, we can convert back to 3 dimensions by multiplying by a $3 \times 9$ matrix, which you specify with the parameters. I've intentionally actually skipped most of the first three columns as you can figure those out yourself with a normal 3x3 matrix prior to this DCTL, and that keeps it way cleaner.
+
+### DCTL Parameters
+**Red/Green/Blue => Red/Green/Blue**: The coefficient corresponding to the original color.
+
+**Red/Green/Blue * Red/Green/Blue => Red/Green/Blue**: The coefficient corresponding to this $(x_i \cdot x_j)^p$ term.
+
+**Power**: The value of $p$.
+
+**Mid Gray**: Indicates the code value for Mid Gray, that will be restored via RGB gain if Preserve Gray is checked.
+
+**Identity Point for Products**: By default, $x^p$ obviously is an identity function only when $x = 1$ (or $x = 0$). This allows you to choose a different stationary point, as we will scale the input and output of the power such that $x$ remains stationary for this specified value when Normalize Powers is checked.
+
+**Preserve Gray**: If checked, runs mid-gray through the pipeline and applies gain at the end to restore it.
+
+**Normalize Powers**: If checked, powers will be normalized at the value specified by Identity Point for Products.
+
+
+
 ## Quantize
 Simulates the effect of saving the current image at a specified bit depth.
 

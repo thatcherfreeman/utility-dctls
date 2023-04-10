@@ -1,0 +1,97 @@
+// clang-format off
+DEFINE_UI_PARAMS(red_0, Red => Red, DCTLUI_SLIDER_FLOAT, 1.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(red_1, Red*Red => Red, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(red_2, Green*Green => Red, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(red_3, Blue*Blue => Red, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(red_4, Red*Green => Red, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(red_5, Red*Blue => Red, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(red_6, Green*Blue => Red, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+
+DEFINE_UI_PARAMS(green_0, Green => Green, DCTLUI_SLIDER_FLOAT, 1.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(green_1, Red*Red => Green, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(green_2, Green*Blue => Green, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(green_3, Blue*Blue => Green, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(green_4, Red*Green => Green, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(green_5, Red*Blue => Green, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(green_6, Green*Green => Green, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+
+DEFINE_UI_PARAMS(blue_0, Blue => Blue, DCTLUI_SLIDER_FLOAT, 1.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(blue_1, Red*Red => Blue, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(blue_2, Green*Green => Blue, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(blue_3, Blue*Blue => Blue, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(blue_4, Red*Green => Blue, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(blue_5, Red*Blue => Blue, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+DEFINE_UI_PARAMS(blue_6, Green*Blue => Blue, DCTLUI_SLIDER_FLOAT, 0.0, -10, 10, 0.001)
+
+DEFINE_UI_PARAMS(power, Power, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.001)
+DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(power_neutral, Identity Point for Products, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(preserve_gray, Preserve Gray, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(normalize_gray, Normalize Powers, DCTLUI_CHECK_BOX, 1)
+// clang-format on
+
+__DEVICE__ float3 mv_310_10(float mat[3][9], float vec[9]) {
+    float out[3] = {0.0, 0.0, 0.0};
+    for (int i = 0; i < 3; ++i) {
+        float cumulative = 0.0;
+        for (int j = 0; j < 9; ++j) {
+            cumulative += mat[i][j] * vec[j];
+        }
+        out[i] = cumulative;
+    }
+    return make_float3(out[0], out[1], out[2]);
+}
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float product_power(float a, float b, float power, float neutral, int normalize_gray) {
+    if (normalize_gray) {
+        return powf((a / neutral) * (b / neutral), power) * neutral;
+    } else {
+        return powf(a * b, power);
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float r = p_R;
+    float g = p_G;
+    float b = p_B;
+    float vec[10] = {
+        r,
+        g,
+        b,
+        product_power(r, r, power, power_neutral, normalize_gray),
+        product_power(g, g, power, power_neutral, normalize_gray),
+        product_power(b, b, power, power_neutral, normalize_gray),
+        product_power(r, g, power, power_neutral, normalize_gray),
+        product_power(r, b, power, power_neutral, normalize_gray),
+        product_power(g, b, power, power_neutral, normalize_gray),
+    };
+    float gray[9] = {
+        mid_gray,
+        mid_gray,
+        mid_gray,
+        product_power(mid_gray, mid_gray, power, power_neutral, normalize_gray),
+        product_power(mid_gray, mid_gray, power, power_neutral, normalize_gray),
+        product_power(mid_gray, mid_gray, power, power_neutral, normalize_gray),
+        product_power(mid_gray, mid_gray, power, power_neutral, normalize_gray),
+        product_power(mid_gray, mid_gray, power, power_neutral, normalize_gray),
+        product_power(mid_gray, mid_gray, power, power_neutral, normalize_gray),
+    };
+
+    float mat[3][9] = {
+        {red_0, 0.0, 0.0, red_1, red_2, red_3, red_4, red_5, red_6},
+        {0.0, green_0, 0.0, green_1, green_2, green_3, green_4, green_5, green_6},
+        {0.0, 0.0, blue_0, blue_1, blue_2, blue_3, blue_4, blue_5, blue_6},
+    };
+    float3 out_gray = mv_310_10(mat, gray);
+    float3 out = mv_310_10(mat, vec);
+    if (preserve_gray) {
+        out.x *= (mid_gray / out_gray.x);
+        out.y *= (mid_gray / out_gray.y);
+        out.z *= (mid_gray / out_gray.z);
+    }
+    return out;
+}
