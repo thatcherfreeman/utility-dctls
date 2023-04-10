@@ -477,7 +477,7 @@ Multiplies each channel by a value. The channels are computed by $\text{Red}_{\t
 
 
 ## Polynomial Kernel DCTL
-For each of $x_i \in \{r, g, b\}$, computes $(x_i \cdot x_j)^p$ and allows you to shuffle a linear combination of those into each of the r, g, b channels
+For each of $x_i \in \{r, g, b\}$, computes $(x_i \cdot x_j)^p$ and allows you to specify a linear combination of those into each of the r, g, b channels
 
 ### How it works
 One of the tricks with SVMs is the Polynomial kernel, where you extend your feature vector with $k(x_i, x_j) = (x_i * x_j)^p$ for some integer $p$, and for all $x_i$ or $x_j$ in your original input feature vector. This results in a higher dimensional input (in this case, 9 unique dimensions) where the dimensions are as follows: $r, g, b, k(r, r), k(g, g), k(b, b), k(r, g), k(r, b), k(g, b)$
@@ -634,6 +634,29 @@ Applies the sigmoid function to the inputs. Computes $b + (w-b)\frac{1}{1 + e^{-
 **Output White**: Controls the value of $w$. Vanilla sigmoid has this set to 1.0.
 
 **Output Black**: Controls the value of $b$. Vanilla sigmoid has this set to 1.0.
+
+
+## Sigmoid Kernel DCTL
+Similar to Polynomial Kernele. For each of $x_i \in \{r, g, b\}$, computes $\sigma((x_i \cdot x_j)^p)$ where $\sigma(x) = \frac{x}{x + w}$, with $w$ being a user specified white point. Allows you to specify a linear combination of those into each of the r, g, b channels. You should use a linear input for this function.
+
+### How it works
+One of the tricks with SVMs is the Polynomial kernel, where you extend your feature vector with $k(x_i, x_j) = \sigma((x_i * x_j)^p)$ for some integer $p$, and for all $x_i$ or $x_j$ in your original input feature vector. This results in a higher dimensional input (in this case, 9 unique dimensions) where the dimensions are as follows: $r, g, b, k(r, r), k(g, g), k(b, b), k(r, g), k(r, b), k(g, b)$
+
+Now, we can convert back to 3 dimensions by multiplying by a $3 \times 9$ matrix, which you specify with the parameters. I've intentionally actually skipped most of the first three columns as you can figure those out yourself with a normal 3x3 matrix prior to this DCTL, and that keeps it way cleaner.
+
+### DCTL Parameters
+**Red/Green/Blue => Red/Green/Blue**: The coefficient corresponding to the original color.
+
+**Red/Green/Blue * Red/Green/Blue => Red/Green/Blue**: The coefficient corresponding to this $\sigma((x_i \cdot x_j)^p)$ term.
+
+**Power**: The value of $p$.
+
+**Mid Gray**: Indicates the code value for Mid Gray, that will be restored via RGB gain if Preserve Gray is checked.
+
+**White Point**: The value of $w$ in the denominator of $\sigma(x)$.
+
+**Preserve Gray**: If checked, runs mid-gray through the pipeline and applies gain at the end to restore it.
+
 
 
 ## Softmax DCTL
