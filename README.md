@@ -429,8 +429,13 @@ Given a color gamut, compute the luminance channel associated with those primari
 **Show Luminance Vector**: If checked, just outputs the RGB weights of the generated luminance vector, you can take the dot product of this color and your input color to compute the luminance.
 
 
-## Matrix Tester
-Multiplies the RGB values of the input by a 3x3 matrix with the specified entries. Supports negative values.
+## Matrix
+Multiplies the RGB values of the input by a 3x3 matrix with the specified entries. Supports negative values. Given your input $x = [r, g, b]^T$, this computes $f(x) = Ax$. If you choose to preserve neutrals, then we will ensure that the rows of $A$ sum to 1.0, so please make sure the matrix doesn't have rows of zeros if you intend to use that feature.
+
+### DCTL Parameters
+**Red/Green/Blue => Red/Green/Blue**: Indicates the coefficient corresponding to how much of the left hand side (input) channel will be included in the right hand side channel (output). The entries ending with "=> Red" are the first row of the matrix, the entries ending in "=> Green" are the second row, etc.
+
+**Preserve Neutral**: Sends $(1, 1, 1)$ through the matrix and applies RGB gain to the output to ensure that $(1, 1, 1)$ is ultimately returned.
 
 
 ## Photon Noise DCTL
