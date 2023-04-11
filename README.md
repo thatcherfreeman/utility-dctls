@@ -143,6 +143,14 @@ Applies a beach bypass look to the image. Expects a Linear image. Uses a custom 
 
 **Middle Gray**: Indicates the middle gray value that will be preserved.
 
+
+## Channel Viewer DCTL
+Emulates the Fusion channel viewer, for Red/Green/Blue channels.
+
+### DCTL Parameters
+**Channel**: Allows you to choose whether the full color image will be returned, or only one of the red/green/blue channels (duplicated onto all three channels in the output for visibility).
+
+
 ## Chroma Subsampling DCTL
 Applies chroma subsampling to an image by converting to YCbCr, downsampling the Cb and Cr channels via box averaging, then converting back to RGB.
 
@@ -181,10 +189,12 @@ Generates a colorchecker image based on the original specification (you can find
 
 
 ## Color Generator DCTL
-Generates the specified RGB value across the whole frame.
+Generates the specified RGB value across the whole frame. Also allows you to bypass certain channels via the "Pass-through" checkboxes.
 
 ### DCTL Parameters
 **Red/Green/Blue**: the Red/Green/Blue value that will be returned.
+
+**Red/Green/Blue Pass-Through**: If checked, just return the red/green/blue value of the input image.
 
 
 ## Color Ramp DCTL

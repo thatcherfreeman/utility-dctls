@@ -1,0 +1,15 @@
+DEFINE_UI_PARAMS(channel, Channel, DCTLUI_COMBO_BOX, 0, {ALL, RED, GREEN, BLUE}, {All, Red, Green, Blue})
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 output = make_float3(0.0, 0.0, 0.0);
+    if (channel == ALL) {
+        output = make_float3(p_R, p_G, p_B);
+    } else if (channel == RED) {
+        output = make_float3(p_R, p_R, p_R);
+    } else if (channel == GREEN) {
+        output = make_float3(p_G, p_G, p_G);
+    } else if (channel == BLUE) {
+        output = make_float3(p_B, p_B, p_B);
+    }
+    return output;
+}
