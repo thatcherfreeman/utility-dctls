@@ -23,11 +23,11 @@ Fuses should also be placed in the following folder to install them for Fusion S
 
 If a DCTL is not working, you can usually find logs in these directories. If you find that there is a problem, make an Issue on Github with your OS and Resolve version so I can fix it.
 
-**MacOS (Apple Silicon)**: `~/Library/Application Support/Blackmagic Design/DaVinci Resolve/logs/davinci_resolve.log`
+**MacOS (Apple Silicon)**: `[Your user directory]/Library/Application Support/Blackmagic Design/DaVinci Resolve/logs/davinci_resolve.log`
 
 **MacOS (Intel)**: `/Library/Application Support/Blackmagic Design/DaVinci Resolve/logs/davinci_resolve.log`
 
-**Windows**: `C:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\logs\davinci_resolve.log`
+**Windows**: `C:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\logs\davinci_resolve.log` or `[Your user directory]\AppData\Blackmagic Design\DaVinci Resolve\Support\logs\davinci_resolve.log`
 
 # The Fuses
 
