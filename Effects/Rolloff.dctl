@@ -1,0 +1,46 @@
+//clang-format off
+DEFINE_UI_PARAMS(target_slope, Target Slope, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.01)
+DEFINE_UI_PARAMS(white_point, White Point, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(black_point, Black Point, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mid_gray_in, Input Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(usr_mid_gray_out, Output Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(scale_mid_gray, Scale Mid Gray with White Point, DCTLUI_CHECK_BOX, 0)
+//clang-format on
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float contrast(float x, float mid_gray, float gamma) {
+    return mid_gray * powf(x / mid_gray, gamma);
+}
+
+// g(x) = a * (x / (x+b)) + c
+__DEVICE__ float rolloff_function(float x, float a, float b, float c) {
+    return a * (x / (x + b)) + c;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float mid_gray_out;
+    if (scale_mid_gray) {
+        mid_gray_out = usr_mid_gray_out * white_point;
+    } else {
+        mid_gray_out = usr_mid_gray_out;
+    }
+
+    float3 out = make_float3(p_R, p_G, p_B);
+    // Constraint 1: h(0) = black_point
+    float c = black_point;
+    // Constraint 2: h(infty) = white_point
+    float a = white_point - c;
+    // Constraint 3: h(mid) = mid
+    float b = (a / (mid_gray_out - c)) * (1.0 - ((mid_gray_out - c) / a)) * mid_gray_in;
+    // Constraint 4: h'(mid) = target_slope
+    float gamma = target_slope * _powf((mid_gray_in + b), 2.0) / (a * b);
+
+    // h(x) = g(m_i * ((x/m_i)**gamma))
+    out.x = rolloff_function(contrast(out.x, mid_gray_in, gamma), a, b, c);
+    out.y = rolloff_function(contrast(out.y, mid_gray_in, gamma), a, b, c);
+    out.z = rolloff_function(contrast(out.z, mid_gray_in, gamma), a, b, c);
+    return out;
+}
