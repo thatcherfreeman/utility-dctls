@@ -23,7 +23,7 @@ __DEVICE__ float rolloff_function(float x, float a, float b, float c) {
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float mid_gray_out;
     if (scale_mid_gray) {
-        mid_gray_out = usr_mid_gray_out * white_point;
+        mid_gray_out = usr_mid_gray_out * (white_point - black_point) + black_point;
     } else {
         mid_gray_out = usr_mid_gray_out;
     }

@@ -597,25 +597,6 @@ The DCTL works in three steps:
 **Ungroup RGB**: If unchecked, only applies the Neutral Gamma, otherwise applies both Neutral gamma and the Color Gamma, multiplying together those two powers.
 
 
-## Rolloff DCTL
-Applies a sigmoid function to compress highlights. Attempts to target a specific black point, white point, mid_gray, and slope at mid gray. Expects a linear state image and outputs a linear state image.
-
-### How it works
-The DCTL computes the $h(x)$, where: $h(x) = g(m_i(x/m_i)^\gamma)$ and $g(x) = a\frac{x}{x+b} + c$. The parameters $a, b, c, \gamma$ are selected for you based on the specified white point, black point, and target slope, and input/output mid gray points.
-
-### DCTL Parameters
-**Target Slope**: Linear slope at mid gray. $\gamma$ is selected so that $h'(m) = \text{target slope}$.
-
-**White Point**: Maximum output, typically 1.0 corresponds to 100 nits, and $h(x)$ will asymptotically approach this value as $x \rightarrow \infty$.
-
-**Black Point**: This indicates where $h(0)$ will map to. If your linear image has negative code values, they can map to be below this black point.
-
-**Input Mid Gray**: Indicate the value corresponding to $m_i$.
-
-**Output Mid Gray**: Specifies the value corresponding to $m_o$. We choose gamma such that $h(m_i) = m_o$.
-
-**Scale Mid Gray with White Point**: If checked, the value of $m_o$ is overridden to `output_mid_gray * white_point`. If unchecked, $m_o$ is just set equal to `output_mid_gray`. If you want your mid gray to scale with the max output white point as you change white points, then check this box.
-
 
 ## Safety Lines DCTL
 DCTL that creates a white frame to indicate safety boundaries for the image.
@@ -745,6 +726,26 @@ Converts between linear and my super cool, fully-logarithmic curve. Spec for thi
 **Exposure Compensation**: Applies this many stops of gain prior to a lin2log conversion, and removes this many stops of gain after a log2lin conversion. Convenient if you want to map a tone other than 18% gray to 50IRE, but typically you should leave this at 0.
 
 **Direction**: Indicates whether to convert linear to tlog, or from tlog to linear.
+
+
+## Tone Mapping DCTL
+Applies a sigmoid function to compress highlights. Attempts to target a specific black point, white point, mid_gray, and slope at mid gray. Expects a linear state image and outputs a linear state image.
+
+### How it works
+The DCTL computes the $h(x)$, where: $h(x) = g(m_i(x/m_i)^\gamma)$ and $g(x) = a\frac{x}{x+b} + c$. The parameters $a, b, c, \gamma$ are selected for you based on the specified white point, black point, and target slope, and input/output mid gray points.
+
+### DCTL Parameters
+**Target Slope**: Linear slope at mid gray. $\gamma$ is selected so that $h'(m) = \text{target slope}$.
+
+**White Point**: Maximum output, typically 1.0 corresponds to 100 nits, and $h(x)$ will asymptotically approach this value as $x \rightarrow \infty$.
+
+**Black Point**: This indicates where $h(0)$ will map to. If your linear image has negative code values, they can map to be below this black point.
+
+**Input Mid Gray**: Indicate the value corresponding to $m_i$.
+
+**Output Mid Gray**: Specifies the value corresponding to $m_o$. We choose gamma such that $h(m_i) = m_o$.
+
+**Scale Mid Gray with White Point**: If checked, the value of $m_o$ is overridden to `output_mid_gray * (white_point - black_point) + black_point`. If unchecked, $m_o$ is just set equal to `output_mid_gray`. If you want your mid gray to scale with the max output white point as you change white points, then check this box.
 
 
 ## Unit Length DCTL
