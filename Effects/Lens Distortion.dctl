@@ -1,20 +1,71 @@
-DEFINE_UI_PARAMS(k, Distortion Parameter k, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.01)
+// clang-format off
+// Need parameter for k1
+DEFINE_UI_PARAMS(k_1_x, X Distortion Amount K1, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(k_1_y, Y Distortion Amount K1, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(uniform_distortion, Couple XY, DCTLUI_CHECK_BOX, 1)
+// clang-format on
+
+///////////////////////////////
+// Bilinear sampling
+//////////////////////////////
+
+__DEVICE__ float sample_point_bilinear_1ch(float x, float y, __TEXTURE__ tex, float scale) {
+    const float scale_round = _round(scale);
+    const int iX = (int)(_floor(x / scale_round) * scale_round);
+    const int iY = (int)(_floor(y / scale_round) * scale_round);
+
+    int x_low = (int)(iX);
+    int x_high = (int)(iX + scale_round);
+    int y_low = (int)(iY);
+    int y_high = (int)(iY + scale_round);
+
+    float c_ll = _tex2D(tex, x_low, y_low);
+    float c_lh = _tex2D(tex, x_low, y_high);
+    float c_hl = _tex2D(tex, x_high, y_low);
+    float c_hh = _tex2D(tex, x_high, y_high);
+
+    float c_l = _mix(c_ll, c_hl, (x - x_low) / (x_high - x_low));
+    float c_h = _mix(c_lh, c_hh, (x - x_low) / (x_high - x_low));
+    float c = _mix(c_l, c_h, (y - y_low) / (y_high - y_low));
+    return c;
+}
+
+__DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
+    float3 out = make_float3(0.0, 0.0, 0.0);
+    out.x = sample_point_bilinear_1ch(x, y, p_TexR, scale);
+    out.y = sample_point_bilinear_1ch(x, y, p_TexG, scale);
+    out.z = sample_point_bilinear_1ch(x, y, p_TexB, scale);
+    return out;
+}
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
-    float aspect = (float)p_Width / (float)p_Height;
-    float x = ((float)p_X / (float)p_Width - 0.5) * aspect;
-    float y = (float)p_Y / (float)p_Height - 0.5;
+    // Transform p_X and p_Y into x_d, y_d, where the center is now 0.0, 0.0, and the height of the image is 1.0 (bottom middle is 0.0,
+    // 0.5).
+    float aspect_ratio = (float)p_Width / (float)p_Height;
+    float p_x_scaled = (float)p_X / (float)(p_Width - 1);
+    float p_y_scaled = (float)p_Y / (float)(p_Height - 1);
+    float x_d = (p_x_scaled - 0.5) * aspect_ratio;
+    float y_d = p_y_scaled - 0.5;
 
-    float r_d = _sqrtf(_powf(_fabs(x), 2.0) + _powf(_fabs(y), 2.0));
-    float r_u = r_d * (1.0 + k * _powf(_fabs(r_d), 2.0));
+    // Compute r_d, distance of the current pixel from the center of the frame.
+    float r_d = _hypotf(x_d, y_d);
 
-    float new_x = x * (r_u / r_d) / aspect;
-    float new_y = y * (r_u / r_d);
+    // Compute x_u, y_u
+    if (uniform_distortion) {
+        k_1_y = k_1_x;
+    }
+    float x_u = x_d * (1.0 + k_1_x * _powf(r_d, 2.0));
+    float y_u = y_d * (1.0 + k_1_y * _powf(r_d, 2.0));
 
-    // sample textures at new_x, new_y
-    float3 output = make_float3(0.0, 0.0, 0.0);
-    output.x = _tex2D(p_TexR, (int)((new_x + 0.5) * p_Width), (int)((new_y + 0.5) * p_Height));
-    output.y = _tex2D(p_TexG, (int)((new_x + 0.5) * p_Width), (int)((new_y + 0.5) * p_Height));
-    output.z = _tex2D(p_TexB, (int)((new_x + 0.5) * p_Width), (int)((new_y + 0.5) * p_Height));
-    return output;
+    // Transform x_u, y_u into new p_X_u, p_Y_u coordinates where the origin is in the top left
+    float p_x_u_scaled = (x_u / aspect_ratio) + 0.5;
+    float p_y_u_scaled = y_u + 0.5;
+    float p_x_u = p_x_u_scaled * (float)(p_Width - 1);
+    float p_y_u = p_y_u_scaled * (float)(p_Height - 1);
+
+    // Look up the pixel at p_X_u, p_Y_u in each of the three channels
+    float3 out = sample_point_bilinear_3ch(p_x_u, p_y_u, p_TexR, p_TexG, p_TexB, 1.0);
+
+    // Return that pixel value.
+    return out;
 }

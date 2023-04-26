@@ -381,10 +381,20 @@ Inverts the values in an image.
 **Log Mode**: When checked, computes the inverse by taking `1 - x`. When unchecked, assumes the image is scene linear and therefore computes `1 / x`.
 
 ## Lens Distortion DCTL
-Applies a basic lens distortion model.
+Applies a basic lens distortion model, uses bilinear sampling to avoid aliasing problems for reasonable choices of $k_1$.
+
+### How it works
+Lens distortion here is modelled with:
+$r_d = \sqrt{x_d^2 + y_d^2}$
+$x_u = x_d (1 + k_{1x} r_d^2)$
+$y_u = y_d (1 + k_{1y} r_d^2)$
 
 ### DCTL Parameters
-**Distortion Parameter k**: Chooses the value of $k$ in $r_u = r_d (1 + k r_d^2)$, the model.
+**X Distortion Amount K1**: Chooses the value of $k_{1x}$ in the above model
+
+**Y Distortion Amount K1**: Chooses the value of $k_{1y}$ in the above model
+
+**Couple XY**: If checked, just use $k_{1x}$ for both $x_u$ and $y_u$ calculations, keeping the lens distortion spherical.
 
 ## Levels Converter
 Converts between full and (0-1023) legal levels (64-940)
