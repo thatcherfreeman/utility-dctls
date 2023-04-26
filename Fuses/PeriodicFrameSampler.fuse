@@ -1,0 +1,53 @@
+FuRegisterClass("PeriodicFrameSampler",
+    CT_Tool, {
+        REGS_Name = "Periodic Frame Sampler",
+        REGS_Category = "Fuses\\Util\\PeriodicFrameSampler",
+        REGS_OpIconString = "PrFrSm",
+        REGS_OpDescription = "Extracts one frame along the specified period, starting at the specified time."
+    }
+)
+
+function Create()
+    SourceTime = self:AddInput("Source Time Start", "SourceTime", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ScrewControl",
+        INP_Default = 0.0,
+        INP_INTEGER = true,
+        IC_DisplayedPrecision = 0,
+    })
+    DestTime = self:AddInput("Destination Time Start", "DestTime", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ScrewControl",
+        INP_Default = 0.0,
+        INP_INTEGER = true,
+        IC_DisplayedPrecision = 0,
+    })
+    Period = self:AddInput("Period", "Period", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 1.0,
+        INP_MaxScale = 10.0,
+        INP_Default = 1.0,
+        INP_INTEGER = true,
+        INP_MinAllowed = 1.0,
+        IC_DisplayedPrecision = 0,
+    })
+    InImage = self:AddInput("Input", "Input", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+end
+
+function Process(req)
+    -- Get values from the UI Tools
+    local start_time = SourceTime:GetValue(req).Value
+    local target_time = DestTime:GetValue(req).Value
+    local period = Period:GetValue(req).Value
+
+    local img = InImage:GetSource((req.Time - target_time) * period + start_time)
+    OutImage:Set(req, img)
+end

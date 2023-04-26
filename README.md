@@ -86,6 +86,22 @@ quotient_out := (input_value / low_pass5)^band5_contrast * (low_pass5 / low_pass
 difference_out := (input_value - low_pass5)*band5_contrast + (low_pass5 - low_pass4)*band4_contrast + ... + low_pass1
 ```
 
+## Periodic Frame Sampler Fuse
+Samples the input image at the specified frame interval. Suppose the current frame time is `Destination Time Start`, and you want to be looking at the input image at frame `Source Time Start`, and you want the next frame outputted from this Fuse to be at `Source Time Start + Period * 1` and so on, then this is the Fuse for you.
+
+Essentially, we will compute:
+
+`(current_time - destination_time_start) * period + source_time_start` and return the frame at this time.
+
+### Parameters
+**Source Time Start**: Frame number we should consider to be the "First Frame" of the input image.
+
+**Destination Time Start**: Frame number at which we should output the `Source Time Start` frame.
+
+**Period**: As time progresses one frame, this indicates how many frames later we should sample from the source image.
+
+
+
 # The DCTLs:
 
 ## ACES Exposure DCTL
