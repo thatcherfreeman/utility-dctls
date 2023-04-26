@@ -479,6 +479,13 @@ difference_out := (input_value - low_pass5)*band5_contrast + (low_pass5 - low_pa
 ```
 
 
+## Output Blanking DCTL
+Draws black bars on the top/bottom or left/right sides of the frame to mask out all but a specified aspect ratio
+
+### DCTL Parameters
+**Aspect Ratio** The aspect ratio you want to keep after pillar/letter boxing.
+
+
 ## Multiplication Function DCTL
 Multiplies each channel by a value. The channels are computed by $\text{Red}_{\text{out}} = \text{Red}_{\text{in}} * \text{Global Gain} + \text{Red Gain}$ and likewise for the other two channels.
 
