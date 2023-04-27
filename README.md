@@ -334,9 +334,9 @@ Creates a random noise, inspired by statistical film models. You'll need to pass
 
 **D Min**: Minimum density of the film.
 
-**Number of Grains Per Pixel**: Should control the variance of the noise. More grains results in a finer image.
+**Grains Per Pixel**: Should control the variance of the noise. More grains results in a finer image.
 
-**Number of layers of grains**: Should contribute towards controlling the gamma of the film. Essentially controls how thick the emulsion layer is.
+**Num Layers of Grains**: Should contribute towards controlling the gamma of the film. Essentially controls how thick the emulsion layer is.
 
 **Activation Threshold**: Controls the amount of light needed for a grain to be activated.
 
