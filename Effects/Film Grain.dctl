@@ -1,9 +1,10 @@
 DEFINE_UI_PARAMS(dmax, D Max, DCTLUI_VALUE_BOX, 4.0)
+DEFINE_UI_PARAMS(dmin, D Min, DCTLUI_VALUE_BOX, 0.01)
 DEFINE_UI_PARAMS(num_grains_per_pixel, Number of Grains Per Pixel, DCTLUI_VALUE_BOX, 100)
 DEFINE_UI_PARAMS(num_layers, Number of layers of grains, DCTLUI_VALUE_BOX, 5)
 DEFINE_UI_PARAMS(activation_threshold, Activation Threshold, DCTLUI_VALUE_BOX, 0.18)
-DEFINE_UI_PARAMS(photon_gain, Photon Gain, DCTLUI_VALUE_BOX, 0.2)
-DEFINE_UI_PARAMS(noise_mode, Noise Mode, DCTLUI_COMBO_BOX, 1, {RGB, VALUE, LUM}, {RGB Noise, Value Noise, Luminance Noise})
+DEFINE_UI_PARAMS(photon_gain, Photon Gain, DCTLUI_VALUE_BOX, 0.5)
+DEFINE_UI_PARAMS(noise_mode, Noise Mode, DCTLUI_COMBO_BOX, 1, {RGB, MONO}, {RGB Noise, Monochrome Noise})
 DEFINE_UI_PARAMS(seed_position_x, Seed Position X, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(seed_position_y, Seed Position Y, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
 
@@ -125,7 +126,6 @@ __DEVICE__ float sample_bernoulli(float p, __PRIVATE__ rand_state* seed) {
 
 __DEVICE__ float sample_binomial_continuous(float n, float p, __PRIVATE__ rand_state* seed) {
     float cont_sample = sample_norm(n * p, n * p * (1.0 - p), seed);
-    cont_sample = _clampf(cont_sample, 0, n);
     return cont_sample;
 }
 
@@ -159,7 +159,7 @@ __DEVICE__ inline float3 _threshold3(float3 input, float threshold) {
 /////////////////////////////////////////////
 
 __DEVICE__ float convert_photons_to_transmittance(
-    float pixel_photons, float threshold, float num_grains, float num_layers, float dmax,  __PRIVATE__ rand_state* seed) {
+    float pixel_photons, float threshold, float num_grains, float num_layers, float dmax, float dmin, __PRIVATE__ rand_state* seed) {
 
     // Probability of a grain being activated, given its threshold
     // P(activated) = P(x >= threshold) = 1 - P(x <= threshold)
@@ -167,14 +167,15 @@ __DEVICE__ float convert_photons_to_transmittance(
 
     float T = 1.0;
 
+    float layer_transmittance = _powf(_powf(10.0, -1.0 * dmin), 1.0 / num_layers);
     float grain_absorption = 1 - _powf(_powf(10.0, -1.0 * dmax), 1.0 / num_layers);
 
     for (int i = 0; i < num_layers; ++i) {
         float N = sample_binomial_continuous(num_grains, p, seed);
-        float T_i = 1 - (grain_absorption * (N / num_grains));
+        float T_i = layer_transmittance - (grain_absorption * (N / num_grains));
         T *= T_i;
     }
-
+    T = _clampf(T, 0.0, 1.0);
     return T;
 }
 
@@ -200,22 +201,30 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float3 output_color = make_float3(0.0, 0.0, 0.0);
     float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y)) * photon_gain;
 
-    if (noise_mode == LUM || noise_mode == VALUE) {
-        float lum;
-        if (noise_mode == LUM) {
-            lum = (curr_color.x + curr_color.y + curr_color.z) / 3.0;
-        } else if (noise_mode == VALUE) {
-            lum = _fmaxf(_fmaxf(curr_color.x, curr_color.y), curr_color.z);
-        }
-        float lum_transmittance = convert_photons_to_transmittance(lum, activation_threshold, num_grains_per_pixel, num_layers, dmax, state);
+    if (noise_mode == MONO) {
+        // As the seed of the random number generators is only dependent
+        // on the position of the current pixel (and the value of some arbitrary
+        // pixel in the middle of the frame), we can simply share the same seed
+        // between all three channels to generate monochrome noise. IE the same
+        // exposure adjustment will be applied to all three channels, resulting in
+        // a neutral look.
+        rand_state initial_state_value_red = *state;
+        rand_state initial_state_value_green = *state;
+        rand_state initial_state_value_blue = *state;
 
-        output_color.x = curr_color.x * lum_transmittance / lum;
-        output_color.y = curr_color.y * lum_transmittance / lum;
-        output_color.z = curr_color.z * lum_transmittance / lum;
+        output_color.x = convert_photons_to_transmittance(
+            curr_color.x, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, &initial_state_value_red);
+        output_color.y = convert_photons_to_transmittance(
+            curr_color.y, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, &initial_state_value_green);
+        output_color.z = convert_photons_to_transmittance(
+            curr_color.z, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, &initial_state_value_blue);
     } else {
-        output_color.x = convert_photons_to_transmittance(curr_color.x, activation_threshold, num_grains_per_pixel, num_layers, dmax, state);
-        output_color.y = convert_photons_to_transmittance(curr_color.y, activation_threshold, num_grains_per_pixel, num_layers, dmax, state);
-        output_color.z = convert_photons_to_transmittance(curr_color.z, activation_threshold, num_grains_per_pixel, num_layers, dmax, state);
+        output_color.x =
+            convert_photons_to_transmittance(curr_color.x, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, state);
+        output_color.y =
+            convert_photons_to_transmittance(curr_color.y, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, state);
+        output_color.z =
+            convert_photons_to_transmittance(curr_color.z, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, state);
     }
     return output_color;
 }

@@ -330,7 +330,9 @@ In practice, you should use the following pipeline: `1. Clamp 0+ ==> 2. Film Cur
 Creates a random noise, inspired by statistical film models. You'll need to pass in a linear image and use two of these DCTLs in a pipeline, one for the Neg stock and one for the print stock, as each one returns the Transmittance of the film stock.
 
 ### DCTL Parameters
-**D MAX**: Maximum density
+**D Max**: Maximum density
+
+**D Min**: Minimum density of the film.
 
 **Number of Grains Per Pixel**: Should control the variance of the noise. More grains results in a finer image.
 
@@ -342,7 +344,7 @@ Creates a random noise, inspired by statistical film models. You'll need to pass
 
 **Seed Position X/Y**: Indicates where in the image to pull a pixel to start the random seed. Change this if the noise is fixed.
 
-**Noise Mode**: Indicates a different noise mode. In RGB, noise is computed on each channel independently, in VALUE, the max of the three channels is used to figure out input energy and transmittance is applied to each channel using math, and Luminance is the same as Value but the channels are averaged when computing the noise.
+**Noise Mode**: Indicates a different noise mode. In RGB, noise is computed on each channel independently, In Monochrome Noise mode, I recycle the same random seed for all three channels to avoid introducing chroma noise.
 
 
 ## Gamma Function
@@ -477,6 +479,8 @@ Helps simulate the effect of photon noise, a noise that's approximately poisson 
 
 ### DCTL Parameters
 **Photon Exposure** (stops): The input signal is multiplied by `_exp2f(photon exposure)`to compute the variance
+
+**Noise Mode**: Indicates a different noise mode. In RGB, noise is computed on each channel independently, In Monochrome Noise mode, I recycle the same random seed for all three channels to avoid introducing chroma noise.
 
 **Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
 
