@@ -36,7 +36,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     // Constraint 3: h(mid) = mid
     float b = (a / (mid_gray_out - c)) * (1.0 - ((mid_gray_out - c) / a)) * mid_gray_in;
     // Constraint 4: h'(mid) = target_slope
-    float gamma = target_slope * _powf((mid_gray_in + b), 2.0) / (a * b);
+    float gamma = target_slope * powf((mid_gray_in + b), 2.0) / (a * b);
 
     // h(x) = g(m_i * ((x/m_i)**gamma))
     out.x = rolloff_function(contrast(out.x, mid_gray_in, gamma), a, b, c);
