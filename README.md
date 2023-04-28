@@ -551,6 +551,8 @@ One of the tricks with SVMs is the Polynomial kernel, where you extend your feat
 
 Now, we can convert back to 3 dimensions by multiplying by a $3 \times 9$ matrix, which you specify with the parameters. I've intentionally actually skipped most of the first three columns as you can figure those out yourself with a normal 3x3 matrix prior to this DCTL, and that keeps it way cleaner.
 
+There's an interesting special case when $p = 0.5$ and you're therefore taking the geometric mean of each pair of channels, and effectively get a 3x3 matrix in here too.
+
 ### DCTL Parameters
 **Red/Green/Blue => Red/Green/Blue**: The coefficient corresponding to the original color.
 
