@@ -1,0 +1,86 @@
+FuRegisterClass("PixelLogger",
+    CT_Tool, {
+        REGS_Name = "Pixel Logger",
+        REGS_Category = "Fuses\\Util\\PixelLogger",
+        REGS_OpIconString = "PixLg",
+        REGS_OpDescription = "Extracts the RGB value at the specified pixel and prints it to console."
+    }
+)
+
+function Create()
+    PixelLocation = self:AddInput("Pixel Location", "PixelLocation", {
+        LINKID_DataType = "Point",
+        INPID_InputControl = "OffsetControl",
+        INPID_PreviewControl = "CrosshairControl",
+        INP_DoNotifyChanged = true,
+    })
+    Tags = self:AddInput("Tags", "Tags", {
+        LINKID_DataType = "Text",
+        INPID_InputControl = "TextEditControl",
+        INPS_DefaultText = "",
+        TEC_Lines = 1,
+        TEC_Wrap = true,
+        TEC_DeferSetInputs = true,
+        INP_DoNotifyChanged = true,
+    })
+    LogHeader = self:AddInput("Log Header", "LogHeader", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "CheckboxControl",
+        INP_Integer = true,
+        INP_Default = 1.0,
+    })
+    FrameNum = self:AddInput("Frame Number", "FrameNum", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ScrewControl",
+        INP_Default = -1.0,
+        INP_INTEGER = true,
+        IC_DisplayedPrecision = 0,
+        IC_Visible = false,
+        INP_DoNotifyChanged = false,
+    })
+    InImage = self:AddInput("Input", "Input", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+end
+
+function NotifyChanged(inp, param, time)
+    if inp == Tags or inp == PixelLocation then
+        FrameNum:SetSource(Number(time-1.0), time)
+    end
+end
+
+function Process(req)
+    -- Get values from the UI Tools
+    local pixel_location = PixelLocation:GetValue(req)
+    local text = Tags:GetValue(req).Value
+    local img = InImage:GetSource(req.Time)
+    local log_header = LogHeader:GetValue(req).Value
+
+    -- Have to use this SetSource hack in order to void the cache, but
+    -- this code would otherwise run continuously so we just need to
+    -- save whether we ran the function by holding it in FrameNum.
+    if log_header == 1 and FrameNum:GetValue(req).Value == -1.0 then
+        local tags_title = ""
+        if text ~= "" then
+            tags_title = ",tags"
+        end
+        print(string.format("frame,red,green,blue%s", tags_title))
+    end
+    if FrameNum:GetValue(req).Value ~= req.Time then
+        FrameNum:SetSource(Number(req.Time), 0)
+        local p = Pixel()
+        img:GetPixel(pixel_location.X * (img.Width - 1), pixel_location.Y * (img.Height - 1), p)
+        local tag_str = text
+        if text ~= "" then
+            tag_str = string.format(",%s", text)
+        end
+        print(string.format("%d,%.9f,%.9f,%.9f%s", req.Time, p.R, p.G, p.B, tag_str))
+    end
+
+    OutImage:Set(req, img)
+end

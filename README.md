@@ -102,6 +102,28 @@ Essentially, we will compute:
 
 
 
+## Pixel Logger Fuse
+Samples the specified pixel in the image, then prints out the frame number and rgb values to console.
+
+### Instructions
+1. Place it somewhere in the render path of your pipeline (it could simply be "rendered" by being sent to the viewer)
+2. Go to the start of the video file
+3. Clear the console logs with the CLS button
+4. Hit the Reload button at the top of the Fuse
+5. Hit play or scrub through frames, whenever the frame number changes, the Fuse will print to the log.
+6. Copy and paste the contents of the log to a CSV file or spreadsheet or something, maybe filter by tags later.
+
+**Note**: In order to make this thing print out on every frame change, I needed the Process function to be called on every frame change and had to use a hack to disable caching. This means that this Fuse and everything downstream of it should be uncachable and this will negatively impact playback and render performance. You probably want to put this at the end of the pipeline.
+
+### Parameters
+**Pixel Location X/Y**: The x/y coordinates of the pixel you want to sample from.
+
+**Tags**: Any tags you want to add to the end of the line. I figure if you have multiple of these nodes in your pipeline, then you'll probably want to be able to distinguish between them by setting different tags.
+
+**Log Header**: If you're on Frame 0 and you hit Reload when this is checked, it'll print out a`frame,red,green,blue[,tags]`, which would make it useful when copying and pasting your console into spreadsheet software via csv. Uncheck this if you don't want that bit to be printed out.
+
+
+
 # The DCTLs:
 
 ## ACES Exposure DCTL
