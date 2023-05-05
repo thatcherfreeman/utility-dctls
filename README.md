@@ -620,6 +620,19 @@ Constructs a contrast curve, has the option to procedurally generate one with ra
 **Ungroup RGB**: When checked, if Randomize is also checked, then this will randomize a contrast curve for each of the RGB channels.
 
 
+## Read Noise DCTL
+Simulates electronic noise from your camera or film stock. Given a linear signal, we compute $x + N(\mu, \sigma^2)$, IE adding a noise with a fixed mean and variance to the input signal.
+
+### DCTL Parameters
+**Noise Mean**: Mean value for the noise
+
+**Noise Std. Dev**: Specify the standard deviation of the noise, $\sigma$.
+
+**Noise Mode**: Choose from RGB Noise and Monochrome Noise. If RGB noise is selected, different noise is applied to each channel. If Monochrome is selected, the noise will appear to be monochrome.
+
+**Seed Position X/Y**: Indicates which pixel is pulled from the frame in order to get the seed for the noise. Make sure this pixel changes over time for noise to not be fixed.
+
+
 ## RGB Chips
 Creates three columns of RGB chips, and optionally CMY and Luminance chips. When the RGB mixer (or any other operation) is used, the extent to which channels have been mixed will be visible in the RGB Parade. Outputs a Linear image.
 

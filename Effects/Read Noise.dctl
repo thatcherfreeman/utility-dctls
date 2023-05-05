@@ -1,4 +1,5 @@
-DEFINE_UI_PARAMS(photon_exp, Photon Exposure, DCTLUI_VALUE_BOX, -9.0)
+DEFINE_UI_PARAMS(mean, Noise Mean, DCTLUI_VALUE_BOX, 0.01)
+DEFINE_UI_PARAMS(stddev, Noise Std. Dev, DCTLUI_VALUE_BOX, 0.001)
 DEFINE_UI_PARAMS(noise_mode, Noise Mode, DCTLUI_COMBO_BOX, 1, {RGB, MONO}, {RGB Noise, Monochrome Noise})
 DEFINE_UI_PARAMS(seed_position_x, Seed Position X, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(seed_position_y, Seed Position Y, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
@@ -54,16 +55,6 @@ __DEVICE__ float norm_pdf(float z, float mean, float var) {
 
 typedef ulong rand_state;
 
-__DEVICE__ float _randu_lcg(__PRIVATE__ rand_state* seed) {
-    // Returns random number in interval [0, 1)
-    rand_state old_seed = *seed;
-    const rand_state m = (~((rand_state)0));
-    const rand_state a = 48271;
-    rand_state new_seed = (a * old_seed) % m;
-    *seed = new_seed;
-    return (((float)new_seed) / (float)m);
-}
-
 __DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
     rand_state x = *seed;
     x ^= (x << 13 | x >> 19);
@@ -112,21 +103,20 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     *state = *((__PRIVATE__ rand_state*)&val);
 
     // Apply noise.
-    float photon_gain = _exp2f(photon_exp);
-    float3 output_color = make_float3(0.0, 0.0, 0.0);
-    float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+    float3 output_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+    float variance = stddev * stddev;
 
     if (noise_mode == MONO) {
         rand_state initial_state_value_red = *state;
         rand_state initial_state_value_green = *state;
         rand_state initial_state_value_blue = *state;
-        output_color.x = sample_norm(curr_color.x, curr_color.x * photon_gain, &initial_state_value_red);
-        output_color.y = sample_norm(curr_color.y, curr_color.y * photon_gain, &initial_state_value_green);
-        output_color.z = sample_norm(curr_color.z, curr_color.z * photon_gain, &initial_state_value_blue);
+        output_color.x += sample_norm(mean, variance, &initial_state_value_red);
+        output_color.y += sample_norm(mean, variance, &initial_state_value_green);
+        output_color.z += sample_norm(mean, variance, &initial_state_value_blue);
     } else {
-        output_color.x = sample_norm(curr_color.x, curr_color.x * photon_gain, state);
-        output_color.y = sample_norm(curr_color.y, curr_color.y * photon_gain, state);
-        output_color.z = sample_norm(curr_color.z, curr_color.z * photon_gain, state);
+        output_color.x += sample_norm(mean, variance, state);
+        output_color.y += sample_norm(mean, variance, state);
+        output_color.z += sample_norm(mean, variance, state);
     }
 
     return output_color;
