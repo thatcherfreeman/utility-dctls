@@ -1,0 +1,224 @@
+FuRegisterClass("DCTLInterpreter",
+    CT_Tool, {
+        REGS_Name = "DCTLInterpreter",
+        REGS_Category = "Fuses\\Util",
+        REGS_OpIconString = "DCTLi",
+        REGS_OpDescription = "Open a DCTL and run it in a Fuse."
+    }
+)
+function Create()
+    DCTLFile = self:AddInput("DCTL File", "DCTLFile", {
+        LINKID_DataType = "Text",
+        INPID_InputControl = "FileControl",
+        FC_ClipBrowse = false,
+        FC_IsSaver = false,
+        FC_PathBrowse = false,
+        FCS_FilterString = "DCTL Files (*.dctl)|*.dctl|",
+        INP_DoNotifyChanged = true,
+    })
+    num_sliders = 10
+    InpFloatSliders = {}
+    for i = 1, num_sliders do
+        InpFloatSliders[i] = self:AddInput(
+            string.format("Float Slider %d", i),
+            string.format("FloatSlider%d", i),
+            {
+                LINKID_DataType = "Number",
+                INPID_InputControl = "SliderControl",
+                INP_MinScale = 0.0,
+                INP_MaxScale = 10.0,
+                INP_Default = 1.0,
+                IC_Visible = false,
+            }
+        )
+    end
+    InImage = self:AddInput("Input", "Input", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+end
+
+function OpenDCTL(filename)
+    local file_obj = io.open(filename, "r")
+    local original_content = file_obj:read("*a")
+    file_obj:close()
+    return original_content
+end
+
+function StripComments(text)
+    local text = string.gsub(text, "//.-\n", "\n")
+    text = string.gsub(text, "/%*.-%*/", "")
+    return text
+end
+
+function OpenAndStripDCTL(filename)
+    local dctl_contents = OpenDCTL(filename)
+    local out_content = StripComments(dctl_contents)
+
+    -- TODO: Handle .h files.
+    -- * Basically just need to identify the file name, open the file and paste it in.
+
+    -- Strip comments again, in case there are comments in the .h file.
+    out_content = StripComments(out_content)
+
+    return out_content
+end
+
+function dump(o)
+    if type(o) == 'table' then
+       local s = '{ '
+       for k,v in pairs(o) do
+          if type(k) ~= 'number' then k = '"'..k..'"' end
+          s = s .. '['..k..'] = ' .. dump(v) .. ','
+       end
+       return s .. '} '
+    else
+       return tostring(o)
+    end
+ end
+
+
+function ExtractParameters(dctl_source)
+    -- TODO, return list of parameters and their names or something.
+    local float_sliders = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
+    local slider_float_pattern = "DEFINE_UI_PARAMS%((%S+)%s*,%s*(%S+[^,]*),%s*DCTLUI_SLIDER_FLOAT%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*%)"
+    local ret1 = 0
+    local rhs = 0
+    local slider_float_counter = 1
+    repeat
+        ret1, rhs, var_name, label, default_val, min_val, max_val, step_size = string.find(dctl_source, slider_float_pattern, rhs)
+        if ret1 ~= nil then
+            float_sliders[slider_float_counter] = {
+                param_type="SLIDER_FLOAT",
+                var_name=var_name,
+                label=label,
+                default_val=tonumber(default_val),
+                min_val=tonumber(min_val),
+                max_val=tonumber(max_val),
+                step_size=tonumber(step_size),
+            }
+        end
+        slider_float_counter = slider_float_counter + 1
+    until (ret1 == nil)
+
+    dctl_source = string.gsub(dctl_source, slider_float_pattern, "")
+    return dctl_source, float_sliders
+end
+
+function NotifyChanged(inp, param, time)
+    if inp == DCTLFile then
+        -- When new DCTL is loaded in, we need to update the displayed parameters.
+        local content = OpenAndStripDCTL(param.Value)
+
+        -- TODO: Call ExtractParameters
+        -- Rename parameters and update the Visibility attribute on all DCTL parameters.
+        local content, float_sliders = ExtractParameters(content)
+        for i, FloatSlider in pairs(InpFloatSliders) do
+            InpFloatSliders[i]:SetAttrs({
+                IC_Visible = false,
+            })
+        end
+        for i, slider_table in pairs(float_sliders) do
+            InpFloatSliders[i]:SetAttrs({
+                LINKS_Name = slider_table.label,
+                INP_MinScale = slider_table.min_val,
+                INP_MaxScale = slider_table.max_val,
+                INP_Default = slider_table.default_val,
+                IC_Visible = true,
+            })
+            -- InpFloatSliders[i]:SetValue(Number(slider_table.default_val))
+        end
+    end
+end
+
+
+function Process(req)
+    local img = InImage:GetValue(req)
+    local out = img:Copy()
+
+    local dctl_fn = DCTLFile:GetValue(req).Value
+    if dctl_fn == nil or dctl_fn == "" then
+        OutImage:Set(req, out)
+    else
+        -- TODO: Remove this block to improve performance.
+        local original_content = OpenDCTL(dctl_fn)
+        print("Original DCTL:")
+        print(original_content)
+
+        local preprocessed_content = OpenAndStripDCTL(dctl_fn)
+        preprocessed_content, float_sliders = ExtractParameters(preprocessed_content)
+        local num_float_sliders = table.getn(float_sliders) -- TODO: Update this when we add more kinds of parameters
+        print(string.format("Found %d sliders", num_float_sliders))
+
+        -- TODO: parse DEFINE_UI_PARAMS
+        -- * Read parameters via searching for DEFINE_UI_PARAMS, skip commented out ones.
+        -- * Inject parameters to code by just adding more parameters to the Transform function.
+        --     * It follows that we need the variable name and type.
+        --     * We also need the default value and stuff so that we can populate the Fuse parameters properly.
+
+        local DCTLParameters = string.format([[
+            float float_slider_params[%d];
+        ]], num_float_sliders)
+
+        local transform_extra_params = ""
+        local transform_named_parameters = ""
+        for i=0,num_float_sliders-1 do
+            transform_extra_params = transform_extra_params .. string.format(", params->float_slider_params[%d]", i)
+            transform_named_parameters = transform_named_parameters .. string.format(", float %s", float_sliders[i+1].var_name)
+        end
+
+        -- Replace transform function with augmented one with new parameters.
+
+        local transform_function_pattern = "__DEVICE__%s*float3%s*transform%(int%s*p_Width,%s*int%s*p_Height,%s*int p_X,%s*int%s*p_Y,%s*float%s*p_R,%s*float%s*p_G,%s*float%s*p_B%)"
+        local new_transform_function_signature = string.format("__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B%s)", transform_named_parameters)
+        preprocessed_content = string.gsub(preprocessed_content, transform_function_pattern, new_transform_function_signature)
+
+        -- TODO: properly handle __TEXTURE__
+        -- * This will be done by making a wrapper struct that stores a __TEXTURE2D__ and an integer that indicates the channel.
+        -- * Then we will replace all _tex2d calls in the original source code with _tex2DVecN with the appropriate value passed in.
+        -- * All instances of __TEXTURE__ will then be replaced with the wrapper struct and the appropriate values will have to be passed
+        --   into the transform function.
+
+        -- We'll append the necessary kernel function to the bottom of the DCTL, and we'll call the DCTL's transform function.
+        local kernel_function_str = string.format([[
+__KERNEL__ void __DCTLKernel(__CONSTANTREF__ DCTLParameters *params, __TEXTURE2D__ inputTexture, __TEXTURE2D_WRITE__ outputTexture) {
+    DEFINE_KERNEL_ITERATORS_XY(p_X, p_Y)
+    float4 __RGBA = _tex2DVec4(inputTexture, p_X, p_Y);
+    float p_R = __RGBA.x;
+    float p_G = __RGBA.y;
+    float p_B = __RGBA.z;
+    int p_Width = %d;
+    int p_Height = %d;
+
+    float3 __RGB = transform(p_Width, p_Height, p_X, p_Y, p_R, p_G, p_B%s);
+    float4 __RGBA_OUT = make_float4(__RGB.x, __RGB.y, __RGB.z, __RGBA.w);
+    _tex2DVec4Write(outputTexture, p_X, p_Y, __RGBA_OUT);
+}]], img.Width, img.Height, transform_extra_params)
+        preprocessed_content = preprocessed_content .. "\n" .. kernel_function_str
+
+        -- Improve formatting for console.
+        preprocessed_content = string.gsub(preprocessed_content, "\n%s*\n", "\n")
+        print("Resulting Source Code:")
+        print(preprocessed_content)
+
+        local node = DVIPComputeNode(req, "__DCTLKernel", preprocessed_content, "DCTLParameters", DCTLParameters)
+        -- local node = DVIPComputeNode(req, "GradientKernel", GradientSource, "GradientParams", GradientParams)
+        node:AddInput("inputTexture", img)
+        node:AddOutput("outputTexture", out)
+
+        -- TODO: Populate DCTLParametersRef once we started parsing parameters.
+        local paramsRef = node:GetParamBlock(DCTLParameters)
+        for i = 0,num_float_sliders-1 do
+            paramsRef.float_slider_params[i] = InpFloatSliders[i+1]:GetValue(req).Value
+        end
+        node:SetParamBlock(paramsRef)
+
+        success = node:RunSession(req)
+        OutImage:Set(req, out)
+    end
+
+end
