@@ -1,0 +1,23 @@
+
+DEFINE_UI_PARAMS(some_param, Parameter Label, DCTLUI_SLIDER_FLOAT, 0.5, -1.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(another_param, Parameter Label2, DCTLUI_SLIDER_FLOAT, 0.000, -1.0, 1.0, 1e-1)
+DEFINE_UI_PARAMS(last_param, yet one more parameter!, DCTLUI_SLIDER_FLOAT, 0.000, -1.0, 1.0, 1e-1)
+DEFINE_UI_PARAMS(int_param, Integer Parameter, DCTLUI_SLIDER_INT, 3, 1, 5, 1)
+DEFINE_UI_PARAMS(value_box_param, Value Box parameter, DCTLUI_VALUE_BOX, 1)
+DEFINE_UI_PARAMS(value_box_param2, Value Box parameter2, DCTLUI_VALUE_BOX, 1)
+DEFINE_UI_PARAMS(combo, Combo box parameter, DCTLUI_COMBO_BOX, 0, {OPTION1, OPTION2, OPTION3}, {Option 1, Option 2, Option 3})
+DEFINE_UI_PARAMS(combo2, Combo box parameter2, DCTLUI_COMBO_BOX, 0, {OPTION4, OPTION5, OPTION6}, {Option 4, Option 5, Option 6})
+/**
+ * Javadocs style comment.
+ */
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    if (combo == OPTION1) {
+        return make_float3(p_R * some_param, p_G * another_param, p_B * last_param); // comment about this line
+    } else if (combo == OPTION2) {
+        return make_float3(OPTION4, OPTION5, OPTION6);
+    } else if (combo == OPTION3) {
+        return make_float3(OPTION1, OPTION2, OPTION3);
+    }
+    return make_float3(p_R * 2.0, p_G * 2.0, p_B * 2.0);
+}
