@@ -390,7 +390,7 @@ Creates a random noise, inspired by statistical film models. You'll need to pass
 ## Gamma Function
 Applies a power function with the reciprocal of the specified exponent.
 
-### DCTL Parmaeters
+### DCTL Parameters
 **Gamma**: Given some number $\gamma$, raise each of the RGB components to the power of $\gamma$
 
 **Use Reciprocal**: If checked, instead raises each RGB component to the power of $1 / \gamma$.
@@ -401,6 +401,25 @@ Applies a power function with the reciprocal of the specified exponent.
 * y=x/gamma - Returns $y = x / \gamma$ so the slope somewhat scales according to the choice of exponent.
 * Positive Reflection - Returns $y = \lvert x \rvert^\gamma$
 * Sign Match Reflection - Returns $y = -\lvert x \rvert^\gamma$, returning a negative result if $x$ is negative.
+
+
+## Gradient Smoothness Chart DCTL
+Generates a test chart with a series of linear gradients. Each gradient is a full linear interpolation between two colors. For each band drawn, the value of the start and end color is changed. The premise of this DCTL is that you would place it towards the head of your node graph and then look at the 3D Histogram towards the end of the graph. If these straight lines remain smooth, then I would assume your series of operations is going to look reasonably good on a lot of images. If the straight lines have discontinuities or sharp angles (particularly near the achromatic axis), you'll likely have breakage in certain images.
+
+### DCTL Parameters
+**Base Hue**: Hue angle of the left edge of the gradients.
+
+**Angle Between Patches**: Angle added to Base Hue to compute the hue of the right edge of the gradient.
+
+**Saturation**: Saturation of left and right edges of the gradient. Computed in HSV.
+
+**Number of Bands**: Number of gradients to draw on the screen.
+
+**Mid Gray**: If Band Interval is set to Exponential, this represents the target value for the middle band.
+
+**Continuous**: If checked, fills in the plane in the rgb cube between the bands.
+
+**Clamp Output**: If checked, replaces values > 1 with pure white so that your image doesn't have any values that go outside the unit cube.
 
 
 ## Halation DCTL

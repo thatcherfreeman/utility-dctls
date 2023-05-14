@@ -1,0 +1,67 @@
+// clang-format off
+DEFINE_UI_PARAMS(hue, Base Hue, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 360.0, 0.01)
+DEFINE_UI_PARAMS(hue_angle, Angle Between Patches, DCTLUI_SLIDER_FLOAT, 180.0, 0.0, 360.0, 0.01)
+DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(num_bands, Number of Bands, DCTLUI_SLIDER_INT, 10, 1, 50, 1)
+DEFINE_UI_PARAMS(band_interval, Band Interval, DCTLUI_COMBO_BOX, 0, {EQUAL, EXPONENTIAL}, {Equal (Log), Exponential (Linear)})
+DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(continuous, Continuous, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(clamp_output, Clamp Output, DCTLUI_CHECK_BOX, 1)
+// clang-format on
+
+__DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
+    // assume hue is in degrees
+    hue = _fmod(hue, 360.0);
+    float c = val * sat;
+    float x = c * (1.0 - _fabs(_fmod(hue / 60.0, 2.0) - 1.0));
+    float m = val - c;
+    float3 rgbp;
+    if (0.0 <= hue && hue < 60.0) {
+        rgbp = make_float3(c, x, 0.0);
+    } else if (60.0 <= hue && hue < 120.0) {
+        rgbp = make_float3(x, c, 0.0);
+    } else if (120.0 <= hue && hue < 180.0) {
+        rgbp = make_float3(0.0, c, x);
+    } else if (180.0 <= hue && hue < 240.0) {
+        rgbp = make_float3(0.0, x, c);
+    } else if (240.0 <= hue && hue < 300.0) {
+        rgbp = make_float3(x, 0.0, c);
+    } else { // if (300.0 < hue && hue < 360.0) {
+        rgbp = make_float3(c, 0.0, x);
+    }
+    return rgbp + m;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float x = (float)p_X / (p_Width - 1);
+    float y = (float)p_Y / (p_Height - 1);
+
+    float band_height = 1.0 / num_bands;
+    float curr_band = y / band_height;
+    if (!continuous) {
+        curr_band = _ceilf(curr_band);
+    }
+
+    // Kinda hacky max_val intended to have a roughly mid-gray center in one of the linear gradients.
+    const float max_val = 1.0 + saturation;
+    float curr_band_value;
+    if (band_interval == EQUAL) {
+        curr_band_value = max_val * ((float)curr_band / num_bands);
+    } else {
+        curr_band_value = max_val * mid_gray * _exp2f(curr_band - _round(num_bands / 2.0));
+    }
+
+    // Draw Gradient
+    float3 left_patch = hsv_to_rgb(hue, saturation, curr_band_value);
+    float3 right_patch = hsv_to_rgb(hue + hue_angle, saturation, curr_band_value);
+    float3 output = _mix(left_patch, right_patch, x);
+
+    // Output Clamping
+    if (clamp_output) {
+        if (output.x > 1.0 || output.y > 1.0 || output.z > 1.0) {
+            output = make_float3(1.0, 1.0, 1.0);
+        }
+    }
+
+    return output;
+}
