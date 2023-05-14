@@ -470,45 +470,114 @@ function Process(req)
 
         -- Inject parameters to code by just adding more parameters to the Transform function.
         local transform_extra_params = ""
-        local transform_named_parameters = ""
+        local transform_parameter_declarations = ""
         for i, float_slider in pairs(params.float_sliders) do
             transform_extra_params = transform_extra_params .. string.format(", params->float_slider_params[%d]", i)
-            transform_named_parameters = transform_named_parameters .. string.format(", float %s", float_slider.var_name)
+            transform_parameter_declarations = transform_parameter_declarations .. string.format(", float %s", float_slider.var_name)
         end
         for i, int_slider in pairs(params.int_sliders) do
             transform_extra_params = transform_extra_params .. string.format(", params->int_slider_params[%d]", i)
-            transform_named_parameters = transform_named_parameters .. string.format(", int %s", int_slider.var_name)
+            transform_parameter_declarations = transform_parameter_declarations .. string.format(", int %s", int_slider.var_name)
         end
         for i, value_box in pairs(params.value_boxes) do
             transform_extra_params = transform_extra_params .. string.format(", params->value_box_params[%d]", i)
-            transform_named_parameters = transform_named_parameters .. string.format(", float %s", value_box.var_name)
+            transform_parameter_declarations = transform_parameter_declarations .. string.format(", float %s", value_box.var_name)
         end
         for i, check_box in pairs(params.check_boxes) do
             transform_extra_params = transform_extra_params .. string.format(", params->check_box_params[%d]", i)
-            transform_named_parameters = transform_named_parameters .. string.format(", int %s", check_box.var_name)
+            transform_parameter_declarations = transform_parameter_declarations .. string.format(", int %s", check_box.var_name)
         end
         for i, combo_box in pairs(params.combo_boxes) do
             transform_extra_params = transform_extra_params .. string.format(", params->combo_box_params[%d]", i)
-            transform_named_parameters = transform_named_parameters .. string.format(", int %s", combo_box.var_name)
+            transform_parameter_declarations = transform_parameter_declarations .. string.format(", int %s", combo_box.var_name)
         end
 
         -- Replace transform function with augmented one with new parameters.
-        local transform_function_pattern = "__DEVICE__%s*float3%s*transform%(int%s*p_Width,%s*int%s*p_Height,%s*int p_X,%s*int%s*p_Y,%s*float%s*p_R,%s*float%s*p_G,%s*float%s*p_B%)"
-        local new_transform_function_signature = string.format("__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B%s)", transform_named_parameters)
-        local res = string.find(preprocessed_content, transform_function_pattern)
-        if res == nil then
+        local local_transform_function_pattern = "__DEVICE__%s*float3%s*transform%(int%s+p_Width,%s*int%s+p_Height,%s*int%s+p_X,%s*int%s+p_Y,%s*float%s+p_R,%s*float%s+p_G,%s*float%s+p_B%)"
+        local new_local_transform_function_signature = string.format("__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B%s)", transform_parameter_declarations)
+        local local_transform_function_call = string.format("transform(p_Width, p_Height, p_X, p_Y, p_R, p_G, p_B%s)", transform_extra_params)
+        local res1 = string.find(preprocessed_content, local_transform_function_pattern)
+
+        local texture_transform_function_pattern = "__DEVICE__%s*float3%s*transform%(int%s+p_Width,%s*int%s+p_Height,%s*int%s+p_X,%s*int%s+p_Y,%s*__TEXTURE__%s+p_TexR%s*,%s*__TEXTURE__%s+p_TexG%s*,%s*__TEXTURE__%s+p_TexB%s*%)"
+        local new_texture_transform_function_signature = string.format("__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB%s)", transform_parameter_declarations)
+        local texture_transform_function_call = string.format("transform(p_Width, p_Height, p_X, p_Y, p_TexR, p_TexG, p_TexB%s)", transform_extra_params)
+        local res2 = string.find(preprocessed_content, texture_transform_function_pattern)
+
+        local transform_function_pattern
+        local transform_function_signature
+        local transform_function_call
+        local channel_declarations
+        local texture_declarations_required = false
+        if res1 ~= nil and res2 == nil then
+            transform_function_pattern = local_transform_function_pattern
+            transform_function_signature = new_local_transform_function_signature
+            transform_function_call = local_transform_function_call
+            channel_declarations = [[
+    float4 __RGBA = _tex2DVec4(inputTexture, X, Y);
+    float p_R = __RGBA.x;
+    float p_G = __RGBA.y;
+    float p_B = __RGBA.z;
+            ]]
+        elseif res1 == nil and res2 ~= nil then
+            texture_declarations_required = true
+            transform_function_pattern = texture_transform_function_pattern
+            transform_function_signature = new_texture_transform_function_signature
+            transform_function_call = texture_transform_function_call
+            -- Declare p_TexR/g/b in the kernel.
+            channel_declarations = [[
+    __TEXTURESTRUCT__ p_TexR = {inputTexture, 8, p_Width, p_Height};
+    __TEXTURESTRUCT__ p_TexG = {inputTexture, 4, p_Width, p_Height};
+    __TEXTURESTRUCT__ p_TexB = {inputTexture, 2, p_Width, p_Height};
+            ]]
+
+        elseif res1 == nil and res2 == nil then
             print("ERROR: Could not find transform function.")
+            return
+        else
+            print("ERROR: Found multiple transform functions.")
             return
         end
 
-        preprocessed_content = string.gsub(preprocessed_content, transform_function_pattern, new_transform_function_signature)
+        preprocessed_content = string.gsub(
+            preprocessed_content, transform_function_pattern, transform_function_signature
+        )
 
-        -- TODO: properly handle __TEXTURE__
-        -- * This will be done by making a wrapper struct that stores a __TEXTURE2D__ and an integer that indicates the channel.
-        -- * Then we will replace all _tex2d calls in the original source code with _tex2DVecN with the appropriate value passed in.
-        -- * All instances of __TEXTURE__ will then be replaced with the wrapper struct and the appropriate values will have to be passed
-        --   into the transform function.
+        if texture_declarations_required then
+            -- TODO: properly handle __TEXTURE__
+            -- inject __TEXTURE__ type declaration at the top of the code.
+            -- This will be done by making a wrapper struct that stores a __TEXTURE2D__ and an integer that indicates the channel.
+            local texture_declaration = [[
+typedef struct {
+    __TEXTURE2D__ tex;
+    int index;
+    int width, height;
+} __TEXTURESTRUCT__;
 
+__DEVICE__ float __tex2D_override(__TEXTURESTRUCT__ ptex, int x, int y) {
+    float4 out = _tex2DVec4(ptex.tex, x, (ptex.height - 1) - y);
+    if (ptex.index & 1) {
+        return out.w;
+    }
+    if (ptex.index & 1 << 1) {
+        return out.z;
+    }
+    if (ptex.index & 1 << 2) {
+        return out.y;
+    }
+    if (ptex.index & 1 << 3) {
+        return out.x;
+    }
+}
+            ]]
+            preprocessed_content = string.insert(preprocessed_content, texture_declaration, 1)
+
+            -- All instances of __TEXTURE__ will then be replaced with the wrapper struct and the appropriate values will have to be passed
+            preprocessed_content = string.gsub(preprocessed_content, "__TEXTURE__", "__TEXTURESTRUCT__")
+
+            -- Then we will replace all _tex2d calls in the original source code with _tex2DVecN with the appropriate value passed in.
+            preprocessed_content = string.gsub(preprocessed_content, "_tex2D%s*%(", "__tex2D_override(")
+
+        end
 
         -- Rename kernel so that each dctl has a unique kernel. This fixes a bug with Fusion caching where
         -- multiple DCTL Interpreters in a row would be broken.
@@ -522,15 +591,11 @@ __KERNEL__ void %s(__CONSTANTREF__ %s *params, __TEXTURE2D__ inputTexture, __TEX
     DEFINE_KERNEL_ITERATORS_XY(X, Y)
     int p_X = X;
     int p_Y = (p_Height - 1) - Y;
-    float4 __RGBA = _tex2DVec4(inputTexture, X, Y);
-    float p_R = __RGBA.x;
-    float p_G = __RGBA.y;
-    float p_B = __RGBA.z;
-
-    float3 __RGB = transform(p_Width, p_Height, p_X, p_Y, p_R, p_G, p_B%s);
-    float4 __RGBA_OUT = make_float4(__RGB.x, __RGB.y, __RGB.z, __RGBA.w);
+    %s
+    float3 __RGB = %s;
+    float4 __RGBA_OUT = make_float4(__RGB.x, __RGB.y, __RGB.z, 1.0);
     _tex2DVec4Write(outputTexture, X, Y, __RGBA_OUT);
-}]], kernel_name, parameters_name, img.Width, img.Height, transform_extra_params)
+}]], kernel_name, parameters_name, img.Width, img.Height, channel_declarations, transform_function_call)
         preprocessed_content = preprocessed_content .. "\n" .. kernel_function_str
 
         -- Improve formatting for console.
