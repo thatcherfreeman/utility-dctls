@@ -269,7 +269,6 @@ function ExtractParameters(dctl_source)
             end
             -- Get attributes
             local dropdown_options = {}
-            print(label_list)
             for enum_label in string.gmatch(label_list, "%s*(%S[^,]*)%s*,?") do
                 table.insert(dropdown_options, { CCS_AddString = enum_label, })
             end
@@ -277,7 +276,6 @@ function ExtractParameters(dctl_source)
                 print(string.format("ERROR: Mismatched quantity of enums for combo box: %s", label))
                 success = false
             end
-            print(dump(dropdown_options))
             combo_boxes[combo_box_counter] = {
                 param_type="COMBO_BOX",
                 var_name=var_name,
@@ -302,7 +300,6 @@ function ExtractParameters(dctl_source)
         end
     until idx == nil
 
-    print(dump(params))
     return success, dctl_source, params
 end
 
@@ -456,6 +453,12 @@ function Process(req)
 
         local transform_function_pattern = "__DEVICE__%s*float3%s*transform%(int%s*p_Width,%s*int%s*p_Height,%s*int p_X,%s*int%s*p_Y,%s*float%s*p_R,%s*float%s*p_G,%s*float%s*p_B%)"
         local new_transform_function_signature = string.format("__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B%s)", transform_named_parameters)
+        local res = string.find(preprocessed_content, transform_function_pattern)
+        if res == nil then
+            print("ERROR: Could not find transform function.")
+            return
+        end
+
         preprocessed_content = string.gsub(preprocessed_content, transform_function_pattern, new_transform_function_signature)
 
         -- TODO: properly handle __TEXTURE__
@@ -467,17 +470,19 @@ function Process(req)
         -- We'll append the necessary kernel function to the bottom of the DCTL, and we'll call the DCTL's transform function.
         local kernel_function_str = string.format([[
 __KERNEL__ void __DCTLKernel(__CONSTANTREF__ DCTLParameters *params, __TEXTURE2D__ inputTexture, __TEXTURE2D_WRITE__ outputTexture) {
-    DEFINE_KERNEL_ITERATORS_XY(p_X, p_Y)
+    int p_Width = %d;
+    int p_Height = %d;
+    DEFINE_KERNEL_ITERATORS_XY(X, Y)
+    int p_X = X;
+    int p_Y = (p_Height - 1) - Y;
     float4 __RGBA = _tex2DVec4(inputTexture, p_X, p_Y);
     float p_R = __RGBA.x;
     float p_G = __RGBA.y;
     float p_B = __RGBA.z;
-    int p_Width = %d;
-    int p_Height = %d;
 
     float3 __RGB = transform(p_Width, p_Height, p_X, p_Y, p_R, p_G, p_B%s);
     float4 __RGBA_OUT = make_float4(__RGB.x, __RGB.y, __RGB.z, __RGBA.w);
-    _tex2DVec4Write(outputTexture, p_X, p_Y, __RGBA_OUT);
+    _tex2DVec4Write(outputTexture, X, Y, __RGBA_OUT);
 }]], img.Width, img.Height, transform_extra_params)
         preprocessed_content = preprocessed_content .. "\n" .. kernel_function_str
 
@@ -510,7 +515,6 @@ __KERNEL__ void __DCTLKernel(__CONSTANTREF__ DCTLParameters *params, __TEXTURE2D
         end
         node:SetParamBlock(paramsRef)
 
-        print("Running session...")
         success = node:RunSession(req)
         OutImage:Set(req, out)
 
