@@ -163,7 +163,7 @@ function ExtractParameters(dctl_source)
 
     -- FLOAT SLIDERS
     local float_sliders = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
-    local slider_float_pattern = "DEFINE_UI_PARAMS%((%S+)%s*,%s*(%S+[^,]*),%s*DCTLUI_SLIDER_FLOAT%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*%)"
+    local slider_float_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_SLIDER_FLOAT%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*%)"
     local ret1 = 0
     local rhs = 0
     local slider_float_counter = 0
@@ -187,7 +187,7 @@ function ExtractParameters(dctl_source)
 
     -- INT SLIDERS
     local int_sliders = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
-    local slider_int_pattern = "DEFINE_UI_PARAMS%((%S+)%s*,%s*(%S+[^,]*),%s*DCTLUI_SLIDER_INT%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*%)"
+    local slider_int_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_SLIDER_INT%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*%)"
     local ret1 = 0
     local rhs = 0
     local slider_int_counter = 0
@@ -211,7 +211,7 @@ function ExtractParameters(dctl_source)
 
     -- VALUE BOXES
     local value_boxes = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
-    local value_box_pattern = "DEFINE_UI_PARAMS%((%S+)%s*,%s*(%S+[^,]*),%s*DCTLUI_VALUE_BOX%s*,%s*([%-%d%.eE]+)%s*%)"
+    local value_box_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_VALUE_BOX%s*,%s*([%-%d%.eE]+)%s*%)"
     local ret1 = 0
     local rhs = 0
     local value_box_counter = 0
@@ -232,7 +232,7 @@ function ExtractParameters(dctl_source)
 
     -- CHECK BOXES
     local check_boxes = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
-    local check_box_pattern = "DEFINE_UI_PARAMS%((%S+)%s*,%s*(%S+[^,]*),%s*DCTLUI_CHECK_BOX%s*,%s*([01])%s*%)"
+    local check_box_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_CHECK_BOX%s*,%s*([01])%s*%)"
     local ret1 = 0
     local rhs = 0
     local check_box_counter = 0
@@ -253,7 +253,7 @@ function ExtractParameters(dctl_source)
 
     -- COMBO BOXES
     local combo_boxes = {}
-    local combo_box_pattern = "DEFINE_UI_PARAMS%((%S+)%s*,%s*(%S+[^,]*),%s*DCTLUI_COMBO_BOX%s*,%s*([%d]+)%s*,%s*{(.-)}%s*,%s*{(.-)}%s*%)"
+    local combo_box_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_COMBO_BOX%s*,%s*([%d]+)%s*,%s*{(.-)}%s*,%s*{(.-)}%s*%)"
     local ret1 = 0
     local rhs = 0
     local combo_box_counter = 0
@@ -263,14 +263,14 @@ function ExtractParameters(dctl_source)
             -- Replace this DEFINE with new #define statements to instantiate the enums.
             local define_block = ""
             local enum_counter = 0
-            for enum_name in string.gmatch(enum_list, "(%w+)") do
+            for enum_name in string.gmatch(enum_list, "([^,%s]+)") do
                 define_block = define_block .. string.format("#define %s (%d)\n", enum_name, enum_counter)
                 enum_counter = enum_counter + 1
             end
             -- Get attributes
             local dropdown_options = {}
             print(label_list)
-            for enum_label in string.gmatch(label_list, "%s*([^,]+)%s*,?") do
+            for enum_label in string.gmatch(label_list, "%s*(%S[^,]*)%s*,?") do
                 table.insert(dropdown_options, { CCS_AddString = enum_label, })
             end
             if table_len(dropdown_options) ~= enum_counter then
@@ -321,7 +321,7 @@ function NotifyChanged(inp, param, time)
 
         -- TODO: Call ExtractParameters
         -- Rename parameters and update the Visibility attribute on all DCTL parameters.
-        -- local success, content, params = ExtractParameters(content)
+        local success, content, params = ExtractParameters(content)
 
         HideUIElements(InpFloatSliders)
         HideUIElements(InpIntSliders)
@@ -385,7 +385,7 @@ function Process(req)
     local dctl_fn = DCTLFile:GetValue(req).Value
     if dctl_fn == nil or dctl_fn == "" then
         OutImage:Set(req, out)
-    else
+    elseif not req:IsPreCalc() then
         -- TODO: Remove this block to improve performance.
         local original_content = OpenDCTL(dctl_fn)
         print("Original DCTL:")
@@ -415,12 +415,18 @@ function Process(req)
         --     * We also need the default value and stuff so that we can populate the Fuse parameters properly.
 
         local DCTLParameters = string.format([[
-            float float_slider_params[%d];
-            int int_slider_params[%d];
-            float value_box_params[%d];
-            int check_box_params[%d];
-            int combo_box_params[%d];
-        ]], num_float_sliders, num_int_sliders, num_value_boxes, num_check_boxes, num_combo_boxes)
+                float float_slider_params[%d];
+                int int_slider_params[%d];
+                float value_box_params[%d];
+                int check_box_params[%d];
+                int combo_box_params[%d];
+            ]],
+            math.max(1, num_float_sliders),
+            math.max(1, num_int_sliders),
+            math.max(1, num_value_boxes),
+            math.max(1, num_check_boxes),
+            math.max(1, num_combo_boxes)
+        )
 
 
         local transform_extra_params = ""
