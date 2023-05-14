@@ -16,7 +16,7 @@ function Create()
         FCS_FilterString = "DCTL Files (*.dctl)|*.dctl|",
         INP_DoNotifyChanged = true,
     })
-    num_sliders = 10
+    local num_sliders = 64
     InpFloatSliders = {}
     for i = 0, num_sliders-1 do
         InpFloatSliders[i] = self:AddInput(
@@ -475,7 +475,7 @@ __KERNEL__ void __DCTLKernel(__CONSTANTREF__ DCTLParameters *params, __TEXTURE2D
     DEFINE_KERNEL_ITERATORS_XY(X, Y)
     int p_X = X;
     int p_Y = (p_Height - 1) - Y;
-    float4 __RGBA = _tex2DVec4(inputTexture, p_X, p_Y);
+    float4 __RGBA = _tex2DVec4(inputTexture, X, Y);
     float p_R = __RGBA.x;
     float p_G = __RGBA.y;
     float p_B = __RGBA.z;
