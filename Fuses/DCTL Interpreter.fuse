@@ -112,6 +112,11 @@ function StripComments(text)
     return text
 end
 
+function StripACESParams(text)
+    local text = string.gsub(text, "DEFINE_ACES_PARAM%(%s*IS_PARAMETRIC_ACES_TRANSFORM%:%s*0%)", "")
+    return text
+end
+
 function string.insert(str1, str2, pos)
     return str1:sub(1,pos) .. str2 .. str1:sub(pos + 1)
 end
@@ -120,6 +125,7 @@ end
 function OpenAndStripDCTL(filename)
     local dctl_contents = OpenDCTL(filename)
     local out_content = StripComments(dctl_contents)
+    out_content = StripACESParams(out_content)
 
     -- TODO: Handle .h files.
     -- * Basically just need to identify the file name, open the file and paste it in.
@@ -316,7 +322,7 @@ function NotifyChanged(inp, param, time)
         -- When new DCTL is loaded in, we need to update the displayed parameters.
         local content = OpenAndStripDCTL(param.Value)
 
-        -- TODO: Call ExtractParameters
+        -- Call ExtractParameters
         -- Rename parameters and update the Visibility attribute on all DCTL parameters.
         local success, content, params = ExtractParameters(content)
 
@@ -334,7 +340,7 @@ function NotifyChanged(inp, param, time)
                 INP_Default = float_slider_table.default_val,
                 IC_Visible = true,
             })
-            InpFloatSliders[i]:SetSource(Number(float_slider_table.default_val), 0)
+            -- InpFloatSliders[i]:SetSource(Number(float_slider_table.default_val), 0)
         end
         for i, int_slider_table in pairs(params.int_sliders) do
             InpIntSliders[i]:SetAttrs({
@@ -344,7 +350,7 @@ function NotifyChanged(inp, param, time)
                 INP_Default = int_slider_table.default_val,
                 IC_Visible = true,
             })
-            InpIntSliders[i]:SetSource(Number(int_slider_table.default_val), 0)
+            -- InpIntSliders[i]:SetSource(Number(int_slider_table.default_val), 0)
         end
         for i, value_box_table in pairs(params.value_boxes) do
             InpValueBoxes[i]:SetAttrs({
@@ -352,7 +358,7 @@ function NotifyChanged(inp, param, time)
                 INP_Default = value_box_table.default_val,
                 IC_Visible = true,
             })
-            InpValueBoxes[i]:SetSource(Number(value_box_table.default_val), 0)
+            -- InpValueBoxes[i]:SetSource(Number(value_box_table.default_val), 0)
         end
         for i, check_box_table in pairs(params.check_boxes) do
             InpCheckBoxes[i]:SetAttrs({
@@ -360,7 +366,7 @@ function NotifyChanged(inp, param, time)
                 INP_Default = check_box_table.default_val,
                 IC_Visible = true,
             })
-            InpCheckBoxes[i]:SetSource(Number(check_box_table.default_val), 0)
+            -- InpCheckBoxes[i]:SetSource(Number(check_box_table.default_val), 0)
         end
         for i, combo_box_table in pairs(params.combo_boxes) do
             InpComboBoxes[i]:SetAttrs({
@@ -369,7 +375,7 @@ function NotifyChanged(inp, param, time)
                 IC_Visible = true,
                 combo_box_table.dropdown_options,
             })
-            InpComboBoxes[i]:SetSource(Number(combo_box_table.default_val), 0)
+            -- InpComboBoxes[i]:SetSource(Number(combo_box_table.default_val), 0)
         end
     end
 end
@@ -389,12 +395,15 @@ function Process(req)
         print(original_content)
 
         local preprocessed_content = OpenAndStripDCTL(dctl_fn)
+
+        -- parse DEFINE_UI_PARAMS
+        -- Read parameters via searching for DEFINE_UI_PARAMS, skip commented out ones.
         local success, preprocessed_content, params = ExtractParameters(preprocessed_content)
         print("success: ", success)
         if success == false then
             return
         end
-        local num_float_sliders = table_len(params.float_sliders) -- TODO: Update this when we add more kinds of parameters
+        local num_float_sliders = table_len(params.float_sliders)
         local num_int_sliders = table_len(params.int_sliders)
         local num_value_boxes = table_len(params.value_boxes)
         local num_check_boxes = table_len(params.check_boxes)
@@ -405,18 +414,13 @@ function Process(req)
         print(string.format("Found %d check boxes", num_check_boxes))
         print(string.format("Found %d combo boxes", num_combo_boxes))
 
-        -- TODO: parse DEFINE_UI_PARAMS
-        -- * Read parameters via searching for DEFINE_UI_PARAMS, skip commented out ones.
-        -- * Inject parameters to code by just adding more parameters to the Transform function.
-        --     * It follows that we need the variable name and type.
-        --     * We also need the default value and stuff so that we can populate the Fuse parameters properly.
 
         local DCTLParameters = string.format([[
-                float float_slider_params[%d];
-                int int_slider_params[%d];
-                float value_box_params[%d];
-                int check_box_params[%d];
-                int combo_box_params[%d];
+            float float_slider_params[%d];
+            int int_slider_params[%d];
+            float value_box_params[%d];
+            int check_box_params[%d];
+            int combo_box_params[%d];
             ]],
             math.max(1, num_float_sliders),
             math.max(1, num_int_sliders),
@@ -426,6 +430,7 @@ function Process(req)
         )
 
 
+        -- Inject parameters to code by just adding more parameters to the Transform function.
         local transform_extra_params = ""
         local transform_named_parameters = ""
         for i, float_slider in pairs(params.float_sliders) do
@@ -450,7 +455,6 @@ function Process(req)
         end
 
         -- Replace transform function with augmented one with new parameters.
-
         local transform_function_pattern = "__DEVICE__%s*float3%s*transform%(int%s*p_Width,%s*int%s*p_Height,%s*int p_X,%s*int%s*p_Y,%s*float%s*p_R,%s*float%s*p_G,%s*float%s*p_B%)"
         local new_transform_function_signature = string.format("__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B%s)", transform_named_parameters)
         local res = string.find(preprocessed_content, transform_function_pattern)
@@ -496,7 +500,7 @@ __KERNEL__ void __DCTLKernel(__CONSTANTREF__ DCTLParameters *params, __TEXTURE2D
         node:AddInput("inputTexture", img)
         node:AddOutput("outputTexture", out)
 
-        -- TODO: Populate DCTLParametersRef once we started parsing parameters.
+        -- Populate DCTLParametersRef once we started parsing parameters.
         local paramsRef = node:GetParamBlock(DCTLParameters)
         for i=0,num_float_sliders-1 do
             paramsRef.float_slider_params[i] = InpFloatSliders[i]:GetValue(req).Value
