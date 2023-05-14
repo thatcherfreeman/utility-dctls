@@ -18,7 +18,7 @@ function Create()
     })
     num_sliders = 10
     InpFloatSliders = {}
-    for i = 1, num_sliders do
+    for i = 0, num_sliders-1 do
         InpFloatSliders[i] = self:AddInput(
             string.format("Float Slider %d", i),
             string.format("FloatSlider%d", i),
@@ -28,6 +28,63 @@ function Create()
                 INP_MinScale = 0.0,
                 INP_MaxScale = 10.0,
                 INP_Default = 1.0,
+                IC_Visible = false,
+            }
+        )
+    end
+    InpIntSliders = {}
+    for i = 0, num_sliders-1 do
+        InpIntSliders[i] = self:AddInput(
+            string.format("Int Slider %d", i),
+            string.format("IntSlider%d", i),
+            {
+                LINKID_DataType = "Number",
+                INPID_InputControl = "SliderControl",
+                INP_MinScale = 0.0,
+                INP_MaxScale = 10.0,
+                INP_Default = 1.0,
+                IC_Visible = false,
+                INP_Integer = true,
+            }
+        )
+    end
+    InpValueBoxes = {}
+    for i = 0, num_sliders-1 do
+        InpValueBoxes[i] = self:AddInput(
+            string.format("Value Box %d", i),
+            string.format("ValueBox%d", i),
+            {
+                LINKID_DataType = "Number",
+                INPID_InputControl = "ScrewControl",
+                INP_Default = 1.0,
+                IC_Visible = false,
+            }
+        )
+    end
+    InpCheckBoxes = {}
+    for i = 0, num_sliders-1 do
+        InpCheckBoxes[i] = self:AddInput(
+            string.format("Check Box %d", i),
+            string.format("CheckBox%d", i),
+            {
+                LINKID_DataType = "Number",
+                INPID_InputControl = "CheckboxControl",
+                INP_Default = 1.0,
+                INP_Integer = true,
+                IC_Visible = false,
+            }
+        )
+    end
+    InpComboBoxes = {}
+    for i = 0, num_sliders-1 do
+        InpComboBoxes[i] = self:AddInput(
+            string.format("Combo Box %d", i),
+            string.format("ComboBox%d", i),
+            {
+                LINKID_DataType = "Number",
+                INPID_InputControl = "ComboControl",
+                INP_Default = 0.0,
+                INP_Integer = true,
                 IC_Visible = false,
             }
         )
@@ -55,6 +112,11 @@ function StripComments(text)
     return text
 end
 
+function string.insert(str1, str2, pos)
+    return str1:sub(1,pos) .. str2 .. str1:sub(pos + 1)
+end
+
+
 function OpenAndStripDCTL(filename)
     local dctl_contents = OpenDCTL(filename)
     local out_content = StripComments(dctl_contents)
@@ -68,14 +130,24 @@ function OpenAndStripDCTL(filename)
     return out_content
 end
 
+function table_len(t)
+    local counter = 0
+    for k, v in pairs(t) do
+        counter = counter + 1
+    end
+    return counter
+end
+
 function dump(o)
     if type(o) == 'table' then
-       local s = '{ '
-       for k,v in pairs(o) do
-          if type(k) ~= 'number' then k = '"'..k..'"' end
-          s = s .. '['..k..'] = ' .. dump(v) .. ','
-       end
-       return s .. '} '
+        local s = '{ '
+        for k,v in pairs(o) do
+            if type(k) ~= 'number' then
+                k = '"'..k..'"'
+            end
+            s = s .. '['..k..'] = ' .. dump(v) .. ','
+        end
+        return s .. '} '
     else
        return tostring(o)
     end
@@ -83,12 +155,18 @@ function dump(o)
 
 
 function ExtractParameters(dctl_source)
-    -- TODO, return list of parameters and their names or something.
+    -- returns Success, the resulting source code, and the parameters.
+    local params = {}
+    local success = true
+
+    local var_name, label, default_val, min_val, max_val, step_size, enum_list, label_list
+
+    -- FLOAT SLIDERS
     local float_sliders = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
     local slider_float_pattern = "DEFINE_UI_PARAMS%((%S+)%s*,%s*(%S+[^,]*),%s*DCTLUI_SLIDER_FLOAT%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*%)"
     local ret1 = 0
     local rhs = 0
-    local slider_float_counter = 1
+    local slider_float_counter = 0
     repeat
         ret1, rhs, var_name, label, default_val, min_val, max_val, step_size = string.find(dctl_source, slider_float_pattern, rhs)
         if ret1 ~= nil then
@@ -101,12 +179,139 @@ function ExtractParameters(dctl_source)
                 max_val=tonumber(max_val),
                 step_size=tonumber(step_size),
             }
+            slider_float_counter = slider_float_counter + 1
         end
-        slider_float_counter = slider_float_counter + 1
     until (ret1 == nil)
-
+    params.float_sliders = float_sliders
     dctl_source = string.gsub(dctl_source, slider_float_pattern, "")
-    return dctl_source, float_sliders
+
+    -- INT SLIDERS
+    local int_sliders = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
+    local slider_int_pattern = "DEFINE_UI_PARAMS%((%S+)%s*,%s*(%S+[^,]*),%s*DCTLUI_SLIDER_INT%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*%)"
+    local ret1 = 0
+    local rhs = 0
+    local slider_int_counter = 0
+    repeat
+        ret1, rhs, var_name, label, default_val, min_val, max_val, step_size = string.find(dctl_source, slider_int_pattern, rhs)
+        if ret1 ~= nil then
+            int_sliders[slider_int_counter] = {
+                param_type="SLIDER_INT",
+                var_name=var_name,
+                label=label,
+                default_val=tonumber(default_val),
+                min_val=tonumber(min_val),
+                max_val=tonumber(max_val),
+                step_size=tonumber(step_size),
+            }
+            slider_int_counter = slider_int_counter + 1
+        end
+    until (ret1 == nil)
+    params.int_sliders = int_sliders
+    dctl_source = string.gsub(dctl_source, slider_int_pattern, "")
+
+    -- VALUE BOXES
+    local value_boxes = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
+    local value_box_pattern = "DEFINE_UI_PARAMS%((%S+)%s*,%s*(%S+[^,]*),%s*DCTLUI_VALUE_BOX%s*,%s*([%-%d%.eE]+)%s*%)"
+    local ret1 = 0
+    local rhs = 0
+    local value_box_counter = 0
+    repeat
+        ret1, rhs, var_name, label, default_val = string.find(dctl_source, value_box_pattern, rhs)
+        if ret1 ~= nil then
+            value_boxes[value_box_counter] = {
+                param_type="VALUE_BOX",
+                var_name=var_name,
+                label=label,
+                default_val=tonumber(default_val),
+            }
+            value_box_counter = value_box_counter + 1
+        end
+    until (ret1 == nil)
+    params.value_boxes = value_boxes
+    dctl_source = string.gsub(dctl_source, value_box_pattern, "")
+
+    -- CHECK BOXES
+    local check_boxes = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
+    local check_box_pattern = "DEFINE_UI_PARAMS%((%S+)%s*,%s*(%S+[^,]*),%s*DCTLUI_CHECK_BOX%s*,%s*([01])%s*%)"
+    local ret1 = 0
+    local rhs = 0
+    local check_box_counter = 0
+    repeat
+        ret1, rhs, var_name, label, default_val = string.find(dctl_source, check_box_pattern, rhs)
+        if ret1 ~= nil then
+            check_boxes[check_box_counter] = {
+                param_type="CHECK_BOX",
+                var_name=var_name,
+                label=label,
+                default_val=tonumber(default_val),
+            }
+            check_box_counter = check_box_counter + 1
+        end
+    until (ret1 == nil)
+    params.check_boxes = check_boxes
+    dctl_source = string.gsub(dctl_source, check_box_pattern, "")
+
+    -- COMBO BOXES
+    local combo_boxes = {}
+    local combo_box_pattern = "DEFINE_UI_PARAMS%((%S+)%s*,%s*(%S+[^,]*),%s*DCTLUI_COMBO_BOX%s*,%s*([%d]+)%s*,%s*{(.-)}%s*,%s*{(.-)}%s*%)"
+    local ret1 = 0
+    local rhs = 0
+    local combo_box_counter = 0
+    repeat
+        ret1, rhs, var_name, label, default_val, enum_list, label_list = string.find(dctl_source, combo_box_pattern, rhs)
+        if ret1 ~= nil then
+            -- Replace this DEFINE with new #define statements to instantiate the enums.
+            local define_block = ""
+            local enum_counter = 0
+            for enum_name in string.gmatch(enum_list, "(%w+)") do
+                define_block = define_block .. string.format("#define %s (%d)\n", enum_name, enum_counter)
+                enum_counter = enum_counter + 1
+            end
+            -- Get attributes
+            local dropdown_options = {}
+            print(label_list)
+            for enum_label in string.gmatch(label_list, "%s*([^,]+)%s*,?") do
+                table.insert(dropdown_options, { CCS_AddString = enum_label, })
+            end
+            if table_len(dropdown_options) ~= enum_counter then
+                print(string.format("ERROR: Mismatched quantity of enums for combo box: %s", label))
+                success = false
+            end
+            print(dump(dropdown_options))
+            combo_boxes[combo_box_counter] = {
+                param_type="COMBO_BOX",
+                var_name=var_name,
+                label=label,
+                default_val=tonumber(default_val),
+                dropdown_options=dropdown_options
+            }
+            combo_box_counter = combo_box_counter + 1
+            dctl_source = string.insert(dctl_source, define_block, rhs)
+        end
+    until (ret1 == nil)
+    params.combo_boxes = combo_boxes
+    dctl_source = string.gsub(dctl_source, combo_box_pattern, "")
+
+    -- Check to make sure we got all the DEFINE_UI_PARAMS.
+    rhs = 0
+    repeat
+        idx, rhs, match = string.find(dctl_source, "DEFINE_UI_PARAMS(%b())", rhs)
+        if idx ~= nil then
+            success = false
+            print(string.format("ERROR: Did not parse: DEFINE_UI_PARAMS%s", match))
+        end
+    until idx == nil
+
+    print(dump(params))
+    return success, dctl_source, params
+end
+
+function HideUIElements(Inputs)
+    for i, obj in pairs(Inputs) do
+        obj[i]:SetAttrs({
+            IC_Visible = false,
+        })
+    end
 end
 
 function NotifyChanged(inp, param, time)
@@ -116,21 +321,58 @@ function NotifyChanged(inp, param, time)
 
         -- TODO: Call ExtractParameters
         -- Rename parameters and update the Visibility attribute on all DCTL parameters.
-        local content, float_sliders = ExtractParameters(content)
-        for i, FloatSlider in pairs(InpFloatSliders) do
+        -- local success, content, params = ExtractParameters(content)
+
+        HideUIElements(InpFloatSliders)
+        HideUIElements(InpIntSliders)
+        HideUIElements(InpValueBoxes)
+        HideUIElements(InpCheckBoxes)
+        HideUIElements(InpComboBoxes)
+
+        for i, float_slider_table in pairs(params.float_sliders) do
             InpFloatSliders[i]:SetAttrs({
-                IC_Visible = false,
-            })
-        end
-        for i, slider_table in pairs(float_sliders) do
-            InpFloatSliders[i]:SetAttrs({
-                LINKS_Name = slider_table.label,
-                INP_MinScale = slider_table.min_val,
-                INP_MaxScale = slider_table.max_val,
-                INP_Default = slider_table.default_val,
+                LINKS_Name = float_slider_table.label,
+                INP_MinScale = float_slider_table.min_val,
+                INP_MaxScale = float_slider_table.max_val,
+                INP_Default = float_slider_table.default_val,
                 IC_Visible = true,
             })
-            -- InpFloatSliders[i]:SetValue(Number(slider_table.default_val))
+            InpFloatSliders[i]:SetSource(Number(float_slider_table.default_val), 0)
+        end
+        for i, int_slider_table in pairs(params.int_sliders) do
+            InpIntSliders[i]:SetAttrs({
+                LINKS_Name = int_slider_table.label,
+                INP_MinScale = int_slider_table.min_val,
+                INP_MaxScale = int_slider_table.max_val,
+                INP_Default = int_slider_table.default_val,
+                IC_Visible = true,
+            })
+            InpIntSliders[i]:SetSource(Number(int_slider_table.default_val), 0)
+        end
+        for i, value_box_table in pairs(params.value_boxes) do
+            InpValueBoxes[i]:SetAttrs({
+                LINKS_Name = value_box_table.label,
+                INP_Default = value_box_table.default_val,
+                IC_Visible = true,
+            })
+            InpValueBoxes[i]:SetSource(Number(value_box_table.default_val), 0)
+        end
+        for i, check_box_table in pairs(params.check_boxes) do
+            InpCheckBoxes[i]:SetAttrs({
+                LINKS_Name = check_box_table.label,
+                INP_Default = check_box_table.default_val,
+                IC_Visible = true,
+            })
+            InpCheckBoxes[i]:SetSource(Number(check_box_table.default_val), 0)
+        end
+        for i, combo_box_table in pairs(params.combo_boxes) do
+            InpComboBoxes[i]:SetAttrs({
+                LINKS_Name = combo_box_table.label,
+                INP_Default = combo_box_table.default_val,
+                IC_Visible = true,
+                combo_box_table.dropdown_options,
+            })
+            InpComboBoxes[i]:SetSource(Number(combo_box_table.default_val), 0)
         end
     end
 end
@@ -150,9 +392,21 @@ function Process(req)
         print(original_content)
 
         local preprocessed_content = OpenAndStripDCTL(dctl_fn)
-        preprocessed_content, float_sliders = ExtractParameters(preprocessed_content)
-        local num_float_sliders = table.getn(float_sliders) -- TODO: Update this when we add more kinds of parameters
-        print(string.format("Found %d sliders", num_float_sliders))
+        local success, preprocessed_content, params = ExtractParameters(preprocessed_content)
+        print("success: ", success)
+        if success == false then
+            return
+        end
+        local num_float_sliders = table_len(params.float_sliders) -- TODO: Update this when we add more kinds of parameters
+        local num_int_sliders = table_len(params.int_sliders)
+        local num_value_boxes = table_len(params.value_boxes)
+        local num_check_boxes = table_len(params.check_boxes)
+        local num_combo_boxes = table_len(params.combo_boxes)
+        print(string.format("Found %d float sliders", num_float_sliders))
+        print(string.format("Found %d int sliders", num_int_sliders))
+        print(string.format("Found %d value boxes", num_value_boxes))
+        print(string.format("Found %d check boxes", num_check_boxes))
+        print(string.format("Found %d combo boxes", num_combo_boxes))
 
         -- TODO: parse DEFINE_UI_PARAMS
         -- * Read parameters via searching for DEFINE_UI_PARAMS, skip commented out ones.
@@ -162,13 +416,34 @@ function Process(req)
 
         local DCTLParameters = string.format([[
             float float_slider_params[%d];
-        ]], num_float_sliders)
+            int int_slider_params[%d];
+            float value_box_params[%d];
+            int check_box_params[%d];
+            int combo_box_params[%d];
+        ]], num_float_sliders, num_int_sliders, num_value_boxes, num_check_boxes, num_combo_boxes)
+
 
         local transform_extra_params = ""
         local transform_named_parameters = ""
-        for i=0,num_float_sliders-1 do
+        for i, float_slider in pairs(params.float_sliders) do
             transform_extra_params = transform_extra_params .. string.format(", params->float_slider_params[%d]", i)
-            transform_named_parameters = transform_named_parameters .. string.format(", float %s", float_sliders[i+1].var_name)
+            transform_named_parameters = transform_named_parameters .. string.format(", float %s", float_slider.var_name)
+        end
+        for i, int_slider in pairs(params.int_sliders) do
+            transform_extra_params = transform_extra_params .. string.format(", params->int_slider_params[%d]", i)
+            transform_named_parameters = transform_named_parameters .. string.format(", int %s", int_slider.var_name)
+        end
+        for i, value_box in pairs(params.value_boxes) do
+            transform_extra_params = transform_extra_params .. string.format(", params->value_box_params[%d]", i)
+            transform_named_parameters = transform_named_parameters .. string.format(", float %s", value_box.var_name)
+        end
+        for i, check_box in pairs(params.check_boxes) do
+            transform_extra_params = transform_extra_params .. string.format(", params->check_box_params[%d]", i)
+            transform_named_parameters = transform_named_parameters .. string.format(", int %s", check_box.var_name)
+        end
+        for i, combo_box in pairs(params.combo_boxes) do
+            transform_extra_params = transform_extra_params .. string.format(", params->combo_box_params[%d]", i)
+            transform_named_parameters = transform_named_parameters .. string.format(", int %s", combo_box.var_name)
         end
 
         -- Replace transform function with augmented one with new parameters.
@@ -205,20 +480,40 @@ __KERNEL__ void __DCTLKernel(__CONSTANTREF__ DCTLParameters *params, __TEXTURE2D
         print("Resulting Source Code:")
         print(preprocessed_content)
 
+
         local node = DVIPComputeNode(req, "__DCTLKernel", preprocessed_content, "DCTLParameters", DCTLParameters)
-        -- local node = DVIPComputeNode(req, "GradientKernel", GradientSource, "GradientParams", GradientParams)
         node:AddInput("inputTexture", img)
         node:AddOutput("outputTexture", out)
 
         -- TODO: Populate DCTLParametersRef once we started parsing parameters.
         local paramsRef = node:GetParamBlock(DCTLParameters)
-        for i = 0,num_float_sliders-1 do
-            paramsRef.float_slider_params[i] = InpFloatSliders[i+1]:GetValue(req).Value
+        for i=0,num_float_sliders-1 do
+            paramsRef.float_slider_params[i] = InpFloatSliders[i]:GetValue(req).Value
+        end
+        for i=0,num_int_sliders-1 do
+            paramsRef.int_slider_params[i] = InpIntSliders[i]:GetValue(req).Value
+        end
+        for i=0,num_value_boxes-1 do
+            paramsRef.value_box_params[i] = InpValueBoxes[i]:GetValue(req).Value
+        end
+        for i=0,num_check_boxes-1 do
+            paramsRef.check_box_params[i] = InpCheckBoxes[i]:GetValue(req).Value
+        end
+        for i=0,num_combo_boxes-1 do
+            paramsRef.combo_box_params[i] = InpComboBoxes[i]:GetValue(req).Value
         end
         node:SetParamBlock(paramsRef)
 
+        print("Running session...")
         success = node:RunSession(req)
         OutImage:Set(req, out)
+
+        -- print("reached the end! success: ", success)
+        -- local p = Pixel()
+        -- img:GetPixel(100, 100, p)
+        -- print("Input image color: ", p.R, p.G, p.B, p.A)
+        -- out:GetPixel(100, 100, p)
+        -- print("Output image color: ", p.R, p.G, p.B, p.A)
     end
 
 end
