@@ -7,6 +7,7 @@ FuRegisterClass("DCTLInterpreter",
     }
 )
 function Create()
+
     DCTLFile = self:AddInput("DCTL File", "DCTLFile", {
         LINKID_DataType = "Text",
         INPID_InputControl = "FileControl",
@@ -91,6 +92,19 @@ function Create()
             }
         )
     end
+    self:BeginControlNest("Debug", "Debug", false, {})
+    DebugBox = self:AddInput(
+        "Enable Debug Mode",
+        "DebugMode",
+        {
+            LINKID_DataType = "Number",
+            INPID_InputControl = "CheckboxControl",
+            INP_Default = 0.0,
+            INP_Integer = true,
+            IC_Visible = true,
+        }
+    )
+    self:EndControlNest()
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
         LINK_Main = 1,
@@ -401,20 +415,22 @@ function Process(req)
     local out = img:Copy()
 
     local dctl_fn = DCTLFile:GetValue(req).Value
+    local debug = DebugBox:GetValue(req).Value > 0.5
+
     if dctl_fn == nil or dctl_fn == "" then
         OutImage:Set(req, out)
     elseif not req:IsPreCalc() then
-        -- TODO: Remove this block to improve performance.
-        local original_content = OpenDCTL(dctl_fn)
-        print("Original DCTL:")
-        print(original_content)
+        if debug then
+            local original_content = OpenDCTL(dctl_fn)
+            print("Original DCTL:")
+            print(original_content)
+        end
 
         local preprocessed_content = OpenAndStripDCTL(dctl_fn)
 
         -- parse DEFINE_UI_PARAMS
         -- Read parameters via searching for DEFINE_UI_PARAMS, skip commented out ones.
         local success, preprocessed_content, params = ExtractParameters(preprocessed_content)
-        print("success: ", success)
         if success == false then
             return
         end
@@ -423,11 +439,13 @@ function Process(req)
         local num_value_boxes = table_len(params.value_boxes)
         local num_check_boxes = table_len(params.check_boxes)
         local num_combo_boxes = table_len(params.combo_boxes)
-        print(string.format("Found %d float sliders", num_float_sliders))
-        print(string.format("Found %d int sliders", num_int_sliders))
-        print(string.format("Found %d value boxes", num_value_boxes))
-        print(string.format("Found %d check boxes", num_check_boxes))
-        print(string.format("Found %d combo boxes", num_combo_boxes))
+        if debug then
+            print(string.format("Found %d float sliders", num_float_sliders))
+            print(string.format("Found %d int sliders", num_int_sliders))
+            print(string.format("Found %d value boxes", num_value_boxes))
+            print(string.format("Found %d check boxes", num_check_boxes))
+            print(string.format("Found %d combo boxes", num_combo_boxes))
+        end
 
 
         local DCTLParameters = string.format([[
@@ -443,6 +461,11 @@ function Process(req)
             math.max(1, num_check_boxes),
             math.max(1, num_combo_boxes)
         )
+
+        if debug then
+            print("Parameter Struct: ")
+            print(DCTLParameters)
+        end
 
 
         -- Inject parameters to code by just adding more parameters to the Transform function.
@@ -512,8 +535,10 @@ __KERNEL__ void %s(__CONSTANTREF__ %s *params, __TEXTURE2D__ inputTexture, __TEX
 
         -- Improve formatting for console.
         preprocessed_content = string.gsub(preprocessed_content, "\n%s*\n", "\n")
-        print("Resulting Source Code:")
-        print(preprocessed_content)
+        if debug then
+            print("Resulting Source Code:")
+            print(preprocessed_content)
+        end
 
 
         local node = DVIPComputeNode(req, kernel_name, preprocessed_content, parameters_name, DCTLParameters)
@@ -541,13 +566,5 @@ __KERNEL__ void %s(__CONSTANTREF__ %s *params, __TEXTURE2D__ inputTexture, __TEX
 
         success = node:RunSession(req)
         OutImage:Set(req, out)
-
-        -- print("reached the end! success: ", success)
-        -- local p = Pixel()
-        -- img:GetPixel(100, 100, p)
-        -- print("Input image color: ", p.R, p.G, p.B, p.A)
-        -- out:GetPixel(100, 100, p)
-        -- print("Output image color: ", p.R, p.G, p.B, p.A)
     end
-
 end
