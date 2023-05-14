@@ -421,6 +421,8 @@ Generates a test chart with a series of linear gradients. Each gradient is a ful
 
 **Clamp Output**: If checked, replaces values > 1 with pure white so that your image doesn't have any values that go outside the unit cube.
 
+**Band Interval**: If set to Equal, then each band will be a constant code value apart from the previous band. If set to Exponential, each band will be 2x the previous band. For pipelines expecting a log or gamma encoded image, use Equal, and for pipelines expecting a linear image, use Exponential (and probably turn off output clamping).
+
 
 ## Halation DCTL
 DCTL that physically emulates film halation, intended for ACES Linear AP0 images. This is intended to be used in a linear gamma timeline.
