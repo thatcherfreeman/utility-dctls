@@ -253,6 +253,24 @@ Takes the specified vector and rotates the RGB cube (around 0,0,0) so that the g
 **Inverse**: Rotates the cube the opposite angle, so that the currently white vector rotates to the direction of the specified vector, therefore doing the opposite of the normal version.
 
 
+## DaVinci Tone Mapping DCTL
+Recreation of the DaVinci Tone Mapping setting in the Color Space Transform effect. Expects a linear image and outputs a linear image. Currently only replicates the tone mapping when Adaptation is set to 9.
+
+### How it works
+DaVinci Tone Mapping is simply a function of $f(x) = a \frac{x}{x + b}$, with some strategically selected $a$ and $b$ depending on your selected parameters. I've solved both $a$ and $b$ when Adaptation is set to 9.
+
+### DCTL Parameters
+**Max Input Nits**: Quantity of nits that will be mapped to the Max Output Nits. Resolve is scaled so that linear 1.0 means 100 nits.
+
+**Max Output Nits**: Max Linear value that will be in the output image.
+
+**Adaptation**: Makes the image brighter or darker.
+
+**User Input B**: When "Use Custom Adaptation" is checked, we use this value of $b$ instead of the one computed by default when Adaptation is 9. You'll have to use this if you want to emulate DaVinci Tone Mapping in the scenario that Adaptation is not equal to 9.
+
+**Use Custom Adaptation**: Allows you to override the selection of $b$ when checked. Otherwise, $b$ is computed from the specified value of Adaptation.
+
+
 ## Dot Product DCTL
 Takes the dot product of the current color and the specified `(r, g, b)` value.
 

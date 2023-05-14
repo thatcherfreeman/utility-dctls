@@ -1,0 +1,48 @@
+//clang-format off
+DEFINE_UI_PARAMS(max_input_nits, Max Input Nits, DCTLUI_SLIDER_FLOAT, 100.0, 48.0, 10000.0, 1.0)
+DEFINE_UI_PARAMS(max_output_nits, Max Output Nits, DCTLUI_SLIDER_FLOAT, 100.0, 48.0, 10000.0, 1.0)
+DEFINE_UI_PARAMS(adaptation, Adaptation, DCTLUI_SLIDER_FLOAT, 9.0, 9.0, 9.0, 1.0)
+DEFINE_UI_PARAMS(user_b, User Input B, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.0001)
+DEFINE_UI_PARAMS(custom_b, Use Custom Adaptation, DCTLUI_CHECK_BOX, 0)
+//clang-format on
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float contrast(float x, float mid_gray, float gamma) {
+    return mid_gray * powf(x / mid_gray, gamma);
+}
+
+// g(x) = a * (x / (x+b)) + c
+__DEVICE__ float rolloff_function(float x, float a, float b) {
+    return a * (x / (x + b));
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float input_white = max_input_nits / 100.0;
+    float output_white = max_output_nits / 100.0;
+
+    float3 out = make_float3(p_R, p_G, p_B);
+    float b;
+    if (custom_b) {
+        b = user_b;
+    } else {
+        // Value of `b` when adaptation is 9.0:
+        b = (input_white - (adaptation / 100.0) * (input_white / output_white)) / ((input_white / output_white) - 1);
+    }
+
+    // Constraint 1: f(W_in) = W_out
+    float a = output_white / (input_white / (input_white + b));
+    if (input_white != output_white) {
+        out.x = rolloff_function(out.x, a, b);
+        out.y = rolloff_function(out.y, a, b);
+        out.z = rolloff_function(out.z, a, b);
+    }
+
+    // Resolve clamps to the output white point.
+    out.x = _clampf(out.x, 0.0, output_white);
+    out.y = _clampf(out.y, 0.0, output_white);
+    out.z = _clampf(out.z, 0.0, output_white);
+    return out;
+}
