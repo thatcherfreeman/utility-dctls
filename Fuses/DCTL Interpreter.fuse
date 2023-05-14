@@ -15,6 +15,8 @@ function Create()
         FC_PathBrowse = false,
         FCS_FilterString = "DCTL Files (*.dctl)|*.dctl|",
         INP_DoNotifyChanged = true,
+        INP_ForceNotify = false,
+        INP_InitialNotify = false,
     })
     local num_sliders = 64
     InpFloatSliders = {}
@@ -168,7 +170,7 @@ function ExtractParameters(dctl_source)
     local var_name, label, default_val, min_val, max_val, step_size, enum_list, label_list
 
     -- FLOAT SLIDERS
-    local float_sliders = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
+    local float_sliders = {}
     local slider_float_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_SLIDER_FLOAT%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*%)"
     local ret1 = 0
     local rhs = 0
@@ -192,7 +194,7 @@ function ExtractParameters(dctl_source)
     dctl_source = string.gsub(dctl_source, slider_float_pattern, "")
 
     -- INT SLIDERS
-    local int_sliders = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
+    local int_sliders = {}
     local slider_int_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_SLIDER_INT%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*%)"
     local ret1 = 0
     local rhs = 0
@@ -216,7 +218,7 @@ function ExtractParameters(dctl_source)
     dctl_source = string.gsub(dctl_source, slider_int_pattern, "")
 
     -- VALUE BOXES
-    local value_boxes = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
+    local value_boxes = {}
     local value_box_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_VALUE_BOX%s*,%s*([%-%d%.eE]+)%s*%)"
     local ret1 = 0
     local rhs = 0
@@ -237,7 +239,7 @@ function ExtractParameters(dctl_source)
     dctl_source = string.gsub(dctl_source, value_box_pattern, "")
 
     -- CHECK BOXES
-    local check_boxes = {} -- Mapping from number (parameter index) to parameter variable name, label, default val, min val, max val
+    local check_boxes = {}
     local check_box_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_CHECK_BOX%s*,%s*([01])%s*%)"
     local ret1 = 0
     local rhs = 0
@@ -318,7 +320,9 @@ function HideUIElements(Inputs)
 end
 
 function NotifyChanged(inp, param, time)
+
     if inp == DCTLFile then
+        local reset_params = not (previous_fn == param.Value)
         -- When new DCTL is loaded in, we need to update the displayed parameters.
         local content = OpenAndStripDCTL(param.Value)
 
@@ -340,7 +344,9 @@ function NotifyChanged(inp, param, time)
                 INP_Default = float_slider_table.default_val,
                 IC_Visible = true,
             })
-            -- InpFloatSliders[i]:SetSource(Number(float_slider_table.default_val), 0)
+            if reset_params then
+                InpFloatSliders[i]:SetSource(Number(float_slider_table.default_val), 0)
+            end
         end
         for i, int_slider_table in pairs(params.int_sliders) do
             InpIntSliders[i]:SetAttrs({
@@ -350,7 +356,9 @@ function NotifyChanged(inp, param, time)
                 INP_Default = int_slider_table.default_val,
                 IC_Visible = true,
             })
-            -- InpIntSliders[i]:SetSource(Number(int_slider_table.default_val), 0)
+            if reset_params then
+                InpIntSliders[i]:SetSource(Number(int_slider_table.default_val), 0)
+            end
         end
         for i, value_box_table in pairs(params.value_boxes) do
             InpValueBoxes[i]:SetAttrs({
@@ -358,7 +366,9 @@ function NotifyChanged(inp, param, time)
                 INP_Default = value_box_table.default_val,
                 IC_Visible = true,
             })
-            -- InpValueBoxes[i]:SetSource(Number(value_box_table.default_val), 0)
+            if reset_params then
+                InpValueBoxes[i]:SetSource(Number(value_box_table.default_val), 0)
+            end
         end
         for i, check_box_table in pairs(params.check_boxes) do
             InpCheckBoxes[i]:SetAttrs({
@@ -366,7 +376,9 @@ function NotifyChanged(inp, param, time)
                 INP_Default = check_box_table.default_val,
                 IC_Visible = true,
             })
-            -- InpCheckBoxes[i]:SetSource(Number(check_box_table.default_val), 0)
+            if reset_params then
+                InpCheckBoxes[i]:SetSource(Number(check_box_table.default_val), 0)
+            end
         end
         for i, combo_box_table in pairs(params.combo_boxes) do
             InpComboBoxes[i]:SetAttrs({
@@ -375,8 +387,11 @@ function NotifyChanged(inp, param, time)
                 IC_Visible = true,
                 combo_box_table.dropdown_options,
             })
-            -- InpComboBoxes[i]:SetSource(Number(combo_box_table.default_val), 0)
+            if reset_params then
+                InpComboBoxes[i]:SetSource(Number(combo_box_table.default_val), 0)
+            end
         end
+        previous_fn = param.Value
     end
 end
 
@@ -471,9 +486,14 @@ function Process(req)
         -- * All instances of __TEXTURE__ will then be replaced with the wrapper struct and the appropriate values will have to be passed
         --   into the transform function.
 
+
+        -- Rename kernel so that each dctl has a unique kernel. This fixes a bug with Fusion caching where
+        -- multiple DCTL Interpreters in a row would be broken.
+        local kernel_name = string.gsub(string.gsub(dctl_fn, "%.dctl", ""), "[^%w]", "__")
+        local parameters_name = kernel_name .. "_parameters_t"
         -- We'll append the necessary kernel function to the bottom of the DCTL, and we'll call the DCTL's transform function.
         local kernel_function_str = string.format([[
-__KERNEL__ void __DCTLKernel(__CONSTANTREF__ DCTLParameters *params, __TEXTURE2D__ inputTexture, __TEXTURE2D_WRITE__ outputTexture) {
+__KERNEL__ void %s(__CONSTANTREF__ %s *params, __TEXTURE2D__ inputTexture, __TEXTURE2D_WRITE__ outputTexture) {
     int p_Width = %d;
     int p_Height = %d;
     DEFINE_KERNEL_ITERATORS_XY(X, Y)
@@ -487,7 +507,7 @@ __KERNEL__ void __DCTLKernel(__CONSTANTREF__ DCTLParameters *params, __TEXTURE2D
     float3 __RGB = transform(p_Width, p_Height, p_X, p_Y, p_R, p_G, p_B%s);
     float4 __RGBA_OUT = make_float4(__RGB.x, __RGB.y, __RGB.z, __RGBA.w);
     _tex2DVec4Write(outputTexture, X, Y, __RGBA_OUT);
-}]], img.Width, img.Height, transform_extra_params)
+}]], kernel_name, parameters_name, img.Width, img.Height, transform_extra_params)
         preprocessed_content = preprocessed_content .. "\n" .. kernel_function_str
 
         -- Improve formatting for console.
@@ -496,7 +516,7 @@ __KERNEL__ void __DCTLKernel(__CONSTANTREF__ DCTLParameters *params, __TEXTURE2D
         print(preprocessed_content)
 
 
-        local node = DVIPComputeNode(req, "__DCTLKernel", preprocessed_content, "DCTLParameters", DCTLParameters)
+        local node = DVIPComputeNode(req, kernel_name, preprocessed_content, parameters_name, DCTLParameters)
         node:AddInput("inputTexture", img)
         node:AddOutput("outputTexture", out)
 
