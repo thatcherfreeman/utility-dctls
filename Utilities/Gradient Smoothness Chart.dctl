@@ -5,6 +5,8 @@ DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.0
 DEFINE_UI_PARAMS(num_bands, Number of Bands, DCTLUI_SLIDER_INT, 10, 1, 50, 1)
 DEFINE_UI_PARAMS(band_interval, Band Interval, DCTLUI_COMBO_BOX, 0, {EQUAL, EXPONENTIAL}, {Equal (Log), Exponential (Linear)})
 DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(clamp_output_min, Min Clamp, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(clamp_output_max, Max Clamp, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(continuous, Continuous, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(clamp_output, Clamp Output, DCTLUI_CHECK_BOX, 1)
 // clang-format on
@@ -58,8 +60,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     // Output Clamping
     if (clamp_output) {
-        if (output.x > 1.0 || output.y > 1.0 || output.z > 1.0) {
-            output = make_float3(1.0, 1.0, 1.0);
+        if (output.x > clamp_output_max || output.y > clamp_output_max || output.z > clamp_output_max || output.x < clamp_output_min ||
+            output.y < clamp_output_min || output.z < clamp_output_min) {
+            output = make_float3(clamp_output_max, clamp_output_max, clamp_output_max);
         }
     }
 

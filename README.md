@@ -417,6 +417,8 @@ Generates a test chart with a series of linear gradients. Each gradient is a ful
 
 **Mid Gray**: If Band Interval is set to Exponential, this represents the target value for the middle band.
 
+**Min/Max Clamp**: If Clamp Output is checked, then colors will be replaced with white if any channel goes outside the range of [Min Clamp, Max Clamp]
+
 **Continuous**: If checked, fills in the plane in the rgb cube between the bands.
 
 **Clamp Output**: If checked, replaces values > 1 with pure white so that your image doesn't have any values that go outside the unit cube.
