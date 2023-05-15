@@ -1,7 +1,7 @@
 // Just a DCTL to save my resize algorithm code. I wouldn't recommend using this for anything other than demos.
 // clang-format off
 DEFINE_UI_PARAMS(scale, Scaling, DCTLUI_VALUE_BOX, 2.0)
-DEFINE_UI_PARAMS(resize_mode, Resize Mode, DCTLUI_COMBO_BOX, 3, {NN, LINEAR, CUBIC}, {Nearest Neighbors, BiLinear, BiCubic})
+DEFINE_UI_PARAMS(resize_mode, Resize Mode, DCTLUI_COMBO_BOX, 0, {NN, LINEAR, CUBIC}, {Nearest Neighbors, BiLinear, BiCubic})
 // clang-format on
 
 
