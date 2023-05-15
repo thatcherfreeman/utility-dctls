@@ -53,7 +53,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     } else if (brightness_mode == VALUE) {
         curr_lum = _fmaxf(p_R, _fmaxf(p_G, p_B));
     }
-    int curr_stop = (int)_round(_log2f(curr_lum / mid_gray));
+    float curr_stop = _round(_log2f(curr_lum / mid_gray));
 
     float3 linear_output_color;
     if (curr_stop == 0) {
