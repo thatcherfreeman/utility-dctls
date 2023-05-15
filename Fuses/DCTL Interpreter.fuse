@@ -34,8 +34,9 @@ end
 function string.insert(str1, str2, pos)
     return str1:sub(1,pos) .. str2 .. str1:sub(pos + 1)
 end
-
-
+function string.trim(s)
+    return (s:gsub("^%s*(.-)%s*$", "%1"))
+ end
 
 function Create()
 
@@ -125,8 +126,30 @@ function Create()
     end
     self:BeginControlNest("Debug", "Debug", false, {})
     DebugBox = self:AddInput(
-        "Enable Debug Mode",
-        "DebugMode",
+        "Debug to Console",
+        "DebugConsole",
+        {
+            LINKID_DataType = "Number",
+            INPID_InputControl = "CheckboxControl",
+            INP_Default = 0.0,
+            INP_Integer = true,
+            IC_Visible = true,
+        }
+    )
+    AutoTypecast = self:AddInput(
+        "Explicitly Typecast Builtin Funcs",
+        "AutoTypecast",
+        {
+            LINKID_DataType = "Number",
+            INPID_InputControl = "CheckboxControl",
+            INP_Default = 0.0,
+            INP_Integer = true,
+            IC_Visible = true,
+        }
+    )
+    DontRun = self:AddInput(
+        "Don't Run the DCTL Code",
+        "DontRun",
         {
             LINKID_DataType = "Number",
             INPID_InputControl = "CheckboxControl",
@@ -158,6 +181,7 @@ end
 
 function StripComments(text)
     local text = string.gsub(text, "//.-\n", "\n")
+    text = string.gsub(text, "//.-$", "")
     text = string.gsub(text, "/%*.-%*/", "")
     return text
 end
@@ -435,6 +459,131 @@ function NotifyChanged(inp, param, time)
     end
 end
 
+function split_arguments(args)
+    -- Given a string args like "foo - bar, min(foo, bar)" return a table that splits
+    -- this string around commas that aren't in any parentheses or braces.
+    local paren_counter = 0
+    local start = 1;
+    local arg_table = {}
+    for i = 1,string.len(args) do
+        local curr_char = string.sub(args, i, i)
+        if curr_char == "{" or curr_char == "(" then
+            paren_counter = paren_counter + 1
+        elseif curr_char == "}" or curr_char == ")" then
+            paren_counter = paren_counter - 1
+        end
+        if paren_counter == 0 then
+            if i == string.len(args) then
+                table.insert(arg_table, string.trim(string.sub(args, start, i)))
+                start = i
+            elseif curr_char == "," then
+                table.insert(arg_table, string.trim(string.sub(args, start, i - 1)))
+                start = i + 1
+            end
+        end
+    end
+    return arg_table
+end
+
+function typecast_builtin_funcs(dctl_source)
+    local dctl_source = dctl_source
+    -- Take the list of built-in functions, Find the ones with float parameters and explicitly cast their parameters to floats.
+
+    local builtins = {
+        "_fabs(float x)",
+        "_logf(float x)",
+        "_log2f(float x)",
+        "_log10f(float x)",
+        "_expf(float x)",
+        "_exp2f(float x)",
+        "_exp10f(float x)",
+        "_saturatef(float x)",
+        "_sqrtf(float x)",
+        "_ceilf(float x)",
+        "_floorf(float x)",
+        "_truncf(float x)",
+        "_round(float x)",
+        "_cosf(float x)",
+        "_sinf(float x)",
+        "_cospif(float x)",
+        "_sinpif(float x)",
+        "_tanf(float x)",
+        "_acosf(float x)",
+        "_asinf(float x)",
+        "_acoshf(float x)",
+        "_asinhf(float x)",
+        "_atanhf(float x)",
+        "_coshf(float x)",
+        "_sinhf(float x)",
+        "_tanhf(float x)",
+        "_rsqrtf(float x)",
+        "_frecip(float x)",
+        "isinf(float x)",
+        "isnan(float x)",
+        "signbit(float x)",
+        "_fmaxf(float x, float y)",
+        "_frexp(float x, int exp)",
+        "_ldexp(float x, int exp)",
+        "_powf(float x, float y)",
+        "_copysignf(float x, float y)",
+        "_fminf(float x, float y)",
+        "_fmod(float x, float y)",
+        "_hypotf(float x, float y)",
+        "_atan2f(float y, float x)",
+        "_fdimf(float x, float y)",
+        "_fdivide(float x, float y)",
+        "_clampf(float x, float min, float max)",
+        "_fmaf(float x, float y, float z)",
+        "abs(int x)",
+        "min(int x, int y)",
+        "max(int x, int y)",
+        -- "T _mix(T x, T y, float a)",
+    }
+    for i, signature in pairs(builtins) do
+        local ret, rhs = 0, 0
+        local source_args, source_funcname
+        local func_name = string.match(signature, "([%w_]+)%(")
+        local arguments = string.match(signature, "%((.+)%)")
+        local arg_types = {}
+        -- Retrieve expected argument types.
+        local i = 1
+        for arg_type in string.gmatch(arguments, "([%w]+)%s[^,%)]*") do
+            arg_types[i] = arg_type
+            i = i + 1
+        end
+        -- source_funcname will have one extra character prepended to it.
+        local signature_pattern = "([^%w_]"..func_name..")(%b())"
+        repeat
+            ret, rhs, source_funcname, source_args = string.find(dctl_source, signature_pattern, rhs)
+            if ret ~= nil then
+                -- strip off parentheses
+                source_args = source_args:sub(2, source_args:len() - 1)
+                -- Get what's passed into the function in the source code.
+                local split_source_args = split_arguments(source_args)
+                if table_len(split_source_args) ~= table_len(arg_types) then
+                    print("ERROR: Incorrect number of arguments for function ", func_name, source_args)
+                    return
+                end
+                -- Add casting operator
+                local new_args = ""
+                for i = 1,table_len(arg_types) do
+                    local separator = ", "
+                    if i == 1 then
+                        separator = ""
+                    end
+                    new_args = new_args .. string.format("%s(%s)(%s)", separator, arg_types[i], split_source_args[i])
+                end
+                -- Inject new function call into the source code.
+                local new_funccall = string.format("%s(%s)", source_funcname, new_args)
+                dctl_source = dctl_source:sub(1, ret-1) .. new_funccall .. dctl_source:sub(rhs+1)
+                rhs = ret + string.len(source_funcname) + 1
+            end
+        until ret == nil
+    end
+
+    return dctl_source
+end
+
 -- KNOWN PROBLEMS:
 -- * if your dctl passes an int into a function that expects a float, this isn't willing to cast it over. IE
 --   _exp2f(1.0) will work but _exp2f(1) will not.
@@ -444,6 +593,8 @@ function Process(req)
 
     local dctl_fn = DCTLFile:GetValue(req).Value
     local debug = DebugBox:GetValue(req).Value > 0.5
+    local auto_typecast = AutoTypecast:GetValue(req).Value > 0.5
+    local dont_run = DontRun:GetValue(req).Value > 0.5
 
     if dctl_fn == nil or dctl_fn == "" then
         OutImage:Set(req, out)
@@ -455,6 +606,10 @@ function Process(req)
         end
 
         local preprocessed_content = OpenAndStripDCTL(dctl_fn)
+
+        if auto_typecast then
+            preprocessed_content = typecast_builtin_funcs(preprocessed_content)
+        end
 
         -- parse DEFINE_UI_PARAMS
         -- Read parameters via searching for DEFINE_UI_PARAMS, skip commented out ones.
@@ -541,6 +696,7 @@ function Process(req)
             transform_function_signature = new_local_transform_function_signature
             transform_function_call = local_transform_function_call
             channel_declarations = [[
+
     float4 __RGBA = _tex2DVec4(inputTexture, X, Y);
     float p_R = __RGBA.x;
     float p_G = __RGBA.y;
@@ -553,6 +709,7 @@ function Process(req)
             transform_function_call = texture_transform_function_call
             -- Declare p_TexR/g/b in the kernel.
             channel_declarations = [[
+
     __TEXTURESTRUCT__ p_TexR = {inputTexture, 8, p_Width, p_Height};
     __TEXTURESTRUCT__ p_TexG = {inputTexture, 4, p_Width, p_Height};
     __TEXTURESTRUCT__ p_TexB = {inputTexture, 2, p_Width, p_Height};
@@ -574,6 +731,7 @@ function Process(req)
             -- inject __TEXTURE__ type declaration at the top of the code.
             -- This will be done by making a wrapper struct that stores a __TEXTURE2D__ and an integer that indicates the channel.
             local texture_declaration = [[
+
 typedef struct {
     __TEXTURE2D__ tex;
     int index;
@@ -630,6 +788,9 @@ __KERNEL__ void %s(__CONSTANTREF__ %s *params, __TEXTURE2D__ inputTexture, __TEX
         if debug then
             print("Resulting Source Code:")
             print(preprocessed_content)
+            if dont_run then
+                OutImage:Set(req, out)
+            end
         end
 
 
