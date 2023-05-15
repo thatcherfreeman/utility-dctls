@@ -8,6 +8,12 @@ FuRegisterClass("DCTLInterpreter",
 )
 
 -- UTILITY FUNCTIONS --
+function sleep()
+    local j = 0
+    for i = 1, 1000000000 do
+        j = j + 1
+    end
+end
 function table_len(t)
     local counter = 0
     for k, v in pairs(t) do
@@ -486,7 +492,7 @@ function split_arguments(args)
 end
 
 function typecast_builtin_funcs(dctl_source)
-    local dctl_source = dctl_source
+    local dctl_source_new = dctl_source
     -- Take the list of built-in functions, Find the ones with float parameters and explicitly cast their parameters to floats.
 
     local builtins = {
@@ -553,9 +559,12 @@ function typecast_builtin_funcs(dctl_source)
         end
         -- source_funcname will have one extra character prepended to it.
         local signature_pattern = "([^%w_]"..func_name..")(%b())"
+        -- local source_buffer = {}
+        -- local last_rhs = 1
         repeat
-            ret, rhs, source_funcname, source_args = string.find(dctl_source, signature_pattern, rhs)
+            ret, rhs, source_funcname, source_args = string.find(dctl_source_new, signature_pattern, rhs)
             if ret ~= nil then
+                local original_substr = string.sub(dctl_source_new, ret, rhs)
                 -- strip off parentheses
                 source_args = source_args:sub(2, source_args:len() - 1)
                 -- Get what's passed into the function in the source code.
@@ -575,21 +584,18 @@ function typecast_builtin_funcs(dctl_source)
                 end
                 -- Inject new function call into the source code.
                 local new_funccall = string.format("%s(%s)", source_funcname, new_args)
-                dctl_source = dctl_source:sub(1, ret-1) .. new_funccall .. dctl_source:sub(rhs+1)
+                -- dctl_source = dctl_source:sub(1, ret-1) .. new_funccall .. dctl_source:sub(rhs+1)
+                dctl_source_new = string.gsub(dctl_source_new, original_substr:gsub('%W', function(x) return '%'..x end), new_funccall, 1)
                 rhs = ret + string.len(source_funcname) + 1
             end
         until ret == nil
     end
-
-    return dctl_source
+    return dctl_source_new
 end
 
--- KNOWN PROBLEMS:
--- * if your dctl passes an int into a function that expects a float, this isn't willing to cast it over. IE
---   _exp2f(1.0) will work but _exp2f(1) will not.
+
 function Process(req)
     local img = InImage:GetValue(req)
-    local out = img:Copy()
 
     local dctl_fn = DCTLFile:GetValue(req).Value
     local debug = DebugBox:GetValue(req).Value > 0.5
@@ -597,7 +603,7 @@ function Process(req)
     local dont_run = DontRun:GetValue(req).Value > 0.5
 
     if dctl_fn == nil or dctl_fn == "" then
-        OutImage:Set(req, out)
+        OutImage:Set(req, img)
     elseif not req:IsPreCalc() then
         if debug then
             local original_content = OpenDCTL(dctl_fn)
@@ -649,7 +655,6 @@ function Process(req)
             print("Parameter Struct: ")
             print(DCTLParameters)
         end
-
 
         -- Inject parameters to code by just adding more parameters to the Transform function.
         local transform_extra_params = ""
@@ -785,39 +790,42 @@ __KERNEL__ void %s(__CONSTANTREF__ %s *params, __TEXTURE2D__ inputTexture, __TEX
 
         -- Improve formatting for console.
         preprocessed_content = string.gsub(preprocessed_content, "\n%s*\n", "\n")
+
         if debug then
             print("Resulting Source Code:")
             print(preprocessed_content)
             if dont_run then
-                OutImage:Set(req, out)
+                OutImage:Set(req, img)
             end
         end
 
+        if not dont_run then
+            local out = Image({IMG_Like = img})
+            local node = DVIPComputeNode(req, kernel_name, preprocessed_content, parameters_name, DCTLParameters)
+            node:AddInput("inputTexture", img)
+            node:AddOutput("outputTexture", out)
 
-        local node = DVIPComputeNode(req, kernel_name, preprocessed_content, parameters_name, DCTLParameters)
-        node:AddInput("inputTexture", img)
-        node:AddOutput("outputTexture", out)
+            -- Populate DCTLParametersRef once we started parsing parameters.
+            local paramsRef = node:GetParamBlock(DCTLParameters)
+            for i=0,num_float_sliders-1 do
+                paramsRef.float_slider_params[i] = InpFloatSliders[i]:GetValue(req).Value
+            end
+            for i=0,num_int_sliders-1 do
+                paramsRef.int_slider_params[i] = InpIntSliders[i]:GetValue(req).Value
+            end
+            for i=0,num_value_boxes-1 do
+                paramsRef.value_box_params[i] = InpValueBoxes[i]:GetValue(req).Value
+            end
+            for i=0,num_check_boxes-1 do
+                paramsRef.check_box_params[i] = InpCheckBoxes[i]:GetValue(req).Value
+            end
+            for i=0,num_combo_boxes-1 do
+                paramsRef.combo_box_params[i] = InpComboBoxes[i]:GetValue(req).Value
+            end
+            node:SetParamBlock(paramsRef)
 
-        -- Populate DCTLParametersRef once we started parsing parameters.
-        local paramsRef = node:GetParamBlock(DCTLParameters)
-        for i=0,num_float_sliders-1 do
-            paramsRef.float_slider_params[i] = InpFloatSliders[i]:GetValue(req).Value
+            success = node:RunSession(req)
+            OutImage:Set(req, out)
         end
-        for i=0,num_int_sliders-1 do
-            paramsRef.int_slider_params[i] = InpIntSliders[i]:GetValue(req).Value
-        end
-        for i=0,num_value_boxes-1 do
-            paramsRef.value_box_params[i] = InpValueBoxes[i]:GetValue(req).Value
-        end
-        for i=0,num_check_boxes-1 do
-            paramsRef.check_box_params[i] = InpCheckBoxes[i]:GetValue(req).Value
-        end
-        for i=0,num_combo_boxes-1 do
-            paramsRef.combo_box_params[i] = InpComboBoxes[i]:GetValue(req).Value
-        end
-        node:SetParamBlock(paramsRef)
-
-        success = node:RunSession(req)
-        OutImage:Set(req, out)
     end
 end
