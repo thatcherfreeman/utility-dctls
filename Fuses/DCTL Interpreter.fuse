@@ -795,6 +795,10 @@ __KERNEL__ void %s(__CONSTANTREF__ %s *params, __TEXTURE2D__ inputTexture, __TEX
 
     -- Improve formatting for console.
     preprocessed_content = string.gsub(preprocessed_content, "\n%s*\n", "\n")
+    if debug then
+        print("Resulting Source Code:")
+        print(preprocessed_content)
+    end
 
     return kernel_name, preprocessed_content, parameters_name, dctl_parameters, param_counts
 end
@@ -811,11 +815,6 @@ function Process(req)
         OutImage:Set(req, img)
     elseif not req:IsPreCalc() then
         local kernel_name, preprocessed_content, parameters_name, dctl_parameters, param_counts = rewrite_code(dctl_fn, debug, auto_typecast, img.Width, img.Height)
-
-        if debug then
-            print("Resulting Source Code:")
-            print(preprocessed_content)
-        end
 
         if dont_run then
             OutImage:Set(req, img)
