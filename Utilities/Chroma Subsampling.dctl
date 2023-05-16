@@ -16,8 +16,8 @@ __DEVICE__ float3 average(float3 a, float3 b) {
 __DEVICE__ float3 rgb_to_ycrcb(float3 rgb) {
     float kr = 0.2126, kg = 0.7152, kb = 0.0722;
     float yp = rgb.x * kr + rgb.y * kg + rgb.z * kb;
-    float pb = 0.5 * (rgb.b - yp) / (1.0 - kb);
-    float pr = 0.5 * (rgb.r - yp) / (1.0 - kr);
+    float pb = 0.5 * (rgb.z - yp) / (1.0 - kb);
+    float pr = 0.5 * (rgb.x - yp) / (1.0 - kr);
 
     float3 ycrcb = make_float3(yp, pb, pr);
     return ycrcb;
