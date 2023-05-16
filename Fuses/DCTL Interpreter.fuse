@@ -815,12 +815,11 @@ function Process(req)
         if debug then
             print("Resulting Source Code:")
             print(preprocessed_content)
-            if dont_run then
-                OutImage:Set(req, img)
-            end
         end
 
-        if not dont_run then
+        if dont_run then
+            OutImage:Set(req, img)
+        else
             local out = Image({IMG_Like = img})
             local node = DVIPComputeNode(req, kernel_name, preprocessed_content, parameters_name, dctl_parameters)
             node:AddInput("inputTexture", img)
