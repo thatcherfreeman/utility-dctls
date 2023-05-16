@@ -29,6 +29,18 @@ If a DCTL is not working, you can usually find logs in these directories. If you
 
 # The Fuses
 
+## DCTL Interpreter
+Adds support for DCTLs within Fusion Studio rather than just Resolve. This is done by reading in a DCTL file and any headers, then rewriting several parts of the source code so it can be run natively within the Fuse DCTL framework (which is somewhat different than the Resolve DCTL framework).
+
+### Parameters
+**DCTL File**: Allows you to specify a .dctl file, anywhere on your system.
+
+**Debug to Console**: Prints out the changes made to the source code and the quantity of captured params.
+
+**Explicitly Typecast Builtin Funcs**: The Fuse DCTL framework has a bug where builtin functions like `_exp2f()`, when provided with an integer argument, will cause the DCTL to fail to build. As a workaround, if you check this box I parse all the code and inject the appropriate type cast to each parameter. This can have some performance impact if your DCTL is large enough as it's a lot of string manipulations that would take place every frame.
+
+**Don't run the DCTL Code**: Self explanatory, If your DCTL is causing Fusion to crash, checking this box might help you help me debug it. Doesn't always stop Fusion from crashing though.
+
 ## FrameAvg Fuse
 Blends together several frames, can be used to retime projects shot at high frame rates. Should certainly be used with a float input, and likely be used with a Linear input.
 
