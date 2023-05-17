@@ -372,11 +372,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     int num_major_axes;
     int num_minor_axes;
-    float major_nits[10] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    char nits_names[10][10] = {"0", "0", "0", "0", "0", "0", "0", "0", "0", "0"};
-    float minor_nits[50] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    float major_nits[10] = {};
+    char nits_names[10][10] = {};
+    float minor_nits[50] = {};
 
     if (waveform_scale == GAMMA24_NITS || waveform_scale == BT1886_NITS) {
         num_major_axes = 5;
