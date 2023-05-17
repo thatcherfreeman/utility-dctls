@@ -282,6 +282,10 @@ DaVinci Tone Mapping is simply a function of $f(x) = a \frac{x}{x + b}$, with so
 
 **Use Custom Adaptation**: Allows you to override the selection of $b$ when checked. Otherwise, $b$ is computed from the specified value of Adaptation.
 
+**Invert**: Inverts the tone mapping with the specified parameters.
+
+**Clamp**: Allows you to disable white point clamping. Resolve would have this permanently enabled.
+
 
 ## Dot Product DCTL
 Takes the dot product of the current color and the specified `(r, g, b)` value.

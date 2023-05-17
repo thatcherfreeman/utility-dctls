@@ -4,6 +4,8 @@ DEFINE_UI_PARAMS(max_output_nits, Max Output Nits, DCTLUI_SLIDER_FLOAT, 100.0, 4
 DEFINE_UI_PARAMS(adaptation, Adaptation, DCTLUI_SLIDER_FLOAT, 9.0, 9.0, 9.0, 1.0)
 DEFINE_UI_PARAMS(user_b, User Input B, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.0001)
 DEFINE_UI_PARAMS(custom_b, Use Custom Adaptation, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(clamp_toggle, Clamp, DCTLUI_CHECK_BOX, 1)
 //clang-format on
 
 __DEVICE__ float powf(float base, float exp) {
@@ -15,8 +17,12 @@ __DEVICE__ float contrast(float x, float mid_gray, float gamma) {
 }
 
 // g(x) = a * (x / (x+b)) + c
-__DEVICE__ float rolloff_function(float x, float a, float b) {
-    return a * (x / (x + b));
+__DEVICE__ float rolloff_function(float x, float a, float b, int invert) {
+    if (invert) {
+        return b * x / (a - x);
+    } else {
+        return a * (x / (x + b));
+    }
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
@@ -32,17 +38,26 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         b = (input_white - (adaptation / 100.0) * (input_white / output_white)) / ((input_white / output_white) - 1);
     }
 
+    // Resolve evidently clamps the input to the input white point.
+    if (clamp_toggle) {
+        out.x = _fminf(out.x, input_white);
+        out.y = _fminf(out.y, input_white);
+        out.z = _fminf(out.z, input_white);
+    }
+
     // Constraint 1: f(W_in) = W_out
     float a = output_white / (input_white / (input_white + b));
     if (input_white != output_white) {
-        out.x = rolloff_function(out.x, a, b);
-        out.y = rolloff_function(out.y, a, b);
-        out.z = rolloff_function(out.z, a, b);
+        out.x = rolloff_function(out.x, a, b, invert);
+        out.y = rolloff_function(out.y, a, b, invert);
+        out.z = rolloff_function(out.z, a, b, invert);
     }
 
     // Resolve clamps to the output white point.
-    out.x = _clampf(out.x, 0.0, output_white);
-    out.y = _clampf(out.y, 0.0, output_white);
-    out.z = _clampf(out.z, 0.0, output_white);
+    if (clamp_toggle) {
+        out.x = _clampf(out.x, 0.0, output_white);
+        out.y = _clampf(out.y, 0.0, output_white);
+        out.z = _clampf(out.z, 0.0, output_white);
+    }
     return out;
 }
