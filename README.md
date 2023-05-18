@@ -564,6 +564,17 @@ Helps simulate the effect of photon noise, a noise that's approximately poisson 
 **Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
 
 
+## Modulo Function DCTL
+Takes the input $x$ and computes $x \mod y$, the remainder when dividing $x$ by $y$.
+
+### DCTL Parameters
+**Global Denominator**: If Use Per-Channel Denominator is unchecked, then the modulo of all three channels is computed with respect to this number.
+
+**Red/Green/Blue Denominator**: If Use Per-Channel Denominator is checked, then each channel's modulo will be computed with respect to the corresponding number.
+
+**Use Per-Channel Denominator**: Check in order to compute modulo with a different denominator for each channel.
+
+
 ## Power Function
 Computes the function $\texttt{base}^x$.
 

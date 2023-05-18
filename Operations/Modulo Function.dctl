@@ -1,0 +1,24 @@
+// clang-format off
+DEFINE_UI_PARAMS(all_mod, Global Denominator, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(red_mod, Red Denominator, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(green_mod, Green Denominator, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(blue_mod, Blue Denominator, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(separate_mods, Use Per-Channel Denominator, DCTLUI_CHECK_BOX, 0)
+// clang-format on
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 output;
+
+    if (separate_mods) {
+        output = make_float3((red_mod == 0.0f) ? p_R : _fmod(p_R, red_mod),
+                             (green_mod == 0.0f) ? p_G : _fmod(p_G, green_mod),
+                             (blue_mod == 0.0f) ? p_B : _fmod(p_B, blue_mod));
+    } else {
+        if (all_mod == 0.0f) {
+            output = make_float3(p_R, p_G, p_B);
+        } else {
+            output = make_float3(_fmod(_fabs(p_R), all_mod), _fmod(_fabs(p_G), all_mod), _fmod(_fabs(p_B), all_mod));
+        }
+    }
+    return output;
+}
