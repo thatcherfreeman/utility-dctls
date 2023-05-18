@@ -49,6 +49,13 @@ function Create()
     PreviousFn = ""
 
     -- Inputs
+    ResetParamsButton = self:AddInput("Reset Parameters", "ResetParameters", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ButtonControl",
+        INP_DoNotifyChanged = true,
+        INP_External = false,
+    })
+
     DCTLFile = self:AddInput("DCTL File", "DCTLFile", {
         LINKID_DataType = "Text",
         INPID_InputControl = "FileControl",
@@ -58,7 +65,7 @@ function Create()
         FCS_FilterString = "DCTL Files (*.dctl)|*.dctl|",
         INP_DoNotifyChanged = true,
         INP_ForceNotify = false,
-        INP_InitialNotify = false,
+        INP_InitialNotify = true,
     })
 
     local num_sliders = 64
@@ -101,7 +108,7 @@ function Create()
             {
                 LINKID_DataType = "Number",
                 INPID_InputControl = "ScrewControl",
-                INP_Default = 1.0,
+                INP_Default = 0.0,
                 IC_Visible = false,
             }
         )
@@ -114,7 +121,7 @@ function Create()
             {
                 LINKID_DataType = "Number",
                 INPID_InputControl = "CheckboxControl",
-                INP_Default = 1.0,
+                INP_Default = 0.0,
                 INP_Integer = true,
                 IC_Visible = false,
             }
@@ -172,7 +179,7 @@ function Create()
         }
     )
     self:EndControlNest()
-    InImage = self:AddInput("Input", "Input", {
+    InImage = self:AddInput("Input", "ImageInput", {
         LINKID_DataType = "Image",
         LINK_Main = 1,
     })
@@ -400,77 +407,88 @@ function HideUIElements(Inputs)
 end
 
 function NotifyChanged(inp, param, time)
+    local reset_params = ((inp == DCTLFile) and (PreviousFn ~= param.Value) and
+                            (PreviousFn ~= nil) and (PreviousFn ~= "")) or
+                        ((inp == ResetParamsButton) and param.Value == 1)
+
     if inp == DCTLFile then
-        local reset_params = not (PreviousFn == param.Value)
-        -- When new DCTL is loaded in, we need to update the displayed parameters.
-        local content = OpenAndStripDCTL(param.Value)
-
-        -- Call ExtractParameters
-        -- Rename parameters and update the Visibility attribute on all DCTL parameters.
-        local success, content, params = ExtractParameters(content)
-
         HideUIElements(InpFloatSliders)
         HideUIElements(InpIntSliders)
         HideUIElements(InpValueBoxes)
         HideUIElements(InpCheckBoxes)
         HideUIElements(InpComboBoxes)
 
-        for i, float_slider_table in pairs(params.float_sliders) do
-            InpFloatSliders[i]:SetAttrs({
-                LINKS_Name = float_slider_table.label,
-                INP_MinScale = float_slider_table.min_val,
-                INP_MaxScale = float_slider_table.max_val,
-                INP_Default = float_slider_table.default_val,
-                IC_Visible = true,
-            })
-            if reset_params then
-                InpFloatSliders[i]:SetSource(Number(float_slider_table.default_val), 0)
+        if (param.Value ~= nil) and (param.Value ~= "") then
+            -- When new DCTL is loaded in, we need to update the displayed parameters.
+            local content = OpenAndStripDCTL(param.Value)
+
+            -- Call ExtractParameters
+            -- Rename parameters and update the Visibility attribute on all DCTL parameters.
+            local success, content, params = ExtractParameters(content)
+
+            for i, float_slider_table in pairs(params.float_sliders) do
+                InpFloatSliders[i]:SetAttrs({
+                    LINKS_Name = float_slider_table.label,
+                    INP_MinScale = float_slider_table.min_val,
+                    INP_MaxScale = float_slider_table.max_val,
+                    INP_Default = float_slider_table.default_val,
+                    IC_Visible = true,
+                })
             end
-        end
-        for i, int_slider_table in pairs(params.int_sliders) do
-            InpIntSliders[i]:SetAttrs({
-                LINKS_Name = int_slider_table.label,
-                INP_MinScale = int_slider_table.min_val,
-                INP_MaxScale = int_slider_table.max_val,
-                INP_Default = int_slider_table.default_val,
-                IC_Visible = true,
-            })
-            if reset_params then
-                InpIntSliders[i]:SetSource(Number(int_slider_table.default_val), 0)
+            for i, int_slider_table in pairs(params.int_sliders) do
+                InpIntSliders[i]:SetAttrs({
+                    LINKS_Name = int_slider_table.label,
+                    INP_MinScale = int_slider_table.min_val,
+                    INP_MaxScale = int_slider_table.max_val,
+                    INP_Default = int_slider_table.default_val,
+                    IC_Visible = true,
+                })
             end
-        end
-        for i, value_box_table in pairs(params.value_boxes) do
-            InpValueBoxes[i]:SetAttrs({
-                LINKS_Name = value_box_table.label,
-                INP_Default = value_box_table.default_val,
-                IC_Visible = true,
-            })
-            if reset_params then
-                InpValueBoxes[i]:SetSource(Number(value_box_table.default_val), 0)
+            for i, value_box_table in pairs(params.value_boxes) do
+                InpValueBoxes[i]:SetAttrs({
+                    LINKS_Name = value_box_table.label,
+                    INP_Default = value_box_table.default_val,
+                    IC_Visible = true,
+                })
             end
-        end
-        for i, check_box_table in pairs(params.check_boxes) do
-            InpCheckBoxes[i]:SetAttrs({
-                LINKS_Name = check_box_table.label,
-                INP_Default = check_box_table.default_val,
-                IC_Visible = true,
-            })
-            if reset_params then
-                InpCheckBoxes[i]:SetSource(Number(check_box_table.default_val), 0)
+            for i, check_box_table in pairs(params.check_boxes) do
+                InpCheckBoxes[i]:SetAttrs({
+                    LINKS_Name = check_box_table.label,
+                    INP_Default = check_box_table.default_val,
+                    INP_Default = -1,
+                    IC_Visible = true,
+                })
             end
-        end
-        for i, combo_box_table in pairs(params.combo_boxes) do
-            InpComboBoxes[i]:SetAttrs({
-                LINKS_Name = combo_box_table.label,
-                INP_Default = combo_box_table.default_val,
-                IC_Visible = true,
-                combo_box_table.dropdown_options,
-            })
-            if reset_params then
-                InpComboBoxes[i]:SetSource(Number(combo_box_table.default_val), 0)
+            for i, combo_box_table in pairs(params.combo_boxes) do
+                InpComboBoxes[i]:SetAttrs({
+                    LINKS_Name = combo_box_table.label,
+                    INP_Default = combo_box_table.default_val,
+                    IC_Visible = true,
+                    combo_box_table.dropdown_options,
+                })
             end
         end
         PreviousFn = param.Value
+    end
+
+    -- If the Rest button is pressed, we only have access to the default parameters in the form
+    -- of the INP_Default attribute (not the source code).
+    if reset_params then
+        for i=0,table_len(InpFloatSliders)-1 do
+            InpFloatSliders[i]:SetSource(Number(InpFloatSliders[i]:GetAttr("INP_Default")), 0)
+        end
+        for i=0,table_len(InpIntSliders)-1 do
+            InpIntSliders[i]:SetSource(Number(InpIntSliders[i]:GetAttr("INP_Default")), 0)
+        end
+        for i=0,table_len(InpValueBoxes)-1 do
+            InpValueBoxes[i]:SetSource(Number(InpValueBoxes[i]:GetAttr("INP_Default")), 0)
+        end
+        for i=0,table_len(InpCheckBoxes)-1 do
+            InpCheckBoxes[i]:SetSource(Number(InpCheckBoxes[i]:GetAttr("INP_Default")), 0)
+        end
+        for i=0,table_len(InpComboBoxes)-1 do
+            InpComboBoxes[i]:SetSource(Number(InpComboBoxes[i]:GetAttr("INP_Default")), 0)
+        end
     end
 end
 
