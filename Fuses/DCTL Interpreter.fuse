@@ -42,11 +42,13 @@ function string.insert(str1, str2, pos)
 end
 function string.trim(s)
     return (s:gsub("^%s*(.-)%s*$", "%1"))
- end
+end
 
 function Create()
     -- Globals
     PreviousFn = ""
+    -- Default value for all sliders, needs to be a number users aren't likely to enter themselves in nature. Chosen at random.
+    MAGIC_DEFAULT = -420691
 
     -- Inputs
     ResetParamsButton = self:AddInput("Reset Parameters", "ResetParameters", {
@@ -68,6 +70,7 @@ function Create()
         INP_InitialNotify = true,
     })
 
+    -- DCTL PARAMETERS
     local num_sliders = 64
     InpFloatSliders = {}
     for i = 0, num_sliders-1 do
@@ -79,7 +82,7 @@ function Create()
                 INPID_InputControl = "SliderControl",
                 INP_MinScale = 0.0,
                 INP_MaxScale = 10.0,
-                INP_Default = 1.0,
+                INP_Default = MAGIC_DEFAULT,
                 IC_Visible = false,
             }
         )
@@ -94,7 +97,7 @@ function Create()
                 INPID_InputControl = "SliderControl",
                 INP_MinScale = 0.0,
                 INP_MaxScale = 10.0,
-                INP_Default = 1.0,
+                INP_Default = MAGIC_DEFAULT,
                 IC_Visible = false,
                 INP_Integer = true,
             }
@@ -108,7 +111,7 @@ function Create()
             {
                 LINKID_DataType = "Number",
                 INPID_InputControl = "ScrewControl",
-                INP_Default = 0.0,
+                INP_Default = MAGIC_DEFAULT,
                 IC_Visible = false,
             }
         )
@@ -121,7 +124,7 @@ function Create()
             {
                 LINKID_DataType = "Number",
                 INPID_InputControl = "CheckboxControl",
-                INP_Default = 0.0,
+                INP_Default = MAGIC_DEFAULT,
                 INP_Integer = true,
                 IC_Visible = false,
             }
@@ -135,12 +138,14 @@ function Create()
             {
                 LINKID_DataType = "Number",
                 INPID_InputControl = "ComboControl",
-                INP_Default = 0.0,
+                INP_Default = MAGIC_DEFAULT,
                 INP_Integer = true,
                 IC_Visible = false,
             }
         )
     end
+
+    -- DEBUG PARAMETERS
     self:BeginControlNest("Debug", "Debug", false, {})
     DebugBox = self:AddInput(
         "Debug to Console",
@@ -398,10 +403,29 @@ function ExtractParameters(dctl_source)
     return success, dctl_source, params
 end
 
+
+-- Update Default value. If the current value of the parameter is equal
+-- to the old default, then we also update the current value of the parameter
+-- to be equal to the new default too.
+function UpdateDefault(inp, new_default, time)
+    -- Inputs that are animated often have a nil GetSource value. Let's
+    -- not override the current value when that's the case.
+    if (inp:GetSource(time) ~= nil) then
+        local curr_value = inp:GetSource(time).Value
+        local curr_default = inp:GetAttr("INP_Default")
+        if curr_value == curr_default then
+            inp:SetSource(Number(new_default), time)
+        end
+        -- Otherwise, just keep the existing value.
+    end
+    inp:SetAttrs({INP_Default=new_default})
+end
+
 function HideUIElements(Inputs)
     for i, obj in pairs(Inputs) do
         obj[i]:SetAttrs({
             IC_Visible = false,
+            INP_Default = MAGIC_DEFAULT,
         })
     end
 end
@@ -431,41 +455,40 @@ function NotifyChanged(inp, param, time)
                     LINKS_Name = float_slider_table.label,
                     INP_MinScale = float_slider_table.min_val,
                     INP_MaxScale = float_slider_table.max_val,
-                    INP_Default = float_slider_table.default_val,
                     IC_Visible = true,
                 })
+                UpdateDefault(InpFloatSliders[i], float_slider_table.default_val, time)
             end
             for i, int_slider_table in pairs(params.int_sliders) do
                 InpIntSliders[i]:SetAttrs({
                     LINKS_Name = int_slider_table.label,
                     INP_MinScale = int_slider_table.min_val,
                     INP_MaxScale = int_slider_table.max_val,
-                    INP_Default = int_slider_table.default_val,
                     IC_Visible = true,
                 })
+                UpdateDefault(InpIntSliders[i], int_slider_table.default_val, time)
             end
             for i, value_box_table in pairs(params.value_boxes) do
                 InpValueBoxes[i]:SetAttrs({
                     LINKS_Name = value_box_table.label,
-                    INP_Default = value_box_table.default_val,
                     IC_Visible = true,
                 })
+                UpdateDefault(InpValueBoxes[i], value_box_table.default_val, time)
             end
             for i, check_box_table in pairs(params.check_boxes) do
                 InpCheckBoxes[i]:SetAttrs({
                     LINKS_Name = check_box_table.label,
-                    INP_Default = check_box_table.default_val,
-                    INP_Default = -1,
                     IC_Visible = true,
                 })
+                UpdateDefault(InpCheckBoxes[i], check_box_table.default_val, time)
             end
             for i, combo_box_table in pairs(params.combo_boxes) do
                 InpComboBoxes[i]:SetAttrs({
                     LINKS_Name = combo_box_table.label,
-                    INP_Default = combo_box_table.default_val,
                     IC_Visible = true,
                     combo_box_table.dropdown_options,
                 })
+                UpdateDefault(InpComboBoxes[i], combo_box_table.default_val, time)
             end
         end
         PreviousFn = param.Value
@@ -475,19 +498,19 @@ function NotifyChanged(inp, param, time)
     -- of the INP_Default attribute (not the source code).
     if reset_params then
         for i=0,table_len(InpFloatSliders)-1 do
-            InpFloatSliders[i]:SetSource(Number(InpFloatSliders[i]:GetAttr("INP_Default")), 0)
+            InpFloatSliders[i]:SetSource(Number(InpFloatSliders[i]:GetAttr("INP_Default")), time)
         end
         for i=0,table_len(InpIntSliders)-1 do
-            InpIntSliders[i]:SetSource(Number(InpIntSliders[i]:GetAttr("INP_Default")), 0)
+            InpIntSliders[i]:SetSource(Number(InpIntSliders[i]:GetAttr("INP_Default")), time)
         end
         for i=0,table_len(InpValueBoxes)-1 do
-            InpValueBoxes[i]:SetSource(Number(InpValueBoxes[i]:GetAttr("INP_Default")), 0)
+            InpValueBoxes[i]:SetSource(Number(InpValueBoxes[i]:GetAttr("INP_Default")), time)
         end
         for i=0,table_len(InpCheckBoxes)-1 do
-            InpCheckBoxes[i]:SetSource(Number(InpCheckBoxes[i]:GetAttr("INP_Default")), 0)
+            InpCheckBoxes[i]:SetSource(Number(InpCheckBoxes[i]:GetAttr("INP_Default")), time)
         end
         for i=0,table_len(InpComboBoxes)-1 do
-            InpComboBoxes[i]:SetSource(Number(InpComboBoxes[i]:GetAttr("INP_Default")), 0)
+            InpComboBoxes[i]:SetSource(Number(InpComboBoxes[i]:GetAttr("INP_Default")), time)
         end
     end
 end

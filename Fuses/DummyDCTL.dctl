@@ -1,0 +1,24 @@
+
+struct arr_struct {
+    float the_arr[5];
+};
+
+__DEVICE__ arr_struct arr_maker() {
+    float bar[5] = {1.0, 2.0, 3.0, 4.0, 5.0};
+    arr_struct foo = {};
+    for (int i = 0; i < 5; ++i) {
+        foo.the_arr[i] = bar[i];
+    }
+    return foo;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float man[5] = {0.0};
+    arr_struct temp = arr_maker();
+    for (int i = 0; i < 5; ++i) {
+        man[i] = temp.the_arr[i];
+    }
+
+    return make_float3(man[0], man[1], man[2]);
+}
