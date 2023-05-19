@@ -688,6 +688,23 @@ Constructs a contrast curve, has the option to procedurally generate one with ra
 **Ungroup RGB**: When checked, if Randomize is also checked, then this will randomize a contrast curve for each of the RGB channels.
 
 
+## Random Linear Contrast
+Expects a linear image, applies linear contrast to each channel via gamma, preserving mid gray, but you can use a random number generator so you can try a lot of different curves in only moments.
+
+### DCTL Parameters
+**Global Contrast**: Initial gamma applied to all channels.
+
+**Red/Green/Blue Contrast**: Gamma added to Global gamma for the corresponding channel.
+
+**Random Interval**: Maximum amount that a randomly selected gamma can deviate from a per-channel gamma or the global gamma
+
+**Random Seed**: User selected seed for the random number generator.
+
+**Mid Gray**: Linear value of mid gray.
+
+**Use Random**: Choose whether to not use the random number generator, to randomly generate a split tone (randomness is applied only to the per-channel contrasts), to randomly augment the Global Contrast, or both.
+
+
 ## Read Noise DCTL
 Simulates electronic noise from your camera or film stock. Given a linear signal, we compute $x + N(\mu, \sigma^2)$, IE adding a noise with a fixed mean and variance to the input signal.
 
