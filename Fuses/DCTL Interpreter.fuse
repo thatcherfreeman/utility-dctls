@@ -630,8 +630,6 @@ function typecast_builtin_funcs(dctl_source)
         end
         -- source_funcname will have one extra character prepended to it.
         local signature_pattern = "([^%w_]"..func_name..")(%b())"
-        -- local source_buffer = {}
-        -- local last_rhs = 1
         repeat
             ret, rhs, source_funcname, source_args = string.find(dctl_source_new, signature_pattern, rhs)
             if ret ~= nil then
@@ -655,7 +653,6 @@ function typecast_builtin_funcs(dctl_source)
                 end
                 -- Inject new function call into the source code.
                 local new_funccall = string.format("%s(%s)", source_funcname, new_args)
-                -- dctl_source = dctl_source:sub(1, ret-1) .. new_funccall .. dctl_source:sub(rhs+1)
                 dctl_source_new = string.gsub(dctl_source_new, original_substr:gsub('%W', function(x) return '%'..x end), new_funccall, 1)
                 rhs = ret + string.len(source_funcname) + 1
             end
