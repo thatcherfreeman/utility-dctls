@@ -154,6 +154,15 @@ Internally, this DCTL converts ACEScc or ACEScct to Linear, and then applies a g
 Adds a value to each channel. The channels are computed by $\text{Red}_{\text{out}} = \text{Red}_{\text{in}} + \text{Global Offset} + \text{Red Offset}$ and likewise for the other two channels.
 
 
+## Bit Depth Estimator DCTL
+Tool to help estimate the true bit depth of a file. It works by comparing the code values in the current pixel to the adjacent pixels and measuring the smallest nonzero difference between the corresponding channels to estimate the effective bit depth for the current pixel.
+
+### DCTL Parameters
+**Target Bit Depth**: When Highlight is enabled, Highlights all pixels whose effective bit depth is within 0.1 of this Target Bit Depth.
+
+**Highlight**: When checked, highlights only pixels whose bit depth is near the Target Bit Depth, otherwise all pixels are replaced with their effective bit depth.
+
+
 ## Blanking Checker DCTL
 Helps you spot pixels with NaN, infinity, negative, zero, or superwhite channels. Pixels with certain conditions are replaced by a specified highlight color. Optionally, the highlight can be a checkerboard shape.
 
@@ -477,21 +486,28 @@ Inverts the values in an image.
 ### DCTL Parameters
 **Log Mode**: When checked, computes the inverse by taking `1 - x`. When unchecked, assumes the image is scene linear and therefore computes `1 / x`.
 
+
 ## Lens Distortion DCTL
-Applies a basic lens distortion model, uses bilinear sampling to avoid aliasing problems for reasonable choices of $k_1$.
+Applies a basic lens distortion model, uses bilinear sampling to avoid aliasing problems for reasonable choices of $k_1$ and $k_2$.
 
 ### How it works
 Lens distortion here is modelled with:
 $r_d = \sqrt{x_d^2 + y_d^2}$
-$x_u = x_d (1 + k_{1x} r_d^2)$
-$y_u = y_d (1 + k_{1y} r_d^2)$
+$x_u = x_d (1 + k_{1x} r_d^2 + k_{2x} r_d^4)$
+$y_u = y_d (1 + k_{1y} r_d^2 + k_{2y} r_d^4)$
 
 ### DCTL Parameters
 **X Distortion Amount K1**: Chooses the value of $k_{1x}$ in the above model
 
 **Y Distortion Amount K1**: Chooses the value of $k_{1y}$ in the above model
 
-**Couple XY**: If checked, just use $k_{1x}$ for both $x_u$ and $y_u$ calculations, keeping the lens distortion spherical.
+**X Distortion Amount K2**: Chooses the value of $k_{2x}$ in the above model
+
+**Y Distortion Amount K2**: Chooses the value of $k_{2y}$ in the above model
+
+**Couple XY**: If checked, just use the same $k_{1x}, k_{2x}$ for both $x_u$ and $y_u$ calculations, keeping the lens distortion spherical.
+
+
 
 ## Levels Converter
 Converts between full and (0-1023) legal levels (64-940)

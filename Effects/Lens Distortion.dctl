@@ -1,7 +1,9 @@
 // clang-format off
 // Need parameter for k1
-DEFINE_UI_PARAMS(k_1_x, X Distortion Amount K1, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.001)
-DEFINE_UI_PARAMS(k_1_y, Y Distortion Amount K1, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(k_1_x, X Distortion Amount K1, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.0001)
+DEFINE_UI_PARAMS(k_1_y, Y Distortion Amount K1, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.0001)
+DEFINE_UI_PARAMS(k_2_x, X Distortion Amount K2, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.0001)
+DEFINE_UI_PARAMS(k_2_y, Y Distortion Amount K2, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.0001)
 DEFINE_UI_PARAMS(uniform_distortion, Couple XY, DCTLUI_CHECK_BOX, 1)
 // clang-format on
 
@@ -53,9 +55,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     // Compute x_u, y_u
     if (uniform_distortion) {
         k_1_y = k_1_x;
+        k_2_y = k_2_x;
     }
-    float x_u = x_d * (1.0 + k_1_x * _powf(r_d, 2.0));
-    float y_u = y_d * (1.0 + k_1_y * _powf(r_d, 2.0));
+    float x_u = x_d * (1.0 + k_1_x * _powf(r_d, 2.0) + k_2_x * _powf(r_d, 4.0));
+    float y_u = y_d * (1.0 + k_1_y * _powf(r_d, 2.0) + k_2_y * _powf(r_d, 4.0));
 
     // Transform x_u, y_u into new p_X_u, p_Y_u coordinates where the origin is in the top left
     float p_x_u_scaled = (x_u / aspect_ratio) + 0.5;
