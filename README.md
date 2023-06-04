@@ -76,6 +76,11 @@ Simply multiplies the input values by `2^x`, where `x` is the specified Exposure
 ### Parameters
 **Exposure (Stops)**: Exposure compensation to make in stops.
 
+
+## Merge Adjacent Fuse
+Simply sticks the foreground image to be adjacent to the background image, really quickly so that it doesn't require any work or the necessary three or four nodes. You can choose what direction the two images are concatenated.
+
+
 ## MTF Curve Fuse
 This is a higher quality version of the MTF Curve DCTL. Here, we provide 5 frequency bands in which the lower end number of line-pairs per mm can be specified, and the computation of the frequency bands is done in a higher quality way. Importantly, this Fuse requires that your input image is a Float16 or Float32 type image, and it works best on a Log state image. I do not recommend using it with a Linear state image, and I would also recommend clamping the input to be non-negative. This Fuse works using several different discrete frequency bands rather than via a fourier transform, but it largely gives good looking results regardless.
 

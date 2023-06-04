@@ -1,0 +1,77 @@
+FuRegisterClass("MergeAdjacent",
+    CT_Tool, {
+        REGS_Category = "Fuses\\Util",
+        REGS_OpIconString = "MrgAdj",
+        REGS_OpDescription = "Merges the foreground adjacent to the background."
+    }
+)
+
+function Create()
+    BackImage = self:AddInput("Background", "Background", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+    FrontImage = self:AddInput("Foreground", "Foreground", {
+        LINKID_DataType = "Image",
+        LINK_Main = 2,
+    })
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+
+    Direction = self:AddInput("Direction", "Direction", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ComboControl",
+        INP_Default = 0,
+        INP_Integer = true,
+        {CCS_AddString = "Right"},
+        {CCS_AddString = "Below"},
+        {CCS_AddString = "Left"},
+        {CCS_AddString = "Above"},
+    })
+end
+
+
+function Process(req)
+    local background = BackImage:GetValue(req)
+    local foreground = FrontImage:GetValue(req)
+    local direction = Direction:GetValue(req).Value
+
+    -- Compute new dimensions
+    local new_width, new_height
+    if direction == 1 or direction == 3 then
+        -- Above or below
+        new_width = math.max(background.Width, foreground.Width)
+        new_height = background.Height + foreground.Height
+    elseif direction == 0 or direction == 2 then
+        -- Left or Right
+        new_width = background.Width + foreground.Width
+        new_height = math.max(background.Height, foreground.Height)
+    end
+
+    local out_image = Image({IMG_Depth=background.Depth, IMG_Height = new_height, IMG_Width = new_width, IMAT_OriginalWidth=new_width, IMAT_OriginalHeight=new_height})
+    out_image:Fill(Pixel({R = 0, G = 0, B = 0, A = 0.0}))
+
+    -- Copy background and foreground images in.
+    if direction == 0 then
+        -- Right
+        out_image:Merge(background, {MO_EdgeMode="Canvas", MO_ApplyMode="Merge", MO_XOffset=(background.Width / 2.0) / new_width, MO_YOffset=0.5})
+        out_image:Merge(foreground, {MO_EdgeMode="Canvas", MO_ApplyMode="Merge", MO_XOffset=1.0 - ((foreground.Width / 2.0) / new_width), MO_YOffset=0.5})
+    elseif direction == 1 then
+        -- Below
+        out_image:Merge(background, {MO_EdgeMode="Canvas", MO_ApplyMode="Merge", MO_XOffset=0.5, MO_YOffset=1.0-((background.Height / 2.0) / new_height)})
+        out_image:Merge(foreground, {MO_EdgeMode="Canvas", MO_ApplyMode="Merge", MO_XOffset=0.5, MO_YOffset=((foreground.Height / 2.0) / new_height)})
+    elseif direction == 2 then
+        -- Left
+        out_image:Merge(background, {MO_EdgeMode="Canvas", MO_ApplyMode="Merge", MO_XOffset=1.0 - ((background.Width / 2.0) / new_width), MO_YOffset=0.5})
+        out_image:Merge(foreground, {MO_EdgeMode="Canvas", MO_ApplyMode="Merge", MO_XOffset=((foreground.Width / 2.0) / new_width), MO_YOffset=0.5})
+    elseif direction == 3 then
+        -- Above
+        out_image:Merge(background, {MO_EdgeMode="Canvas", MO_ApplyMode="Merge", MO_XOffset=0.5, MO_YOffset=((background.Height / 2.0) / new_height)})
+        out_image:Merge(foreground, {MO_EdgeMode="Canvas", MO_ApplyMode="Merge", MO_XOffset=0.5, MO_YOffset=1.0-((foreground.Height / 2.0) / new_height)})
+    end
+
+    OutImage:Set(req, out_image)
+
+end
