@@ -1,18 +1,17 @@
 DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 0, {TO_LEGAL, TO_FULL}, {Full to Legal, Legal to Full})
 DEFINE_UI_PARAMS(clip, Clip, DCTLUI_CHECK_BOX, 0)
 
-
 __DEVICE__ float convert_to_legal(float x) {
     float out = x;
-    out *= 940.0/1023.0;
-    out = 1.0 - (1.0 - out) * (1023.0 - 64.0)/1023.0;
+    out *= (940.0 - 64.0) / 1023.0;
+    out += 64.0 / 1023.0;
     return out;
 }
 
 __DEVICE__ float convert_to_full(float x) {
     float out = x;
-    out *= 1023.0/940.0;
-    out = 1.0 - (1.0 - out) * (1023.0/(1023.0-64.0));
+    out -= 64.0 / 1023.0;
+    out *= 1023.0 / (940.0 - 64.0);
     return out;
 }
 
@@ -21,22 +20,14 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 input_color = make_float3(p_R, p_G, p_B);
     float3 output_color;
     if (mode == TO_LEGAL) {
-        output_color = make_float3(
-            convert_to_legal(input_color.x),
-            convert_to_legal(input_color.y),
-            convert_to_legal(input_color.z)
-        );
+        output_color = make_float3(convert_to_legal(input_color.x), convert_to_legal(input_color.y), convert_to_legal(input_color.z));
         if (clip) {
-            output_color.x = _clampf(output_color.x, 64.0/1023, 940.0/1023);
-            output_color.y = _clampf(output_color.y, 64.0/1023, 940.0/1023);
-            output_color.z = _clampf(output_color.z, 64.0/1023, 940.0/1023);
+            output_color.x = _clampf(output_color.x, 64.0 / 1023, 940.0 / 1023);
+            output_color.y = _clampf(output_color.y, 64.0 / 1023, 940.0 / 1023);
+            output_color.z = _clampf(output_color.z, 64.0 / 1023, 940.0 / 1023);
         }
-    } else { //if (mode == TO_FULL) {
-        output_color = make_float3(
-            convert_to_full(input_color.x),
-            convert_to_full(input_color.y),
-            convert_to_full(input_color.z)
-        );
+    } else { // if (mode == TO_FULL) {
+        output_color = make_float3(convert_to_full(input_color.x), convert_to_full(input_color.y), convert_to_full(input_color.z));
         if (clip) {
             output_color.x = _clampf(output_color.x, 0.0, 1.0);
             output_color.y = _clampf(output_color.y, 0.0, 1.0);
