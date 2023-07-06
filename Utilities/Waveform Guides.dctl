@@ -1,17 +1,19 @@
+#line 2
 // clang-format off
 DEFINE_UI_PARAMS(minor_line_width, Minor Line Width, DCTLUI_SLIDER_FLOAT, 0.012, 0.0, 1.0, 0.01)
-DEFINE_UI_PARAMS(line_thickness, Line Thickness, DCTLUI_SLIDER_FLOAT, 0.004, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(line_thickness, Line Thickness, DCTLUI_SLIDER_FLOAT, 0.003, 0.0, 0.01, 0.01)
 DEFINE_UI_PARAMS(text_scale, Text Size, DCTLUI_SLIDER_FLOAT, 0.025, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(text_width, Margin for Text, DCTLUI_SLIDER_FLOAT, 0.04, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(num_repetitions, Graticule Brightness, DCTLUI_SLIDER_INT, 5, 1, 10, 1)
+DEFINE_UI_PARAMS(num_stops, Num Stops, DCTLUI_SLIDER_INT, 3, 1, 10, 1)
 DEFINE_UI_PARAMS(bt1886_lw, BT1886 White Point, DCTLUI_VALUE_BOX, 100)
-DEFINE_UI_PARAMS(bt1886_lb, BT1886 Black Point, DCTLUI_VALUE_BOX, 1)
+DEFINE_UI_PARAMS(bt1886_lb, BT1886 Black Point, DCTLUI_VALUE_BOX, 0)
 DEFINE_UI_PARAMS(bt1886_g, BT1886 Gamma, DCTLUI_VALUE_BOX, 2.4)
 
 DEFINE_UI_PARAMS(mid_gray, Mid Gray Nits, DCTLUI_VALUE_BOX, 18)
 
 DEFINE_UI_PARAMS(rescale_image, Rescale Mode, DCTLUI_COMBO_BOX, 1, {NONE, FILL, ASPECT}, {None, Fill, Aspect})
-DEFINE_UI_PARAMS(waveform_scale, Waveform Scale, DCTLUI_COMBO_BOX, 0, {GAMMA24_NITS, GAMMA24_STOPS, BT1886_NITS, BT1886_STOPS}, {Gamma 2.4 Nits, Gamma 2.4 Stops, BT.1886 Annex 1 Nits, BT.1886 Annex 1 Stops})
+DEFINE_UI_PARAMS(waveform_scale, Waveform Scale, DCTLUI_COMBO_BOX, 0, {BT1886_NITS, BT1886_STOPS, ST2084_NITS, ST2084_STOPS}, {BT.1886 Annex 1 Nits, BT.1886 Annex 1 Stops, ST.2084 Nits, ST.2084 Stops})
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {
@@ -220,6 +222,69 @@ draw_string(char str[], __PRIVATE__ char_trans_t* char_trans, __PRIVATE__ curr_p
     }
 }
 
+//////////////////////////
+// String manipulations //
+//////////////////////////
+__DEVICE__ void strcpy_idx(char str_src[], char str_dst[], int src_start_idx, int dst_start_idx, int num_chars) {
+    for (int i = 0; i < num_chars; ++i) {
+        str_dst[dst_start_idx + i] = str_src[src_start_idx + i];
+    }
+}
+
+__DEVICE__ int strlen(char a[]) {
+    int i = 0;
+    while (a[i] != '\0' && a[i] != 0) {
+        ++i;
+    }
+    return i;
+}
+
+__DEVICE__ void strcat(char a[], char b[], char dest[]) {
+    int len_a = strlen(a);
+    int len_b = strlen(b);
+    if (a != dest) {
+        strcpy_idx(a, dest, 0, 0, len_a);
+    }
+    strcpy_idx(b, dest, 0, len_a, len_b);
+    dest[len_a + len_b] = '\0';
+}
+
+__DEVICE__ char digit2char(int i) {
+    return (char)('0' + i);
+}
+
+
+__DEVICE__ void int2str(int f, char output[], int num_chars) {
+    int runner = 0;
+
+    // First char is neg sign, if necessary
+    char zero[] = "0";
+
+    if (f < 0) {
+        output[runner] = '-';
+        runner++;
+    }
+    if (f == 0) {
+        strcpy_idx(zero, output, 0, runner, strlen(zero));
+        // strcat(output, zero, output);
+        runner += strlen(zero);
+    } else {
+        // input is real number, print absolute value.
+        f = (int)_round(_fabs(f));
+        // num digits before decimal point
+        int left_digits = (int)(_log10f(f) + 1);
+
+        // Extract left digits
+        for (int i = left_digits; i > 0 && runner < num_chars; --i, ++runner) {
+            float base = _powf(10.0, i - 1);
+            int d = (int)_truncf(f / base);
+            f = _fmod(f, base);
+            output[runner] = digit2char(d);
+        }
+    }
+    output[runner] = '\0';
+}
+
 //////////////////////////////
 // DRAW RECT                //
 //////////////////////////////
@@ -268,6 +333,19 @@ __DEVICE__ float bt1886_nits_to_cv(float l, float lw, float lb, float gamma) {
     // L = a * _fmaxf((V + b), 0) ^ gamma
     float v = powf(l / a, 1.0 / gamma) - b;
     return v;
+}
+//////////////////////////////
+// ST2084 NITS              //
+//////////////////////////////
+__DEVICE__ float st2084_nits_to_cv(float n) {
+    // n is scaled so 1.0 is 100 nits.
+    float Y = n / 10000.0;  // scale 10k nits to 1.0
+    const float m1 = 2610.0 / 16384.0;
+    const float m2 = 128.0 * 2523.0 / 4096.0;
+    const float c2 = 32.0 * 2413.0 / 4096.0;
+    const float c3 = 32.0 * 2392.0 / 4096.0;
+    const float c1 = c3 - c2 + 1.0;
+    return powf((c1 + c2 * powf(Y, m1)) / (1.0 + c3 * powf(Y, m1)), m2);
 }
 
 #define copy_array(source, dest, num_entries)                                                                                              \
@@ -372,68 +450,66 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     int num_major_axes;
     int num_minor_axes;
-    float major_nits[10] = {};
-    char nits_names[10][10] = {};
-    float minor_nits[50] = {};
+    float major_nits[21] = {};
+    char nits_names[21][10] = {};
+    float minor_nits[100] = {};
 
-    if (waveform_scale == GAMMA24_NITS || waveform_scale == BT1886_NITS) {
-        num_major_axes = 5;
-        num_minor_axes = 41;
-        float major_nits2[5] = {0.0, 0.1, 1.0, 10.0, 100.0};
-        copy_array(major_nits2, major_nits, num_major_axes);
-        char nits_names2[5][10] = {"0", "0.1", "1", "10", "100"};
-        copy_2d_array(nits_names2, nits_names, num_major_axes, 10);
-        float minor_nits2[41] = {0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1,  0.2,  0.3,
-                                 0.4, 0.5,  0.6,  0.7,  0.8,  0.9,  1.0,  2.0,  3.0,  4.0,  5.0,  6.0,  7.0,
-                                 8.0, 9.0,  10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0};
-        copy_array(minor_nits2, minor_nits, num_minor_axes);
-    } else if (waveform_scale == GAMMA24_STOPS || waveform_scale == BT1886_STOPS) {
-        num_major_axes = 7;
-        num_minor_axes = 19;
-        float major_nits2[7] = {mid_gray * _exp2f(-3.0),
-                                mid_gray * _exp2f(-2.0),
-                                mid_gray * _exp2f(-1.0),
-                                mid_gray,
-                                mid_gray * _exp2f(1.0),
-                                mid_gray * _exp2f(2.0),
-                                mid_gray * _exp2f(3.0)};
-        copy_array(major_nits2, major_nits, num_major_axes);
-        char nits_names2[7][10] = {"-3", "-2", "-1", "MID", "1", "2", "3"};
-        copy_2d_array(nits_names2, nits_names, num_major_axes, 10);
-        float minor_nits2[19] = {mid_gray * _exp2f(-3.0),
-                                 mid_gray * _exp2f(-2.6666),
-                                 mid_gray * _exp2f(-2.3333),
-                                 mid_gray * _exp2f(-2.0),
-                                 mid_gray * _exp2f(-1.66666),
-                                 mid_gray * _exp2f(-1.33333),
-                                 mid_gray * _exp2f(-1.0),
-                                 mid_gray * _exp2f(-0.66666),
-                                 mid_gray * _exp2f(-0.33333),
-                                 mid_gray,
-                                 mid_gray * _exp2f(0.33333),
-                                 mid_gray * _exp2f(0.66666),
-                                 mid_gray * _exp2f(1.0),
-                                 mid_gray * _exp2f(1.33333),
-                                 mid_gray * _exp2f(1.66666),
-                                 mid_gray * _exp2f(2.0),
-                                 mid_gray * _exp2f(2.33333),
-                                 mid_gray * _exp2f(2.66666),
-                                 mid_gray * _exp2f(3.0)};
-        copy_array(minor_nits2, minor_nits, num_minor_axes);
+    if (waveform_scale == BT1886_NITS || waveform_scale == ST2084_NITS) {
+        float max_nits;
+        if (waveform_scale == ST2084_NITS) {
+            max_nits = 10000.0;
+        } else if (waveform_scale == BT1886_NITS) {
+            max_nits = bt1886_lw;
+        }
+
+        num_major_axes = 0;
+        num_minor_axes = 0;
+        for (int nits = 0, next_nits = 0, j = 0; nits <= max_nits; ++j, ++num_major_axes) {
+            major_nits[j] = nits;
+            int2str(nits, nits_names[j], 6);
+            if (nits == 0) {
+                next_nits = 1;
+            } else {
+                next_nits = nits * 10;
+            }
+            for (int k = 0; k < 10; ++k, ++num_minor_axes) {
+                minor_nits[j * 10 + k] = (next_nits / 10.0) * k;
+            }
+            nits = next_nits;
+        }
+    } else if (waveform_scale == BT1886_STOPS || waveform_scale == ST2084_STOPS) {
+        num_major_axes = 1 + (num_stops * 2);
+        num_minor_axes = 1 + (num_stops * 3 * 2);
+        for (int stop = -1 * num_stops, j = 0; stop <= num_stops; ++stop, ++j) {
+            major_nits[j] = mid_gray * _exp2f(stop);
+            if (stop == 0) {
+                char mid_str[4] = "MID";
+                strcpy_idx(mid_str, nits_names[j], 0, 0, 4);
+            } else {
+                int2str(stop, nits_names[j], 4);
+            }
+            int substeps = 3;
+            if (stop == num_stops) {
+                substeps = 1;
+            }
+            for (int k = 0; k < substeps; ++k) {
+                minor_nits[j*3 + k] = mid_gray * _exp2f(stop + (k * 0.33333333));
+            }
+        }
     }
-    if (waveform_scale == GAMMA24_NITS || waveform_scale == GAMMA24_STOPS) {
-        for (int i = 0; i < num_major_axes; ++i) {
-            major_nits[i] = gamma_24_nits_to_cv(major_nits[i]);
-        }
-        for (int i = 0; i < num_minor_axes; ++i) {
-            minor_nits[i] = gamma_24_nits_to_cv(minor_nits[i]);
-        }
-    } else if (waveform_scale == BT1886_NITS || waveform_scale == BT1886_STOPS) {
+    if (waveform_scale == BT1886_NITS || waveform_scale == BT1886_STOPS) {
         for (int i = 0; i < num_major_axes; ++i) {
             major_nits[i] = bt1886_nits_to_cv(major_nits[i], bt1886_lw, bt1886_lb, bt1886_g);
         }
         for (int i = 0; i < num_minor_axes; ++i) {
             minor_nits[i] = bt1886_nits_to_cv(minor_nits[i], bt1886_lw, bt1886_lb, bt1886_g);
+        }
+    } else if (waveform_scale == ST2084_NITS || waveform_scale == ST2084_STOPS) {
+        for (int i = 0; i < num_major_axes; ++i) {
+            major_nits[i] = st2084_nits_to_cv(major_nits[i]);
+        }
+        for (int i = 0; i < num_minor_axes; ++i) {
+            minor_nits[i] = st2084_nits_to_cv(minor_nits[i]);
         }
     }
 

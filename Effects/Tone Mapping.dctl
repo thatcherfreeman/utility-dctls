@@ -29,18 +29,20 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     float3 out = make_float3(p_R, p_G, p_B);
+    out *= mid_gray_out / mid_gray_in;
+
     // Constraint 1: h(0) = black_point
     float c = black_point;
     // Constraint 2: h(infty) = white_point
     float a = white_point - c;
-    // Constraint 3: h(mid) = mid
-    float b = (a / (mid_gray_out - c)) * (1.0 - ((mid_gray_out - c) / a)) * mid_gray_in;
-    // Constraint 4: h'(mid) = target_slope
-    float gamma = target_slope * powf((mid_gray_in + b), 2.0) / (a * b);
+    // Constraint 3: h(mid_out) = mid_out
+    float b = (a / (mid_gray_out - c)) * (1.0 - ((mid_gray_out - c) / a)) * mid_gray_out;
+    // Constraint 4: h'(mid_out) = target_slope
+    float gamma = target_slope * powf((mid_gray_out + b), 2.0) / (a * b);
 
     // h(x) = g(m_i * ((x/m_i)**gamma))
-    out.x = rolloff_function(contrast(out.x, mid_gray_in, gamma), a, b, c);
-    out.y = rolloff_function(contrast(out.y, mid_gray_in, gamma), a, b, c);
-    out.z = rolloff_function(contrast(out.z, mid_gray_in, gamma), a, b, c);
+    out.x = rolloff_function(contrast(out.x, mid_gray_out, gamma), a, b, c);
+    out.y = rolloff_function(contrast(out.y, mid_gray_out, gamma), a, b, c);
+    out.z = rolloff_function(contrast(out.z, mid_gray_out, gamma), a, b, c);
     return out;
 }

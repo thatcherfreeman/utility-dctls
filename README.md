@@ -915,7 +915,7 @@ Applies a sigmoid function to compress highlights. Attempts to target a specific
 The DCTL computes the $h(x)$, where: $h(x) = g(m_i(x/m_i)^\gamma)$ and $g(x) = a\frac{x}{x+b} + c$. The parameters $a, b, c, \gamma$ are selected for you based on the specified white point, black point, and target slope, and input/output mid gray points.
 
 ### DCTL Parameters
-**Target Slope**: Linear slope at mid gray. $\gamma$ is selected so that $h'(m) = \text{target slope}$.
+**Target Slope**: Linear slope at the output mid gray. $\gamma$ is selected so that $h'(m) = \text{target slope}$.
 
 **White Point**: Maximum output, typically 1.0 corresponds to 100 nits, and $h(x)$ will asymptotically approach this value as $x \rightarrow \infty$.
 
@@ -963,9 +963,11 @@ Adds a border to the image and draws on the border so that the luma waveform has
 
 **Graticule Brightness**: Allows you to increase the brightness of the drawn graticule by repeating the drawn lines and characters.
 
+**Num Stops**: Indicates how many stops of lines to show when you have ST2084 Stops or Bt1886 Stops selected as the Waveform Scale.
+
 **BT1886 White Point**: If BT.1886 Annex 1 is selected as the Waveform scale, this controls the white point parameter, specified by $L_W$ in the official recommendation.
 
-**BT1886 Black Point**: If BT.1886 Annex 1 is selected as the Waveform scale, this controls the black point parameter, specified by $L_B$ in the official recommendation. If set to 0, then this is effectively just a gamma function.
+**BT1886 Black Point**: If BT.1886 Annex 1 is selected as the Waveform scale, this controls the black point parameter, specified by $L_B$ in the official recommendation. If set to 0, then this is just a gamma function.
 
 **BT1886 Gamma**: Specifies the gamma curve, the recommendation says to fix this at 2.4.
 
@@ -973,4 +975,4 @@ Adds a border to the image and draws on the border so that the luma waveform has
 
 **Rescale Mode**: Choose from None, Fill, or Aspect. As the drawn stuff in the margins changes the remaining space in the viewer, this chooses whether to just crop in on the iamge (None), to scale the image to fill the remaining space (Fill), or to scale the image while preserving its aspect ratio.
 
-**Waveform Scale**: Choose how the horizontal guides in the waveform are calculated. If Gamma2.4 is selected, it's equivalent to BT.1886 Annex 1 with $L_W = 100$, $L_B = 0.0$, and $\gamma = 2.4$. If you choose the ones that end in "Stops", then the vertical units are in stops above/below mid gray, and if you choose "Nits", then the units are in nits assuming that your display is calibrated for the specified function.
+**Waveform Scale**: Choose how the horizontal guides in the waveform are calculated. If you choose the ones that end in "Stops", then the vertical units are in stops above/below mid gray, and if you choose "Nits", then the units are in nits assuming that your display is calibrated for the specified function.
