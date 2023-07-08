@@ -70,7 +70,7 @@ __DEVICE__ float3 rgb_to_spherical(float3 x) {
     float3 out = make_float3(0.0, 0.0, 0.0);
     out.x = norm_f3(rotated_color);
     out.y = theta < 0.0 ? theta + 1.0 : theta;
-    out.z = _atan2f(norm_f3(make_float3(rotated_color.y, rotated_color.z, 0.0)), rotated_color.x) / (0.5 * PI);
+    out.z = _atan2f(norm_f3(make_float3(rotated_color.y, rotated_color.z, 0.0)), rotated_color.x) / (0.25 * PI);
     return out;
 }
 
@@ -85,7 +85,7 @@ __DEVICE__ float3 spherical_to_rgb(float3 in) {
         rot_mat_inv, unit_vec(cross_product(red_axis, achromatic)), _acosf(dot_product(red_axis, unit_vec(achromatic))));
     make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0 * PI / 4.0);
 
-    float3 in_rads = make_float3(in.x, (in.y > 0.5 ? in.y - 1.0 : in.y) * 2.0 * PI, in.z * 0.5 * PI);
+    float3 in_rads = make_float3(in.x, (in.y > 0.5 ? in.y - 1.0 : in.y) * 2.0 * PI, in.z * 0.25 * PI);
 
     float3 direction = make_float3(1.0, 1.0, 1.0);
     direction.x = in_rads.x * _cosf(in_rads.z);
