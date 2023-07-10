@@ -739,20 +739,23 @@ Simulates electronic noise from your camera or film stock. Given a linear signal
 **Seed Position X/Y**: Indicates which pixel is pulled from the frame in order to get the seed for the noise. Make sure this pixel changes over time for noise to not be fixed.
 
 
-## RGB Chips
-Creates three columns of RGB chips, and optionally CMY and Luminance chips. When the RGB mixer (or any other operation) is used, the extent to which channels have been mixed will be visible in the RGB Parade. Outputs a Linear image.
+## RGB Chips DCTL
+Creates rows of colored chips at the specified increment of stops. Outputs a Linear image. This is useful in evaluating tone mapping and the "Notorious Six" problem where overexposed pure colors get mapped to pure RGBCMY primaries rather than preserving their hue.
 
 ### DCTL Parameters
-**Number of Steps**: Number of different luminances to display for each chip. Each chip is one stop apart (in linear).
+**Stops between Chips**: Stops of light between columns
 
-**Exposure**: Amount of gain to be applied to the image, in stops.
+**Saturation**: HSV Saturation of the chips.
 
-**Show RGB Colors**: Displays Red, Green, and Blue charts.
+**Number of Hues**: Number of rows with different hues. Set this to 3 if you want pure RGB chips, set to 6 if you want RGB CMY chips. Increase if you want more granularity.
 
-**Show CMY Colors**: Displays Cyan, Magenta, and Yellow charts.
+**Number of Chips**: Number of columns to generate, each is `Stops between Chips` higher or lower than the adjacent ones.
 
-**Show Luminance**: Displays an additionall luminance chart.
+**Mid Gray**: Indicates the value that will be assigned to the middle chip.
 
+**Continuous**: Runs a smooth hue and exposure ramp instead of discretizing the chips.
+
+**Gray Ramp**: Adds a gray ramp to the top of the frame.
 
 ## RGB Linear Contrast DCTL
 Applies a power function to the RGB channels, keeping 0.18 unchanged. This DCTL expects a scene linear image.

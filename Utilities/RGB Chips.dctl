@@ -1,64 +1,55 @@
-DEFINE_UI_PARAMS(num_steps, Number of Steps, DCTLUI_SLIDER_INT, 7, 1, 32, 1)
-DEFINE_UI_PARAMS(exp, Exposure, DCTLUI_SLIDER_FLOAT, 0.0, -8.0, 8.0, 0.1)
-DEFINE_UI_PARAMS(show_rgb, Show RGB Colors, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(show_cmy, Show CMY Colors, DCTLUI_CHECK_BOX, 0)
-DEFINE_UI_PARAMS(show_lum, Show Luminance, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(num_hues, Number of Hues, DCTLUI_SLIDER_INT, 36, 3, 72, 1)
+DEFINE_UI_PARAMS(num_stops, Number of Chips, DCTLUI_SLIDER_INT, 24, 1, 100, 1)
+DEFINE_UI_PARAMS(increment_size, Stops Between Chips, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
+DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(continuous, Continuous, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(gray_ramp, Gray Ramp, DCTLUI_CHECK_BOX, 0)
 
-
-__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
-    float x = (float) p_X / p_Width;
-    float y = (float) p_Y / p_Height;
-    float step_width = 1.0f / num_steps;
-    float3 output_color;
-
-    int curr_step = (int) (y / step_width);
-    float val = _exp2f(exp) * _exp2f((float) -1.0f * curr_step);
-
-    int num_chips = 0;
-    if (show_rgb) {
-        num_chips += 3;
+__DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
+    // assume hue is in degrees
+    hue = _fmod(hue, 360.0);
+    float c = val * sat;
+    float x = c * (1.0 - _fabs(_fmod(hue / 60.0, 2.0) - 1.0));
+    float m = val - c;
+    float3 rgbp;
+    if (0.0 <= hue && hue < 60.0) {
+        rgbp = make_float3(c, x, 0.0);
+    } else if (60.0 <= hue && hue < 120.0) {
+        rgbp = make_float3(x, c, 0.0);
+    } else if (120.0 <= hue && hue < 180.0) {
+        rgbp = make_float3(0.0, c, x);
+    } else if (180.0 <= hue && hue < 240.0) {
+        rgbp = make_float3(0.0, x, c);
+    } else if (240.0 <= hue && hue < 300.0) {
+        rgbp = make_float3(x, 0.0, c);
+    } else { // if (300.0 < hue && hue < 360.0) {
+        rgbp = make_float3(c, 0.0, x);
     }
-    if (show_cmy) {
-        num_chips += 3;
-    }
-    if (show_lum) {
-        num_chips += 1;
-    }
+    return rgbp + m;
+}
 
-    float chip_width = 1.0f / num_chips;
 
-    int curr_chip_num = _floorf(x / chip_width);
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float x = (float) p_X / (float) p_Width;
+    float y = (float) p_Y / (float) p_Height;
 
-    if (show_rgb) {
-        if (curr_chip_num == (show_cmy + 1) * 0) {
-            output_color = make_float3(val, 0.0f, 0.0f);
-        } else if (curr_chip_num == (show_cmy + 1) * 1) {
-            output_color = make_float3(0.0f, val, 0.0f);
-        } else if (curr_chip_num == (show_cmy + 1) * 2) {
-            output_color = make_float3(0.0f, 0.0f, val);
-        }
-    }
-
-    if (show_cmy) {
-        if (curr_chip_num == (show_rgb + 1) * 0 + show_rgb) {
-            output_color = make_float3(val, val, 0.0f);
-        } else if (curr_chip_num == (show_rgb + 1) * 1 + show_rgb) {
-            output_color = make_float3(0.0f, val, val);
-        } else if (curr_chip_num == (show_rgb + 1) * 2 + show_rgb) {
-            output_color = make_float3(val, 0.0f, val);
-        }
-
+    float curr_row, curr_col;
+    if (continuous) {
+        curr_row = y * (num_hues + gray_ramp) - gray_ramp;
+        curr_col = (x - 0.5) * num_stops;
+    } else {
+        curr_row = _floorf(y * (num_hues + gray_ramp)) - gray_ramp;
+        curr_col = _round((x - 0.5) * num_stops);
     }
 
-    if (show_lum && curr_chip_num == num_chips - 1) {
-        // Luminance is the last color chip
-        output_color = make_float3(val, val, val);
-    }
+    float3 rgb;
+    if (gray_ramp && curr_row < 0) {
+        rgb = hsv_to_rgb(0.0, 0.0, _exp2f(curr_col * increment_size) * mid_gray);
+    } else {
+        rgb = hsv_to_rgb((curr_row / num_hues) * 360.0, saturation, _exp2f(curr_col * increment_size) * mid_gray);
 
-    if (num_chips == 0) {
-        // Just do middle gray I guess.
-        output_color = make_float3(0.18f, 0.18f, 0.18f);
     }
-
-    return output_color;
+    return rgb;
 }
