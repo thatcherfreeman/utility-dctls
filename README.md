@@ -866,7 +866,7 @@ Converts between RGB and a spherical color space. Outputs a 3-channel image, $(\
 
 
 ## Subtractive Saturation DCTL
-Computes saturation in a way that adds "density" to more saturated colors, making them darker.
+Computes saturation in a way that adds "density" to more saturated colors, making them darker. Expects a Linear image.
 
 ### How it works
 Suppose a pixel is a color `input`. The DCTL will first compute a `Value` (IE luminance) of that pixel using one of many methods, and from there it can compute the input's `Color` by taking `input / Value`. The color is saturated or desaturated using the Gamma controls (we raise each channel of the `Color` to a power). From there, we multiply the `Color` by a different luminance called `Density` that's calculated using the method specified by the second dropdown menu. The result is scaled so that white is preserved.
