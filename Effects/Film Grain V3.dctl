@@ -1,0 +1,387 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(dmax, D Max, DCTLUI_VALUE_BOX, 4.0)
+DEFINE_UI_PARAMS(dmin, D Min, DCTLUI_VALUE_BOX, 0.01)
+DEFINE_UI_PARAMS(gamma, Film Gamma, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(mid_gray_in, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(width_mm, Format Width mm, DCTLUI_VALUE_BOX, 24)
+// For context, color dye clouds are 10-25 um, silver is 0.2-2.0 um.
+DEFINE_UI_PARAMS(grain_size, Grain Size um, DCTLUI_VALUE_BOX, 3)
+DEFINE_UI_PARAMS(seed_position_x, Seed Position X, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(seed_position_y, Seed Position Y, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(debug_mode, Debug Mode, DCTLUI_COMBO_BOX, 0, {NONE, DEBUG_TRANSMITTANCE, DEBUG_TARGET_TRANSMITTANCE, DEBUG_PRINTER_LIGHT, DEBUG_CACHE}, {None, Output Transmittance, Ouput Target Transmittance, Output Printer Light, Cache})
+// clang-format on
+
+/////////////////////////////////////////////
+// PDFs and CDFs
+/////////////////////////////////////////////
+
+__DEVICE__ float standard_norm_cdf(float z) {
+    // Approximation of Normal CDF function with mean 0 and var 1.
+    const float k = _sqrtf(2.0 / 3.1415926535);
+    float output = 1.0 / (1.0 + _expf(-2.0 * k * z));
+    return output;
+}
+
+__DEVICE__ float norm_cdf(float z, float mean, float var) {
+    float output = standard_norm_cdf((z - mean) / _sqrtf(var));
+    return output;
+}
+
+__DEVICE__ float standard_norm_inv_cdf(float z) {
+    // Approximation from "Very Simply Explicitly Invertible Approximations of
+    // Normal Cumulative and Normal Quantile Function" by Alessandro Soranzo
+
+    // CDF
+    // float out = _powf(2.0, -1.0 * _powf(22, 1 - _powf(41, z / 10.0)));
+    float abs_z = _fabs(z - 0.5) + 0.5;
+    float out = 10.0 / _logf(41.0) * _logf(1.0 - (_logf((-1.0 * _logf(abs_z)) / _logf(2.0))) / _logf(22.0));
+    if (abs_z >= 0.995) {
+        out = 2.5758;
+    }
+
+    if (z <= 0.5) {
+        out *= -1.0;
+    }
+    return out;
+}
+
+__DEVICE__ float norm_inv_cdf(float z, float mean, float var) {
+    float out = standard_norm_inv_cdf(z) * _sqrtf(var) + mean;
+    return out;
+}
+
+__DEVICE__ float norm_pdf(float z, float mean, float var) {
+    float out = _expf(-0.5 * _exp2f((z - mean)) / var);
+    out *= 1.0 / (_sqrtf(2.0 * 3.1415926535 * var));
+    return out;
+}
+
+__DEVICE__ float poisson_cdf(float z, float lambda) {
+    // Approximate poisson distribution with normal distribution
+    float output = norm_cdf(z, lambda, lambda);
+    return output;
+}
+
+__DEVICE__ float binomial_cdf(float z, float n, float p) {
+    float out = norm_cdf(z, n * p, n * p * (1.0 - p));
+    return out;
+}
+
+/////////////////////////////////////////////
+// Random Number Generator
+/////////////////////////////////////////////
+
+typedef ulong rand_state;
+
+__DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
+    rand_state x = *seed;
+    x ^= (x << 13 | x >> 19);
+    x ^= (x >> 7 | x << 25);
+    x ^= (x << 15 | x >> 15);
+    *seed = x;
+    return (((float)x) / (float)(~((rand_state)0)));
+}
+
+__DEVICE__ inline float randu(__PRIVATE__ rand_state* seed) {
+    return _randu_xorshift(seed);
+}
+
+/////////////////////////////////////////////
+// Distribution Sampling functions
+/////////////////////////////////////////////
+
+__DEVICE__ float sample_uniform(float a, float b, __PRIVATE__ rand_state* seed) {
+    float range = b - a;
+    float x = randu(seed);
+    return a + range * x;
+}
+
+__DEVICE__ float sample_norm(float mean, float var, __PRIVATE__ rand_state* seed) {
+    float u_sample = randu(seed);
+    float out = norm_inv_cdf(u_sample, mean, var);
+    return out;
+}
+
+__DEVICE__ float sample_poisson(float lambda, __PRIVATE__ rand_state* seed) {
+    // approximate just using normal distribution.
+    float sample = sample_norm(lambda, lambda, seed);
+    return _fmaxf(0.001, sample);
+}
+
+__DEVICE__ float sample_bernoulli(float p, __PRIVATE__ rand_state* seed) {
+    float sample = randu(seed);
+    float out = 0.0;
+    if (sample <= p) {
+        out = 1.0;
+    }
+    return out;
+}
+
+__DEVICE__ float sample_binomial_continuous(float n, float p, __PRIVATE__ rand_state* seed) {
+    float cont_sample = sample_norm(n * p, n * p * (1.0 - p), seed);
+    return cont_sample;
+}
+
+__DEVICE__ float sample_binomial(float n, float p, __PRIVATE__ rand_state* seed) {
+    // Approximation of binomial distribution using a normal distribution
+    // requires that n * p  and n * (1 - p) is bigger than like 5.
+    float cont_sample = sample_binomial_continuous(n, p, seed);
+    float out = _round(cont_sample);
+    return out;
+}
+
+__DEVICE__ rand_state warmup_rng_state(rand_state initial_state, int pos) {
+    rand_state state_value = initial_state;
+    state_value ^= (pos) << 5;
+    float val;
+    val = randu(&state_value);
+    val = randu(&state_value);
+    val = randu(&state_value);
+    val = randu(&state_value);
+    state_value = *((__PRIVATE__ rand_state*)&val);
+    return state_value;
+}
+
+/////////////////////////////////////////////
+// Utilities for float3
+/////////////////////////////////////////////
+
+__DEVICE__ inline float3 powf3(float3 base, float gamma) {
+    float3 output = make_float3(_powf(base.x, gamma), _powf(base.y, gamma), _powf(base.z, gamma));
+    return output;
+}
+
+////////////////////////////////////////////
+// Density
+////////////////////////////////////////////
+typedef struct {
+        float mid_gray_in;
+        float dmin;
+        float dmax;
+        float gamma;
+} curve_params_t;
+
+__DEVICE__ float characteristic_curve(float logexp, curve_params_t params) {
+    // Assume sigmoid shaped curve.
+    // float dmid = (params.dmin + params.dmax) / 2.0;
+    float log_mid = _log10f(params.mid_gray_in);
+    // need to map log_mid to dmid
+    float exposure_offset = -1.0 * log_mid;
+    float c = params.gamma * (4.0 / ((params.dmax - params.dmin) * _logf(10.0)));
+    float out = (params.dmax - params.dmin) * (1.0 / (1 + _powf(10.0, -1.0 * c * (logexp + exposure_offset)))) + params.dmin;
+    return out;
+}
+
+__DEVICE__ float linear_to_target_transmittance(float l, curve_params_t params) {
+    float logexp = _log10f(l);
+    float density = characteristic_curve(logexp, params);
+    float transmittance = _powf(10.0, -1.0 * density);
+    return transmittance;
+}
+
+////////////////////////////////////////////
+// Position/Dimension
+////////////////////////////////////////////
+typedef struct {
+        int width_px;
+        int height_px;
+        float width_mm;
+        float height_mm;
+        float pixel_width_mm;
+        float pixel_height_mm;
+} dimensions_params_t;
+
+typedef struct {
+        int x_px;
+        int y_px;
+        float x_mm; // coordinates of top left corner of pixel
+        float y_mm;
+        float center_x_mm; // coordinates of center of pixel
+        float center_y_mm;
+        float pixel_width_mm;
+        float pixel_height_mm;
+} curr_pos_t;
+
+__DEVICE__ curr_pos_t compute_curr_pos(int p_X, int p_Y, dimensions_params_t dimensions) {
+    curr_pos_t curr_pos = {};
+    curr_pos.x_px = p_X;
+    curr_pos.y_px = p_Y;
+    curr_pos.x_mm = (float)p_X * dimensions.width_mm / dimensions.width_px;
+    curr_pos.y_mm = (float)p_Y * dimensions.height_mm / dimensions.height_px;
+    curr_pos.center_x_mm = curr_pos.x_mm + dimensions.pixel_width_mm / 2.0;
+    curr_pos.center_y_mm = curr_pos.y_mm + dimensions.pixel_height_mm / 2.0;
+    curr_pos.pixel_width_mm = dimensions.pixel_width_mm;
+    curr_pos.pixel_height_mm = dimensions.pixel_height_mm;
+    return curr_pos;
+}
+
+// Region of Interest, bounding box of all positions that could contain a grain that overlaps with curr_pos.
+typedef struct {
+        float grain_rad_mm;
+        // Top left coordinates
+        float x0_mm;
+        float y0_mm;
+        // bottom right coordinates
+        float x1_mm;
+        float y1_mm;
+} roi_t;
+
+typedef struct {
+        int x0_px; // inclusive
+        int y0_px;
+        int x1_px; // exclusive
+        int y1_px;
+} pixel_roi_t;
+
+__DEVICE__ roi_t get_region_of_interest(float2 curr_pos_mm, dimensions_params_t dimensions, float max_grain_rad_mm) {
+    roi_t roi = {};
+    roi.grain_rad_mm = max_grain_rad_mm;
+    roi.x0_mm = curr_pos_mm.x - max_grain_rad_mm;
+    roi.y0_mm = curr_pos_mm.y - max_grain_rad_mm;
+    roi.x1_mm = curr_pos_mm.x + max_grain_rad_mm;
+    roi.y1_mm = curr_pos_mm.y + max_grain_rad_mm;
+    return roi;
+}
+
+__DEVICE__ pixel_roi_t get_covering_pixels(roi_t roi, dimensions_params_t dimensions) {
+    pixel_roi_t p_roi = {};
+    p_roi.x0_px = (int)_floorf(roi.x0_mm / dimensions.pixel_width_mm);
+    p_roi.y0_px = (int)_floorf(roi.y0_mm / dimensions.pixel_height_mm);
+    p_roi.x1_px = (int)_ceilf(roi.x1_mm / dimensions.pixel_width_mm);
+    p_roi.y1_px = (int)_ceilf(roi.y1_mm / dimensions.pixel_height_mm);
+    return p_roi;
+}
+
+__DEVICE__ roi_t get_region_of_interest_whole_pixel(curr_pos_t curr_pos, float max_grain_rad_mm) {
+    roi_t roi = {};
+    roi.grain_rad_mm = max_grain_rad_mm;
+    roi.x0_mm = curr_pos.x_mm - max_grain_rad_mm;
+    roi.y0_mm = curr_pos.y_mm - max_grain_rad_mm;
+    roi.x1_mm = curr_pos.x_mm + curr_pos.pixel_width_mm + max_grain_rad_mm;
+    roi.y1_mm = curr_pos.y_mm + curr_pos.pixel_height_mm + max_grain_rad_mm;
+    return roi;
+}
+
+////////////////////////////////////////////
+// Grains
+////////////////////////////////////////////
+
+#define MAX_GRAINS 100
+#define NUM_RAYS 10
+#define PI 3.14159265358979
+#define MAX_CACHED_PIXELS 64
+#define NUM_CHANNELS 3
+
+typedef struct {
+        float value;
+        int valid; // 0 if invalid, 1 if valid.
+} cache_entry_t;
+
+__DEVICE__ float
+tex2d_cached(int channel, __TEXTURE__ texs[NUM_CHANNELS], int x, int y, pixel_roi_t p_roi, cache_entry_t cache[][NUM_CHANNELS]) {
+    int roi_width = p_roi.x1_px - p_roi.x0_px;
+    int cache_idx = ((y - p_roi.y0_px) * roi_width + (x - p_roi.x0_px));
+    if (cache_idx >= MAX_CACHED_PIXELS || cache_idx < 0) {
+        // This is bad!
+        return -1.0;
+    }
+    int cache_line = cache_idx % MAX_CACHED_PIXELS;
+    cache_entry_t cached_value = cache[cache_line][channel];
+    if (cached_value.valid == 0) {
+        cached_value.value = _tex2D(texs[channel], x, y);
+        cached_value.valid = 1;
+        cache[cache_line][channel] = cached_value;
+    }
+    return cached_value.value;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    // Warm up RNG
+    float seed = _tex2D(p_TexR, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height));
+    seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0;
+    seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0;
+    rand_state global_initial_state = *((__PRIVATE__ rand_state*)&seed);
+    global_initial_state ^= p_Width * p_Height;
+
+    rand_state curr_pixel_initial_state = global_initial_state;
+    __PRIVATE__ rand_state* state = &curr_pixel_initial_state;
+    *state = warmup_rng_state(curr_pixel_initial_state, p_Width * p_Y + p_X);
+
+    // Image position/dimension stuff.
+    float aspect = (float)p_Width / (float)p_Height;
+    float height_mm = width_mm / aspect;
+    dimensions_params_t img_dimensions = {p_Width, p_Height, width_mm, height_mm, width_mm / p_Width, height_mm / p_Height};
+    curr_pos_t curr_pos = compute_curr_pos(p_X, p_Y, img_dimensions);
+    float grain_rad_mm = grain_size / 1000.0 / 2.0;
+
+    // Compute target transmittance from the current pixel.
+    float3 input_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+    curve_params_t cc_params = {mid_gray_in, dmin, dmax, gamma};
+
+    float3 target_transmittance = make_float3(linear_to_target_transmittance(input_color.x, cc_params),
+                                              linear_to_target_transmittance(input_color.y, cc_params),
+                                              linear_to_target_transmittance(input_color.z, cc_params));
+    float mid_gray_out = linear_to_target_transmittance(mid_gray_in, cc_params);
+    float output_exposure_adjustment = mid_gray_in / mid_gray_out;
+
+    // Monte carlo simulation, basically copied from the paper.
+    float monte_carlo_results[NUM_CHANNELS] = {0.0, 0.0, 0.0};
+    roi_t roi = get_region_of_interest_whole_pixel(curr_pos, grain_rad_mm);
+    pixel_roi_t p_roi = get_covering_pixels(roi, img_dimensions);
+    cache_entry_t cached_target_transmittances[MAX_CACHED_PIXELS][NUM_CHANNELS] = {};
+    __TEXTURE__ texs[NUM_CHANNELS] = {p_TexR, p_TexG, p_TexB};
+
+    for (int k = 0; k < NUM_RAYS; ++k) {
+        float var = _powf(img_dimensions.pixel_width_mm / 4.0, 2.0);
+        float2 sample_position_mm = make_float2(sample_norm(curr_pos.center_x_mm, _powf(img_dimensions.pixel_width_mm / 4.0, 2.0), state),
+                                                sample_norm(curr_pos.center_y_mm, _powf(img_dimensions.pixel_width_mm / 4.0, 2.0), state));
+
+        for (int channel = 0; channel < NUM_CHANNELS; ++channel) {
+            int ray_hit = 0;
+            for (int x_runner = p_roi.x0_px; x_runner < p_roi.x1_px && ray_hit == 0; ++x_runner) {
+                for (int y_runner = p_roi.y0_px; y_runner < p_roi.y1_px && ray_hit == 0; ++y_runner) {
+                    curr_pos_t px_pos = compute_curr_pos(x_runner, y_runner, img_dimensions);
+                    float curr_pixel_linear = tex2d_cached(channel, texs, x_runner, y_runner, p_roi, cached_target_transmittances);
+                    float curr_pixel_transmittance = linear_to_target_transmittance(curr_pixel_linear, cc_params);
+                    // TODO: Skip border pixels.
+
+                    rand_state px_seed = warmup_rng_state(global_initial_state, (p_Width * y_runner + x_runner) * NUM_CHANNELS + channel);
+                    float lambda = _logf(curr_pixel_transmittance) * (-1.0) *
+                                   (img_dimensions.pixel_width_mm * img_dimensions.pixel_height_mm) / (PI * grain_rad_mm * grain_rad_mm);
+                    int num_grains = (int)_ceilf(sample_poisson(lambda, &px_seed));
+                    num_grains = (int)_fminf((float)num_grains, (float)MAX_GRAINS);
+                    num_grains = lambda;
+
+                    for (int l = 0; l < num_grains && ray_hit == 0; ++l) {
+                        float2 grain_pos_mm = make_float2(sample_uniform(px_pos.x_mm, px_pos.x_mm + px_pos.pixel_width_mm, &px_seed),
+                                                         sample_uniform(px_pos.y_mm, px_pos.y_mm + px_pos.pixel_height_mm,
+                                                         &px_seed));
+                        if (_hypotf(sample_position_mm.x - grain_pos_mm.x, sample_position_mm.y - grain_pos_mm.y) < grain_rad_mm) {
+                            monte_carlo_results[channel] += 1;
+                            ray_hit = 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    float3 measured_mc_result = make_float3(monte_carlo_results[0], monte_carlo_results[1], monte_carlo_results[2]);
+    float3 estimated_transmittance = 1.0 - (measured_mc_result / NUM_RAYS);
+
+    float3 output_color = estimated_transmittance;
+    // Debug stuff.
+    if (debug_mode == DEBUG_TARGET_TRANSMITTANCE) {
+        return target_transmittance;
+    } else if (debug_mode == DEBUG_PRINTER_LIGHT) {
+        return target_transmittance * output_exposure_adjustment;
+    } else if (debug_mode == DEBUG_TRANSMITTANCE) {
+        return output_color;
+    } else if (debug_mode == DEBUG_CACHE) {
+        float value = tex2d_cached(0, texs, p_roi.x0_px, p_roi.y0_px, p_roi, cached_target_transmittances);
+        return make_float3(value, value, value);
+    }
+    return output_color * output_exposure_adjustment;
+}
