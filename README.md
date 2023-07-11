@@ -6,6 +6,7 @@ These are DCTLs that I have developed.
     - [Contents](#contents)
 - [Installation](#installation)
 - [The Fuses](#the-fuses)
+    - [Fuses](#fuses)
         - [DCTL Interpreter](#dctl-interpreter)
         - [FrameAvg Fuse](#frameavg-fuse)
         - [HDR Blending Fuse](#hdr-blending-fuse)
@@ -101,6 +102,8 @@ If a DCTL is not working, you can usually find logs in these directories. If you
 **Windows**: `C:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\logs\davinci_resolve.log` or `[Your user directory]\AppData\Blackmagic Design\DaVinci Resolve\Support\logs\davinci_resolve.log`
 
 # The Fuses
+
+## Fuses
 
 ### DCTL Interpreter
 Adds support for DCTLs within Fusion Studio rather than just Resolve. This is done by reading in a DCTL file and any headers, then rewriting several parts of the source code so it can be run natively within the Fuse DCTL framework (which is somewhat different than the Resolve DCTL framework).
