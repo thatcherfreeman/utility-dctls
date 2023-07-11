@@ -105,6 +105,9 @@ If a DCTL is not working, you can usually find logs in these directories. If you
 
 ## Fuses
 
+
+---
+
 ### DCTL Interpreter
 Adds support for DCTLs within Fusion Studio rather than just Resolve. This is done by reading in a DCTL file and any headers, then rewriting several parts of the source code so it can be run natively within the Fuse DCTL framework (which is somewhat different than the Resolve DCTL framework).
 
@@ -117,6 +120,9 @@ Adds support for DCTLs within Fusion Studio rather than just Resolve. This is do
 
 **Don't run the DCTL Code**: Self explanatory, If your DCTL is causing Fusion to crash, checking this box might help you help me debug it. Doesn't always stop Fusion from crashing though.
 
+
+---
+
 ### FrameAvg Fuse
 Blends together several frames, can be used to retime projects shot at high frame rates. Should certainly be used with a float input, and likely be used with a Linear input.
 
@@ -127,6 +133,9 @@ Blends together several frames, can be used to retime projects shot at high fram
 
 #### Examples:
 Suppose you shot a video at 240fps, 360degree shutter. To simulate 24fps 360degree shutter, you would set Number of Frames to 10, Frame Hold to 10. To simulate 30fps 180degree shutter, you would set Number of Frames to 4, Frame Hold to 8.
+
+
+---
 
 ### HDR Blending Fuse
 For the purpose of stitching HDR (multiple exposure composites) images.
@@ -146,6 +155,9 @@ For the purpose of stitching HDR (multiple exposure composites) images.
 
 **Show Mask**: Shows the mask used. Each of the three channels is masked individually.
 
+
+---
+
 ### Linear Exposure Fuse
 Simply multiplies the input values by `2^x`, where `x` is the specified Exposure (Stops) value. Expects a Linear input.
 
@@ -153,9 +165,15 @@ Simply multiplies the input values by `2^x`, where `x` is the specified Exposure
 **Exposure (Stops)**: Exposure compensation to make in stops.
 
 
+
+---
+
 ### Merge Adjacent Fuse
 Simply sticks the foreground image to be adjacent to the background image, really quickly so that it doesn't require any work or the necessary three or four nodes. You can choose what direction the two images are concatenated.
 
+
+
+---
 
 ### MTF Curve Fuse
 This is a higher quality version of the MTF Curve DCTL. Here, we provide 5 frequency bands in which the lower end number of line-pairs per mm can be specified, and the computation of the frequency bands is done in a higher quality way. Importantly, this Fuse requires that your input image is a Float16 or Float32 type image, and it works best on a Log state image. I do not recommend using it with a Linear state image, and I would also recommend clamping the input to be non-negative. This Fuse works using several different discrete frequency bands rather than via a fourier transform, but it largely gives good looking results regardless.
@@ -179,6 +197,9 @@ quotient_out := (input_value / low_pass5)^band5_contrast * (low_pass5 / low_pass
 difference_out := (input_value - low_pass5)*band5_contrast + (low_pass5 - low_pass4)*band4_contrast + ... + low_pass1
 ```
 
+
+---
+
 ### Periodic Frame Sampler Fuse
 Samples the input image at the specified frame interval. Suppose the current frame time is `Destination Time Start`, and you want to be looking at the input image at frame `Source Time Start`, and you want the next frame outputted from this Fuse to be at `Source Time Start + Period * 1` and so on, then this is the Fuse for you.
 
@@ -194,6 +215,9 @@ Essentially, we will compute:
 **Period**: As time progresses one frame, this indicates how many frames later we should sample from the source image.
 
 
+
+
+---
 
 ### Pixel Logger Fuse
 Samples the specified pixel in the image, then prints out the frame number and rgb values to console.
@@ -221,6 +245,9 @@ Samples the specified pixel in the image, then prints out the frame number and r
 
 ## Effects
 
+
+---
+
 ### Bleach Bypass DCTL
 Applies a beach bypass look to the image. Expects a Linear image. Uses a custom Overlay implementation designed for Linear images.
 
@@ -231,6 +258,9 @@ Applies a beach bypass look to the image. Expects a Linear image. Uses a custom 
 
 **Middle Gray**: Indicates the middle gray value that will be preserved.
 
+
+
+---
 
 ### Film Curve DCTL
 Assumes the scene is a linear image, then converts to log10 exposure values, applies a sigmoid characteristic curve to get density, then computes transmittance. Parametric over each of the three channels.
@@ -263,6 +293,9 @@ In practice, you should use the following pipeline: `1. Clamp 0+ ==> 2. Film Cur
 **Curve Type**: allows you to use Sigmoid of "Quadratic Sigmoid", which follows a similar shape but has a more a brupt rolloff.
 
 
+
+---
+
 ### Film Grain DCTL
 Creates a random noise, inspired by statistical film models. You'll need to pass in a linear image and use two of these DCTLs in a pipeline, one for the Neg stock and one for the print stock, as each one returns the Transmittance of the film stock.
 
@@ -284,6 +317,9 @@ Creates a random noise, inspired by statistical film models. You'll need to pass
 **Noise Mode**: Indicates a different noise mode. In RGB, noise is computed on each channel independently, In Monochrome Noise mode, I recycle the same random seed for all three channels to avoid introducing chroma noise.
 
 
+
+
+---
 
 ### Halation DCTL
 DCTL that physically emulates film halation, intended for ACES Linear AP0 images. This is intended to be used in a linear gamma timeline.
@@ -314,6 +350,9 @@ Light passes through three layers of film emulsion and various color filters, ul
 
 
 
+
+---
+
 ### Lens Distortion DCTL
 Applies a basic lens distortion model, uses bilinear sampling to avoid aliasing problems for reasonable choices of $k_1$ and $k_2$.
 
@@ -335,6 +374,9 @@ $y_u = y_d (1 + k_{1y} r_d^2 + k_{2y} r_d^4)$
 **Couple XY**: If checked, just use the same $k_{1x}, k_{2x}$ for both $x_u$ and $y_u$ calculations, keeping the lens distortion spherical.
 
 
+
+---
+
 ### MTF Curve DCTL
 Gives you control over a MTF-like curve. Internally makes passes of different frequencies which can be increased or reduced in gain before combining them back together. Highly recommend using the Quotient method and feeding this DCTL a log image.
 
@@ -353,6 +395,9 @@ difference_out := (input_value - low_pass5)*band5_contrast + (low_pass5 - low_pa
 
 
 
+
+---
+
 ### Photon Noise DCTL
 Helps simulate the effect of photon noise, a noise that's approximately poisson distributed, where the variance is proportional to the intensity of the signal. Apply this to a linear image.
 
@@ -364,6 +409,9 @@ Helps simulate the effect of photon noise, a noise that's approximately poisson 
 **Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
 
 
+
+
+---
 
 ### Random Channel Mixer
 Constructs a random RGB matrix that is some distance away from the Identity matrix. Useful when trying out lots of different looks, expects image to be converted to Linear before using.
@@ -378,6 +426,9 @@ Constructs a random RGB matrix that is some distance away from the Identity matr
 **Show Matrix** [OFF, FLOAT VALUE, SCALED TEN BIT VALUE]: If set to "Float Value", the entries of the matrix are displayed, allowing you to copy the values down using the RGB picker in Fusion. If set to "Scaled Ten Bit Value", the entries of the matrix are displayed, and if you have a 10-bit color picker, the difference between the code value and 500 represents the hundreths of a point that you should enter in the corresponding entry in the RGB Mixer. IE if the top middle patch has a 10-bit code value of `496`, you would enter `-0.04` for the Green channel in the Red Output section of the RGB Mixer.
 
 
+
+
+---
 
 ### Random Contrast Curve
 Constructs a contrast curve, has the option to procedurally generate one with random parameters so you can try lots of different curves in a moment.
@@ -404,6 +455,9 @@ Constructs a contrast curve, has the option to procedurally generate one with ra
 **Ungroup RGB**: When checked, if Randomize is also checked, then this will randomize a contrast curve for each of the RGB channels.
 
 
+
+---
+
 ### Random Linear Contrast
 Expects a linear image, applies linear contrast to each channel via gamma, preserving mid gray, but you can use a random number generator so you can try a lot of different curves in only moments.
 
@@ -421,6 +475,9 @@ Expects a linear image, applies linear contrast to each channel via gamma, prese
 **Use Random**: Choose whether to not use the random number generator, to randomly generate a split tone (randomness is applied only to the per-channel contrasts), to randomly augment the Global Contrast, or both.
 
 
+
+
+---
 
 ### RGB Linear Contrast DCTL
 Applies a power function to the RGB channels, keeping 0.18 unchanged. This DCTL expects a scene linear image.
@@ -446,6 +503,9 @@ The DCTL works in three steps:
 
 
 
+
+---
+
 ### Subtractive Saturation DCTL
 Computes saturation in a way that adds "density" to more saturated colors, making them darker. Expects a Linear image.
 
@@ -469,6 +529,9 @@ Suppose a pixel is a color `input`. The DCTL will first compute a `Value` (IE lu
 
 
 
+
+---
+
 ### Tone Mapping DCTL
 Applies a sigmoid function to compress highlights. Attempts to target a specific black point, white point, mid_gray, and slope at mid gray. Expects a linear state image and outputs a linear state image.
 
@@ -489,6 +552,9 @@ The DCTL computes the $h(x)$, where: $h(x) = g(m_i(x/m_i)^\gamma)$ and $g(x) = a
 **Scale Mid Gray with White Point**: If checked, the value of $m_o$ is overridden to `output_mid_gray * (white_point - black_point) + black_point`. If unchecked, $m_o$ is just set equal to `output_mid_gray`. If you want your mid gray to scale with the max output white point as you change white points, then check this box.
 
 
+
+---
+
 ### Vignette DCTL
 Corrects for a vignette in the image, only handles circular vignettes for now, expects a scene linear image.
 
@@ -503,10 +569,16 @@ Corrects for a vignette in the image, only handles circular vignettes for now, e
 ## Operations
 
 
+
+---
+
 ### Addition Function DCTL
 Adds a value to each channel. The channels are computed by $\text{Red}_{\text{out}} = \text{Red}_{\text{in}} + \text{Global Offset} + \text{Red Offset}$ and likewise for the other two channels.
 
 
+
+
+---
 
 ### Clamp DCTL
 Clamps the code values of the current frame to the specified Min and Max values, such that for any `x`, we will then have `clamp_min <= x <= clamp_max`
@@ -522,6 +594,9 @@ Clamps the code values of the current frame to the specified Min and Max values,
 
 
 
+
+---
+
 ### Color Generator DCTL
 Generates the specified RGB value across the whole frame. Also allows you to bypass certain channels via the "Pass-through" checkboxes.
 
@@ -533,9 +608,15 @@ Generates the specified RGB value across the whole frame. Also allows you to byp
 
 
 
+
+---
+
 ### Dot Product DCTL
 Takes the dot product of the current color and the specified `(r, g, b)` value.
 
+
+
+---
 
 ### Gamma Function DCTL
 Applies a power function with the reciprocal of the specified exponent.
@@ -554,6 +635,9 @@ Applies a power function with the reciprocal of the specified exponent.
 
 
 
+
+---
+
 ### Invert DCTL
 Inverts the values in an image.
 
@@ -563,6 +647,9 @@ Inverts the values in an image.
 
 
 
+
+---
+
 ### Log Function
 For each pixel and channel, takes the logarithm.
 
@@ -570,6 +657,9 @@ For each pixel and channel, takes the logarithm.
 **Log Base**: The base of the logarithm, 10.0 by default.
 
 
+
+
+---
 
 ### Matrix
 Multiplies the RGB values of the input by a 3x3 matrix with the specified entries. Supports negative values. Given your input $x = [r, g, b]^T$, this computes $f(x) = Ax$. If you choose to preserve neutrals, then we will ensure that the rows of $A$ sum to 1.0, so please make sure the matrix doesn't have rows of zeros if you intend to use that feature.
@@ -579,6 +669,9 @@ Multiplies the RGB values of the input by a 3x3 matrix with the specified entrie
 
 **Preserve Neutral**: Sends $(1, 1, 1)$ through the matrix and applies RGB gain to the output to ensure that $(1, 1, 1)$ is ultimately returned.
 
+
+
+---
 
 ### Modulo Function DCTL
 Takes the input $x$ and computes $x \mod y$, the remainder when dividing $x$ by $y$.
@@ -592,9 +685,15 @@ Takes the input $x$ and computes $x \mod y$, the remainder when dividing $x$ by 
 
 
 
+
+---
+
 ### Multiplication Function DCTL
 Multiplies each channel by a value. The channels are computed by $\text{Red}_{\text{out}} = \text{Red}_{\text{in}} * \text{Global Gain} + \text{Red Gain}$ and likewise for the other two channels.
 
+
+
+---
 
 ### Polynomial Kernel DCTL
 For each of $x_i \in \{r, g, b\}$, computes $(x_i \cdot x_j)^p$ and allows you to specify a linear combination of those into each of the r, g, b channels
@@ -622,6 +721,9 @@ There's an interesting special case when $p = 0.5$ and you're therefore taking t
 **Normalize Powers**: If checked, powers will be normalized at the value specified by Identity Point for Products.
 
 
+
+---
+
 ### Power Function
 Computes the function $\texttt{base}^x$.
 
@@ -629,6 +731,9 @@ Computes the function $\texttt{base}^x$.
 **Base** The base of the exponent, raised to the power of the input pixel.
 
 
+
+
+---
 
 ### Sigmoid Function DCTL
 Applies the sigmoid function to the inputs. Computes $b + (w-b)\frac{1}{1 + e^{-c(x-d)}}$.
@@ -642,6 +747,9 @@ Applies the sigmoid function to the inputs. Computes $b + (w-b)\frac{1}{1 + e^{-
 
 **Output Black**: Controls the value of $b$. Vanilla sigmoid has this set to 1.0.
 
+
+
+---
 
 ### Sigmoid Kernel DCTL
 Similar to Polynomial Kernele. For each of $x_i \in \{r, g, b\}$, computes $\sigma((x_i \cdot x_j)^p)$ where $\sigma(x) = \frac{x}{x + w}$, with $w$ being a user specified white point. Allows you to specify a linear combination of those into each of the r, g, b channels. You should use a linear input for this function.
@@ -666,12 +774,18 @@ Now, we can convert back to 3 dimensions by multiplying by a $3 \times 9$ matrix
 
 
 
+
+---
+
 ### Softmax DCTL
 Applies a Softmax function, with Temperature. Outputs in the 0-1 range for all real inputs.
 
 #### DCTL Parameters
 **Temperature**: Scales the input values, so larger values will result in a more extreme output.
 
+
+
+---
 
 ### Tanh Function DCTL
 Computes a tanh of the input via $g \tanh(c (x - b))$.
@@ -686,8 +800,14 @@ Computes a tanh of the input via $g \tanh(c (x - b))$.
 **Maintain Contrast**: If checked, then the Contrast control controls the derivative at x=0 even if the output white is changed (IE $c$ is scaled by $1/g$).
 
 
+
+---
+
 ### Unit Length DCTL
 Takes the current `(r, g, b)` color value, computes the L2 norm, and divides each component by the norm to convert the vector to unit length.
+
+
+---
 
 ### Vector Norm DCTL
 Computes various norms of the given vector.
@@ -702,6 +822,9 @@ Computes various norms of the given vector.
 ## Utilities
 
 
+
+---
+
 ### ACES Exposure DCTL
 DCTL that allows for adjustment of exposure in ACES. Important: It's probably better to just set your timeline color space to the ACES color space you want to use, and then to use the Exposure slider in the HDR color wheels.
 
@@ -714,6 +837,9 @@ Internally, this DCTL converts ACEScc or ACEScct to Linear, and then applies a g
 **Exposure Adjustment**: Specifies the number of stops to increase or decrease (negative) exposure.
 
 
+
+---
+
 ### Bit Depth Estimator DCTL
 Tool to help estimate the true bit depth of a file. It works by comparing the code values in the current pixel to the adjacent pixels and measuring the smallest nonzero difference between the corresponding channels to estimate the effective bit depth for the current pixel.
 
@@ -723,6 +849,9 @@ Tool to help estimate the true bit depth of a file. It works by comparing the co
 **Highlight**: When checked, highlights only pixels whose bit depth is near the Target Bit Depth, otherwise all pixels are replaced with their effective bit depth.
 
 
+
+
+---
 
 ### Blanking Checker DCTL
 Helps you spot pixels with NaN, infinity, negative, zero, or superwhite channels. Pixels with certain conditions are replaced by a specified highlight color. Optionally, the highlight can be a checkerboard shape.
@@ -752,12 +881,18 @@ Helps you spot pixels with NaN, infinity, negative, zero, or superwhite channels
 
 
 
+
+---
+
 ### Channel Viewer DCTL
 Emulates the Fusion channel viewer, for Red/Green/Blue channels.
 
 #### DCTL Parameters
 **Channel**: Allows you to choose whether the full color image will be returned, or only one of the red/green/blue channels (duplicated onto all three channels in the output for visibility).
 
+
+
+---
 
 ### Chroma Subsampling DCTL
 Applies chroma subsampling to an image by converting to YCbCr, downsampling the Cb and Cr channels via box averaging, then converting back to RGB.
@@ -769,6 +904,9 @@ Applies chroma subsampling to an image by converting to YCbCr, downsampling the 
 
 **Chroma Subsampling Type**: Allows you to choose which kind of chroma subsampling to use.
 
+
+
+---
 
 ### ColorChecker DCTL
 Generates a colorchecker image based on the original specification (you can find in Documentation/ColorChecker.pdf). Outputs in XYZ/Linear color space.
@@ -784,6 +922,9 @@ Generates a colorchecker image based on the original specification (you can find
 
 
 
+
+---
+
 ### Color Ramp DCTL
 Creates a color ramp from 0 to 100% Hue, Saturation, or Luminance. This can be used to monitor the output of your tools and overall node pipeline.
 
@@ -795,6 +936,9 @@ Creates a color ramp from 0 to 100% Hue, Saturation, or Luminance. This can be u
 **Hue Ramp Saturation**: If Hue ramp is selected, then this controls the saturation of the hue ramp.
 
 
+
+---
+
 ### Cube Rotate DCTL
 Takes the specified vector and rotates the RGB cube (around 0,0,0) so that the given vector is now achromatic.
 
@@ -803,6 +947,9 @@ Takes the specified vector and rotates the RGB cube (around 0,0,0) so that the g
 
 **Inverse**: Rotates the cube the opposite angle, so that the currently white vector rotates to the direction of the specified vector, therefore doing the opposite of the normal version.
 
+
+
+---
 
 ### DaVinci Tone Mapping DCTL
 Recreation of the DaVinci Tone Mapping setting in the Color Space Transform effect. Expects a linear image and outputs a linear image. Currently only replicates the tone mapping when Adaptation is set to 9.
@@ -826,6 +973,9 @@ DaVinci Tone Mapping is simply a function of $f(x) = a \frac{x}{x + b}$, with so
 **Clamp**: Allows you to disable white point clamping. Resolve would have this permanently enabled.
 
 
+
+---
+
 ### Exposure Chart DCTL
 Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and several gray exposure chips that are an integer number of stops above and below middle gray. This is intended to be used in a linear gamma timeline.
 
@@ -835,6 +985,9 @@ Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and se
 **Middle Gray Value**: Specifies the desired value of middle gray, which is 18% by default. This controls the brightness of the large chip in the middle too.
 
 
+
+
+---
 
 ### False Color Generator DCTL
 Generates a false color conversion for linear images. Allows you to assign colors to specific regions of the image, in one-stop increments. You set a black point, a shadow point, mid gray, a highlight point, and a white point, and you can assign colors to all regions between and outside of those bounds.
@@ -887,6 +1040,9 @@ Generates a false color conversion for linear images. Allows you to assign color
 
 
 
+
+---
+
 ### Gradient Smoothness Chart DCTL
 Generates a test chart with a series of linear gradients. Each gradient is a full linear interpolation between two colors. For each band drawn, the value of the start and end color is changed. The premise of this DCTL is that you would place it towards the head of your node graph and then look at the 3D Histogram towards the end of the graph. If these straight lines remain smooth, then I would assume your series of operations is going to look reasonably good on a lot of images. If the straight lines have discontinuities or sharp angles (particularly near the achromatic axis), you'll likely have breakage in certain images.
 
@@ -914,6 +1070,9 @@ Generates a test chart with a series of linear gradients. Each gradient is a ful
 
 
 
+
+---
+
 ### Levels Converter
 Converts between full and (0-1023) legal levels (64-940)
 
@@ -922,6 +1081,9 @@ Converts between full and (0-1023) legal levels (64-940)
 
 **Clip**: Indicates whether to clip extreme values. If Mode is set to `Full to Legal`, then Clip will clip values outside of the range 64-940. Otherwise, clip will clip values outside of the range 0-1023.
 
+
+
+---
 
 ### Log Curve
 Applies the Linear To Log function or Log To Linear function generated by [this repo](https://github.com/thatcherfreeman/log2lin-finder)
@@ -947,6 +1109,9 @@ def linear2log(y):
 **Direction**: This allows you to specify whether to convert Log to Linear, or Linear to Log.
 
 
+
+---
+
 ### Luminance
 Given a color gamut, compute the luminance channel associated with those primaries (IE the Y channel after converting to CIE XYZ). Expects the image to be in a Linear state.
 
@@ -958,6 +1123,9 @@ Given a color gamut, compute the luminance channel associated with those primari
 **Show Luminance Vector**: If checked, just outputs the RGB weights of the generated luminance vector, you can take the dot product of this color and your input color to compute the luminance.
 
 
+
+---
+
 ### Output Blanking DCTL
 Draws black bars on the top/bottom or left/right sides of the frame to mask out all but a specified aspect ratio
 
@@ -967,6 +1135,9 @@ Draws black bars on the top/bottom or left/right sides of the frame to mask out 
 
 
 
+
+
+---
 
 ### Quantize
 Simulates the effect of saving the current image at a specified bit depth.
@@ -979,6 +1150,9 @@ Simulates the effect of saving the current image at a specified bit depth.
 **Quantization Method** [ROUND, TRUNCATE, STOCHASTIC]: If set to Round, round each value to the nearest code value, if set to truncate, simply round down to the nearest below code value. If set to Stochastic, round up or round down with a probability equal to how close the value is to the nearest integer.
 
 
+
+
+---
 
 ### RGB Chips DCTL
 Creates rows of colored chips at the specified increment of stops. Outputs a Linear image. This is useful in evaluating tone mapping and the "Notorious Six" problem where overexposed pure colors get mapped to pure RGBCMY primaries rather than preserving their hue.
@@ -999,6 +1173,9 @@ Creates rows of colored chips at the specified increment of stops. Outputs a Lin
 **Gray Ramp**: Adds a gray ramp to the top of the frame.
 
 
+
+---
+
 ### Safety Lines DCTL
 DCTL that creates a white frame to indicate safety boundaries for the image.
 
@@ -1014,6 +1191,9 @@ DCTL that creates a white frame to indicate safety boundaries for the image.
 **Shade Darkness**: Indicates brightness of the region outside of the box.
 
 
+
+
+---
 
 ### Saturation Adjustment DCTL
 DCTL that applies Gain and Gamma controls to the Saturation of an image. Can be used in HSL saturation or HSV saturation, though note that in HSL, be sure that inputs are between 0 and 1, as saturation is poorly defined for RGB values outside of this range. This is similar to a combination of the Color Boost (which is approximately a combination of saturation gamma + gain) and Saturation (gain) controls.
@@ -1034,6 +1214,9 @@ This DCTL converts the input image to HSL or HSV, then applies a Gamma and Gain 
 
 
 
+
+---
+
 ### Spherical Color Space DCTL
 Converts between RGB and a spherical color space. Outputs a 3-channel image, $(\rho, \theta, \phi)$. $\rho$ represents the radius, $\theta$ is scaled 0-1 and represents the hue, and $\phi$ represents saturation and is scaled from 0 to $\pi / 2$.
 
@@ -1041,6 +1224,9 @@ Converts between RGB and a spherical color space. Outputs a 3-channel image, $(\
 **Invert**: When unchecked, converts from RGB to spherical, and when checked, converts from spherical to RGB.
 
 
+
+
+---
 
 ### T-Log Curve
 Converts between linear and my super cool, fully-logarithmic curve. Spec for this curve is 18% gray maps to 50 IRE, then 100% IRE is middle gray plus `num_stops/2`, and 0% is middle gray minus `num_stops/2`. Every stop of dynamic range has an equal number of code values given by `100% / num_stops`. Also clamps the linear input to be >= 0.0 to avoid NaNs.
@@ -1054,6 +1240,9 @@ Converts between linear and my super cool, fully-logarithmic curve. Spec for thi
 
 
 
+
+
+---
 
 ### Waveform Guides
 Adds a border to the image and draws on the border so that the luma waveform has a luminance scale drawn on it. Put this **after** your ODT.
