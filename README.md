@@ -1146,7 +1146,7 @@ Draws black bars on the top/bottom or left/right sides of the frame to mask out 
 
 ---
 ### Printer Lights
-Photometric printer lights function. This DCTL expects a scene linear image and outputs a scene linear image. Applied gain for one or more channels is computed by $10^{\gamma \cdot 0.025(x - 25)}$.
+Photometric printer lights function. This DCTL expects a scene linear image and outputs a scene linear image. Applied gain for one or more channels is computed by $10^{\gamma \cdot 0.025(x - 25)}$, where $x$ is the aggregate printer light ($\text{exposure} + \text{rgbchannel} + \text{cmychannel}$) and $\gamma$ is the neg gamma.
 
 #### DCTL Parameters
 **Exposure Trim**: This adjusts the printer light setting for all channels.
