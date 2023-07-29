@@ -76,6 +76,7 @@ These are DCTLs that I have developed.
         - [Spherical Color Space DCTL](#spherical-color-space-dctl)
         - [T-Log Curve](#t-log-curve)
         - [Waveform Guides](#waveform-guides)
+        - [White Mask DCTL](#white-mask-dctl)
 
 
 # Installation
@@ -1291,3 +1292,13 @@ Adds a border to the image and draws on the border so that the luma waveform has
 **Rescale Mode**: Choose from None, Fill, or Aspect. As the drawn stuff in the margins changes the remaining space in the viewer, this chooses whether to just crop in on the iamge (None), to scale the image to fill the remaining space (Fill), or to scale the image while preserving its aspect ratio.
 
 **Waveform Scale**: Choose how the horizontal guides in the waveform are calculated. If you choose the ones that end in "Stops", then the vertical units are in stops above/below mid gray, and if you choose "Nits", then the units are in nits assuming that your display is calibrated for the specified function.
+
+
+---
+### White Mask DCTL
+Draws a white matte around the border of the frame, in case you need to spice up your standard viewing environment.
+
+#### DCTL Parameters
+**Scaling**: The original image is resized down to this scale.
+
+**White Point**: Code value to draw for the matte.

@@ -1,0 +1,55 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(scaling, Scaling, DCTLUI_SLIDER_FLOAT, 0.8, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(white_point, White Point, DCTLUI_VALUE_BOX, 1.0)
+// clang-format on
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float sample_point_bilinear_1ch(float x, float y, __TEXTURE__ tex, float scale) {
+    const float scale_round = _round(scale);
+    const int iX = (int)(_floor(x / scale_round) * scale_round);
+    const int iY = (int)(_floor(y / scale_round) * scale_round);
+
+    int x_low = (int)(iX);
+    int x_high = (int)(iX + scale_round);
+    int y_low = (int)(iY);
+    int y_high = (int)(iY + scale_round);
+
+    float c_ll = _tex2D(tex, x_low, y_low);
+    float c_lh = _tex2D(tex, x_low, y_high);
+    float c_hl = _tex2D(tex, x_high, y_low);
+    float c_hh = _tex2D(tex, x_high, y_high);
+
+    float c_l = _mix(c_ll, c_hl, (x - x_low) / (x_high - x_low));
+    float c_h = _mix(c_lh, c_hh, (x - x_low) / (x_high - x_low));
+    float c = _mix(c_l, c_h, (y - y_low) / (y_high - y_low));
+    return c;
+}
+
+__DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
+    float3 out = make_float3(0.0, 0.0, 0.0);
+    out.x = sample_point_bilinear_1ch(x, y, p_TexR, scale);
+    out.y = sample_point_bilinear_1ch(x, y, p_TexG, scale);
+    out.z = sample_point_bilinear_1ch(x, y, p_TexB, scale);
+    return out;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    float x = (float)p_X / ((float)p_Width - 1) - 0.5;
+    float y = (float)p_Y / ((float)p_Height - 1) - 0.5;
+
+    float x_sample = (((x / scaling) + 0.5) * (p_Width - 1));
+    float y_sample = (((y / scaling) + 0.5) * (p_Height - 1));
+
+    float3 out;
+    if (_fabs(x) > (scaling / 2.0) || _fabs(y) > (scaling / 2.0)) {
+        out = make_float3(white_point, white_point, white_point);
+    } else {
+        out = sample_point_bilinear_3ch(x_sample, y_sample, p_TexR, p_TexG, p_TexB, 1.0);
+    }
+    return out;
+}
