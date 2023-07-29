@@ -1,0 +1,149 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {XYZ_TO_LUV, XYZ_TO_LCH, XYZ_TO_LSH, LUV_TO_XYZ, LCH_TO_XYZ, LSH_TO_XYZ}, {XYZ to LUV, XYZ to LCH, XYZ to LSH, LUV to XYZ, LCH to XYZ, LSH to XYZ})
+DEFINE_UI_PARAMS(white_point_x, White Point x, DCTLUI_SLIDER_FLOAT, 0.31271, 0.25, 0.5, 0.0001)
+DEFINE_UI_PARAMS(white_point_y, White Point y, DCTLUI_SLIDER_FLOAT, 0.32902, 0.25, 0.5, 0.0001)
+DEFINE_UI_PARAMS(white_point_luminance, White Point Luminance, DCTLUI_VALUE_BOX, 100.0)
+// clang-format on
+
+#define PI (3.14159265358979)
+#define WHITE_SCALE (100.0)
+#define SAT_SCALE (10.0)
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float2 xyz_to_xy(float3 xyz, float2 white_xy) {
+    if (xyz.y == 0.0) {
+        return white_xy;
+    }
+    float x = xyz.x / (xyz.x + xyz.y + xyz.z);
+    float y = xyz.y / (xyz.x + xyz.y + xyz.z);
+    return make_float2(x, y);
+}
+
+__DEVICE__ float2 xy_to_uv(float2 xy) {
+    float up = 4.0 * xy.x / (-2.0 * xy.x + 12.0 * xy.y + 3.0);
+    float vp = 9.0 * xy.y / (-2.0 * xy.x + 12.0 * xy.y + 3.0);
+    return make_float2(up, vp);
+}
+
+__DEVICE__ inline float2 xyY_to_xy(float3 xyY) {
+    return make_float2(xyY.x, xyY.y);
+}
+
+__DEVICE__ float2 uv_to_xy(float2 uv) {
+    float x = 9.0 * uv.x / (6.0 * uv.x - 16.0 * uv.y + 12.0);
+    float y = 9.0 * uv.y / (6.0 * uv.x - 16.0 * uv.y + 12.0);
+    return make_float2(x, y);
+}
+
+__DEVICE__ float3 xyz_to_luv(float3 xyz, float3 white_xyY) {
+    float2 white_uv = xy_to_uv(xyY_to_xy(white_xyY));
+    float2 xy = xyz_to_xy(xyz, xyY_to_xy(white_xyY));
+    float2 uv = xy_to_uv(xy);
+    float Ls;
+    float Yn = white_xyY.z;
+    if ((xyz.y / Yn) <= powf(6.0 / 29.0, 3.0)) {
+        Ls = powf(29.0 / 3.0, 3.0) * xyz.y / Yn;
+    } else {
+        Ls = 116.0 * powf(xyz.y / Yn, 1.0 / 3.0) - 16.0;
+    }
+    float us = 13.0 * Ls * (uv.x - white_uv.x);
+    float vs = 13.0 * Ls * (uv.y - white_uv.y);
+
+    float3 luv = make_float3(Ls, us, vs);
+    return luv;
+}
+
+__DEVICE__ float3 luv_to_xyz(float3 luv, float3 white_xyY) {
+    float Ls = luv.x;
+    float us = luv.y;
+    float vs = luv.z;
+    float2 white_uv = xy_to_uv(xyY_to_xy(white_xyY));
+    float Yn = white_xyY.z;
+
+    float up = us / (13.0 * Ls) + white_uv.x;
+    float vp = vs / (13.0 * Ls) + white_uv.y;
+
+    if (Ls == 0.0) {
+        up = white_uv.x;
+        vp = white_uv.y;
+    }
+
+    float Y;
+    if (Ls <= 8.0) {
+        Y = Yn * Ls * powf(3.0 / 29.0, 3.0);
+    } else {
+        Y = Yn * powf((Ls + 16.0) / 116.0, 3.0);
+    }
+    float X = Y * 9.0 * up / (4.0 * vp);
+    float Z = Y * (12.0 - 3.0 * up - 20.0 * vp) / (4.0 * vp);
+    return make_float3(X, Y, Z);
+}
+
+__DEVICE__ float3 luv_to_lch(float3 luv) {
+    float cs = _hypotf(luv.y, luv.z);
+    float hs = _atan2f(luv.z, luv.y) / (2.0 * PI);
+    if (hs < 0) {
+        hs += 1.0;
+    }
+    return make_float3(luv.x, cs, hs);
+}
+
+__DEVICE__ float3 lch_to_luv(float3 lch) {
+    float us = lch.y * _cosf(lch.z * 2.0 * PI);
+    float vs = lch.y * _sinf(lch.z * 2.0 * PI);
+    return make_float3(lch.x, us, vs);
+}
+
+__DEVICE__ float3 lch_to_lsh(float3 lch) {
+    float s = lch.y / lch.x;
+    if (lch.x == 0.0) {
+        s = 0.0;
+    }
+    return make_float3(lch.x, s, lch.z);
+}
+
+__DEVICE__ float3 lsh_to_lch(float3 lsh) {
+    float c = lsh.y * lsh.x;
+    return make_float3(lsh.x, c, lsh.z);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 white_xyY = make_float3(white_point_x, white_point_y, white_point_luminance);
+
+    float3 in = make_float3(p_R, p_G, p_B);
+    float3 out;
+    if (direction == XYZ_TO_LUV) {
+        in *= WHITE_SCALE;
+        out = xyz_to_luv(in, white_xyY);
+        out /= WHITE_SCALE;
+    } else if (direction == XYZ_TO_LCH) {
+        in *= WHITE_SCALE;
+        out = luv_to_lch(xyz_to_luv(in, white_xyY));
+        out.x /= WHITE_SCALE;
+        out.y /= WHITE_SCALE;
+    } else if (direction == XYZ_TO_LSH) {
+        in *= WHITE_SCALE;
+        out = lch_to_lsh(luv_to_lch(xyz_to_luv(in, white_xyY)));
+        out.x /= WHITE_SCALE;
+        out.y /= SAT_SCALE;
+    } else if (direction == LUV_TO_XYZ) {
+        in *= WHITE_SCALE;
+        out = luv_to_xyz(in, white_xyY);
+        out /= WHITE_SCALE;
+    } else if (direction == LCH_TO_XYZ) {
+        in.x *= WHITE_SCALE;
+        in.y *= WHITE_SCALE;
+        out = luv_to_xyz(lch_to_luv(in), white_xyY);
+        out /= WHITE_SCALE;
+    } else if (direction == LSH_TO_XYZ) {
+        in.x *= WHITE_SCALE;
+        in.y *= SAT_SCALE;
+        out = luv_to_xyz(lch_to_luv(lsh_to_lch(in)), white_xyY);
+        out /= WHITE_SCALE;
+    }
+    return out;
+}
