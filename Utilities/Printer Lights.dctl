@@ -1,0 +1,30 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(exposure, Exposure Trim, DCTLUI_SLIDER_FLOAT, 25, 0, 50, 1)
+DEFINE_UI_PARAMS(red, Red Trim, DCTLUI_SLIDER_FLOAT, 25, 0, 50, 0.25)
+DEFINE_UI_PARAMS(green, Green Trim, DCTLUI_SLIDER_FLOAT, 25, 0, 50, 0.25)
+DEFINE_UI_PARAMS(blue, Blue Trim, DCTLUI_SLIDER_FLOAT, 25, 0, 50, 0.25)
+DEFINE_UI_PARAMS(cyan, Cyan Trim, DCTLUI_SLIDER_FLOAT, 25, 0, 50, 0.25)
+DEFINE_UI_PARAMS(magenta, Magenta Trim, DCTLUI_SLIDER_FLOAT, 25, 0, 50, 0.25)
+DEFINE_UI_PARAMS(yellow, Yellow Trim, DCTLUI_SLIDER_FLOAT, 25, 0, 50, 0.25)
+
+DEFINE_UI_PARAMS(gamma, Neg Gamma, DCTLUI_SLIDER_FLOAT, 0.5, 0, 5, 0.01)
+// clang-format on
+
+__DEVICE__ float apply_lights(float input, float lights, float gamma) {
+    // lights set so that zero is neutral
+    return input * _exp10f(lights * gamma * 0.025);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    const float neutral_point = 25.0;
+
+    float red_lights = (exposure - neutral_point) + (red - neutral_point) + (magenta - neutral_point) + (yellow - neutral_point);
+    float green_lights = (exposure - neutral_point) + (green - neutral_point) + (cyan - neutral_point) + (yellow - neutral_point);
+    float blue_lights = (exposure - neutral_point) + (blue - neutral_point) + (cyan - neutral_point) + (magenta - neutral_point);
+
+    float3 input_color = make_float3(p_R, p_G, p_B);
+    float3 output_color = make_float3(
+        apply_lights(input_color.x, red_lights, gamma), apply_lights(input_color.y, green_lights, gamma), apply_lights(input_color.z, blue_lights, gamma));
+    return output_color;
+}

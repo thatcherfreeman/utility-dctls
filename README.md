@@ -68,6 +68,7 @@ These are DCTLs that I have developed.
         - [Log Curve](#log-curve)
         - [Luminance](#luminance)
         - [Output Blanking DCTL](#output-blanking-dctl)
+        - [Printer Lights](#printer-lights)
         - [Quantize](#quantize)
         - [RGB Chips DCTL](#rgb-chips-dctl)
         - [Safety Lines DCTL](#safety-lines-dctl)
@@ -1143,9 +1144,18 @@ Draws black bars on the top/bottom or left/right sides of the frame to mask out 
 **Aspect Ratio** The aspect ratio you want to keep after pillar/letter boxing.
 
 
+---
+### Printer Lights
+Photometric printer lights function. This DCTL expects a scene linear image and outputs a scene linear image. Applied gain for one or more channels is computed by $10^{\gamma \cdot 0.025(x - 25)}$.
 
+#### DCTL Parameters
+**Exposure Trim**: This adjusts the printer light setting for all channels.
 
+**Red/Green/Blue Trim**: Adjusts the printer light setting for the corresponding single channel. Note that only this slider exists in a real film printer.
 
+**Cyan/Magenta/Yellow Trim**: Adjusts the printer light setting for the corresponding two channels. IE increasing Cyan trim results in increasing Green and Blue trims.
+
+**Neg Gamma**: Indicate the gamma of the negative film stock that's being printed. This is the term $\gamma$ that's multiplied in in the above expression. The print stock gamma (Slope of 3 or 4 in Log Exposure vs Density chart) will presumably be embodied downstream of this DCTL via some sort of contrast adjustment.
 
 ---
 
