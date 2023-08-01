@@ -5,6 +5,7 @@ DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.0
 DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(continuous, Continuous, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(gray_ramp, Gray Ramp, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(vertical, Vertical, DCTLUI_CHECK_BOX, 0)
 
 __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
     // assume hue is in degrees
@@ -32,8 +33,13 @@ __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
-    float x = (float) p_X / (float) p_Width;
-    float y = (float) p_Y / (float) p_Height;
+    float x = (float) p_X / (float) (p_Width - 1);
+    float y = (float) p_Y / (float) (p_Height - 1);
+    if (vertical) {
+        float temp = x;
+        x = y;
+        y = temp;
+    }
 
     float curr_row, curr_col;
     if (continuous) {

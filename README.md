@@ -1193,7 +1193,7 @@ Creates rows of colored chips at the specified increment of stops. Outputs a Lin
 
 **Gray Ramp**: Adds a gray ramp to the top of the frame.
 
-
+**Vertical**: Turns the chart 90 degrees so it's vertical instead.
 
 ---
 
