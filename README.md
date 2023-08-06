@@ -44,6 +44,7 @@ These are DCTLs that I have developed.
         - [Multiplication Function DCTL](#multiplication-function-dctl)
         - [Polynomial Kernel DCTL](#polynomial-kernel-dctl)
         - [Power Function](#power-function)
+        - [Projective Transformation Matrix](#projective-transformation-matrix)
         - [Sigmoid Function DCTL](#sigmoid-function-dctl)
         - [Sigmoid Kernel DCTL](#sigmoid-kernel-dctl)
         - [Softmax DCTL](#softmax-dctl)
@@ -734,7 +735,35 @@ Computes the function $\texttt{base}^x$.
 **Base** The base of the exponent, raised to the power of the input pixel.
 
 
+---
 
+### Projective Transformation Matrix
+Rather than applying a 3x3 matrix, we can apply a Projective Transform.
+
+#### How it works
+Traditionally, you'd make a matrix $M_1 \in \mathbb{R}^{3 \times 3}$ and apply the matrix multiply:
+
+$$\begin{bmatrix} r' \\ g' \\ b'\end{bmatrix} = M_1 \begin{bmatrix} r \\ g \\ b \end{bmatrix}$$
+
+Frequently used in computer graphics, there's a slightly more expressive alternative called Projective Transforms that make use of homogeneous coordinates. You would instead have $M_2 \in \mathbb{R}^{4 \times 4}$ and make the following modifications:
+
+$$\begin{bmatrix} r' \\ g' \\ b' \\ c' \end{bmatrix} = M_2 \begin{bmatrix} r \\ g \\ b \\ 1.0 \end{bmatrix}$$
+
+You'd then output the color:
+
+$$\begin{bmatrix} r'/c' \\ g'/c' \\ b'/c' \end{bmatrix}$$
+
+You can see that this is strictly more expressive than the $3 \times 3$ matrix approach because you could define $M_2$ in the following way:
+
+$$M_2 = \begin{bmatrix} M & 0 \\ 0 & 1 \end{bmatrix}$$
+
+This DCTL allows you to construct $M_2$.
+
+#### DCTL Parameters
+
+**Red/Green/Blue/Bias => Red/Green/Blue/Bias**: These are listed in the same order as if you were reading $M_2$ row by row. Almost all the interesting behavior happens in the fourth row.
+
+**Preserve Neutral**: If checked, applies an RGB gain operation at the end that restores white inputs to (1.0, 1.0, 1.0).
 
 ---
 
