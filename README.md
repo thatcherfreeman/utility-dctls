@@ -43,8 +43,8 @@ These are DCTLs that I have developed.
         - [Modulo Function DCTL](#modulo-function-dctl)
         - [Multiplication Function DCTL](#multiplication-function-dctl)
         - [Polynomial Kernel DCTL](#polynomial-kernel-dctl)
-        - [Power Function](#power-function)
-        - [Projective Transformation Matrix](#projective-transformation-matrix)
+        - [Power Function DCTL](#power-function-dctl)
+        - [Projective Transformation Matrix DCTL](#projective-transformation-matrix-dctl)
         - [Sigmoid Function DCTL](#sigmoid-function-dctl)
         - [Sigmoid Kernel DCTL](#sigmoid-kernel-dctl)
         - [Softmax DCTL](#softmax-dctl)
@@ -728,7 +728,7 @@ There's an interesting special case when $p = 0.5$ and you're therefore taking t
 
 ---
 
-### Power Function
+### Power Function DCTL
 Computes the function $\texttt{base}^x$.
 
 #### DCTL Parameters
@@ -737,25 +737,32 @@ Computes the function $\texttt{base}^x$.
 
 ---
 
-### Projective Transformation Matrix
+### Projective Transformation Matrix DCTL
 Rather than applying a 3x3 matrix, we can apply a Projective Transform.
 
 #### How it works
 Traditionally, you'd make a matrix $M_1 \in \mathbb{R}^{3 \times 3}$ and apply the matrix multiply:
-
-$$\begin{bmatrix} r' \\ g' \\ b'\end{bmatrix} = M_1 \begin{bmatrix} r \\ g \\ b \end{bmatrix}$$
+```math
+\begin{bmatrix} r' \\ g' \\ b'\end{bmatrix} = M_1 \begin{bmatrix} r \\ g \\ b \end{bmatrix}
+```
 
 Frequently used in computer graphics, there's a slightly more expressive alternative called Projective Transforms that make use of homogeneous coordinates. You would instead have $M_2 \in \mathbb{R}^{4 \times 4}$ and make the following modifications:
 
-$$\begin{bmatrix} r' \\ g' \\ b' \\ c' \end{bmatrix} = M_2 \begin{bmatrix} r \\ g \\ b \\ 1.0 \end{bmatrix}$$
+```math
+\begin{bmatrix} r' \\ g' \\ b' \\ c' \end{bmatrix} = M_2 \begin{bmatrix} r \\ g \\ b \\ 1.0 \end{bmatrix}
+```
 
 You'd then output the color:
 
-$$\begin{bmatrix} r'/c' \\ g'/c' \\ b'/c' \end{bmatrix}$$
+```math
+\begin{bmatrix} r'/c' \\ g'/c' \\ b'/c' \end{bmatrix}
+```
 
 You can see that this is strictly more expressive than the $3 \times 3$ matrix approach because you could define $M_2$ in the following way:
 
-$$M_2 = \begin{bmatrix} M & 0 \\ 0 & 1 \end{bmatrix}$$
+```math
+M_2 = \begin{bmatrix} M & 0 \\ 0 & 1 \end{bmatrix}
+```
 
 This DCTL allows you to construct $M_2$.
 
