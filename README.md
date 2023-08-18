@@ -772,6 +772,8 @@ This DCTL allows you to construct $M_2$.
 
 **Preserve Neutral**: If checked, applies an RGB gain operation at the end that restores white inputs to (1.0, 1.0, 1.0).
 
+**Linearize White**: If checked, applies a curve to make the grayscale ramp a straight line.
+
 ---
 
 ### Sigmoid Function DCTL

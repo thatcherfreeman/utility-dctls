@@ -17,6 +17,7 @@ DEFINE_UI_PARAMS(mat13, Green => Bias, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(mat14, Blue => Bias, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(mat15, Bias => Bias, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(preserve_neutral, Preserve Neutral, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(linear_white, Linearize White, DCTLUI_CHECK_BOX, 0)
 // clang-format on
 
 __DEVICE__ float4 mv_44_4(float mat[4][4], float4 v) {
@@ -27,8 +28,19 @@ __DEVICE__ float4 mv_44_4(float mat[4][4], float4 v) {
     return out;
 }
 
+__DEVICE__ float3 apply_mat(float mat[4][4], float3 v, int linearize) {
+    float4 res = mv_44_4(mat, make_float4(v.x, v.y, v.z, 1.0));
+    res /= res.w;
+    if (linearize) {
+        res.x = mat[3][3] / ((1.0 / res.x) - mat[3][0] - mat[3][1] - mat[3][2]);
+        res.y = mat[3][3] / ((1.0 / res.y) - mat[3][0] - mat[3][1] - mat[3][2]);
+        res.z = mat[3][3] / ((1.0 / res.z) - mat[3][0] - mat[3][1] - mat[3][2]);
+    }
+    return make_float3(res.x, res.y, res.z);
+}
+
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
-    float4 rgb = make_float4(p_R, p_G, p_B, 1.0);
+    float3 rgb = make_float3(p_R, p_G, p_B);
 
     float mat[4][4] = {
         {mat0, mat1, mat2, mat3},
@@ -36,16 +48,14 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         {mat8, mat9, mat10, mat11},
         {mat12, mat13, mat14, mat15},
     };
-    float4 res = mv_44_4(mat, rgb);
-    res /= res.w;
-    float4 white_out = mv_44_4(mat, make_float4(1.0, 1.0, 1.0, 1.0));
-    white_out /= white_out.w;
+    float3 res = apply_mat(mat, rgb, linear_white);
+    float3 white_out = apply_mat(mat, make_float3(1.0, 1.0, 1.0), linear_white);
     if (preserve_neutral) {
-        res.x *= 1.0 / white_out.x;
-        res.y *= 1.0 / white_out.y;
-        res.z *= 1.0 / white_out.z;
+        res.x /= white_out.x;
+        res.y /= white_out.y;
+        res.z /= white_out.z;
     }
 
-    float3 out = make_float3(res.x, res.y, res.z);
+    float3 out = res;
     return out;
 }
