@@ -1,11 +1,40 @@
 DEFINE_UI_PARAMS(exposure, Exposure Adjustment, DCTLUI_SLIDER_FLOAT, 0.0, -8.0, 8.0, 0.333)
-DEFINE_UI_PARAMS(outer_border_width, Outer Border Width, DCTLUI_SLIDER_FLOAT, 0.05, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(outer_border_width, Outer Border Width, DCTLUI_SLIDER_FLOAT, 0.01, 0.0, 1.0, 0.001)
 DEFINE_UI_PARAMS(inner_border_width, Inner Border Width, DCTLUI_SLIDER_FLOAT, 0.05, 0.0, 1.0, 0.001)
-DEFINE_UI_PARAMS(convert_illuminant, Convert Illuminant C to D65, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(dataset, Dataset, DCTLUI_COMBO_BOX, 0, {OFFICIAL, MCCAMY}, {Official XRite, McCamy})
+DEFINE_UI_PARAMS(convert_illuminant, Adapt to D65, DCTLUI_CHECK_BOX, 1)
 
+__CONSTANT__ float colors_official[24][3] = {
+    // Copied from X-Rite website Colorchecker after 2014 LAB measurements
+    // LAB coordinates of the 24 color chips under M0 (tungsten) lighting condition.
+    {37.54, 14.37, 14.92},   // Dark Skin
+    {64.66, 19.27, 17.5},    // Light skin
+    {49.32, -3.82, -22.54},  // blue sky
+    {43.46, -12.74, 22.72},  // foliage
+    {54.94, 9.61, -24.79},   // blue flower
+    {70.48, -32.26, -0.37},  // bluish green
+    {62.73, 35.83, 56.5},    // orange
+    {39.43, 10.75, -45.17},  // purplish blue
+    {50.57, 48.64, 16.67},   // moderate red
+    {30.1, 22.54, -20.87},   // purple
+    {71.77, -24.13, 58.19},  // yellow green
+    {71.51, 18.24, 67.37},   // orange yellow
+    {28.37, 15.42, -49.8},   // blue
+    {54.38, -39.72, 32.27},  // green
+    {42.43, 51.05, 28.62},   // red
+    {81.8, 2.67, 80.41},     // yellow
+    {50.63, 51.28, -14.12},  // magenta
+    {49.57, -29.71, -28.32}, // cyan
+    {95.19, -1.03, 2.93},    // white
+    {81.29, -0.57, 0.44},    // neutral 8
+    {66.89, -0.75, -0.06},   // neutral 6.5
+    {50.76, -0.13, 0.14},    // neutral 5
+    {35.63, -0.46, -0.48},   // neutral 3.5
+    {20.64, 0.07, -0.46},    // black
+};
 
-
-__CONSTANT__ float colors[24][3] = {
+// Original Paper values
+__CONSTANT__ float colors_mccamy[24][3] = {
     // xyY coordinates of the 24 color chips.
     {0.4002, 0.3504, 0.1005}, // Dark Skin
     {0.3773, 0.3446, 0.3582}, // Light skin
@@ -34,54 +63,106 @@ __CONSTANT__ float colors[24][3] = {
 };
 
 // Bradford chromatic adaptation matrix from Illuminant C XYZ to D65 XYZ
-__CONSTANT__ float ca_matrix[3][3] = {
-    { 0.9904476, -0.0071683, -0.0116156},
-    {-0.0123712,  1.0155950, -0.0029282},
-    {-0.0035635,  0.0067697,  0.9181569},
+__CONSTANT__ float ca_matrix_c_d65[3][3] = {
+    {0.9904476, -0.0071683, -0.0116156},
+    {-0.0123712, 1.0155950, -0.0029282},
+    {-0.0035635, 0.0067697, 0.9181569},
 };
 
+// Bradford chromatic adaptation matrix from Illuminant A XYZ to D65 XYZ
+__CONSTANT__ float ca_matrix_a_d65[3][3] = {
+    {0.8446965, -0.1179225, 0.3948108},
+    {-0.1366303, 1.1041226, 0.1291718},
+    {0.0798489, -0.1348999, 3.1924009},
+};
 
-__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
-{
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ float3 LAB_to_XYZ(float3 lab, float2 illuminant_xy) {
+    // Adapted from Jan Karow's implementation.
+    float Xr = illuminant_xy.x / illuminant_xy.y * 100.0;
+    float Yr = 100.0;
+    float Zr = (1.0 - illuminant_xy.x - illuminant_xy.y) / illuminant_xy.y * 100.0;
+    float E = 216.0f / 24389.0f;
+    float K = 24389.0f / 27.0f;
+
+    float L = lab.x, a = lab.y, b = lab.z;
+
+    // Lab to XYZ
+    float fy = (L + 16.0f) / 116.0f;
+    float fx = a / 500.0f + fy;
+    float fz = fy - b / 200.0f;
+
+    float xr = powf(fx, 3.0f) > E ? powf(fx, 3.0f) : (116.0f * fx - 16.0f) / K;
+    float yr = L > (K * E) ? powf((L + 16.0f) / 116.0f, 3.0f) : L / K;
+    float zr = powf(fz, 3.0f) > E ? powf(fz, 3.0f) : (116.0f * fz - 16.0f) / K;
+
+    float X = xr * Xr / 100.0f;
+    float Y = yr * Yr / 100.0f;
+    float Z = zr * Zr / 100.0f;
+
+    return make_float3(X, Y, Z);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float x = (float)p_X / (float)p_Width;
     float y = (float)p_Y / (float)p_Height;
 
     float3 output = make_float3(0.0, 0.0, 0.0);
 
     float usable_area = 1.0 - 2 * outer_border_width;
-    float col = ((x - 0.5)/usable_area + 0.5) * 6.0;
-    float row = ((y - 0.5)/usable_area + 0.5) * 4.0;
+    float col = ((x - 0.5) / usable_area + 0.5) * 6.0;
+    float row = ((y - 0.5) / usable_area + 0.5) * 4.0;
 
     if (col < 0 || row < 0 || col >= 6 || row >= 4) {
         return output;
     }
     float inner_posx = _fmod(col, 1.0);
     float inner_posy = _fmod(row, 1.0);
-    if (
-        inner_posx < inner_border_width
-        || inner_posy < inner_border_width
-        || inner_posx >= 1.0 - inner_border_width
-        || inner_posy >= 1.0 - inner_border_width
-    ) {
+    if (inner_posx < inner_border_width || inner_posy < inner_border_width || inner_posx >= 1.0 - inner_border_width ||
+        inner_posy >= 1.0 - inner_border_width) {
         return output;
     }
 
+    // Get current color
     int idx = (int)col + ((int)row * 6);
+    float3 tile_color_XYZ;
+    float adaptation_matrix[3][3] = {};
+    if (dataset == OFFICIAL) {
+        float3 tile_color_LAB = make_float3(colors_official[idx][0], colors_official[idx][1], colors_official[idx][2]);
+        float2 illuminant_a_xy = make_float2(0.44757, 0.40745);
+        tile_color_XYZ = LAB_to_XYZ(tile_color_LAB, illuminant_a_xy);
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                adaptation_matrix[i][j] = ca_matrix_a_d65[i][j];
+            }
+        }
+    } else if (dataset == MCCAMY) {
+        float3 tile_color_xyY = make_float3(colors_mccamy[idx][0], colors_mccamy[idx][1], colors_mccamy[idx][2]);
 
-    float3 tile_color_xyY = make_float3(colors[idx][0], colors[idx][1], colors[idx][2]);
-
-    float3 tile_color_XYZ = make_float3(
-        tile_color_xyY.x * tile_color_xyY.z / tile_color_xyY.y,
-        tile_color_xyY.z,
-        ((1 - tile_color_xyY.x - tile_color_xyY.y) * tile_color_xyY.z) / (tile_color_xyY.y)
-    );
+        tile_color_XYZ = make_float3(tile_color_xyY.x * tile_color_xyY.z / tile_color_xyY.y,
+                                     tile_color_xyY.z,
+                                     ((1 - tile_color_xyY.x - tile_color_xyY.y) * tile_color_xyY.z) / (tile_color_xyY.y));
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                adaptation_matrix[i][j] = ca_matrix_c_d65[i][j];
+            }
+        }
+    }
 
     float3 adapted_colors = tile_color_XYZ;
     if (convert_illuminant) {
-        // convert from Illuminant C to D65, still XYz though.
-        adapted_colors.x = ca_matrix[0][0] * tile_color_XYZ.x + ca_matrix[0][1] * tile_color_XYZ.y + ca_matrix[0][2] * tile_color_XYZ.z;
-        adapted_colors.y = ca_matrix[1][0] * tile_color_XYZ.x + ca_matrix[1][1] * tile_color_XYZ.y + ca_matrix[1][2] * tile_color_XYZ.z;
-        adapted_colors.z = ca_matrix[2][0] * tile_color_XYZ.x + ca_matrix[2][1] * tile_color_XYZ.y + ca_matrix[2][2] * tile_color_XYZ.z;
+        // Chromatic adaptation to D65.
+        adapted_colors = mv_33_3(adaptation_matrix, tile_color_XYZ);
     }
 
     float exposure_gain = _powf(2.0, exposure);
@@ -91,5 +172,4 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     output = adapted_colors;
     return output;
-
 }

@@ -957,7 +957,7 @@ Converts between XYZ and CIELUV, CIELCH, or CIELSH.
 ---
 
 ### ColorChecker DCTL
-Generates a colorchecker image based on the original specification (you can find in Documentation/ColorChecker.pdf). Outputs in XYZ/Linear color space.
+Generates a synthetic image of the Macbeth ColorChecker based on one of two datasets: the X-Rite post-2014 measured LAB values, or the original paper (you can find in Documentation/ColorChecker.pdf). Outputs in XYZ/Linear color space.
 
 #### DCTL Parameters
 **Exposure Adjustment**: Stops of exposure adjustment, in case the rendered image isn't your preferred brightness.
@@ -966,9 +966,9 @@ Generates a colorchecker image based on the original specification (you can find
 
 **Inner Border Width**: How much black border to draw around individual chips.
 
-**Convert Illuminant C to D65**: The xyY values used are copied from the spec, which assumed the Standard Illuminant C illuminant. As most electronics use a D65 illuminant, check this box to use a bradford chromatic adaptation matrix to best approximate what the chart would look like under a D65 illuminant.
+**Dataset**: Choose Official to use the X-Rite values, and use McCamy to use the one from the old paper and wikipedia.
 
-
+**Adapt to D65**: Check this box to use a bradford chromatic adaptation matrix to best approximate what the chart would look like under a D65 illuminant. Leave unchecked to use the native white point for each dataset (Illuminant A for official, Illuminant C for McCamy).
 
 
 ---
