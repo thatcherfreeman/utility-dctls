@@ -35,6 +35,7 @@ These are DCTLs that I have developed.
         - [Addition Function DCTL](#addition-function-dctl)
         - [Clamp DCTL](#clamp-dctl)
         - [Color Generator DCTL](#color-generator-dctl)
+        - [Cross Product DCTL](#cross-product-dctl)
         - [Dot Product DCTL](#dot-product-dctl)
         - [Gamma Function DCTL](#gamma-function-dctl)
         - [Invert DCTL](#invert-dctl)
@@ -611,6 +612,10 @@ Generates the specified RGB value across the whole frame. Also allows you to byp
 
 
 
+---
+
+### Cross Product DCTL
+Computes the cross product of the current color and the specified vector, or the cross product of the specified vector and the current color if you set the direction to $\overrightarrow{Vec} \times \overrightarrow{\text{Input RGB}}$.
 
 
 ---
