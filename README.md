@@ -1232,11 +1232,15 @@ Creates rows of colored chips at the specified increment of stops. Outputs a Lin
 
 **Mid Gray**: Indicates the value that will be assigned to the middle chip.
 
-**Continuous**: Runs a smooth hue and exposure ramp instead of discretizing the chips.
-
 **Gray Ramp**: Adds a gray ramp to the top of the frame.
 
 **Vertical**: Turns the chart 90 degrees so it's vertical instead.
+
+**Model**: Choose whether to use HSV or Spherical to generate the chips. The spherical model is scaled such that at 1.0 saturation, all tiles will fit within the cube, and at 1.0 value, white is (1.0, 1.0, 1.0).
+
+**Continuous Mode**: Choose whether each chip should be discrete, or if hue, exposure, or both should be continuous.
+
+
 
 ---
 
