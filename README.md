@@ -22,6 +22,7 @@ These are DCTLs that I have developed.
         - [Film Grain DCTL](#film-grain-dctl)
         - [Halation DCTL](#halation-dctl)
         - [Lens Distortion DCTL](#lens-distortion-dctl)
+        - [Linear Contrast DCTL](#linear-contrast-dctl)
         - [MTF Curve DCTL](#mtf-curve-dctl)
         - [Photon Noise DCTL](#photon-noise-dctl)
         - [Random Channel Mixer](#random-channel-mixer)
@@ -378,6 +379,26 @@ $y_u = y_d (1 + k_{1y} r_d^2 + k_{2y} r_d^4)$
 
 **Couple XY**: If checked, just use the same $k_{1x}, k_{2x}$ for both $x_u$ and $y_u$ calculations, keeping the lens distortion spherical.
 
+---
+### Linear Contrast DCTL
+Applies a power function to the RGB channels, keeping 0.18 unchanged. This DCTL expects a scene linear image.
+
+#### How it works
+The DCTL works in three steps:
+1. Apply gain to shift Middle gray to 1.0
+2. Raise the code values to the power of `Neutral Gamma * Color Gamma` if Ungroup RGB is checked, otherwise `Neutral Gamma`
+3. Revert the gain done in step 1 (divide by that scaling rather than multiply)
+
+#### DCTL Parameters
+**Neutral Gamma**: Gamma applied to all channels
+
+**Red Gamma**: Gamma to be applied only to the Red Channel
+
+**Green Gamma**: Gamma to be applied only to the Green Channel
+
+**Blue Gamma**: Gamma to be applied only to the Blue Channel
+
+**Mid Gray**: Specifies the middle gray code value that is preserved.
 
 
 ---
@@ -485,6 +506,8 @@ Expects a linear image, applies linear contrast to each channel via gamma, prese
 ---
 
 ### RGB Linear Contrast DCTL
+**(Deprecated - Use "Linear Contrast DCTL" instead.)**
+You can find the old version of this DCTL (here)[https://github.com/thatcherfreeman/utility-dctls/blob/167d849241ddd1e6dbd3963e2be3601694173a38/Effects/RGB%20Linear%20Contrast.dctl]
 Applies a power function to the RGB channels, keeping 0.18 unchanged. This DCTL expects a scene linear image.
 
 #### How it works

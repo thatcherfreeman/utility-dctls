@@ -1,0 +1,21 @@
+DEFINE_UI_PARAMS(gamma, Neutral Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.0)
+DEFINE_UI_PARAMS(red_gamma, Red Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.0)
+DEFINE_UI_PARAMS(green_gamma, Green Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.0)
+DEFINE_UI_PARAMS(blue_gamma, Blue Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.0)
+DEFINE_UI_PARAMS(mid_gray, Middle Gray, DCTLUI_SLIDER_FLOAT, 0.18, 0.0, 5.0, 0.0)
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float scale = 1.0 / mid_gray;
+    float3 curr_color = make_float3(p_R, p_G, p_B);
+
+    curr_color.x = powf(scale * curr_color.x, red_gamma * gamma) / scale;
+    curr_color.y = powf(scale * curr_color.y, green_gamma * gamma) / scale;
+    curr_color.z = powf(scale * curr_color.z, blue_gamma * gamma) / scale;
+
+    return curr_color;
+}
