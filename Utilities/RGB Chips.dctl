@@ -1,11 +1,12 @@
 DEFINE_UI_PARAMS(num_hues, Number of Hues, DCTLUI_SLIDER_INT, 36, 3, 72, 1)
 DEFINE_UI_PARAMS(num_stops, Number of Chips, DCTLUI_SLIDER_INT, 24, 1, 100, 1)
 DEFINE_UI_PARAMS(increment_size, Stops Between Chips, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
-DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
 DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 1.0)
-DEFINE_UI_PARAMS(continuous, Continuous, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(gray_ramp, Gray Ramp, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(vertical, Vertical, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(model, Model, DCTLUI_COMBO_BOX, 0, {HSV, SPHERICAL}, {HSV, Spherical})
+DEFINE_UI_PARAMS(continuous, Continuous Mode, DCTLUI_COMBO_BOX, 0, {DISCRETE, CONTINUOUS_HUE, CONTINUOUS_EXP, CONTINUOUS_BOTH}, {Discrete, Continuous Hue, Continuous Exp, Fully Continuous})
 
 __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
     // assume hue is in degrees
@@ -31,6 +32,83 @@ __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
 }
 
 
+#define PI (3.1415926535)
+
+// LINEAR ALGEBRA FUNCTIONS
+__DEVICE__ float3 cross_product(float3 a, float3 b) {
+    float3 out = make_float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+    return out;
+}
+
+__DEVICE__ inline float pow2f(float base) {
+    return base * base;
+}
+
+__DEVICE__ float dot_product(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__DEVICE__ float norm_f3(float3 a) {
+    return _sqrtf(pow2f(a.x) + pow2f(a.y) + pow2f(a.z));
+}
+
+__DEVICE__ float3 unit_vec(float3 a) {
+    float norm = norm_f3(a);
+    float3 out = make_float3(a.x / norm, a.y / norm, a.z / norm);
+    return out;
+}
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float angle) {
+    // Axis assumed to be unit vector, angle assuemd to be in radians
+    float c = _cosf(angle);
+    float s = _sinf(angle);
+
+    mat[0][0] = c + pow2f(axis.x) * (1.0 - c);
+    mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
+    mat[1][1] = c + pow2f(axis.y) * (1.0 - c);
+    mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
+    mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
+}
+
+
+__DEVICE__ float3 spherical_to_rgb(float hue, float sat, float value) {
+    // Assume Hue is in degrees
+    // Scale saturation so that 1.0 fully saturates RGB colors.
+    // Value of 1.0 scaled to (1.0, 1.0, 1.0);
+    sat *= _acosf(dot_product(unit_vec(make_float3(1.0, 1.0, 0.0)), unit_vec(make_float3(1.0, 1.0, 1.0))));
+    hue *= 2.0 * PI / 360.0;
+    value *= norm_f3(make_float3(1.0, 1.0, 1.0));
+    const float3 achromatic = make_float3(1.0, 1.0, 1.0);
+    const float3 red_axis = make_float3(1.0, 0.0, 0.0);
+
+    float rot_mat_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    float rot_mat2_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    make_rotation_mat_axis_angle(
+        rot_mat_inv, unit_vec(cross_product(red_axis, achromatic)), _acosf(dot_product(red_axis, unit_vec(achromatic))));
+    make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0 * PI / 4.0);
+
+    float3 direction = make_float3(1.0, 1.0, 1.0);
+    direction.x = value              * _cosf(sat);
+    direction.z = value * _sinf(hue) * _sinf(sat);
+    direction.y = value * _cosf(hue) * _sinf(sat);
+
+    float3 x = mv_33_3(rot_mat2_inv, direction);
+    x = mv_33_3(rot_mat_inv, x);
+    return x;
+}
+
+
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
     float x = (float) p_X / (float) (p_Width - 1);
@@ -42,20 +120,30 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     float curr_row, curr_col;
-    if (continuous) {
-        curr_row = y * (num_hues + gray_ramp) - gray_ramp;
-        curr_col = (x - 0.5) * num_stops;
-    } else {
+    if (continuous == DISCRETE) {
         curr_row = _floorf(y * (num_hues + gray_ramp)) - gray_ramp;
         curr_col = _round((x - 0.5) * num_stops);
     }
+    if (continuous == CONTINUOUS_HUE || continuous == CONTINUOUS_BOTH) {
+        curr_row = y * (num_hues + gray_ramp) - gray_ramp;
+    }
+    if (continuous == CONTINUOUS_EXP || continuous == CONTINUOUS_BOTH) {
+        curr_col = (x - 0.5) * num_stops;
+    }
 
     float3 rgb;
-    if (gray_ramp && curr_row < 0) {
-        rgb = hsv_to_rgb(0.0, 0.0, _exp2f(curr_col * increment_size) * mid_gray);
-    } else {
-        rgb = hsv_to_rgb((curr_row / num_hues) * 360.0, saturation, _exp2f(curr_col * increment_size) * mid_gray);
+    float3 hsv;
 
+    if (gray_ramp && curr_row < 0) {
+        hsv = make_float3(0.0, 0.0, _exp2f(curr_col * increment_size) * mid_gray);
+    } else {
+        hsv = make_float3((curr_row / num_hues) * 360.0, saturation, _exp2f(curr_col * increment_size) * mid_gray);
+    }
+
+    if (model == SPHERICAL) {
+        rgb = spherical_to_rgb(hsv.x, hsv.y, hsv.z);
+    } else if (model == HSV) {
+        rgb = hsv_to_rgb(hsv.x, hsv.y, hsv.z);
     }
     return rgb;
 }
