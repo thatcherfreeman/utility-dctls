@@ -1,0 +1,272 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(max_input_saturation, Max Input Saturation (radians), DCTLUI_SLIDER_FLOAT, 3.15, 0, 3.15, 0.01)
+DEFINE_UI_PARAMS(protected_fraction, Saturation Knee (Proportion), DCTLUI_SLIDER_FLOAT, 0.645, 0, 1.0, 0.01)
+DEFINE_UI_PARAMS(output_saturation_calculation, Max Output Saturation, DCTLUI_COMBO_BOX, 0, {WORST_CASE, PER_HUE}, {Worst Case, Per Hue})
+DEFINE_UI_PARAMS(debug, Debug Mode, DCTLUI_COMBO_BOX, 0, {NONE, MAX_SATURATION, SATURATION}, {None, Max Output Saturation, Saturation})
+// clang-format on
+
+#define PI (3.1415926535)
+
+// LINEAR ALGEBRA FUNCTIONS
+__DEVICE__ float3 cross_product(float3 a, float3 b) {
+    float3 out = make_float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+    return out;
+}
+
+__DEVICE__ inline float pow2f(float base) {
+    return base * base;
+}
+
+__DEVICE__ float dot_product(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__DEVICE__ float norm_f3(float3 a) {
+    return _sqrtf(pow2f(a.x) + pow2f(a.y) + pow2f(a.z));
+}
+
+__DEVICE__ float3 unit_vec(float3 a) {
+    float norm = norm_f3(a);
+    float3 out = make_float3(a.x / norm, a.y / norm, a.z / norm);
+    return out;
+}
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float angle) {
+    // Axis assumed to be unit vector, angle assuemd to be in radians
+    float c = _cosf(angle);
+    float s = _sinf(angle);
+
+    mat[0][0] = c + pow2f(axis.x) * (1.0 - c);
+    mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
+    mat[1][1] = c + pow2f(axis.y) * (1.0 - c);
+    mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
+    mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
+}
+
+
+__DEVICE__ float3 rgb_to_spherical(float3 x) {
+    const float3 achromatic = make_float3(1.0, 1.0, 1.0);
+    const float3 red_axis = make_float3(1.0, 0.0, 0.0);
+    const float scale = norm_f3(achromatic);
+    float rot_mat[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    float rot_mat2[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+
+    // Moves the achromatic axis to the red axis.
+    make_rotation_mat_axis_angle(
+        rot_mat, unit_vec(cross_product(red_axis, achromatic)), -1.0 * _acosf(dot_product(red_axis, unit_vec(achromatic))));
+    // Rotates around (1, 0, 0) so that the old red vector points to (1, 0, 0).
+    make_rotation_mat_axis_angle(rot_mat2, red_axis, 3.0 * PI / 4.0);
+
+    float3 rotated_color = mv_33_3(rot_mat, x);
+    rotated_color = mv_33_3(rot_mat2, rotated_color) / scale;
+    float theta = _atan2f(rotated_color.z, rotated_color.y);
+
+    float value = norm_f3(rotated_color);
+    float hue = theta < 0.0 ? theta + 2.0 * PI : theta;
+    float sat = _atan2f(norm_f3(make_float3(rotated_color.y, rotated_color.z, 0.0)), rotated_color.x);
+    return make_float3(hue, sat, value);
+}
+
+__DEVICE__ float3 spherical_to_rgb(float3 in) {
+    const float3 achromatic = make_float3(1.0, 1.0, 1.0);
+    const float3 red_axis = make_float3(1.0, 0.0, 0.0);
+    const float scale = norm_f3(achromatic);
+
+    float rot_mat_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    float rot_mat2_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    make_rotation_mat_axis_angle(
+        rot_mat_inv, unit_vec(cross_product(red_axis, achromatic)), _acosf(dot_product(red_axis, unit_vec(achromatic))));
+    make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0 * PI / 4.0);
+
+    float3 in_rads = make_float3(in.x, (in.y > 0.5 ? in.y - 1.0 : in.y) * 2.0 * PI, in.z);
+
+    float hue = in.x;
+    float sat = in.y;
+    float value = in.z;
+
+    float3 direction = make_float3(1.0, 1.0, 1.0);
+    direction.x = value              * _cosf(sat);
+    direction.z = value * _sinf(hue) * _sinf(sat);
+    direction.y = value * _cosf(hue) * _sinf(sat);
+
+    float3 x = mv_33_3(rot_mat2_inv, direction * scale);
+    x = mv_33_3(rot_mat_inv, x);
+    return x;
+}
+
+// ROLLOFF FUNCTION
+__DEVICE__ float rolloff(float in, float knee, float input_max, float output_max) {
+    float out;
+
+    if (in <= knee) {
+        // Constriants
+        // f'(0) = 1.0
+        // for x < knee, f(x) = x
+        out = in;
+    } else {
+        // Constraints:
+        // passes through (knee, knee) (given for free by construction.)
+        float x = input_max - knee;
+        // f(input_max) = output_max
+        float a = (output_max * x - (knee * x)) / (x - output_max + knee);
+        // Can use `float a = (output_max - knee);` for when input_max is infinity.
+        // f'(knee) = 1.0
+        float b = a;
+        float shoulder = a * (in - knee) / (in - knee + b) + knee;
+        out = shoulder;
+    }
+    return out;
+}
+
+__DEVICE__ float3 gamut_compress(float3 input, float knee, float input_max, float output_max) {
+
+    float3 normalized_input = unit_vec(input);
+    // Extract saturation
+    float sat = _acosf(dot_product(normalized_input, unit_vec(make_float3(1.0, 1.0, 1.0))));
+    input_max = _fmaxf(input_max, output_max + 0.01);
+    float new_saturation = rolloff(sat, knee, input_max, output_max);
+
+    // Rotate around normal to reach new saturation
+    float3 normal = cross_product(normalized_input, unit_vec(make_float3(1.0, 1.0, 1.0)));
+    float sat_change = sat - new_saturation;
+    float mat[3][3] = {};
+    make_rotation_mat_axis_angle(mat, unit_vec(normal), sat_change);
+    float3 result = mv_33_3(mat, input);
+    return result;
+}
+
+
+__DEVICE__ float3 gamut_compress_spherical(float3 input, float knee, float input_max, float output_max) {
+
+    float3 normalized_input = unit_vec(input);
+    // Extract saturation
+    float3 spherical = rgb_to_spherical(input);
+    float sat = spherical.y;
+    input_max = _fmaxf(input_max, output_max + 0.01);
+    float new_saturation = rolloff(sat, knee, input_max, output_max);
+
+    // Rotate around normal to reach new saturation
+    float3 result = spherical_to_rgb(make_float3(spherical.x, new_saturation, spherical.z));
+    return result;
+}
+
+
+
+__DEVICE__ float3 rgb_to_hsv(float r, float g, float b) {
+    float c_max = _fmaxf(_fmaxf(r, g), b);
+    float c_min = _fminf(_fminf(r, g), b);
+    float delta = c_max - c_min;
+
+    float H;
+    if (delta == 0.0f) {
+        H = 0.0f;
+    } else if (r >= g && r >= b) {
+        H = _fmod((g - b) / delta + 6.0f, (6.0f));
+    } else if (g >= r && g >= b) {
+        H = (b - r) / delta + (2.0f);
+    } else {
+        // b >= r && b >= g
+        H = (r - g) / delta + 4.0f;
+    }
+    H = H / 6.0f;
+
+    float S;
+    if (c_max == 0.0f) {
+        S = 0.0f;
+    } else {
+        S = delta / c_max;
+    }
+    float V = c_max;
+
+    float3 color = make_float3(H, S, V);
+    return color;
+}
+
+
+__DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
+    hue *= 360.0;
+    float c = val * sat;
+    float x = c * (1.0 - _fabs(_fmod(hue / 60.0, 2.0) - 1.0));
+    float m = val - c;
+    float3 rgbp;
+    if (0.0 <= hue && hue < 60.0) {
+        rgbp = make_float3(c, x, 0.0);
+    } else if (60.0 <= hue && hue < 120.0) {
+        rgbp = make_float3(x, c, 0.0);
+    } else if (120.0 <= hue && hue < 180.0) {
+        rgbp = make_float3(0.0, c, x);
+    } else if (180.0 <= hue && hue < 240.0) {
+        rgbp = make_float3(0.0, x, c);
+    } else if (240.0 <= hue && hue < 300.0) {
+        rgbp = make_float3(x, 0.0, c);
+    } else if (300.0 < hue && hue < 360.0) {
+        rgbp = make_float3(c, 0.0, x);
+    }
+    return rgbp + m;
+}
+
+
+__DEVICE__ float3 max_out_sat_angle(float3 input) {
+    // Assuming all channels of input are nonnegative,
+    // return a float3 that is on the surface of the cube with unit length.
+    // IE value is set to 1.0 with maxed out saturation, no change to hue.
+    float3 hsv = rgb_to_hsv(input.x, input.y, input.z);
+    float3 rgb = hsv_to_rgb(hsv.x, 1.0, hsv.z);
+
+
+    // TODO: Extract hue from Input
+    // Then apply a smoothed out Hue vs max output angle function
+    // The above piecewise function sucks.
+    return rgb;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 input = make_float3(p_R, p_G, p_B);
+    float3 normalized_input = unit_vec(input);
+
+    if (input.x == 0.0 && input.y == 0.0 && input.z == 0.0) {
+        return make_float3(0.0, 0.0, 0.0);
+    }
+    // Largest saturation angle from achromatic within a cube.
+    float worst_case_output_saturation = _acosf(dot_product(unit_vec(make_float3(1.0, 1.0, 0.0)), unit_vec(make_float3(1.0, 1.0, 1.0))));
+
+    float max_output_saturation;
+    float3 border_location;
+    if (output_saturation_calculation == WORST_CASE) {
+        max_output_saturation = worst_case_output_saturation;
+    } else if (output_saturation_calculation == PER_HUE) {
+        // Need worst case output saturation at hue corresponding to the input
+        float3 initial = gamut_compress(input, worst_case_output_saturation, PI, worst_case_output_saturation);
+        border_location = max_out_sat_angle(initial);
+        max_output_saturation = _acosf(dot_product(unit_vec(border_location), unit_vec(make_float3(1.0, 1.0, 1.0))));
+    }
+
+    // Now gently gamut compress properly to the target max_output_saturation
+    float knee = protected_fraction * max_output_saturation;
+    max_input_saturation = _fmaxf(max_input_saturation, protected_fraction * max_output_saturation + 0.01);
+    float3 result = gamut_compress(input, knee, max_input_saturation, max_output_saturation);
+
+    // Convert to rgb
+    float3 out = make_float3(0.0, 0.0, 0.0);
+    if (debug == NONE) {
+        out = result;
+    } else if (debug == MAX_SATURATION) {
+        return border_location;
+    } else if (debug == SATURATION) {
+        // return make_float3(new_saturation, new_saturation, new_saturation);
+        return make_float3(0.0, 0.0, 0.0);
+    }
+    return out;
+}
