@@ -506,8 +506,11 @@ Expects a linear image, applies linear contrast to each channel via gamma, prese
 ---
 
 ### RGB Linear Contrast DCTL
+
 **(Deprecated - Use "Linear Contrast DCTL" instead.)**
+
 You can find the old version of this DCTL [here](https://github.com/thatcherfreeman/utility-dctls/blob/167d849241ddd1e6dbd3963e2be3601694173a38/Effects/RGB%20Linear%20Contrast.dctl)
+
 Applies a power function to the RGB channels, keeping 0.18 unchanged. This DCTL expects a scene linear image.
 
 #### How it works
