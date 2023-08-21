@@ -2,7 +2,8 @@
 // clang-format off
 DEFINE_UI_PARAMS(max_input_saturation, Max Input Saturation (radians), DCTLUI_SLIDER_FLOAT, 3.15, 0, 3.15, 0.01)
 DEFINE_UI_PARAMS(protected_fraction, Saturation Knee (Proportion), DCTLUI_SLIDER_FLOAT, 0.645, 0, 1.0, 0.01)
-DEFINE_UI_PARAMS(output_saturation_calculation, Max Output Saturation, DCTLUI_COMBO_BOX, 0, {WORST_CASE, PER_HUE}, {Worst Case, Per Hue})
+DEFINE_UI_PARAMS(output_saturation_calculation, Max Output Saturation, DCTLUI_COMBO_BOX, 0, {WORST_CASE, PER_HUE_TRUE_MAX, PER_HUE_SMOOTHED_MAX}, {Worst Case, Per Hue True Max, Per Hue Smoothed Max})
+DEFINE_UI_PARAMS(preservation_strategy, Preservation Strategy, DCTLUI_COMBO_BOX, 0, {MAGNITUDE, WHITE_COMPONENT}, {Magnitude, White Component})
 DEFINE_UI_PARAMS(debug, Debug Mode, DCTLUI_COMBO_BOX, 0, {NONE, MAX_SATURATION, SATURATION}, {None, Max Output Saturation, Saturation})
 // clang-format on
 
@@ -59,7 +60,6 @@ __DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float
 __DEVICE__ float3 rgb_to_spherical(float3 x) {
     const float3 achromatic = make_float3(1.0, 1.0, 1.0);
     const float3 red_axis = make_float3(1.0, 0.0, 0.0);
-    const float scale = norm_f3(achromatic);
     float rot_mat[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
     float rot_mat2[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
 
@@ -70,7 +70,7 @@ __DEVICE__ float3 rgb_to_spherical(float3 x) {
     make_rotation_mat_axis_angle(rot_mat2, red_axis, 3.0 * PI / 4.0);
 
     float3 rotated_color = mv_33_3(rot_mat, x);
-    rotated_color = mv_33_3(rot_mat2, rotated_color) / scale;
+    rotated_color = mv_33_3(rot_mat2, rotated_color);
     float theta = _atan2f(rotated_color.z, rotated_color.y);
 
     float value = norm_f3(rotated_color);
@@ -82,15 +82,12 @@ __DEVICE__ float3 rgb_to_spherical(float3 x) {
 __DEVICE__ float3 spherical_to_rgb(float3 in) {
     const float3 achromatic = make_float3(1.0, 1.0, 1.0);
     const float3 red_axis = make_float3(1.0, 0.0, 0.0);
-    const float scale = norm_f3(achromatic);
 
     float rot_mat_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
     float rot_mat2_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
     make_rotation_mat_axis_angle(
         rot_mat_inv, unit_vec(cross_product(red_axis, achromatic)), _acosf(dot_product(red_axis, unit_vec(achromatic))));
     make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0 * PI / 4.0);
-
-    float3 in_rads = make_float3(in.x, (in.y > 0.5 ? in.y - 1.0 : in.y) * 2.0 * PI, in.z);
 
     float hue = in.x;
     float sat = in.y;
@@ -101,7 +98,7 @@ __DEVICE__ float3 spherical_to_rgb(float3 in) {
     direction.z = value * _sinf(hue) * _sinf(sat);
     direction.y = value * _cosf(hue) * _sinf(sat);
 
-    float3 x = mv_33_3(rot_mat2_inv, direction * scale);
+    float3 x = mv_33_3(rot_mat2_inv, direction);
     x = mv_33_3(rot_mat_inv, x);
     return x;
 }
@@ -148,9 +145,7 @@ __DEVICE__ float3 gamut_compress(float3 input, float knee, float input_max, floa
 }
 
 
-__DEVICE__ float3 gamut_compress_spherical(float3 input, float knee, float input_max, float output_max) {
-
-    float3 normalized_input = unit_vec(input);
+__DEVICE__ float3 gamut_compress_spherical(float3 input, float knee, float input_max, float output_max, int preservation_strategy) {
     // Extract saturation
     float3 spherical = rgb_to_spherical(input);
     float sat = spherical.y;
@@ -158,7 +153,13 @@ __DEVICE__ float3 gamut_compress_spherical(float3 input, float knee, float input
     float new_saturation = rolloff(sat, knee, input_max, output_max);
 
     // Rotate around normal to reach new saturation
-    float3 result = spherical_to_rgb(make_float3(spherical.x, new_saturation, spherical.z));
+    float output_value;
+    if (preservation_strategy == MAGNITUDE) {
+        output_value = spherical.z;
+    } else if (preservation_strategy == WHITE_COMPONENT) {
+        output_value = _fmaxf(dot_product(input, unit_vec(make_float3(1.0, 1.0, 1.0))), 0.0);
+    }
+    float3 result = spherical_to_rgb(make_float3(spherical.x, new_saturation, output_value));
     return result;
 }
 
@@ -218,18 +219,27 @@ __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
 }
 
 
-__DEVICE__ float3 max_out_sat_angle(float3 input) {
+__DEVICE__ float true_max_worst_case_sat_angle(float3 input) {
     // Assuming all channels of input are nonnegative,
     // return a float3 that is on the surface of the cube with unit length.
     // IE value is set to 1.0 with maxed out saturation, no change to hue.
     float3 hsv = rgb_to_hsv(input.x, input.y, input.z);
     float3 rgb = hsv_to_rgb(hsv.x, 1.0, hsv.z);
+    return rgb_to_spherical(rgb).y;
+}
 
 
-    // TODO: Extract hue from Input
+__DEVICE__ float smoothed_worst_case_sat_angle(float3 input) {
     // Then apply a smoothed out Hue vs max output angle function
     // The above piecewise function sucks.
-    return rgb;
+    float curr_hue = rgb_to_spherical(input).x;
+    float worst_case_sat_cmy = rgb_to_spherical(make_float3(1.0, 1.0, 0.0)).y;
+    float worst_case_sat_rgb = rgb_to_spherical(make_float3(1.0, 0.0, 0.0)).y;
+    // float worst_case_sat_rgb = 0.5;
+
+    float curr_hue_smoothed_worst_case_sat = (worst_case_sat_cmy + 0.2 * (worst_case_sat_rgb - worst_case_sat_cmy)) + ((worst_case_sat_rgb - worst_case_sat_cmy) / 2) * -0.5 * _sinf(3.0 * (curr_hue - (PI / 6.0)));
+
+    return curr_hue_smoothed_worst_case_sat;
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
@@ -240,30 +250,32 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         return make_float3(0.0, 0.0, 0.0);
     }
     // Largest saturation angle from achromatic within a cube.
-    float worst_case_output_saturation = _acosf(dot_product(unit_vec(make_float3(1.0, 1.0, 0.0)), unit_vec(make_float3(1.0, 1.0, 1.0))));
+    float worst_case_output_saturation = rgb_to_spherical(make_float3(1.0, 1.0, 0.0)).y;
 
     float max_output_saturation;
-    float3 border_location;
     if (output_saturation_calculation == WORST_CASE) {
         max_output_saturation = worst_case_output_saturation;
-    } else if (output_saturation_calculation == PER_HUE) {
+    } else if (output_saturation_calculation == PER_HUE_TRUE_MAX) {
         // Need worst case output saturation at hue corresponding to the input
-        float3 initial = gamut_compress(input, worst_case_output_saturation, PI, worst_case_output_saturation);
-        border_location = max_out_sat_angle(initial);
-        max_output_saturation = _acosf(dot_product(unit_vec(border_location), unit_vec(make_float3(1.0, 1.0, 1.0))));
+        float3 initial = gamut_compress_spherical(input, worst_case_output_saturation, PI, worst_case_output_saturation, preservation_strategy);
+        max_output_saturation = true_max_worst_case_sat_angle(initial);
+    } else if (output_saturation_calculation == PER_HUE_SMOOTHED_MAX) {
+        float3 initial = gamut_compress_spherical(input, worst_case_output_saturation, PI, worst_case_output_saturation, preservation_strategy);
+        max_output_saturation = smoothed_worst_case_sat_angle(initial);
     }
 
     // Now gently gamut compress properly to the target max_output_saturation
     float knee = protected_fraction * max_output_saturation;
     max_input_saturation = _fmaxf(max_input_saturation, protected_fraction * max_output_saturation + 0.01);
-    float3 result = gamut_compress(input, knee, max_input_saturation, max_output_saturation);
+    float3 result = gamut_compress_spherical(input, knee, max_input_saturation, max_output_saturation, preservation_strategy);
 
     // Convert to rgb
     float3 out = make_float3(0.0, 0.0, 0.0);
     if (debug == NONE) {
         out = result;
     } else if (debug == MAX_SATURATION) {
-        return border_location;
+        float3 input_spherical = rgb_to_spherical(input);
+        return unit_vec(spherical_to_rgb(make_float3(input_spherical.x, max_output_saturation, input_spherical.z)));
     } else if (debug == SATURATION) {
         // return make_float3(new_saturation, new_saturation, new_saturation);
         return make_float3(0.0, 0.0, 0.0);

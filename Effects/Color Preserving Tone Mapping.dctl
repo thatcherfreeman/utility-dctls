@@ -1,0 +1,242 @@
+//clang-format off
+DEFINE_UI_PARAMS(target_slope, Target Slope, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.01)
+DEFINE_UI_PARAMS(white_point, White Point, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(black_point, Black Point, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mid_gray_in, Input Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(usr_mid_gray_out, Output Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(scale_mid_gray, Scale Mid Gray with White Point, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(model, Model, DCTLUI_COMBO_BOX, 0, {HSV, SPHERICAL}, {HSV, Spherical})
+DEFINE_UI_PARAMS(preservation_strategy, Preservation Strategy, DCTLUI_COMBO_BOX, 1, {PRESERVE_NONE, PRESERVE_HUE, PRESERVE_SAT, PRESERVE_BOTH}, {Preserve None, Preserve Hue, Preserve Sat, Preserve Both})
+//clang-format on
+
+/////////////////////////////////
+// Spherical Color Space stuff //
+/////////////////////////////////
+
+#define PI (3.1415926535)
+
+__DEVICE__ float3 cross_product(float3 a, float3 b) {
+    float3 out = make_float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+    return out;
+}
+
+__DEVICE__ inline float pow2f(float base) {
+    return base * base;
+}
+
+__DEVICE__ float dot_product(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__DEVICE__ float norm_f3(float3 a) {
+    return _sqrtf(pow2f(a.x) + pow2f(a.y) + pow2f(a.z));
+}
+
+__DEVICE__ float3 unit_vec(float3 a) {
+    float norm = norm_f3(a);
+    float3 out = make_float3(a.x / norm, a.y / norm, a.z / norm);
+    return out;
+}
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float angle) {
+    // Axis assumed to be unit vector, angle assuemd to be in radians
+    float c = _cosf(angle);
+    float s = _sinf(angle);
+
+    mat[0][0] = c + pow2f(axis.x) * (1.0 - c);
+    mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
+    mat[1][1] = c + pow2f(axis.y) * (1.0 - c);
+    mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
+    mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
+}
+
+
+__DEVICE__ float3 rgb_to_spherical(float3 x) {
+    const float3 achromatic = make_float3(1.0, 1.0, 1.0);
+    const float3 red_axis = make_float3(1.0, 0.0, 0.0);
+    float rot_mat[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    float rot_mat2[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+
+    // Moves the achromatic axis to the red axis.
+    make_rotation_mat_axis_angle(
+        rot_mat, unit_vec(cross_product(red_axis, achromatic)), -1.0 * _acosf(dot_product(red_axis, unit_vec(achromatic))));
+    // Rotates around (1, 0, 0) so that the old red vector points to (1, 0, 0).
+    make_rotation_mat_axis_angle(rot_mat2, red_axis, 3.0 * PI / 4.0);
+
+    float3 rotated_color = mv_33_3(rot_mat, x);
+    rotated_color = mv_33_3(rot_mat2, rotated_color);
+    float theta = _atan2f(rotated_color.z, rotated_color.y);
+
+    float value = norm_f3(rotated_color);
+    float hue = theta < 0.0 ? theta + 2.0 * PI : theta;
+    float sat = _atan2f(norm_f3(make_float3(rotated_color.y, rotated_color.z, 0.0)), rotated_color.x);
+    return make_float3(hue, sat, value);
+}
+
+__DEVICE__ float3 spherical_to_rgb(float3 in) {
+    const float3 achromatic = make_float3(1.0, 1.0, 1.0);
+    const float3 red_axis = make_float3(1.0, 0.0, 0.0);
+
+    float rot_mat_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    float rot_mat2_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    make_rotation_mat_axis_angle(
+        rot_mat_inv, unit_vec(cross_product(red_axis, achromatic)), _acosf(dot_product(red_axis, unit_vec(achromatic))));
+    make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0 * PI / 4.0);
+
+    float hue = in.x;
+    float sat = in.y;
+    float value = in.z;
+
+    float3 direction = make_float3(1.0, 1.0, 1.0);
+    direction.x = value              * _cosf(sat);
+    direction.z = value * _sinf(hue) * _sinf(sat);
+    direction.y = value * _cosf(hue) * _sinf(sat);
+
+    float3 x = mv_33_3(rot_mat2_inv, direction);
+    x = mv_33_3(rot_mat_inv, x);
+    return x;
+}
+
+__DEVICE__ float3 hsv_to_rgb(float3 hsv) {
+    float hue = hsv.x;
+    float sat = hsv.y;
+    float val = hsv.z;
+
+    hue *= 360.0;
+    float c = val * sat;
+    float x = c * (1.0 - _fabs(_fmod(hue / 60.0, 2.0) - 1.0));
+    float m = val - c;
+    float3 rgbp;
+    if (0.0 <= hue && hue < 60.0) {
+        rgbp = make_float3(c, x, 0.0);
+    } else if (60.0 <= hue && hue < 120.0) {
+        rgbp = make_float3(x, c, 0.0);
+    } else if (120.0 <= hue && hue < 180.0) {
+        rgbp = make_float3(0.0, c, x);
+    } else if (180.0 <= hue && hue < 240.0) {
+        rgbp = make_float3(0.0, x, c);
+    } else if (240.0 <= hue && hue < 300.0) {
+        rgbp = make_float3(x, 0.0, c);
+    } else if (300.0 < hue && hue < 360.0) {
+        rgbp = make_float3(c, 0.0, x);
+    }
+    return rgbp + m;
+}
+
+
+
+__DEVICE__ float3 rgb_to_hsv(float3 rgb) {
+    float r = rgb.x;
+    float g = rgb.y;
+    float b = rgb.z;
+    float c_max = _fmaxf(_fmaxf(r, g), b);
+    float c_min = _fminf(_fminf(r, g), b);
+    float delta = c_max - c_min;
+
+    float H;
+    if (delta == 0.0f) {
+        H = 0.0f;
+    } else if (r >= g && r >= b) {
+        H = _fmod((g - b) / delta + 6.0f, (6.0f));
+    } else if (g >= r && g >= b) {
+        H = (b - r) / delta + (2.0f);
+    } else {
+        // b >= r && b >= g
+        H = (r - g) / delta + 4.0f;
+    }
+    H = H / 6.0f;
+
+    float S;
+    if (c_max == 0.0f) {
+        S = 0.0f;
+    } else {
+        S = delta / c_max;
+    }
+    float V = c_max;
+
+    float3 color = make_float3(H, S, V);
+    return color;
+}
+
+
+
+////////////////////////////
+// Rolloff function stuff //
+////////////////////////////
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float contrast(float x, float mid_gray, float gamma) {
+    return mid_gray * powf(x / mid_gray, gamma);
+}
+
+// g(x) = a * (x / (x+b)) + c
+__DEVICE__ float rolloff_function(float x, float a, float b, float c) {
+    return a * (x / (x + b)) + c;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float mid_gray_out;
+    if (scale_mid_gray) {
+        mid_gray_out = usr_mid_gray_out * (white_point - black_point) + black_point;
+    } else {
+        mid_gray_out = usr_mid_gray_out;
+    }
+
+    float3 in = make_float3(p_R, p_G, p_B);
+    float3 out = in * mid_gray_out / mid_gray_in;
+
+    // Constraint 1: h(0) = black_point
+    float c = black_point;
+    // Constraint 2: h(infty) = white_point
+    float a = white_point - c;
+    // Constraint 3: h(mid_out) = mid_out
+    float b = (a / (mid_gray_out - c)) * (1.0 - ((mid_gray_out - c) / a)) * mid_gray_out;
+    // Constraint 4: h'(mid_out) = target_slope
+    float gamma = target_slope * powf((mid_gray_out + b), 2.0) / (a * b);
+
+    // h(x) = g(m_i * ((x/m_i)**gamma))
+    out.x = rolloff_function(contrast(out.x, mid_gray_out, gamma), a, b, c);
+    out.y = rolloff_function(contrast(out.y, mid_gray_out, gamma), a, b, c);
+    out.z = rolloff_function(contrast(out.z, mid_gray_out, gamma), a, b, c);
+
+    // Now recover hue and/or saturation.
+    float3 original_hsv;
+    float3 compressed_hsv;
+    if (model == HSV) {
+        original_hsv = rgb_to_hsv(in);
+        compressed_hsv = rgb_to_hsv(out);
+    } else if (model == SPHERICAL) {
+        original_hsv = rgb_to_spherical(in);
+        compressed_hsv = rgb_to_spherical(out);
+    }
+
+    float3 recovered_hsv = compressed_hsv;
+    if (preservation_strategy == PRESERVE_HUE || preservation_strategy == PRESERVE_BOTH) {
+        recovered_hsv.x = original_hsv.x;
+    }
+    if (preservation_strategy == PRESERVE_SAT || preservation_strategy == PRESERVE_BOTH) {
+        recovered_hsv.y = original_hsv.y;
+    }
+
+    float3 output;
+    if (model == HSV) {
+        output = hsv_to_rgb(recovered_hsv);
+    } else if (model == SPHERICAL) {
+        output = spherical_to_rgb(recovered_hsv);
+    }
+    return output;
+}
