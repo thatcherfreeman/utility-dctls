@@ -1248,19 +1248,23 @@ Simulates the effect of saving the current image at a specified bit depth.
 Creates rows of colored chips at the specified increment of stops. Outputs a Linear image. This is useful in evaluating tone mapping and the "Notorious Six" problem where overexposed pure colors get mapped to pure RGBCMY primaries rather than preserving their hue.
 
 #### DCTL Parameters
-**Stops between Chips**: Stops of light between columns
-
-**Saturation**: HSV Saturation of the chips.
+**Saturation**: Saturation of the chips. In Spherical, this is set so that 1.0 results in positive CMY colors.
 
 **Number of Hues**: Number of rows with different hues. Set this to 3 if you want pure RGB chips, set to 6 if you want RGB CMY chips. Increase if you want more granularity.
 
-**Number of Chips**: Number of columns to generate, each is `Stops between Chips` higher or lower than the adjacent ones.
+**Number of Columns**: Number of columns to generate
 
-**Mid Gray**: Indicates the value that will be assigned to the middle chip.
+**Mid Gray**: Indicates the Value that will be assigned to the middle chip
+
+**Min/Max Clamp**: If Clamp Output is checked, then if any channel falls outside the range [Min Clamp, Max Clamp], it will be replaced with white.
+
+**Clamp Output**: Check to remove values that fall outside the Min/Max Clamp range.
 
 **Gray Ramp**: Adds a gray ramp to the top of the frame.
 
 **Vertical**: Turns the chart 90 degrees so it's vertical instead.
+
+**Band Interval**: Indicate whether bands should be placed equidistantly (Equal), or one-stop apart (Exponential). The latter is better suited for pipelines that expect a Linear image.
 
 **Model**: Choose whether to use HSV or Spherical to generate the chips. The spherical model is scaled such that at 1.0 saturation, all tiles will fit within the cube, and at 1.0 value, white is (1.0, 1.0, 1.0).
 
