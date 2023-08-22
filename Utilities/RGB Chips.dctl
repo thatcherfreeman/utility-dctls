@@ -1,10 +1,13 @@
 DEFINE_UI_PARAMS(num_hues, Number of Hues, DCTLUI_SLIDER_INT, 36, 3, 72, 1)
-DEFINE_UI_PARAMS(num_stops, Number of Chips, DCTLUI_SLIDER_INT, 24, 1, 100, 1)
-DEFINE_UI_PARAMS(increment_size, Stops Between Chips, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
+DEFINE_UI_PARAMS(num_cols, Number of Columns, DCTLUI_SLIDER_INT, 24, 1, 100, 1)
 DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
 DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(clamp_output_min, Min Clamp, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(clamp_output_max, Max Clamp, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(clamp_output, Clamp Output, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(gray_ramp, Gray Ramp, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(vertical, Vertical, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(band_interval, Band Interval, DCTLUI_COMBO_BOX, 1, {EQUAL, EXPONENTIAL}, {Equal (Log), Exponential (Linear)})
 DEFINE_UI_PARAMS(model, Model, DCTLUI_COMBO_BOX, 0, {HSV, SPHERICAL}, {HSV, Spherical})
 DEFINE_UI_PARAMS(continuous, Continuous Mode, DCTLUI_COMBO_BOX, 0, {DISCRETE, CONTINUOUS_HUE, CONTINUOUS_EXP, CONTINUOUS_BOTH}, {Discrete, Continuous Hue, Continuous Exp, Fully Continuous})
 
@@ -111,8 +114,8 @@ __DEVICE__ float3 spherical_to_rgb(float hue, float sat, float value) {
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
 {
-    float x = (float) p_X / (float) (p_Width - 1);
-    float y = (float) p_Y / (float) (p_Height - 1);
+    float x = (float) (p_X + 1) / (float) (p_Width);
+    float y = (float) (p_Y + 1) / (float) (p_Height);
     if (vertical) {
         float temp = x;
         x = y;
@@ -122,22 +125,31 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float curr_row, curr_col;
     if (continuous == DISCRETE) {
         curr_row = _floorf(y * (num_hues + gray_ramp)) - gray_ramp;
-        curr_col = _round((x - 0.5) * num_stops);
+        curr_col = _ceilf(x * num_cols);
     }
     if (continuous == CONTINUOUS_HUE || continuous == CONTINUOUS_BOTH) {
         curr_row = y * (num_hues + gray_ramp) - gray_ramp;
     }
     if (continuous == CONTINUOUS_EXP || continuous == CONTINUOUS_BOTH) {
-        curr_col = (x - 0.5) * num_stops;
+        curr_col = x * num_cols;
     }
 
     float3 rgb;
     float3 hsv;
 
-    if (gray_ramp && curr_row < 0) {
-        hsv = make_float3(0.0, 0.0, _exp2f(curr_col * increment_size) * mid_gray);
-    } else {
-        hsv = make_float3((curr_row / num_hues) * 360.0, saturation, _exp2f(curr_col * increment_size) * mid_gray);
+    if (band_interval == EQUAL) {
+        if (gray_ramp && curr_row < 0) {
+            hsv = make_float3(0.0, 0.0, curr_col / num_cols);
+        } else {
+            hsv = make_float3((curr_row / num_hues) * 360.0, saturation, curr_col / num_cols);
+        }
+    } else if (band_interval == EXPONENTIAL) {
+        curr_col -= _round(num_cols / 2.0);
+        if (gray_ramp && curr_row < 0) {
+            hsv = make_float3(0.0, 0.0, _exp2f(curr_col) * mid_gray);
+        } else {
+            hsv = make_float3((curr_row / num_hues) * 360.0, saturation, _exp2f(curr_col) * mid_gray);
+        }
     }
 
     if (model == SPHERICAL) {
@@ -145,5 +157,13 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     } else if (model == HSV) {
         rgb = hsv_to_rgb(hsv.x, hsv.y, hsv.z);
     }
+
+    if (clamp_output) {
+        if (rgb.x > clamp_output_max || rgb.y > clamp_output_max || rgb.z > clamp_output_max || rgb.x < clamp_output_min ||
+            rgb.y < clamp_output_min || rgb.z < clamp_output_min) {
+            rgb = make_float3(clamp_output_max, clamp_output_max, clamp_output_max);
+        }
+    }
+
     return rgb;
 }
