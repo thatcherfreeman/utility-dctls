@@ -15,6 +15,7 @@ These are DCTLs that I have developed.
         - [MTF Curve Fuse](#mtf-curve-fuse)
         - [Periodic Frame Sampler Fuse](#periodic-frame-sampler-fuse)
         - [Pixel Logger Fuse](#pixel-logger-fuse)
+        - [Recenter Fuse](#recenter-fuse)
 - [The DCTLs:](#the-dctls)
     - [Effects](#effects)
         - [Bleach Bypass DCTL](#bleach-bypass-dctl)
@@ -246,6 +247,19 @@ Samples the specified pixel in the image, then prints out the frame number and r
 **Log Header**: If you're on Frame 0 and you hit Reload when this is checked, it'll print out a`frame,red,green,blue[,tags]`, which would make it useful when copying and pasting your console into spreadsheet software via csv. Uncheck this if you don't want that bit to be printed out.
 
 
+---
+### Recenter Fuse
+Allows you to specify a source point that you want to move to a destination coordinate. Useful if you need to align a variety of images that only differ in terms of translation.
+
+#### Parameters
+**Mode**: Indicate whether to look at the source image (pre-translation) or destination image (after translation)
+
+**Original Pixel Location**: X,Y coordinates of some pixel in the source image
+
+**New Pixel Location**: X,Y coordinates that indicate the desired destination location of the Original Pixel Location.
+
+
+---
 
 # The DCTLs:
 
