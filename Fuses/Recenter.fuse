@@ -16,6 +16,20 @@ function Create()
         { MBTNC_AddButton = "Destination", MBTNCD_ButtonWidth = 0.50, },
         INP_DoNotifyChanged = true,
     })
+    CopySrcDst = self:AddInput("Copy Src to Dest", "CopySrcDst", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ButtonControl",
+        INP_DoNotifyChanged = true,
+        INP_External = false,
+        ICD_Width = 0.5,
+    })
+    CopyDstSrc = self:AddInput("Copy Dest to Src", "CopyDstSrc", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ButtonControl",
+        INP_DoNotifyChanged = true,
+        INP_External = false,
+        ICD_Width = 0.5,
+    })
     OldPixelLocation = self:AddInput("Original Pixel Location", "OriginalPixelLocation", {
         LINKID_DataType = "Point",
         INPID_InputControl = "OffsetControl",
@@ -56,6 +70,10 @@ function NotifyChanged(inp, param, time)
         OldPixelLocation:SetAttrs({
             PC_Visible = false,
         })
+    elseif inp == CopySrcDst and param.Value == 1 then
+        NewPixelLocation:SetSource(OldPixelLocation:GetSource(time), time)
+    elseif inp == CopyDstSrc and param.Value == 1 then
+        OldPixelLocation:SetSource(NewPixelLocation:GetSource(time), time)
     end
 end
 
@@ -64,7 +82,7 @@ function Process(req)
     local old_pixel_location = OldPixelLocation:GetValue(req)
     local new_pixel_location = NewPixelLocation:GetValue(req)
     local mode = Mode:GetValue(req).Value
-    local img = InImage:GetSource(req.Time)
+    local img = InImage:GetValue(req)
 
     if mode == 1 then
 

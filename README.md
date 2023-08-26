@@ -254,6 +254,8 @@ Allows you to specify a source point that you want to move to a destination coor
 #### Parameters
 **Mode**: Indicate whether to look at the source image (pre-translation) or destination image (after translation)
 
+**Copy Src to Dest/Dest to Src**: Allows you to copy the original pixel location to the new pixel location or vice versa, respectively.
+
 **Original Pixel Location**: X,Y coordinates of some pixel in the source image
 
 **New Pixel Location**: X,Y coordinates that indicate the desired destination location of the Original Pixel Location.
