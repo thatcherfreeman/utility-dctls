@@ -29,7 +29,7 @@ function Create()
         INP_MaxScale = 10.0,
         INP_Default = 1.0,
         INP_INTEGER = true,
-        INP_MinAllowed = 1.0,
+        INP_MinAllowed = 0.0,
         IC_DisplayedPrecision = 0,
     })
     InImage = self:AddInput("Input", "Input", {
