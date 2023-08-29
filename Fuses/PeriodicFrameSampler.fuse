@@ -25,11 +25,10 @@ function Create()
     Period = self:AddInput("Period", "Period", {
         LINKID_DataType = "Number",
         INPID_InputControl = "SliderControl",
-        INP_MinScale = 1.0,
+        INP_MinScale = 0.0,
         INP_MaxScale = 10.0,
         INP_Default = 1.0,
         INP_INTEGER = true,
-        INP_MinAllowed = 0.0,
         IC_DisplayedPrecision = 0,
     })
     InImage = self:AddInput("Input", "Input", {
