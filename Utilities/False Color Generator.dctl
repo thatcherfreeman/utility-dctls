@@ -84,6 +84,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         output_color = make_float3(linear_to_tlog(linear_output_color.x, stops, 0.0),
                                    linear_to_tlog(linear_output_color.y, stops, 0.0),
                                    linear_to_tlog(linear_output_color.z, stops, 0.0));
+        output_color = make_float3(
+            isinf(output_color.x) || isnan(output_color.x) ? 0.0: output_color.x,
+            isinf(output_color.y) || isnan(output_color.y) ? 0.0: output_color.y,
+            isinf(output_color.z) || isnan(output_color.z) ? 0.0: output_color.z
+        );
     } else {
         output_color = linear_output_color;
     }
