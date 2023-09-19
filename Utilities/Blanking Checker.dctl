@@ -2,12 +2,14 @@ DEFINE_UI_PARAMS(highlight_r, Highlight Color Red, DCTLUI_SLIDER_FLOAT, 1.0, 0.0
 DEFINE_UI_PARAMS(highlight_g, Highlight Color Green, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(highlight_b, Highlight Color Blue, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(checker_size, Checkerboard Square Size, DCTLUI_SLIDER_INT, 0, 0, 1000, 1)
+DEFINE_UI_PARAMS(low_bound, Lower Bound, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(up_bound, Upper Bound, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(highlight_nans, Highlight NaNs, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(highlight_ninfs, Highlight -Inf, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(highlight_negatives, Highlight < 0.0, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(highlight_zeros, Highlight == 0.0, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(highlight_ones, Highlight == 1.0, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(highlight_gt_ones, Highlight > 1.0, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(highlight_negatives, Highlight < Lower, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(highlight_zeros, Highlight == Lower, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(highlight_ones, Highlight == Upper, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(highlight_gt_ones, Highlight > Upper, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(highlight_pinfs, Highlight +Inf, DCTLUI_CHECK_BOX, 1)
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
@@ -16,28 +18,28 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     bool flag = 0;
 
     if (highlight_gt_ones) {
-        if (curr_color.x > 1.0 || curr_color.y > 1.0 || curr_color.z > 1.0) {
+        if (curr_color.x > up_bound || curr_color.y > up_bound || curr_color.z > up_bound) {
             output = make_float3(highlight_r, highlight_g, highlight_b);
             flag = 1;
         }
     }
 
     if (highlight_ones) {
-        if (curr_color.x == 1.0 || curr_color.y == 1.0 || curr_color.z == 1.0) {
+        if (curr_color.x == up_bound || curr_color.y == up_bound || curr_color.z == up_bound) {
             output = make_float3(highlight_r, highlight_g, highlight_b);
             flag = 1;
         }
     }
 
     if (highlight_negatives) {
-        if (curr_color.x < 0.0 || curr_color.y < 0.0 || curr_color.z < 0.0) {
+        if (curr_color.x < low_bound || curr_color.y < low_bound || curr_color.z < low_bound) {
             output = make_float3(highlight_r, highlight_g, highlight_b);
             flag = 1;
         }
     }
 
     if (highlight_zeros) {
-        if (curr_color.x == 0.0 || curr_color.y == 0.0 || curr_color.z == 0.0) {
+        if (curr_color.x == low_bound || curr_color.y == low_bound || curr_color.z == low_bound) {
             output = make_float3(highlight_r, highlight_g, highlight_b);
             flag = 1;
         }

@@ -1,0 +1,53 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(mat00, Mat 00, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(mat01, Mat 01, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat02, Mat 02, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat03, Mat 03, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat04, Mat 04, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat05, Mat 05, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat10, Mat 10, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat11, Mat 11, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(mat12, Mat 12, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat13, Mat 13, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat14, Mat 14, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat15, Mat 15, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat20, Mat 20, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat21, Mat 21, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat22, Mat 22, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(mat23, Mat 23, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat24, Mat 24, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat25, Mat 25, DCTLUI_VALUE_BOX, 0.0)
+// clang-format on
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ void mv_36_6(float out[3], float mat[3][6], float vec[6]) {
+    for (int r = 0; r < 3; ++r) {
+        out[r] = 0.0;
+        for (int c = 0; c < 6; ++c) {
+            out[r] += mat[r][c] * vec[c];
+        }
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float mat[3][6] = {
+        {mat00, mat01, mat02, mat03, mat04, mat05},
+        {mat10, mat11, mat12, mat13, mat14, mat15},
+        {mat20, mat21, mat22, mat23, mat24, mat25},
+    };
+    float input[3] = {
+        p_R, p_G, p_B
+    };
+    float augmented_input[6] = {
+        input[0], input[1], input[2], powf(input[0] * input[1], 0.5), powf(input[0] * input[2], 0.5), powf(input[1] * input[2], 0.5)
+    };
+    float output[3] = {};
+    mv_36_6(output, mat, augmented_input);
+
+    return make_float3(output[0], output[1], output[2]);
+}
