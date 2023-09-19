@@ -1,0 +1,47 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(seed, Seed, DCTLUI_SLIDER_INT, 1, 1, 200, 1)
+DEFINE_UI_PARAMS(num_bands, Num Bands, DCTLUI_SLIDER_INT, 1, 1, 100, 1)
+DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 0, {GRADIENT_GENERATOR, GRADIENT_CHECKER}, {Gradient Generator, Gradient Checker})
+// clang-format on
+
+__DEVICE__ float randu(__PRIVATE__ uint* seed) {
+    // Returns random number in interval [0, 1)
+    uint old_seed = *seed;
+    const uint m = (1 << 31) - 1;
+    const uint a = 48271;
+    uint new_seed = (a * old_seed) % m;
+    *seed = new_seed;
+    return (((float)new_seed) / (float)m);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    float3 output_color;
+    if (mode == GRADIENT_GENERATOR) {
+        uint state = seed;
+
+        float x = (float)p_X / (float)(p_Width - 1);
+        float y = (float)p_Y / (float)(p_Height - 1);
+
+        int curr_band = (int)_floorf(y * num_bands);
+        state *= (curr_band + 1);
+        randu(&state);
+        randu(&state);
+        randu(&state);
+
+        float3 curr_color;
+        float3 left = make_float3(randu(&state), randu(&state), randu(&state));
+        float3 right = make_float3(randu(&state), randu(&state), randu(&state)) + left;
+        curr_color = _mix(left, right, x);
+        output_color = curr_color;
+    } else if (mode == GRADIENT_CHECKER) {
+        float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+        float3 left_color = make_float3(_tex2D(p_TexR, p_X - 1, p_Y), _tex2D(p_TexG, p_X - 1, p_Y), _tex2D(p_TexB, p_X - 1, p_Y));
+        if (curr_color.x < left_color.x || curr_color.y < left_color.y || curr_color.z < left_color.z) {
+            output_color = make_float3(0.0, 0.0, 0.0);
+        } else {
+            output_color = curr_color;
+        }
+    }
+    return output_color;
+}

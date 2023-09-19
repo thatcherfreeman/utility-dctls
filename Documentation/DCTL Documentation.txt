@@ -357,6 +357,15 @@ Once defined as non-parametric, all other parameter definitions in DEFINE_ACES_P
     - a custom ODT to convert incoming data from the AP0 linear colorspace.
 2. invokes it from the main transform function.
 
+Optional fields:
+- OUTPUT_COLORSPACE_TAG: Users can tag the output colorspace for ACES DCTL ODT file so that Resolve can set the display correspondingly and tag rendered media correctly.
+                         String to represent the name of tag.
+                         Tag naming is defined by extracting from Academy's odt transform official ctl "[ODT/RRTODT].Academy.[TransformName].ctl"
+                         https://github.com/ampas/aces-dev/tree/master/transforms/ctl/odt
+                         https://github.com/ampas/aces-dev/tree/master/transforms/ctl/outputTransform
+                         e.g. "ODT.Academy.Rec2020_P3D65limited_100nits_dim.ctl" - corresponding OutputColorSpaceTag name is "Rec2020_P3D65limited_100nits_dim"
+             By default, if this tag is not present the output colorspace is assumed to be Rec 709, Gamma 2.4.
+
 Writing a Parametric ACES Transform:
 ------------------------------------
 Example Files:
@@ -379,6 +388,13 @@ Optional fields:
     - SKIP_STANDARD_ACES_RRT: Users can choose to run or skip standard ACES RRT (in output transform) or InvRRT (in input transform), and use their own custom RRT implementation.
                               Integer (either 0,1) representing a boolean flag.
                   By default, this value is treated as 0 and the standard ACES RRT (or InvRRT) is always used.
+    - OUTPUT_COLORSPACE_TAG: Users can tag the output colorspace for ACES DCTL ODT file so that Resolve can set the display correspondingly and tag rendered media correctly.
+                             String to represent the name of tag.
+                             Tag naming is defined by extracting from Academy's odt transform official ctl "[ODT/RRTODT].Academy.[TransformName].ctl"
+                             https://github.com/ampas/aces-dev/tree/master/transforms/ctl/odt
+                             https://github.com/ampas/aces-dev/tree/master/transforms/ctl/outputTransform
+                             e.g. "ODT.Academy.Rec2020_P3D65limited_100nits_dim.ctl" - corresponding OutputColorSpaceTag name is "Rec2020_P3D65limited_100nits_dim"
+                 By default, if this tag is not present the output colorspace is assumed to be Rec 709, Gamma 2.4.
 
 The EOTF and INVERSE EOTF fields correspond to the following Academy standard EOTF transforms:
     - 0: ST-2084 (PQ)
@@ -395,7 +411,7 @@ Example:
                       Y_MAX: 108.0,
                       DISPLAY_PRI: { 0.68000, 0.32000, 0.26500, 0.69000, 0.15000, 0.06000, 0.31270, 0.32900 },
                       LIMITING_PRI: { 0.68000, 0.32000, 0.26500, 0.69000, 0.15000, 0.06000, 0.31270, 0.32900 },
-                      EOTF: 0  ,
+                      EOTF: 0,
                       INVERSE_EOTF: 0,
                       SURROUND: 0,
                       STRETCH_BLACK: 1,
@@ -518,6 +534,32 @@ Input Transform:
         return invRRTResult;
     }
 
+4. List of supporting output colorspace tag names:
+    "DCDM"
+    "DCDM_P3D60limited"
+    "DCDM_P3D65limited"
+    "P3D60_48nits"
+    "P3D65_48nits"
+    "P3D65_D60sim_48nits"
+    "P3D65_Rec709limited_48nits"
+    "P3D65_108nits_7.2nits_ST2084"
+    "P3D65_1000nits_15nits_ST2084"
+    "P3D65_2000nits_15nits_ST2084"
+    "P3D65_4000nits_15nits_ST2084"
+    "P3DCI_D60sim_48nits"
+    "P3DCI_D65sim_48nits"
+    "Rec709_100nits_dim"
+    "Rec709_D60sim_100nits_dim"
+    "Rec2020_100nits_dim"
+    "Rec2020_P3D65limited_100nits_dim"
+    "Rec2020_Rec709limited_100nits_dim"
+    "Rec2020_1000nits_15nits_HLG"
+    "Rec2020_1000nits_15nits_ST2084"
+    "Rec2020_2000nits_15nits_ST2084"
+    "Rec2020_4000nits_15nits_ST2084"
+    "sRGB_100nits_dim"
+    "sRGB_D60sim_100nits_dim"
+
 5. Example ACES DCTLs:
 ---------------------
     - ODT_P3D65_108.dctl: parametric Output Transform implementation following Academy standard for P3D65 108 nits.
@@ -535,3 +577,6 @@ Resolve 17.0
     - Introduce _ceilf() and _floorf() functions which implicitly cast the input value to floating-point value and return floating-point result.
       Older version DCTL that uses deprecated _ceil() and _floor() functions are required to explicitly cast the input type to floating-point.
     - Support inline CUBE LUTs.
+
+Resolve 18.6
+    - Support output color space tag for ACES DCTL ODT files.
