@@ -29,6 +29,14 @@ function Create()
         INP_MaxScale = 8.0,
         INP_Default = 0.0,
     })
+    ChannelMode = self:AddInput("Channel Blend Criteria", "channelMode", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ComboControl",
+        INP_Default = 0.0,
+        INP_Integer = true,
+        { CCS_AddString = "Individual Channels", },
+        { CCS_AddString = "Largest Channel", },
+    })
     ShowMask = self:AddInput("Show Mask", "showMask", {
         LINKID_DataType = "Number",
         INPID_InputControl = "CheckboxControl",
@@ -60,6 +68,12 @@ local computemask = function(x, y, p1)
         p1.G = p1.G > threshold and 1.0 or 0.0
         p1.B = p1.B > threshold and 1.0 or 0.0
     end
+    if channel_mode == 1 then
+        max_mask = math.max(math.max(p1.R, p1.G), p1.B)
+        p1.R = max_mask
+        p1.G = max_mask
+        p1.B = max_mask
+    end
     return p1
 end
 
@@ -80,6 +94,7 @@ function Process(req)
     local feather = FeatherThreshold:GetValue(req).Value
     local blur_strength = BlurAmt:GetValue(req).Value
     local show_mask = ShowMask:GetValue(req).Value
+    local channel_mode = ChannelMode:GetValue(req).Value
 
     local out = Image({IMG_Like = bg})
     local mask = Image({IMG_Like = bg})
@@ -87,7 +102,7 @@ function Process(req)
     ones:Fill(Pixel({R = 1.0, G = 1.0, B = 1.0, A = 1.0}))
     if (bg.Width == fg.Width) and (bg.Height == fg.
         Height) then
-        mask:MultiProcessPixels(nil, {threshold=threshold, feather=feather}, 0, 0, bg.Width, bg.Height, bg, computemask)
+        mask:MultiProcessPixels(nil, {threshold=threshold, feather=feather, channel_mode=channel_mode}, 0, 0, bg.Width, bg.Height, bg, computemask)
         if blur_strength > 0 then
             mask = mask:Blur(nil, {
                 BLUR_Type = "Gaussian",

@@ -1,0 +1,43 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(sample_x, Sample X, DCTLUI_SLIDER_FLOAT, 0.5, 0, 1, 0.01)
+DEFINE_UI_PARAMS(sample_y, Sample Y, DCTLUI_SLIDER_FLOAT, 0.5, 0, 1, 0.01)
+DEFINE_UI_PARAMS(window_size, Window Size(px), DCTLUI_SLIDER_INT, 1, 1, 8, 1)
+DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 0, {CROSSHAIR, COLOR}, {Crosshair, Sampled Color})
+// clang-format on
+
+__DEVICE__ float3 sample(int x, int y, int window_size, __TEXTURE__ texr, __TEXTURE__ texg, __TEXTURE__ texb) {
+    float3 agg = make_float3(0.0, 0.0, 0.0);
+    for (int i = 0; i < window_size; ++i) {
+        for (int j = 0; j < window_size; ++j) {
+            float3 curr_pixel = make_float3(_tex2D(texr, x + i - (window_size / 2), y + j - (window_size / 2)),
+                                            _tex2D(texg, x + i - (window_size / 2), y + j - (window_size / 2)),
+                                            _tex2D(texb, x + i - (window_size / 2), y + j - (window_size / 2)));
+            agg += curr_pixel;
+        }
+    }
+    agg /= (window_size * window_size);
+    return agg;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    int curr_x = _round(sample_x * (p_Width - 1));
+    int curr_y = _round(sample_y * (p_Height - 1));
+
+    float3 output;
+
+    if (mode == CROSSHAIR) {
+        float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+
+        if ((curr_x - (window_size / 2) <= p_X && p_X < curr_x - (window_size / 2) + window_size) ||
+            (curr_y - (window_size / 2) <= p_Y && p_Y < curr_y - (window_size / 2) + window_size)) {
+            // Within crosshair, return inverse of current color so it's visible.
+            curr_color = 1.0 - curr_color;
+        }
+        output = curr_color;
+    } else if (mode == COLOR) {
+        output = sample(curr_x, curr_y, window_size, p_TexR, p_TexG, p_TexB);
+    }
+    return output;
+}
