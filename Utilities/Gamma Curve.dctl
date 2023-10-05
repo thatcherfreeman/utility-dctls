@@ -1,0 +1,56 @@
+#line 2
+// Based on the BT1886 OETF
+// clang-format off
+DEFINE_UI_PARAMS(x_shift, X Shift, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(y_shift, Y Shift, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(scale, Scale, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(slope, Slope, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(intercept, Intercept, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(cut, Cut, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(gain, Linear Gain, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {GAMMA2LIN, LIN2GAMMA}, {Gamma to Lin, Lin to Gamma})
+// clang-format on
+
+typedef struct {
+        float gamma, offset, scale, slope, intercept, cut;
+} gamma_params_t;
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float gamma2lin(float x, gamma_params_t params) {
+    if (x < params.cut) {
+        return x * params.slope + params.intercept;
+    } else {
+        return params.scale * powf(x, params.gamma) + params.offset;
+    }
+}
+
+__DEVICE__ float lin2gamma(float x, gamma_params_t params) {
+    const float y_cut = params.cut * params.slope + params.intercept;
+
+    if (x < y_cut) {
+        return (x - params.intercept) / params.slope;
+    } else {
+        return powf((x - params.offset) / params.scale, 1.0 / params.gamma);
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    gamma_params_t params;
+    params.gamma = gamma;
+    params.offset = offset;
+    params.scale = scale;
+    params.slope = slope;
+    params.intercept = intercept;
+    params.cut = cut;
+
+    float3 output;
+    if (direction == GAMMA2LIN) {
+        output = make_float3(gain * gamma2lin(p_R, params), gain * gamma2lin(p_G, params), gain * gamma2lin(p_B, params));
+    } else if (direction == LIN2GAMMA) {
+        output = make_float3(lin2gamma(p_R / gain, params), lin2gamma(p_G / gain, params), lin2gamma(p_B / gain, params));
+    }
+    return output;
+}

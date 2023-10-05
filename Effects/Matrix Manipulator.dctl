@@ -1,0 +1,150 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(red_hue, Red Hue, DCTLUI_SLIDER_FLOAT, 0, -60.0, 60.0, 0.1)
+DEFINE_UI_PARAMS(red_sat, Red Sat, DCTLUI_SLIDER_FLOAT, 1, 0.0, 3.0, 0.1)
+DEFINE_UI_PARAMS(green_hue, Green Hue, DCTLUI_SLIDER_FLOAT, 0, -60.0, 60.0, 0.1)
+DEFINE_UI_PARAMS(green_sat, Green Sat, DCTLUI_SLIDER_FLOAT, 1, 0.0, 3.0, 0.1)
+DEFINE_UI_PARAMS(blue_hue, Blue Hue, DCTLUI_SLIDER_FLOAT, 0, -60.0, 60.0, 0.1)
+DEFINE_UI_PARAMS(blue_sat, Blue Sat, DCTLUI_SLIDER_FLOAT, 1, 0.0, 3.0, 0.1)
+// clang-format on
+
+
+__DEVICE__ float3 hsv_to_rgb(float3 hsv) {
+    float hue = hsv.x;
+    float sat = hsv.y;
+    float val = hsv.z;
+
+    hue = _fmod(hue + 360.0, 360.0);
+
+    float c = val * sat;
+    float x = c * (1.0 - _fabs(_fmod(hue / 60.0, 2.0) - 1.0));
+    float m = val - c;
+    float3 rgbp;
+    if (0.0 <= hue && hue < 60.0) {
+        rgbp = make_float3(c, x, 0.0);
+    } else if (60.0 <= hue && hue < 120.0) {
+        rgbp = make_float3(x, c, 0.0);
+    } else if (120.0 <= hue && hue < 180.0) {
+        rgbp = make_float3(0.0, c, x);
+    } else if (180.0 <= hue && hue < 240.0) {
+        rgbp = make_float3(0.0, x, c);
+    } else if (240.0 <= hue && hue < 300.0) {
+        rgbp = make_float3(x, 0.0, c);
+    } else if (300.0 < hue && hue < 360.0) {
+        rgbp = make_float3(c, 0.0, x);
+    }
+    return rgbp + m;
+}
+
+
+__DEVICE__ float3 rgb_to_hsv(float3 rgb) {
+    float r = rgb.x;
+    float g = rgb.y;
+    float b = rgb.z;
+    float c_max = _fmaxf(_fmaxf(r, g), b);
+    float c_min = _fminf(_fminf(r, g), b);
+    float delta = c_max - c_min;
+
+    float H;
+    if (delta == 0.0f) {
+        H = 0.0f;
+    } else if (r >= g && r >= b) {
+        H = _fmod((g - b) / delta + 6.0f, (6.0f));
+    } else if (g >= r && g >= b) {
+        H = (b - r) / delta + (2.0f);
+    } else {
+        // b >= r && b >= g
+        H = (r - g) / delta + 4.0f;
+    }
+    H = H / 6.0f;
+
+    float S;
+    if (c_max == 0.0f) {
+        S = 0.0f;
+    } else {
+        S = delta / c_max;
+    }
+    float V = c_max;
+
+    float3 color = make_float3(H * 360.0, S, V);
+    return color;
+}
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    // matrix * vector multiplication
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+
+__DEVICE__ void copy_mat_33(float from[3][3], float to[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            to[i][j] = from[i][j];
+        }
+    }
+}
+
+__DEVICE__ void mat_inverse_33(float inv_buf[3][3], float m[3][3]) {
+    // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
+
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+    inv_buf[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
+    inv_buf[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det;
+    inv_buf[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
+    inv_buf[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det;
+    inv_buf[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
+    inv_buf[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det;
+    inv_buf[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
+    inv_buf[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det;
+    inv_buf[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
+}
+
+
+__DEVICE__ float sum_f3(float3 x) {
+    return x.x + x.y + x.z;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float3 curr_color = make_float3(p_R, p_G, p_B);
+
+    // requirements:
+    // pure red in -> red hue/sat out
+    // same with green/blue
+    // pure white in -> pure white out
+
+    float3 red_hsv = rgb_to_hsv(make_float3(1.0, 0.0, 0.0));
+    float3 green_hsv = rgb_to_hsv(make_float3(0.0, 1.0, 0.0));
+    float3 blue_hsv = rgb_to_hsv(make_float3(0.0, 0.0, 1.0));
+    red_hsv.x += red_hue;
+    red_hsv.y *= red_sat;
+
+    green_hsv.x += green_hue;
+    green_hsv.y *= green_sat;
+
+    blue_hsv.x += blue_hue;
+    blue_hsv.y *= blue_sat;
+
+    float3 red_target_rgb = hsv_to_rgb(red_hsv);
+    float3 green_target_rgb = hsv_to_rgb(green_hsv);
+    float3 blue_target_rgb = hsv_to_rgb(blue_hsv);
+    float mat[3][3] = {
+        red_target_rgb.x, green_target_rgb.x, blue_target_rgb.x,
+        red_target_rgb.y, green_target_rgb.y, blue_target_rgb.y,
+        red_target_rgb.z, green_target_rgb.z, blue_target_rgb.z,
+    };
+
+    // set these so that all rows sum to 1.0.
+    float inv[3][3] = {0.0};
+
+    mat_inverse_33(inv, mat);
+    float3 gains = mv_33_3(inv, make_float3(1.0, 1.0, 1.0));
+
+    float3 res = mv_33_3(mat, curr_color * gains);
+    return res;
+}

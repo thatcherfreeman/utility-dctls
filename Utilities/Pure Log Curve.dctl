@@ -1,35 +1,24 @@
 #line 2
-// Based on ArriLogC3 and most other log curves.
+// Based on the GoPro's log curve
 // clang-format off
 DEFINE_UI_PARAMS(base, Base, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(offset, Offset, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(scale, Scale, DCTLUI_VALUE_BOX, 0.0)
-DEFINE_UI_PARAMS(slope, Slope, DCTLUI_VALUE_BOX, 0.0)
-DEFINE_UI_PARAMS(intercept, Intercept, DCTLUI_VALUE_BOX, 0.0)
-DEFINE_UI_PARAMS(cut, Cut, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(gain, Linear Gain, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {LOG2LIN, LIN2LOG}, {Log to Lin, Lin to Log})
 // clang-format on
 
 typedef struct {
-        float base, offset, scale, slope, intercept, cut;
+        float base, offset, scale;
 } log_params_t;
 
 __DEVICE__ float log2lin(float x, log_params_t params) {
-    if (x < params.cut) {
-        return params.slope * x + params.intercept;
-    } else {
-        return _powf(params.base, x) * params.scale + params.offset;
-    }
+    return (_powf(params.base, x) + params.offset) * params.scale;
 }
 
 __DEVICE__ float lin2log(float y, log_params_t params) {
     float y_cut = params.slope * params.cut + params.intercept;
-    if (y < y_cut) {
-        return (y - params.intercept) / params.slope;
-    } else {
-        return _log10f((y - params.offset) / params.scale) / _log10f(params.base);
-    }
+    return _log10f((y / params.scale) - params.offset) / _log10f(params.base);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {

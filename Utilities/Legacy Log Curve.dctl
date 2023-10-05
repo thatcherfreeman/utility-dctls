@@ -1,4 +1,5 @@
 #line 2
+// Based on the deprecated ACESLog
 // clang-format off
 DEFINE_UI_PARAMS(x_shift, X Shift, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(y_shift, Y Shift, DCTLUI_VALUE_BOX, 0.0)
