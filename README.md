@@ -83,7 +83,6 @@ These are DCTLs that I have developed.
         - [Quantize](#quantize)
         - [RGB Chips DCTL](#rgb-chips-dctl)
         - [Safety Lines DCTL](#safety-lines-dctl)
-        - [Saturation Adjustment DCTL](#saturation-adjustment-dctl)
         - [Spherical Color Space DCTL](#spherical-color-space-dctl)
         - [T-Log Curve](#t-log-curve)
         - [Waveform Guides](#waveform-guides)
@@ -1439,29 +1438,6 @@ DCTL that creates a white frame to indicate safety boundaries for the image.
 **Line Thickness**: Thickness of the drawn box.
 
 **Shade Darkness**: Indicates brightness of the region outside of the box.
-
-
-
-
----
-
-### Saturation Adjustment DCTL
-DCTL that applies Gain and Gamma controls to the Saturation of an image. Can be used in HSL saturation or HSV saturation, though note that in HSL, be sure that inputs are between 0 and 1, as saturation is poorly defined for RGB values outside of this range. This is similar to a combination of the Color Boost (which is approximately a combination of saturation gamma + gain) and Saturation (gain) controls.
-
-#### How it works
-This DCTL converts the input image to HSL or HSV, then applies a Gamma and Gain adjustment to the result. Then, it converts the image back into RGB. This formulation allows for precise control over the Sat v Sat curve, while only allowing for a nondecreasing response. IE, in Resolve's standard Sat v Sat curve, you can make the mistake of having highly saturated objects in the scene become less saturated than less saturated objects, which will typically look unnatural.
-
-#### DCTL Parameters
-**Saturation Type**: Specify one of [HSL, HSV]. This converts the RGB image to HSL or HSV space depending on what is specified, and uses the saturation channel from that image. HSV will typically perform better when your input image has luminances greater than 1, but HSL will sometimes make more appealing saturation adjustments.
-
-**Gain**: The input saturation is linearly multiplied by the Gain, so this will adjust the maximum saturation allowed in the image.
-
-**Gamma**: This mimics the Gamma control in Resolve's Primaries wheels, applying a power function to the saturation channel. This is applied before Gain.
-
-**Show Saturation**: This checkbox allows you to view just the saturation channel, after the Gain and Gamma adjustments have been made.
-
-**Show Curve**: When checked, this displays the corresponding curves adjustment that's being made to the saturation channel.
-
 
 
 
