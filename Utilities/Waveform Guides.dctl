@@ -10,9 +10,9 @@ DEFINE_UI_PARAMS(bt1886_lw, BT1886 White Point, DCTLUI_VALUE_BOX, 100)
 DEFINE_UI_PARAMS(bt1886_lb, BT1886 Black Point, DCTLUI_VALUE_BOX, 0)
 DEFINE_UI_PARAMS(bt1886_g, BT1886 Gamma, DCTLUI_VALUE_BOX, 2.4)
 
-DEFINE_UI_PARAMS(mid_gray, Mid Gray Nits, DCTLUI_VALUE_BOX, 18)
+DEFINE_UI_PARAMS(mid_gray, Mid Gray Nits, DCTLUI_VALUE_BOX, 10)
 
-DEFINE_UI_PARAMS(rescale_image, Rescale Mode, DCTLUI_COMBO_BOX, 1, {NONE, FILL, ASPECT}, {None, Fill, Aspect})
+DEFINE_UI_PARAMS(rescale_image, Rescale Mode, DCTLUI_COMBO_BOX, 2, {NONE, FILL, ASPECT}, {None, Fill, Aspect})
 DEFINE_UI_PARAMS(waveform_scale, Waveform Scale, DCTLUI_COMBO_BOX, 0, {BT1886_NITS, BT1886_STOPS, ST2084_NITS, ST2084_STOPS}, {BT.1886 Annex 1 Nits, BT.1886 Annex 1 Stops, ST.2084 Nits, ST.2084 Stops})
 // clang-format on
 
@@ -481,7 +481,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         num_major_axes = 1 + (num_stops * 2);
         num_minor_axes = 1 + (num_stops * 3 * 2);
         for (int stop = -1 * num_stops, j = 0; stop <= num_stops; ++stop, ++j) {
-            major_nits[j] = mid_gray * _exp2f(stop);
+            major_nits[j] = mid_gray * _exp2f((float)stop);
             if (stop == 0) {
                 char mid_str[4] = "MID";
                 strcpy_idx(mid_str, nits_names[j], 0, 0, 4);
@@ -493,7 +493,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 substeps = 1;
             }
             for (int k = 0; k < substeps; ++k) {
-                minor_nits[j*3 + k] = mid_gray * _exp2f(stop + (k * 0.33333333));
+                minor_nits[j*3 + k] = mid_gray * _exp2f((float) stop + (k * 0.33333333));
             }
         }
     }
