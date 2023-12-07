@@ -1,6 +1,7 @@
 // clang-format off
 DEFINE_UI_PARAMS(hue, Base Hue, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 360.0, 0.01)
 DEFINE_UI_PARAMS(hue_angle, Angle Between Patches, DCTLUI_SLIDER_FLOAT, 180.0, 0.0, 360.0, 0.01)
+DEFINE_UI_PARAMS(base_value, Base Value, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(num_bands, Number of Bands, DCTLUI_SLIDER_INT, 10, 1, 50, 1)
 DEFINE_UI_PARAMS(band_interval, Band Interval, DCTLUI_COMBO_BOX, 0, {EQUAL, EXPONENTIAL}, {Equal (Log), Exponential (Linear)})
@@ -54,7 +55,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     // Draw Gradient
-    float3 left_patch = hsv_to_rgb(hue, saturation, curr_band_value);
+    float3 left_patch = hsv_to_rgb(hue, saturation, curr_band_value * base_value);
     float3 right_patch = hsv_to_rgb(hue + hue_angle, saturation, curr_band_value);
     float3 output = _mix(left_patch, right_patch, x);
 
@@ -62,7 +63,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     if (clamp_output) {
         if (output.x > clamp_output_max || output.y > clamp_output_max || output.z > clamp_output_max || output.x < clamp_output_min ||
             output.y < clamp_output_min || output.z < clamp_output_min) {
-            output = make_float3(clamp_output_max, clamp_output_max, clamp_output_max);
+            output = make_float3(clamp_output_min, clamp_output_min, clamp_output_min);
         }
     }
 

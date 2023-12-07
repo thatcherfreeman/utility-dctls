@@ -1,0 +1,151 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(selected_hue, Selected Hue Angle, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 360.0, 0.01)
+DEFINE_UI_PARAMS(adjustment_amt, Adjustment Amount, DCTLUI_SLIDER_FLOAT, 0.0, -1, 1, 0.01)
+DEFINE_UI_PARAMS(left_feather, Left Feather, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(right_feather, Right Feather, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(draw_curve, Draw Curve, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(curve_type, Hue Selection, DCTLUI_COMBO_BOX, 0, {SINGLE_HUE, COMPLEMENTARY_HUES}, {Single Hue, Complementary Hues})
+DEFINE_UI_PARAMS(control_type, Control Type, DCTLUI_COMBO_BOX, 0, {HUE_ROTATION, VARIATION_CONTROL}, {Hue Control, Variation Control})
+DEFINE_UI_PARAMS(channel, Channel, DCTLUI_COMBO_BOX, 0, {CHANNEL_1, CHANNEL_2, CHANNEL_3, CHANNEL_ALL}, {Channel 1, Channel 2, Channel 3, All Channels})
+// clang-format on
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float smoothstep(float x) {
+    x = _clampf(x, 0.0, 1.0);
+    return 3.0 * powf(x, 2.0) - 2.0 * powf(x, 3.0);
+}
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+typedef struct {
+        float selected_hue;
+        float adjustment_amt;
+        float left_feather;
+        float right_feather;
+} control_params_t;
+
+__DEVICE__ float single_hue_curve(float x, control_params_t params) {
+    // Assume x is a hue between 0 and 1
+    // offset x by the amount that brings the selected_hue to 0.5
+    params.adjustment_amt *= 0.2;
+    float offset = 0.5 - params.selected_hue;
+    float curr_hue = mod(x + offset, 1.0);
+    float left_bound = 0.5 - _fabs(params.adjustment_amt) * (params.left_feather + 1.5);
+    float right_bound = 0.5 + _fabs(params.adjustment_amt) * (params.right_feather + 1.5);
+
+    if (left_bound <= curr_hue && curr_hue <= 0.5) {
+        // left sigmoid case
+        curr_hue = params.adjustment_amt * smoothstep((curr_hue - left_bound) / (0.5 - left_bound)) + curr_hue;
+    } else if (0.5 <= curr_hue && curr_hue <= right_bound) {
+        curr_hue = params.adjustment_amt * (1.0 - smoothstep((curr_hue - 0.5) / (right_bound - 0.5))) + curr_hue;
+    }
+    float output = mod(curr_hue - offset, 1.0);
+    return output;
+}
+
+__DEVICE__ float complementary_hue_curve(float x, control_params_t params) {
+    control_params_t complementary_params = {
+        mod(params.selected_hue + 0.5, 1.0), params.adjustment_amt, params.left_feather, params.right_feather};
+    float out = x;
+    out = single_hue_curve(out, params);
+    out = single_hue_curve(out, complementary_params);
+    return out;
+}
+
+__DEVICE__ float single_hue_variation_curve(float x, control_params_t params) {
+    // Assume x is a hue between 0 and 1
+    // offset x by the amount that brings the selected_hue to 0.5
+    float offset = 0.5 - params.selected_hue;
+    float curr_hue = mod(x + offset, 1.0);
+    float left_bound = 0.5 - params.left_feather * 0.5;
+    float right_bound = 0.5 + params.right_feather * 0.5;
+    float target_slope = 1.0 + params.adjustment_amt;
+
+    if (left_bound <= curr_hue && curr_hue <= 0.5) {
+        // left sigmoid case
+        curr_hue = _mix(curr_hue, (target_slope * (curr_hue - 0.5) + 0.5), smoothstep((curr_hue - left_bound) / (0.5 - left_bound)));
+    } else if (0.5 <= curr_hue && curr_hue <= right_bound) {
+        curr_hue = _mix((target_slope * (curr_hue - 0.5) + 0.5), curr_hue, smoothstep((curr_hue - 0.5) / (right_bound - 0.5)));
+    }
+    float output = mod(curr_hue - offset, 1.0);
+    return output;
+}
+
+__DEVICE__ float complementary_hue_variation_curve(float x, control_params_t params) {
+    control_params_t complementary_params = {
+        mod(params.selected_hue + 0.5, 1.0), params.adjustment_amt, params.left_feather, params.right_feather};
+    float out = x;
+    out = single_hue_variation_curve(out, params);
+    out = single_hue_variation_curve(out, complementary_params);
+    return out;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    selected_hue /= 360.0;
+    float curr_pos_x = (float)p_X / (float)(p_Width - 1);
+    float curr_pos_y = 1.0 - (float)p_Y / (float)(p_Height - 1);
+
+    control_params_t params = {selected_hue, adjustment_amt, left_feather, right_feather};
+
+    float3 curr_color = make_float3(p_R, p_G, p_B);
+    float3 shifted_color;
+    float curve_pos_y;
+
+    // Calculate the curve
+    if (curve_type == SINGLE_HUE && control_type == HUE_ROTATION) {
+        shifted_color = make_float3(
+            single_hue_curve(curr_color.x, params), single_hue_curve(curr_color.y, params), single_hue_curve(curr_color.z, params));
+        curve_pos_y = single_hue_curve(curr_pos_x, params);
+    } else if (curve_type == COMPLEMENTARY_HUES && control_type == HUE_ROTATION) {
+        shifted_color = make_float3(complementary_hue_curve(curr_color.x, params),
+                                    complementary_hue_curve(curr_color.y, params),
+                                    complementary_hue_curve(curr_color.z, params));
+        curve_pos_y = complementary_hue_curve(curr_pos_x, params);
+    } else if (curve_type == SINGLE_HUE && control_type == VARIATION_CONTROL) {
+        shifted_color = make_float3(single_hue_variation_curve(curr_color.x, params),
+                                    single_hue_variation_curve(curr_color.y, params),
+                                    single_hue_variation_curve(curr_color.z, params));
+        curve_pos_y = single_hue_variation_curve(curr_pos_x, params);
+    } else if (curve_type == COMPLEMENTARY_HUES && control_type == VARIATION_CONTROL) {
+        shifted_color = make_float3(complementary_hue_variation_curve(curr_color.x, params),
+                                    complementary_hue_variation_curve(curr_color.y, params),
+                                    complementary_hue_variation_curve(curr_color.z, params));
+        curve_pos_y = complementary_hue_variation_curve(curr_pos_x, params);
+    }
+
+    // Filter down which channels to apply the curve to.
+    float3 output_color = curr_color;
+    float3 output_mask;
+    if (channel == CHANNEL_1) {
+        output_mask = make_float3(1.0, 0.0, 0.0);
+    } else if (channel == CHANNEL_2) {
+        output_mask = make_float3(0.0, 1.0, 0.0);
+    } else if (channel == CHANNEL_3) {
+        output_mask = make_float3(0.0, 0.0, 1.0);
+    } else if (channel == CHANNEL_ALL) {
+        output_mask = make_float3(1.0, 1.0, 1.0);
+    }
+    output_color = curr_color * (1.0 - output_mask) + shifted_color * output_mask;
+
+    // Rendering the curve on the screen.
+    if (draw_curve) {
+        if (_fabs(curve_pos_y - curr_pos_y) < 0.003 || _fabs(curr_pos_x - selected_hue) < 0.003) {
+            output_color = 0.5 * (1.0 - output_mask) + output_mask * curve_pos_y;
+        }
+        if (curve_type == COMPLEMENTARY_HUES && _fabs(mod(selected_hue + 0.5 - curr_pos_x, 1.0)) < 0.003 && mod(curr_pos_y, 0.05) < 0.02) {
+            // Draw position of complementary hue.
+            output_color = 0.5 * (1.0 - output_mask) + output_mask * curve_pos_y;
+        }
+    }
+    return output_color;
+}

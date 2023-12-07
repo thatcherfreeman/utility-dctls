@@ -22,6 +22,7 @@ These are DCTLs that I have developed.
         - [Film Curve DCTL](#film-curve-dctl)
         - [Film Grain DCTL](#film-grain-dctl)
         - [Halation DCTL](#halation-dctl)
+        - [Hue Curve DCTL](#hue-curve-dctl)
         - [Lens Distortion DCTL](#lens-distortion-dctl)
         - [Linear Contrast DCTL](#linear-contrast-dctl)
         - [Matrix Manipulator](#matrix-manipulator)
@@ -379,6 +380,29 @@ Light passes through three layers of film emulsion and various color filters, ul
 
 
 
+---
+### Hue Curve DCTL
+Hue rotation and hue variance adjustments to target a specific hue, much like a hue v hue curve.
+
+#### Motivation
+A common problem with Hue v Hue adjustments is that it's easy to rotate one hue past its neighbors. This DCTL attempts to address that by providing only adjustments that do not suffer from that flaw. It allows for hue rotations as well as hue v hue slope adjustments in such a way that no hue will be pushed past its neighboring hues (the hue v hue curve always has nonnegative slope), and it allows you to make adjustments to the complementary hue so that you have some chance of smoothness in your grade.
+
+To use this DCTL, convert your image to HSV or spherical or the color model of your choice with Hue being scaled 0-1, then apply this DCTL and indicate which channel in the input image corresponds to the Hue dimension, and transform back to RGB after the DCTL.
+
+#### DCTL Parameters
+**Selected Hue**: The hue angle, in degrees, that you want to make an adjustment to. 0 is red.
+
+**Adjustment Amount**: The strength and direction of the adjustment. In Hue Rotation control mode, this rotates the selected hue (specifically, the applied hue rotation is the selection, times 72 degrees). In Variation Control mode, this increases or decreases the slope of the curve for the selected hue (specifically, the new slope will be `1.0 + the adjustment amount`).
+
+**Left/Right Feather**: Represents the distance left and right of the selected hue that will be affected by the adjustment. It's a different amount for each of the two modes, so just turn on "draw curve" or adjust these by eye.
+
+**Draw Curve**: Check to draw the working hue v hue curve. the solid vertical line represents the selected hue, and the dashed line, if present, represents the complementary hue (selected hue + 180 degrees).
+
+**Curve Type**: Indicate whether to target a single hue, or to make a similar adjustment to the complementary hue. You'll easily fail the gradient smoothness checker if this is set to Single Hue, just by the nature of hue v hue adjustments.
+
+**Control Type**: Indicate whether you want to rotate the selected hue, or adjust the slope of the hue v hue curve at the selected hue.
+
+**Channel**: Indicate which channel corresponds to hue in the input image.
 
 ---
 
@@ -1218,6 +1242,8 @@ Generates a test chart with a series of linear gradients. Each gradient is a ful
 **Base Hue**: Hue angle of the left edge of the gradients.
 
 **Angle Between Patches**: Angle added to Base Hue to compute the hue of the right edge of the gradient.
+
+**Base Value**: Constant multiplied by the Value channel on the left side, if you want to make a gradient that has nonequal values on the left and right.
 
 **Saturation**: Saturation of left and right edges of the gradient. Computed in HSV.
 
