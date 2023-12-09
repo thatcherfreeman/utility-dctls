@@ -1158,26 +1158,16 @@ Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and se
 ---
 
 ### False Color Generator DCTL
-Generates a false color conversion for linear images. Allows you to assign colors to specific regions of the image, in one-stop increments. You set a black point, a shadow point, mid gray, a highlight point, and a white point, and you can assign colors to all regions between and outside of those bounds.
+Generates a false color conversion for linear, computer generated images. Allows you to assign colors to specific regions of the image, in one-stop increments. You set a black point, a shadow point, mid gray, a highlight point, and a white point, and you can assign colors to all regions between and outside of those bounds.
 
 #### How to use
-##### Option 1:
-1. Load in a clip from your camera
-2. Apply a CST converting from your camera's color space to Linear
-3. Apply this DCTL after the CST
-4. Set the White Cutoff to capture the white point of your camera.
-5. Set the shadow/highlight stops to the points you feel appropriate
-6. Set the Black cutoff where the black point is in your clip.
-7. Set the Brightness Mode to Value to use the max of the three channels as the input to the false color.
-8. Convert this pipeline into a LUT. "Generate LUT" actually won't work, so you'll have to use an alternative method. Kaur Hendrikson has a great [video](https://www.youtube.com/watch?v=EAHzZH_tdHQ) on how to do this.
-
-##### Option 2:
-1. Load in a clip from your camera and go to the Fusion page.
-2. Create a LUTCubeCreator node
-3. Pipe that node into a CST converting from your camera's color space to Linear
-4. Pipe the CST into this DCTL
-5. Set the parameters using the same approach from Option 1.
-6. Pipe the DCTL into a LutCubeAnalyzer node and choose CUBE as the type and save it somewhere.
+1. Load in a linear image
+2. Apply this DCTL
+3. Set the White Cutoff to capture the clipping point of the linear image.
+4. Set the shadow/highlight stops to the points you feel appropriate
+5. Set the Black cutoff where the black point is in your clip.
+6. Set the Brightness Mode to Value to use the max of the three channels as the input to the false color.
+7. Convert this pipeline into a LUT.
 
 #### DCTL Parameters
 **Black Hue Angle**: Hue of colors below the Black Cutoff
