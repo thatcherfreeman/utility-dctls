@@ -16,6 +16,7 @@ These are DCTLs that I have developed.
         - [Periodic Frame Sampler Fuse](#periodic-frame-sampler-fuse)
         - [Pixel Logger Fuse](#pixel-logger-fuse)
         - [Recenter Fuse](#recenter-fuse)
+        - [RotateImage Fuse](#rotateimage-fuse)
 - [The DCTLs:](#the-dctls)
     - [Effects](#effects)
         - [Bleach Bypass DCTL](#bleach-bypass-dctl)
@@ -268,6 +269,13 @@ Allows you to specify a source point that you want to move to a destination coor
 
 **New Pixel Location**: X,Y coordinates that indicate the desired destination location of the Original Pixel Location.
 
+
+---
+### RotateImage Fuse
+Rotate the input image in increments of 90 degrees, resizing the canvas as necessary.
+
+#### Parameters
+**Rotation**: Indicate the number of degrees to rotate the image, counterclockwise.
 
 ---
 
