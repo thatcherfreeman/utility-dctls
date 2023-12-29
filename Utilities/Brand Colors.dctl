@@ -1,0 +1,43 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(percent_error, Interval Range %, DCTLUI_SLIDER_FLOAT, 10, 0, 100, 0.01)
+DEFINE_UI_PARAMS(highlight_r, Highlight Red, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(highlight_g, Highlight Green, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(highlight_b, Highlight Blue, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(highlight_blend, Highlight Opacity, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(red_ui, Target Color Red, DCTLUI_VALUE_BOX, 0)
+DEFINE_UI_PARAMS(green_ui, Target Color Green, DCTLUI_VALUE_BOX, 0)
+DEFINE_UI_PARAMS(blue_ui, Target Color Blue, DCTLUI_VALUE_BOX, 0)
+DEFINE_UI_PARAMS(rgb_format, Target RGB Format, DCTLUI_COMBO_BOX, 0, {SCALE_0_1, SCALE_0_255}, {Scale 0 to 1, Scale 0 to 255})
+DEFINE_UI_PARAMS(highlight_mode, Highlight Mode, DCTLUI_COMBO_BOX, 1, {GENERATE_COLOR, CV_WITHIN_RANGE, CV_OUTSIDE_RANGE}, {Generate Color, Code Value Within Bounds, Code Value Outside Bounds})
+// clang-format on
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
+{
+    float x = (float) p_X / (float) (p_Width - 1);
+    float y = (float) p_Y / (float) (p_Height - 1);
+    float3 input = make_float3(p_R, p_G, p_B);
+
+    float3 target_rgb;
+    if (rgb_format == SCALE_0_1) {
+        target_rgb = make_float3(red_ui, green_ui, blue_ui);
+    } else if (rgb_format == SCALE_0_255) {
+        target_rgb = make_float3(red_ui, green_ui, blue_ui) / 255.0;
+    }
+    float3 highlight_color = make_float3(highlight_r, highlight_g, highlight_b);
+    float3 source_color = input;
+    float3 low_bound = target_rgb * (1.0 - (percent_error / 100.0));
+    float3 high_bound = target_rgb * (1.0 + (percent_error / 100.0));
+
+    bool cv_is_within_range = (low_bound.x <= source_color.x && source_color.x <= high_bound.x) && (low_bound.y <= source_color.y && source_color.y <= high_bound.y) && (low_bound.z <= source_color.z && source_color.z <= high_bound.z);
+
+    float3 output = input;
+    if (highlight_mode == CV_WITHIN_RANGE && cv_is_within_range) {
+        output = _mix(input, highlight_color, highlight_blend);
+    } else if (highlight_mode == CV_OUTSIDE_RANGE && !cv_is_within_range) {
+        output = _mix(input, highlight_color, highlight_blend);
+    } else if (highlight_mode == GENERATE_COLOR && y > 0.8) {
+        output = target_rgb;
+    }
+    return output;
+}
