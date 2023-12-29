@@ -63,6 +63,7 @@ These are DCTLs that I have developed.
         - [ACES Exposure DCTL](#aces-exposure-dctl)
         - [Bit Depth Estimator DCTL](#bit-depth-estimator-dctl)
         - [Blanking Checker DCTL](#blanking-checker-dctl)
+        - [Brand Colors DCTL](#brand-colors-dctl)
         - [Channel Viewer DCTL](#channel-viewer-dctl)
         - [Chroma Subsampling DCTL](#chroma-subsampling-dctl)
         - [CIELUV DCTL](#cieluv-dctl)
@@ -1046,7 +1047,27 @@ Helps you spot pixels with NaN, infinity, negative, zero, or superwhite channels
 **Highlight +Inf**: Highlights pixels with +infinity as at least one channel.
 
 
+---
 
+### Brand Colors DCTL
+Helps you check if you hit the code values required/provided by some brand. Throw this at the very end of your pipeline (after the ODT) and enter the RGB values that the brand expects in the Target Color section. Then, this tool will highlight when code values that are close to the specified color exist in the image.
+
+#### DCTL Parameters
+**Interval Range %**: Specify what percent difference between the current pixel and the target color will result in a highlight. IE we compute:
+```c
+low_bound  = target_rgb * (1.0 - (percent_error / 100.0))
+high_bound = target_rgb * (1.0 + (percent_error / 100.0))
+```
+
+**Highlight Red/Green/Blue**: If all three channels of the current pixel lie between `low_bound` and `high_bound`, then the pixel will be colored according to this specified Highlight color.
+
+**Highlight Opacity**: Indicates how opaque the highlighting color is.
+
+**Target Color Red/Green/Blue**: Specify the code value of the target color. This can be done on a 0-1 scale, or a 0-255 8-bit scale.
+
+**Target RGB Format**: Indicate whether the target color is specified on a 0-1 scale, or a 0-255 scale.
+
+**Highlight Mode**: Choose whether to Generate the Target Color or to highlight pixels that fall within or outside the interval centered on the target RGB.
 
 ---
 
