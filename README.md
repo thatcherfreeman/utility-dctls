@@ -46,6 +46,7 @@ These are DCTLs that I have developed.
         - [Gamma Function DCTL](#gamma-function-dctl)
         - [Invert DCTL](#invert-dctl)
         - [Log Function](#log-function)
+        - [Luminance Qualifier](#luminance-qualifier)
         - [Matrix](#matrix)
         - [Modulo Function DCTL](#modulo-function-dctl)
         - [Multiplication Function DCTL](#multiplication-function-dctl)
@@ -768,7 +769,22 @@ For each pixel and channel, takes the logarithm.
 #### DCTL Parameters
 **Log Base**: The base of the logarithm, 10.0 by default.
 
+---
+### Luminance Qualifier
+Expects a scene linear image, generates a mask of pixels for which the selected channel is above or below some quantity of stops above/below middle grey.
 
+#### DCTL Parameters
+**Threshold**: Indicate the number of stops above mid grey you want the mask cutoff to take place at.
+
+**Feathering**: Indicate the number of stops between 0% mask and 100% mask
+
+**Mid Grey**: Indicate the value of mid grey
+
+**Center Feathering at Thr.**: Indicate whether the threshold is mapped to 100% in the mask (if unchecked) or to 50% in the mask, if checked.
+
+**Selection**: Choose Select Shadows for values between 0 and threshold to be selected, and choose "Select Highlights" to select between the threshold and Infinity.
+
+**Channel**: Select which number is compared to the threshold to compute the mask. Luminance uses Rec709 Luminance coefficients.
 
 
 ---

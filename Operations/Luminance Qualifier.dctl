@@ -1,0 +1,89 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(threshold_stops, Threshold, DCTLUI_SLIDER_FLOAT, 0, -10, 10, 0.01)
+DEFINE_UI_PARAMS(feathering_stops, Feathering, DCTLUI_SLIDER_FLOAT, 0, 0, 10, 0.01)
+DEFINE_UI_PARAMS(mid_grey, Mid Grey, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(center_feathering, Center Feathering at Thr., DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(selection, Selection, DCTLUI_COMBO_BOX, 0, {ZERO_TO_THR, THR_TO_INF}, {Select Shadows, Select Highlights})
+DEFINE_UI_PARAMS(channel, Channel, DCTLUI_COMBO_BOX, 0, {CHANNEL_R, CHANNEL_G, CHANNEL_B, CHANNEL_Y, CHANNEL_MEAN, CHANNEL_MAX, CHANNEL_MIN}, {Red Channel, Green Channel, Blue Channel, Luminance, Mean, RGB Max, RGB Min})
+// clang-format on
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float smoothstep(float x) {
+    x = _clampf(x, 0.0, 1.0);
+    return 3.0 * powf(x, 2.0) - 2.0 * powf(x, 3.0);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    // Assume input is linear
+    float3 input = make_float3(p_R, p_G, p_B);
+
+    // If we're highlighting the shadows, then the mask will be 100% at threshold_min and reach 0% at threshold_max
+    // If we're highlighting the highlights, then the mask will ultimately be 0% at threshold min and 100% at threshold_max
+    float threshold_max;
+    float threshold_min;
+
+    if (center_feathering && selection == ZERO_TO_THR) {
+        threshold_min = mid_grey * _exp2f(threshold_stops - 0.5 * feathering_stops);
+        threshold_max = mid_grey * _exp2f(threshold_stops + 0.5 * feathering_stops);
+    } else if (!center_feathering && selection == ZERO_TO_THR) {
+        threshold_min = mid_grey * _exp2f(threshold_stops);
+        threshold_max = mid_grey * _exp2f(threshold_stops + feathering_stops);
+    } else if (center_feathering && selection == THR_TO_INF) {
+        threshold_min = mid_grey * _exp2f(threshold_stops - 0.5 * feathering_stops);
+        threshold_max = mid_grey * _exp2f(threshold_stops + 0.5 * feathering_stops);
+    } else if (!center_feathering && selection == THR_TO_INF) {
+        threshold_min = mid_grey * _exp2f(threshold_stops - feathering_stops);
+        threshold_max = mid_grey * _exp2f(threshold_stops);
+    }
+
+    float input_metric;
+    switch (channel) {
+    case CHANNEL_R:
+        input_metric = input.x;
+        break;
+    case CHANNEL_G:
+        input_metric = input.y;
+        break;
+    case CHANNEL_B:
+        input_metric = input.z;
+        break;
+    case CHANNEL_Y:
+        input_metric = (0.212639 * input.x) + (0.715169 * input.y) + (0.072192 * input.z);
+        break;
+    case CHANNEL_MEAN:
+        input_metric = (input.x + input.y + input.z) / 3.0;
+        break;
+    case CHANNEL_MAX:
+        input_metric = _fmaxf(_fmaxf(input.x, input.y), input.z);
+        break;
+    case CHANNEL_MIN:
+        input_metric = _fminf(_fminf(input.x, input.y), input.z);
+        break;
+    }
+
+    float input_metric_log = _log2f(_fmaxf(input_metric, 0.0));
+    float threshold_min_log = _log2f(threshold_min);
+    float threshold_max_log = _log2f(threshold_max);
+
+    float shadow_mask;
+    if (input_metric < threshold_min) {
+        shadow_mask = 1.0;
+    } else if (threshold_max < input_metric) {
+        shadow_mask = 0.0;
+    } else {
+        shadow_mask = _mix(1.0, 0.0, smoothstep((input_metric_log - threshold_min_log) / (threshold_max_log - threshold_min_log)));
+    }
+
+    if (selection == THR_TO_INF) {
+        // Invert selection
+        shadow_mask = 1.0 - shadow_mask;
+    } else if (selection == ZERO_TO_THR) {
+        // do nothing.
+    }
+
+    return make_float3(shadow_mask, shadow_mask, shadow_mask);
+}
