@@ -2,7 +2,7 @@
 // clang-format off
 DEFINE_UI_PARAMS(sample_x, Sample X, DCTLUI_SLIDER_FLOAT, 0.5, 0, 1, 0.01)
 DEFINE_UI_PARAMS(sample_y, Sample Y, DCTLUI_SLIDER_FLOAT, 0.5, 0, 1, 0.01)
-DEFINE_UI_PARAMS(window_size, Window Size(px), DCTLUI_SLIDER_INT, 1, 1, 8, 1)
+DEFINE_UI_PARAMS(window_size, Window Size px, DCTLUI_SLIDER_INT, 1, 1, 8, 1)
 DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 0, {CROSSHAIR, COLOR}, {Crosshair, Sampled Color})
 // clang-format on
 

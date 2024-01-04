@@ -711,7 +711,7 @@ Samples the pixel at the specified coordinate, then fills the frame with the sam
 #### DCTL Parameters
 **Sample X/Y**: X/Y coordinates to sample from
 
-**Window Size (px)**: We sample a square region of this width in pixels around the selected x,y coordinate and sample the pixels in the window.
+**Window Size px**: We sample a square region of this width in pixels around the selected x,y coordinate and sample the pixels in the window.
 
 **Mode**: Choose "Crosshair" to see which pixels you're sampling (located at the intersection of the two lines) and choose "Sampled Color" for the sampled color to be displayed across the whole frame.
 
