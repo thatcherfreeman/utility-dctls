@@ -1197,18 +1197,18 @@ Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and se
 ---
 
 ### False Color Generator DCTL
-Generates a false color conversion for linear, computer generated images. Allows you to assign colors to specific regions of the image, in one-stop increments. You set a black point, a shadow point, mid gray, a highlight point, and a white point, and you can assign colors to all regions between and outside of those bounds.
+Generates a false color conversion for linear, computer generated images (not authorized for use in real photography). Allows you to assign colors to specific regions of the image, in one-stop increments. You set a black point, a shadow point, mid gray, a highlight point, and a white point, and you can assign colors to all regions between and outside of those bounds.
 
 #### How to use
 1. Load in a linear image
 2. Apply this DCTL
-3. Set the White Cutoff to capture the clipping point of the linear image.
+3. Set the clipping point CV to the clipping point of the linear image.
 4. Set the shadow/highlight stops to the points you feel appropriate
 5. Set the Black cutoff where the black point is in your clip.
-6. Set the Brightness Mode to Value to use the max of the three channels as the input to the false color.
-7. Convert this pipeline into a LUT.
+6. Convert this pipeline into a LUT.
 
 #### DCTL Parameters
+
 **Black Hue Angle**: Hue of colors below the Black Cutoff
 
 **Near Black Hue Angle**: Hue of colors between Black Cutoff and Shadow Stop
@@ -1219,22 +1219,29 @@ Generates a false color conversion for linear, computer generated images. Allows
 
 **Near white Hue Angle**: Hue of colors between Highlight Stop and White Cutoff
 
-**Clipped White Hue Angle**: Hue of colors brighter than the White Cutoff point
+**White Hue Angle**: Hue of colors brighter than the White Cutoff point
 
-**Black Cutoff**: Number of stops below middle gray below which we'll consider Black.
+**Clipped Hue Angle**: Hue of colors whose Value exceeds the Clipping Point CV.
 
-**Shadow Stop**: Number of stops below middle gray we'll color with the Shadow Hue Angle
+**Black Cutoff Stop**: Number of stops below middle gray below which we'll consider Black.
 
-**Highlight Stop**: Number of stops above middle gray we'll color the Highlight Hue Angle
+**Shadow Stops**: Number of stops below middle gray we'll color with the Shadow Hue Angle
 
-**White Cutoff**: Number of stops above middle gray after which we'll consider clipped.
+**Highlight Stops**: Number of stops above middle gray we'll color the Highlight Hue Angle
+
+**White Stops**: Number of stops above middle grey which we'll color with the White Hue Angle
+
+**Clipping Point CV**: Linear code value for which if any channel exceeds this value, we will highlight it with the Clipped Hue Angle
 
 **Middle Gray Value**: Indicates the Linear value we consider to be middle gray.
+
+**Log Stops**: If "Log Output" is checked, controls the colorfulness and contrast of the output image.
+
+**Clip to White**: Check this box to render Clipped values as white instead of as whatever hue was selected.
 
 **Log Output**: Check this box if this DCTL isn't going into another CST that converts to a display or log color space.
 
 **Brightness Mode**: If Luminance, then we simply take a weighted average of the RGB channels. If Value, then we take the channel with the maximum value before comparing it to any of the cutoffs or mid gray.
-
 
 ---
 
