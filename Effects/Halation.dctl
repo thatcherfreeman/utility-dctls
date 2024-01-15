@@ -1,29 +1,50 @@
-DEFINE_UI_PARAMS(focal_length, Focal Length, DCTLUI_SLIDER_FLOAT, 50.0, 0.0, 300.0, 5)
-DEFINE_UI_PARAMS(film_base_thickness, Film Base Thickness, DCTLUI_SLIDER_FLOAT, 0.18, 0.00, 0.5, 0.01)
-DEFINE_UI_PARAMS(exposure_lost, Reflection exposure lost, DCTLUI_SLIDER_FLOAT, -1.0, -10.0, 0.0, 0.1)
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(exposure_lost, Reflection exposure lost, DCTLUI_SLIDER_FLOAT, -3.0, -10.0, 0.0, 0.1)
 DEFINE_UI_PARAMS(green_exposure_lost, Green exposure lost, DCTLUI_SLIDER_FLOAT, -1.4, -10.0, 0.0, 0.1)
 DEFINE_UI_PARAMS(blue_exposure_lost, Blue exposure lost, DCTLUI_SLIDER_FLOAT, -1.4, -10.0, 0.0, 0.1)
-DEFINE_UI_PARAMS(blur_type, Blur Type, DCTLUI_COMBO_BOX, 3, {NO_BLUR, BOX, TRIANGLE, FAST}, {None, Box Blur, Triangle Blur, Fast Blur})
+DEFINE_UI_PARAMS(blur_type, Blur Type, DCTLUI_COMBO_BOX, 0, {GAUSSIAN, EXPONENTIAL}, {Gaussian Blur, Exponential Blur})
 DEFINE_UI_PARAMS(blur_amt, Blur Amount, DCTLUI_SLIDER_FLOAT, 3.0, 0.0, 30.0, 1.0)
-DEFINE_UI_PARAMS(show_halation, Show only halation, DCTLUI_CHECK_BOX, 0)
-DEFINE_UI_PARAMS(correct_red_shift, Correct for Red Shift, DCTLUI_CHECK_BOX, 1)
-// Halation gamma isn't physically motivated (should be set to 1.0), but this allows
-// for creative control over how much halation is added and to suppress
-// halation in the shadows.
-DEFINE_UI_PARAMS(halation_gamma, Halation gamma, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(correct_red_shift, Red Shift Correction, DCTLUI_COMBO_BOX, 2, {OFF, GAIN, MATRIX}, {No Correction, RGB Gain, Matrix})
+// clang-format on
 
+#define PI (3.14159265358979)
 
 __DEVICE__ float powf(float base, float exp) {
     float out = _copysignf(_powf(_fabs(base), exp), base);
     return out;
 }
 
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ void mat_inverse_33(float inv_buf[3][3], float m[3][3]) {
+    // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
+
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+    inv_buf[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
+    inv_buf[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det;
+    inv_buf[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
+    inv_buf[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det;
+    inv_buf[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
+    inv_buf[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det;
+    inv_buf[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
+    inv_buf[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det;
+    inv_buf[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
+}
+
 __DEVICE__ int get_coord(float x, int width) {
-    return (int)_round((x + 0.5f) * width);
+    return (int)_round((x + 0.5f) * (width + 1));
 }
 
 __DEVICE__ float get_coord_float(float x, int width) {
-    return ((x + 0.5f) * (float)width);
+    return ((x + 0.5f) * (float)(width + 1));
 }
 
 __DEVICE__ float3 get_color(int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
@@ -34,7 +55,8 @@ __DEVICE__ float3 get_color(int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_
     return make_float3(r, g, b);
 }
 
-__DEVICE__ float3 sample_point_bilinear(float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+__DEVICE__ float3
+sample_point_bilinear(float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     float f_x = get_coord_float(x, p_Width);
     float f_y = get_coord_float(y, p_Height);
 
@@ -57,76 +79,6 @@ __DEVICE__ float3 sample_point_bilinear(float x, float y, int p_Width, int p_Hei
     return c;
 }
 
-
-__DEVICE__ float3 sample_point_nearest(float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
-    float f_x = get_coord_float(x, p_Width);
-    float f_y = get_coord_float(y, p_Height);
-
-    int p_x = (int)_round(f_x);
-    int p_y = (int)_round(f_y);
-
-    float3 c = get_color(p_x, p_y, p_TexR, p_TexG, p_TexB);
-    return c;
-}
-
-__DEVICE__ float3 box_blur(int boxsize, float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
-
-    float3 curr_val = make_float3(0.0f, 0.0f, 0.0f);
-    for (float i = 0.0f; i < boxsize; i++) {
-        for (float j = 0.0f; j < boxsize; j++) {
-            float curr_offset_x = x + ((i - boxsize * 0.5f) / p_Width);
-            float curr_offset_y = y + ((j - boxsize * 0.5f) / p_Height);
-
-            float curr_weight = 1.0f / ((float)boxsize * (float)boxsize);
-
-            curr_val = curr_val + curr_weight * sample_point_nearest(curr_offset_x, curr_offset_y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-        }
-    }
-
-    return curr_val;
-}
-
-__DEVICE__ float3 triangle_blur(int boxsize, float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
-
-    float3 curr_val = make_float3(0.0f, 0.0f, 0.0f);
-    float total_weights = 0.0f;
-    for (float i = 0.0f; i < boxsize; i++) {
-        for (float j = 0.0f; j < boxsize; j++) {
-            float curr_offset_x = x + ((i - boxsize * 0.5f) / p_Width);
-            float curr_offset_y = y + ((j - boxsize * 0.5f) / p_Height);
-
-            float curr_weight = (boxsize + 1 - (_fabs(i + 0.5f - boxsize * 0.5f) + _fabs(j + 0.5f - boxsize * 0.5f))) * 0.5f;
-            curr_weight = _fmaxf(curr_weight, 0.0f);
-            total_weights += curr_weight;
-
-            curr_val = curr_val + curr_weight * sample_point_nearest(curr_offset_x, curr_offset_y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-        }
-    }
-    curr_val /= total_weights;
-
-    return curr_val;
-}
-
-__DEVICE__ float3 fast_blur(int boxsize, float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
-
-    float3 curr_val = make_float3(0.0f, 0.0f, 0.0f);
-    float half_boxsize_x = boxsize * 0.5f / p_Width;
-    float half_boxsize_y = boxsize * 0.5f / p_Height;
-
-    curr_val += sample_point_bilinear(x - half_boxsize_x, y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-    curr_val += sample_point_bilinear(x + half_boxsize_x, y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-    curr_val += sample_point_bilinear(x, y - half_boxsize_y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-    curr_val += sample_point_bilinear(x, y + half_boxsize_y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-    curr_val += sample_point_bilinear(x - half_boxsize_x, y - half_boxsize_y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-    curr_val += sample_point_bilinear(x + half_boxsize_x, y - half_boxsize_y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-    curr_val += sample_point_bilinear(x - half_boxsize_x, y + half_boxsize_y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-    curr_val += sample_point_bilinear(x + half_boxsize_x, y + half_boxsize_y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-    curr_val += sample_point_bilinear(x, y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-
-    curr_val /= 9.0f;
-    return curr_val;
-}
-
 __DEVICE__ float convert_gamma(float g) {
     // Converts -1 to +1 range to an exponent
     // Essentially what Resolve does with its gamma
@@ -140,57 +92,111 @@ __DEVICE__ float convert_gamma(float g) {
     return out;
 }
 
-__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB)
-{
+__DEVICE__ float3
+gaussian_blur(float radius, float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    float std = (float)radius / 2.0;
+    int window_size = (int)_ceilf(2 * std * 3);
 
-    float X = (float) p_X / (float)p_Width - 0.5f;
-    float Y = (float) p_Y / (float)p_Height - 0.5f;
+    int center_x = get_coord(x, p_Width);
+    int center_y = get_coord(y, p_Height);
 
-    float scale = focal_length / (focal_length + 2.0f * film_base_thickness);
+    float3 curr_pixel = get_color(center_x, center_y, p_TexR, p_TexG, p_TexB);
+
+    float3 sum = make_float3(0, 0, 0);
+    float weight_sum = 0;
+    for (int i = center_x - (window_size / 2); i <= center_x + (window_size / 2); ++i) {
+        for (int j = center_y - (window_size / 2); j <= center_y + (window_size / 2); ++j) {
+            float3 runner = get_color(i, j, p_TexR, p_TexG, p_TexB);
+            float weight =
+                1.0 / (2.0 * PI * std * std) *
+                _expf((_powf(_fabs((float)(center_x - i)), 2.0) + _powf(_fabs((float)(center_y - j)), 2.0)) / (-2.0 * std * std));
+            weight_sum += weight;
+            sum += runner * weight;
+        }
+    }
+    return sum / weight_sum;
+}
+
+
+__DEVICE__ inline float exp_k(float x, float y, float r0) {
+    return _expf(-_hypotf(x, y) / r0);
+}
+
+__DEVICE__ float3 exp_blur(float radius, float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    // Adapted from https://github.com/hotgluebanjo/halation-dctl/blob/master/halation.dctl
+    int center_x = get_coord(x, p_Width);
+    int center_y = get_coord(y, p_Height);
+
+    int window_size = (int)_ceilf(2 * radius * 4.5);
+    float3 sum = make_float3(0.0f, 0.0f, 0.0f);
+    float weight_sum = 0.0f;
+    for (int i = center_x - (window_size / 2); i <= center_x + (window_size / 2); ++i) {
+        for (int j = center_y - (window_size / 2); j <= center_y + (window_size / 2); ++j) {
+            float weight = exp_k(i - center_x, j - center_y, radius);
+            float3 runner = get_color(i, j, p_TexR, p_TexG, p_TexB);
+            sum += weight * runner;
+            weight_sum += weight;
+        }
+    }
+
+    return sum / weight_sum;
+}
+
+
+__DEVICE__ float3
+halation(float3 scene_color, float3 diffused_color, float exposure_lost_lin, float green_exposure_lost_lin, float blue_exposure_lost_lin) {
+    float3 output = scene_color;
+    output.x += diffused_color.x * exposure_lost_lin;
+    output.y += diffused_color.x * exposure_lost_lin * green_exposure_lost_lin;
+    output.z += diffused_color.x * exposure_lost_lin * green_exposure_lost_lin * blue_exposure_lost_lin;
+    return output;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    float X = (float)p_X / (float)(p_Width - 1) - 0.5f;
+    float Y = (float)p_Y / (float)(p_Height - 1) - 0.5f;
+
     float exposure_lost_lin = _exp2f(exposure_lost);
     float green_exposure_lost_lin = _exp2f(green_exposure_lost);
     float blue_exposure_lost_lin = _exp2f(blue_exposure_lost);
-    float adjusted_gamma_value = convert_gamma(halation_gamma);
-    int blur_radius = (int)_round((blur_amt / 1000.0f) * p_Width);
+    int blur_radius = (blur_amt / 1000.0f) * p_Width;
 
     float3 scale_color;
-    if (blur_type == BOX){
-        scale_color = box_blur(blur_radius, X * scale, Y * scale, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-    } else if (blur_type == TRIANGLE){
-        scale_color = triangle_blur(blur_radius, X * scale, Y * scale, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-    } else if (blur_type == FAST){
-        scale_color = fast_blur(blur_radius, X * scale, Y * scale, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
-    } else if (blur_type == NO_BLUR) {
-        scale_color = sample_point_bilinear(X * scale, Y * scale, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
+    if (blur_type == GAUSSIAN) {
+        scale_color = gaussian_blur(blur_radius, X, Y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
+    } else if (blur_type == EXPONENTIAL) {
+        scale_color = exp_blur(blur_radius / 3, X, Y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
     }
 
-    float3 curr_color;
-    if (show_halation) {
-        curr_color = make_float3(0.0f, 0.0f, 0.0f);
-    } else {
-        curr_color = get_color(p_X, p_Y, p_TexR, p_TexG, p_TexB);
+    float3 curr_color = get_color(p_X, p_Y, p_TexR, p_TexG, p_TexB);
+    float3 halation_color = halation(curr_color, scale_color, exposure_lost_lin, green_exposure_lost_lin, blue_exposure_lost_lin);
+
+    float3 output_color;
+    if (correct_red_shift == MATRIX) {
+        float3 red = make_float3(1.0, 0.0, 0.0);
+        float3 red_output = halation(red, red, exposure_lost_lin, green_exposure_lost_lin, blue_exposure_lost_lin);
+        float3 green = make_float3(0.0, 1.0, 0.0);
+        float3 green_output = halation(green, green, exposure_lost_lin, green_exposure_lost_lin, blue_exposure_lost_lin);
+        float3 blue = make_float3(0.0, 0.0, 1.0);
+        float3 blue_output = halation(blue, blue, exposure_lost_lin, green_exposure_lost_lin, blue_exposure_lost_lin);
+
+        float inv_matrix_buf[3][3] = {};
+        float forward_matrix[3][3] = {
+            {red_output.x, green_output.x, blue_output.x},
+            {red_output.y, green_output.y, blue_output.y},
+            {red_output.z, green_output.z, blue_output.z},
+        };
+        mat_inverse_33(inv_matrix_buf, forward_matrix);
+        output_color = mv_33_3(inv_matrix_buf, halation_color);
+    } else if (correct_red_shift == GAIN) {
+        float3 white = make_float3(1.0, 1.0, 1.0);
+        float3 white_output = halation(white, white, exposure_lost_lin, green_exposure_lost_lin, blue_exposure_lost_lin);
+        output_color = halation_color * white / white_output;
+    } else if (correct_red_shift == OFF) {
+        // do nothing
+        output_color = halation_color;
     }
 
-    // Red channel re-exposes red channel after bouncing, then
-    // it might go far enough as to hit the green channel after passing through
-    // the red layer again.
-    if (correct_red_shift) {
-        // The same modeled physical process as below, but I've applied a white balance to avoid color shifting
-        // the whole frame.
-        float a = exposure_lost_lin;
-        float b = exposure_lost_lin * green_exposure_lost_lin;
-        float c = exposure_lost_lin * green_exposure_lost_lin * blue_exposure_lost_lin;
-        curr_color.x += powf((scale_color.x - curr_color.x) * (a / (a + 1)), adjusted_gamma_value);
-        curr_color.y += powf((scale_color.x - curr_color.y) * (b / (a + 1)), adjusted_gamma_value);
-        curr_color.z += powf((scale_color.x - curr_color.z) * (c / (a + 1)), adjusted_gamma_value);
-    } else {
-        // The modeled physical process:
-        // C_out = C_in + (red_scaled_blurred * exp)
-        curr_color.x += powf(scale_color.x * exposure_lost_lin, adjusted_gamma_value);
-        curr_color.y += powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin, adjusted_gamma_value);
-        curr_color.z += powf(scale_color.x * exposure_lost_lin * green_exposure_lost_lin * blue_exposure_lost_lin, adjusted_gamma_value);
-    }
-
-    return curr_color;
+    return output_color;
 }
-
