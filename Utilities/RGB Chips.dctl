@@ -10,6 +10,7 @@ DEFINE_UI_PARAMS(vertical, Vertical, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(band_interval, Band Interval, DCTLUI_COMBO_BOX, 1, {EQUAL, EXPONENTIAL}, {Equal (Log), Exponential (Linear)})
 DEFINE_UI_PARAMS(model, Model, DCTLUI_COMBO_BOX, 0, {HSV, SPHERICAL}, {HSV, Spherical})
 DEFINE_UI_PARAMS(continuous, Continuous Mode, DCTLUI_COMBO_BOX, 0, {DISCRETE, CONTINUOUS_HUE, CONTINUOUS_EXP, CONTINUOUS_BOTH}, {Discrete, Continuous Hue, Continuous Exp, Fully Continuous})
+DEFINE_UI_PARAMS(gaps, Row Gaps, DCTLUI_COMBO_BOX, 0, {GAPS_NONE, GAPS_BLACK, GAPS_WHITE, GAPS_MID_GREY}, {None, Black, White, Mid Grey})
 
 __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
     // assume hue is in degrees
@@ -132,6 +133,23 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
     if (continuous == CONTINUOUS_EXP || continuous == CONTINUOUS_BOTH) {
         curr_col = x * num_cols;
+    }
+
+    if (gaps != GAPS_NONE) {
+        float3 gaps_color;
+        if (gaps == GAPS_BLACK) {
+            gaps_color = make_float3(0.0, 0.0, 0.0);
+        } else if (gaps == GAPS_WHITE) {
+            gaps_color = make_float3(1.0, 1.0, 1.0);
+        } else if (gaps == GAPS_MID_GREY) {
+            gaps_color = make_float3(mid_gray, mid_gray, mid_gray);
+        }
+        if (continuous == DISCRETE || continuous == CONTINUOUS_EXP) {
+            float curr_row_cont = y * (num_hues + gray_ramp) - gray_ramp;
+            if (_fabs(curr_row_cont - curr_row) <= 0.25 || _fabs(curr_row_cont - curr_row) >= 0.75) {
+                return gaps_color;
+            }
+        }
     }
 
     float3 rgb;

@@ -1484,6 +1484,8 @@ Creates rows of colored chips at the specified increment of stops. Outputs a Lin
 
 **Continuous Mode**: Choose whether each chip should be discrete, or if hue, exposure, or both should be continuous.
 
+**Row Gaps**: If set not to None, draws neutral stripes between the colors so adjacent rows don't mess up your perception.
+
 
 
 ---
