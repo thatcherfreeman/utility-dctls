@@ -1,0 +1,90 @@
+FuRegisterClass("LUTSmoother",
+    CT_Tool, {
+        REGS_Name = "LUT Smoother",
+        REGS_Category = "Fuses\\Util",
+        REGS_OpIconString = "LUTSmoother",
+        REGS_OpDescription = "Applies 3D blur to your HALD image."
+    }
+)
+
+function Create()
+    Blur = self:AddInput("Blur Strength", "BlurStrength", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 8.0,
+        INP_Default = 0.0,
+    })
+    InImage = self:AddInput("Input", "Input", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+end
+
+function gaussian_weight(x, std)
+    return 1.0 / math.sqrt(2.0 * math.pi * std * std) * math.exp((x * x) / (-2.0 * std * std))
+end
+
+function get_pixel(img, x, y)
+    local p = Pixel()
+    x = math.max(math.min(x, img.Width-1), 0)
+    y = math.max(math.min(y, img.Height-1), 0)
+    img:GetPixel(x, y, p)
+    return p
+end
+
+-- function img_blur(img, std)
+--     local temp = img:CopyOf()
+--     local k = std * 3.0
+--     for y = 0, img.Height-1 do
+--         for x = 0, img.Width-1 do
+--             local total = Pixel({R = 0.0, G = 0.0, B = 0.0, A = 1.0})
+--             local weight = 0.0
+--             for i = -k, k do
+--                 local curr_pixel = get_pixel(img, x + i, y)
+--                 weight = weight + gaussian_weight(i, std)
+--                 total.R = total.R + (curr_pixel.R * weight)
+--                 total.G = total.G + (curr_pixel.G * weight)
+--                 total.B = total.B + (curr_pixel.B * weight)
+--             end
+--             total.R = total.R / weight
+--             total.G = total.G / weight
+--             total.B = total.B / weight
+--             temp:SetPixel(x, y, total)
+--         end
+--     end
+
+--     local out = temp:CopyOf()
+--     for y = 0, img.Height-1 do
+--         for x = 0, img.Width-1 do
+--             local total = Pixel({R = 0.0, G = 0.0, B = 0.0, A = 1.0})
+--             local weight = 0.0
+--             for i = -k, k do
+--                 local curr_pixel = get_pixel(img, x, y + i)
+--                 weight = weight + gaussian_weight(i, std)
+--                 total.R = total.R + (curr_pixel.R * weight)
+--                 total.G = total.G + (curr_pixel.G * weight)
+--                 total.B = total.B + (curr_pixel.B * weight)
+--             end
+--             total.R = total.R / weight
+--             total.G = total.G / weight
+--             total.B = total.B / weight
+--             out:SetPixel(x, y, total)
+--         end
+--     end
+--     return out
+-- end
+
+function Process(req)
+    -- Get values from the UI Tools
+    local img = InImage:GetValue(req)
+    local blur = Blur:GetValue(req).Value
+    -- local out = img_blur(img, blur)
+    local out = img:CopyOf()
+
+    OutImage:Set(req, out)
+end

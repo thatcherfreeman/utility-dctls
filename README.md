@@ -11,6 +11,7 @@ These are DCTLs that I have developed.
         - [FrameAvg Fuse](#frameavg-fuse)
         - [HDR Blending Fuse](#hdr-blending-fuse)
         - [Linear Exposure Fuse](#linear-exposure-fuse)
+        - [LUT Smoother Fuse](#lut-smoother-fuse)
         - [Merge Adjacent Fuse](#merge-adjacent-fuse)
         - [MTF Curve Fuse](#mtf-curve-fuse)
         - [Periodic Frame Sampler Fuse](#periodic-frame-sampler-fuse)
@@ -182,7 +183,12 @@ Simply multiplies the input values by `2^x`, where `x` is the specified Exposure
 #### Parameters
 **Exposure (Stops)**: Exposure compensation to make in stops.
 
+---
+### LUT Smoother Fuse
+Applies a 3D gaussian blur convolution on a LUT. Generate a **Horizontal** HALD image in Fusion via the LUTCubeCreator node. Send it through whatever operations you want and then put it into the LUT Smoother Fuse, which will then crunch numbers and spit out the smoothed LUT.
 
+#### Parameters
+**Blur Strength**: Controls the strength of the blur. Tune by eye, the fuse is slower the larger this value is set to.
 
 ---
 
