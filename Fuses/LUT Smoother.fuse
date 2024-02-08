@@ -73,7 +73,6 @@ end
 function lut_blur(img, std, cube_size)
     local temp = img:CopyOf()
     local k = math.ceil(std * 3.0)
-    print("k is set to: ", k)
     for c = 1, 3 do
         -- C represents which pass of the decomposed blur we're doing.
         local orig = temp:CopyOf()
