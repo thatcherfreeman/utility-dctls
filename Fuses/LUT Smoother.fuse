@@ -2,7 +2,7 @@ FuRegisterClass("LUTSmoother",
     CT_Tool, {
         REGS_Name = "LUT Smoother",
         REGS_Category = "Fuses\\Util",
-        REGS_OpIconString = "LUTSmoother",
+        REGS_OpIconString = "LSmth",
         REGS_OpDescription = "Applies 3D blur to your HALD image."
     }
 )
@@ -12,7 +12,7 @@ function Create()
         LINKID_DataType = "Number",
         INPID_InputControl = "SliderControl",
         INP_MinScale = 0.0,
-        INP_MaxScale = 8.0,
+        INP_MaxScale = 5.0,
         INP_Default = 0.0,
     })
     InImage = self:AddInput("Input", "Input", {
@@ -29,62 +29,94 @@ function gaussian_weight(x, std)
     return 1.0 / math.sqrt(2.0 * math.pi * std * std) * math.exp((x * x) / (-2.0 * std * std))
 end
 
-function get_pixel(img, x, y)
+function zero_nans(x)
+    if x ~= x then
+        return 0.0
+    end
+    return x
+end
+
+function get_sample(img, r, g, b, cube_size)
+    -- Assume r, g, b scaled from 0 to (cube_size - 1), inclusive
     local p = Pixel()
+
+    -- for horizontal LUTs.
+    x = r + (b * cube_size)
+    y = g
     x = math.max(math.min(x, img.Width-1), 0)
     y = math.max(math.min(y, img.Height-1), 0)
     img:GetPixel(x, y, p)
+    p.R = zero_nans(p.R)
+    p.G = zero_nans(p.G)
+    p.B = zero_nans(p.B)
     return p
 end
 
--- function img_blur(img, std)
---     local temp = img:CopyOf()
---     local k = std * 3.0
---     for y = 0, img.Height-1 do
---         for x = 0, img.Width-1 do
---             local total = Pixel({R = 0.0, G = 0.0, B = 0.0, A = 1.0})
---             local weight = 0.0
---             for i = -k, k do
---                 local curr_pixel = get_pixel(img, x + i, y)
---                 weight = weight + gaussian_weight(i, std)
---                 total.R = total.R + (curr_pixel.R * weight)
---                 total.G = total.G + (curr_pixel.G * weight)
---                 total.B = total.B + (curr_pixel.B * weight)
---             end
---             total.R = total.R / weight
---             total.G = total.G / weight
---             total.B = total.B / weight
---             temp:SetPixel(x, y, total)
---         end
---     end
+function set_sample(img, r, g, b, cube_size, p)
+    -- Assume r, g, b scaled from 0 to (cube_size - 1), inclusive
+    -- for horizontal LUTs.
+    x = r + (b * cube_size)
+    y = g
+    x = math.max(math.min(x, img.Width-1), 0)
+    y = math.max(math.min(y, img.Height-1), 0)
+    img:SetPixel(x, y, p)
+    return p
+end
 
---     local out = temp:CopyOf()
---     for y = 0, img.Height-1 do
---         for x = 0, img.Width-1 do
---             local total = Pixel({R = 0.0, G = 0.0, B = 0.0, A = 1.0})
---             local weight = 0.0
---             for i = -k, k do
---                 local curr_pixel = get_pixel(img, x, y + i)
---                 weight = weight + gaussian_weight(i, std)
---                 total.R = total.R + (curr_pixel.R * weight)
---                 total.G = total.G + (curr_pixel.G * weight)
---                 total.B = total.B + (curr_pixel.B * weight)
---             end
---             total.R = total.R / weight
---             total.G = total.G / weight
---             total.B = total.B / weight
---             out:SetPixel(x, y, total)
---         end
---     end
---     return out
--- end
+function ternary(cond, if_true, if_false)
+    if cond then
+        return if_true
+    end
+    return if_false
+end
+
+function lut_blur(img, std, cube_size)
+    local temp = img:CopyOf()
+    local k = math.ceil(std * 3.0)
+    print("k is set to: ", k)
+    for c = 1, 3 do
+        -- C represents which pass of the decomposed blur we're doing.
+        local orig = temp:CopyOf()
+        for r = 0, cube_size - 1 do
+            for g = 0, cube_size - 1 do
+                for b = 0, cube_size - 1 do
+                    local total = Pixel({R = 0.0, G = 0.0, B = 0.0, A = 1.0})
+                    local total_weight = 0.0
+                    for i = -k, k do
+                        local ri = ternary(c == 1, r + i, r)
+                        local gi = ternary(c == 2, g + i, g)
+                        local bi = ternary(c == 3, b + i, b)
+                        if 0 <= ri and ri < cube_size and 0 <= gi and gi < cube_size and 0 <= bi and bi < cube_size then
+                            local curr_pixel = get_sample(orig, ri, gi, bi, cube_size)
+                            local weight = gaussian_weight(i, std)
+                            total_weight = total_weight + weight
+                            total.R = total.R + (curr_pixel.R * weight)
+                            total.G = total.G + (curr_pixel.G * weight)
+                            total.B = total.B + (curr_pixel.B * weight)
+                        end
+                    end
+                    total.R = total.R / total_weight
+                    total.G = total.G / total_weight
+                    total.B = total.B / total_weight
+                    set_sample(temp, r, g, b, cube_size, total)
+                end
+            end
+        end
+    end
+    return temp
+end
 
 function Process(req)
     -- Get values from the UI Tools
     local img = InImage:GetValue(req)
     local blur = Blur:GetValue(req).Value
-    -- local out = img_blur(img, blur)
-    local out = img:CopyOf()
+
+    -- Assume horizontal LUT layout
+    local cube_size = img.Height
+    assert(img.Width == cube_size * cube_size, "Not a valid horizontal HALD")
+
+    blur = blur * cube_size / 65
+    local out = lut_blur(img, blur, cube_size)
 
     OutImage:Set(req, out)
 end
