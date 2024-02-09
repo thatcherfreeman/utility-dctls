@@ -94,30 +94,30 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     chroma_subsample_params_t params;
     params.j = 4;
     switch (subsampling_type) {
-    case CS410:
-        params.a = 1;
-        params.b = 0;
-        break;
-    case CS411:
-        params.a = 1;
-        params.b = 1;
-        break;
-    case CS420:
-        params.a = 2;
-        params.b = 0;
-        break;
-    case CS422:
-        params.a = 2;
-        params.b = 2;
-        break;
-    case CS440:
-        params.a = 4;
-        params.b = 0;
-        break;
-    case CS444:
-        params.a = 4;
-        params.b = 4;
-        break;
+        case CS410:
+            params.a = 1;
+            params.b = 0;
+            break;
+        case CS411:
+            params.a = 1;
+            params.b = 1;
+            break;
+        case CS420:
+            params.a = 2;
+            params.b = 0;
+            break;
+        case CS422:
+            params.a = 2;
+            params.b = 2;
+            break;
+        case CS440:
+            params.a = 4;
+            params.b = 0;
+            break;
+        case CS444:
+            params.a = 4;
+            params.b = 4;
+            break;
     }
     float3 output_color_ycrcb = chroma_subsample(params, region, rx, ry);
     float3 output_color;

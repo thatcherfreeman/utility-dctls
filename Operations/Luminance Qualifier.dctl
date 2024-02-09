@@ -42,27 +42,27 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     float input_metric;
     switch (channel) {
-    case CHANNEL_R:
-        input_metric = input.x;
-        break;
-    case CHANNEL_G:
-        input_metric = input.y;
-        break;
-    case CHANNEL_B:
-        input_metric = input.z;
-        break;
-    case CHANNEL_Y:
-        input_metric = (0.212639 * input.x) + (0.715169 * input.y) + (0.072192 * input.z);
-        break;
-    case CHANNEL_MEAN:
-        input_metric = (input.x + input.y + input.z) / 3.0;
-        break;
-    case CHANNEL_MAX:
-        input_metric = _fmaxf(_fmaxf(input.x, input.y), input.z);
-        break;
-    case CHANNEL_MIN:
-        input_metric = _fminf(_fminf(input.x, input.y), input.z);
-        break;
+        case CHANNEL_R:
+            input_metric = input.x;
+            break;
+        case CHANNEL_G:
+            input_metric = input.y;
+            break;
+        case CHANNEL_B:
+            input_metric = input.z;
+            break;
+        case CHANNEL_Y:
+            input_metric = (0.212639 * input.x) + (0.715169 * input.y) + (0.072192 * input.z);
+            break;
+        case CHANNEL_MEAN:
+            input_metric = (input.x + input.y + input.z) / 3.0;
+            break;
+        case CHANNEL_MAX:
+            input_metric = _fmaxf(_fmaxf(input.x, input.y), input.z);
+            break;
+        case CHANNEL_MIN:
+            input_metric = _fminf(_fminf(input.x, input.y), input.z);
+            break;
     }
 
     float input_metric_log = _log2f(_fmaxf(input_metric, 0.0));
