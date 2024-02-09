@@ -11,3 +11,5 @@ IndentWidth: 4
 PPIndentWidth: 4
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: ControlStatements
+IndentCaseBlocks: true
+IndentCaseLabels: true
