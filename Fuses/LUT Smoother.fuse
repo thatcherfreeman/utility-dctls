@@ -8,12 +8,26 @@ FuRegisterClass("LUTSmoother",
 )
 
 function Create()
-    Blur = self:AddInput("Blur Strength", "BlurStrength", {
+    Blur = self:AddInput("Saturated Blur Strength", "BlurStrength", {
         LINKID_DataType = "Number",
         INPID_InputControl = "SliderControl",
         INP_MinScale = 0.0,
         INP_MaxScale = 5.0,
         INP_Default = 0.0,
+    })
+    AchromaticBlur = self:AddInput("Achromatic Blur Strength", "AchromBlurStrength", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 5.0,
+        INP_Default = 0.0,
+    })
+    Threshold = self:AddInput("Saturation Threshold", "SatThresh", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 1.0,
+        INP_Default = 0.3,
     })
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
@@ -25,7 +39,21 @@ function Create()
     })
 end
 
+function get_saturation(r, g, b, cube_size)
+    local rgb_max = math.max(r, math.max(g, b)) / cube_size
+    local rgb_min = math.min(r, math.min(g, b)) / cube_size
+    local sat = rgb_max - rgb_min
+    return sat
+end
+
+function mix(x1, x2, a)
+    return x1 + (x2 - x1) * a
+end
+
 function gaussian_weight(x, std)
+    if std <= 1e-8 then
+        return ternary(x <= 1e-8, 1.0, 0.0)
+    end
     return 1.0 / math.sqrt(2.0 * math.pi * std * std) * math.exp((x * x) / (-2.0 * std * std))
 end
 
@@ -70,7 +98,7 @@ function ternary(cond, if_true, if_false)
     return if_false
 end
 
-function lut_blur(img, std, cube_size)
+function lut_blur(img, std, achromatic_std, threshold, cube_size)
     local temp = img:CopyOf()
     local k = math.ceil(std * 3.0)
     for c = 1, 3 do
@@ -87,7 +115,10 @@ function lut_blur(img, std, cube_size)
                         local bi = ternary(c == 3, b + i, b)
                         if 0 <= ri and ri < cube_size and 0 <= gi and gi < cube_size and 0 <= bi and bi < cube_size then
                             local curr_pixel = get_sample(orig, ri, gi, bi, cube_size)
-                            local weight = gaussian_weight(i, std)
+                            local curr_sat = get_saturation(ri, gi, bi, cube_size)
+                            local std_mix = ternary(threshold <= 1e-8, 1.0, math.min(curr_sat / threshold, 1.0))
+                            local curr_std = mix(achromatic_std, std, std_mix)
+                            local weight = gaussian_weight(i, curr_std)
                             total_weight = total_weight + weight
                             total.R = total.R + (curr_pixel.R * weight)
                             total.G = total.G + (curr_pixel.G * weight)
@@ -109,13 +140,16 @@ function Process(req)
     -- Get values from the UI Tools
     local img = InImage:GetValue(req)
     local blur = Blur:GetValue(req).Value
+    local achromatic_blur = AchromaticBlur:GetValue(req).Value
+    local threshold = Threshold:GetValue(req).Value
 
     -- Assume horizontal LUT layout
     local cube_size = img.Height
     assert(img.Width == cube_size * cube_size, "Not a valid horizontal HALD")
 
     blur = blur * cube_size / 65
-    local out = lut_blur(img, blur, cube_size)
+    achromatic_blur = achromatic_blur * cube_size / 65
+    local out = lut_blur(img, blur, achromatic_blur, threshold, cube_size)
 
     OutImage:Set(req, out)
 end

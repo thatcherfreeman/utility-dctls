@@ -188,7 +188,13 @@ Simply multiplies the input values by `2^x`, where `x` is the specified Exposure
 Applies a 3D gaussian blur convolution on a LUT. Generate a **Horizontal** HALD image in Fusion via the LUTCubeCreator node. Send it through whatever operations you want and then put it into the LUT Smoother Fuse, which will then crunch numbers and spit out the smoothed LUT.
 
 #### Parameters
-**Blur Strength**: Controls the strength of the blur. Tune by eye, the fuse is slower the larger this value is set to.
+**Saturated Blur Strength**: Controls the strength of the blur in more saturated areas. Tune by eye, the fuse is slower the larger this value is set to.
+
+**Achromatic Blur Strength**: Controls the strength of the blur in the less saturated areas.
+
+**Saturation Threshold**: Saturation threshold at which we will start using the Saturated Blur Strength. When set to 0.0, the cube is blurred using only the saturated blur strength, otherwise it fades from the Achromatic Blur Strength at sat = 0.0 to the Saturated Blur Strength at Sat = Threshold.
+
+
 
 ---
 
