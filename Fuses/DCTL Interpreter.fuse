@@ -821,6 +821,7 @@ __DEVICE__ float __tex2D_override(__TEXTURESTRUCT__ ptex, int x, int y) {
     if (ptex.index & 1 << 3) {
         return out.x;
     }
+    return -1.0;
 }
         ]]
         preprocessed_content = string.insert(preprocessed_content, texture_declaration, 0)
