@@ -4,12 +4,12 @@ DEFINE_UI_PARAMS(hue_angle, Angle Between Patches, DCTLUI_SLIDER_FLOAT, 180.0, 0
 DEFINE_UI_PARAMS(base_value, Base Value, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
 DEFINE_UI_PARAMS(num_bands, Number of Bands, DCTLUI_SLIDER_INT, 10, 1, 50, 1)
-DEFINE_UI_PARAMS(band_interval, Band Interval, DCTLUI_COMBO_BOX, 0, {EQUAL, EXPONENTIAL}, {Equal (Log), Exponential (Linear)})
+DEFINE_UI_PARAMS(band_interval, Band Interval, DCTLUI_COMBO_BOX, 1, {EQUAL, EXPONENTIAL}, {Equal (Log), Exponential (Linear)})
 DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(clamp_output_min, Min Clamp, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(clamp_output_max, Max Clamp, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(continuous, Continuous, DCTLUI_CHECK_BOX, 0)
-DEFINE_UI_PARAMS(clamp_output, Clamp Output, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(clamp_output, Clamp Output, DCTLUI_CHECK_BOX, 0)
 // clang-format on
 
 __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
