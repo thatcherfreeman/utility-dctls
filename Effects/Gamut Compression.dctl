@@ -1,8 +1,9 @@
 #line 2
 // clang-format off
 DEFINE_UI_PARAMS(max_input_saturation, Max Input Saturation (radians), DCTLUI_SLIDER_FLOAT, 3.15, 0, 3.15, 0.01)
+DEFINE_UI_PARAMS(user_max_output_saturation, Max Output Saturation (radians), DCTLUI_SLIDER_FLOAT, 3.15, 0, 3.15, 0.01)
 DEFINE_UI_PARAMS(protected_fraction, Saturation Knee (Proportion), DCTLUI_SLIDER_FLOAT, 0.645, 0, 1.0, 0.01)
-DEFINE_UI_PARAMS(output_saturation_calculation, Max Output Saturation, DCTLUI_COMBO_BOX, 0, {WORST_CASE, PER_HUE_TRUE_MAX, PER_HUE_SMOOTHED_MAX}, {Worst Case, Per Hue True Max, Per Hue Smoothed Max})
+DEFINE_UI_PARAMS(output_saturation_calculation, Max Output Saturation, DCTLUI_COMBO_BOX, 0, {WORST_CASE, PER_HUE_TRUE_MAX, PER_HUE_SMOOTHED_MAX, USER_SELECTED}, {Worst Case, Per Hue True Max, Per Hue Smoothed Max, User Selected})
 DEFINE_UI_PARAMS(preservation_strategy, Preservation Strategy, DCTLUI_COMBO_BOX, 0, {MAGNITUDE, WHITE_COMPONENT}, {Magnitude, White Component})
 DEFINE_UI_PARAMS(debug, Debug Mode, DCTLUI_COMBO_BOX, 0, {NONE, MAX_SATURATION, SATURATION}, {None, Max Output Saturation, Saturation})
 // clang-format on
@@ -262,6 +263,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     } else if (output_saturation_calculation == PER_HUE_SMOOTHED_MAX) {
         float3 initial = gamut_compress_spherical(input, worst_case_output_saturation, PI, worst_case_output_saturation, preservation_strategy);
         max_output_saturation = smoothed_worst_case_sat_angle(initial);
+    } else if (output_saturation_calculation == USER_SELECTED) {
+        max_output_saturation = user_max_output_saturation;
     }
 
     // Now gently gamut compress properly to the target max_output_saturation

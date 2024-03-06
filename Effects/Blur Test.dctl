@@ -1,0 +1,44 @@
+#line 2
+
+DEFINE_UI_PARAMS(threshold, Threshold, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(std, Std, DCTLUI_SLIDER_INT, 1, 0, 3, 1)
+
+#define PI (3.14159265358979)
+
+__DEVICE__ float lum(float3 input) {
+    return (input.x + input.y + input.z) / 3.0;
+}
+
+__DEVICE__ float3 gaussian_blur(float std, float threshold, int x, int y, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
+    int window_size = (int)_ceilf(2 * std * 3);
+
+    float3 curr_pixel = make_float3(_tex2D(tex_r, x, y), _tex2D(tex_g, x, y), _tex2D(tex_b, x, y));
+    float3 sum = make_float3(0, 0, 0);
+    float3 weight_sum = make_float3(0, 0, 0);
+
+    for (int i = x - (window_size / 2); i <= x + (window_size / 2); ++i) {
+        for (int j = y - (window_size / 2); j <= y + (window_size / 2); ++j) {
+            float3 runner = make_float3(_tex2D(tex_r, i, j), _tex2D(tex_g, i, j), _tex2D(tex_b, i, j));
+            float weight = 1.0 / (2.0 * PI * std * std) * _expf((_powf(_fabs((float)(x - i)), 2.0) + _powf(_fabs((float)(y - j)), 2.0)) / (-2.0 * std * std));
+
+            if (_fabs(runner.x - curr_pixel.x) < threshold) {
+                weight_sum.x += weight;
+                sum.x += runner.x * weight;
+            }
+            if (_fabs(runner.y - curr_pixel.y) < threshold) {
+                weight_sum.y += weight;
+                sum.y += runner.y * weight;
+            }
+            if (_fabs(runner.z - curr_pixel.z) < threshold) {
+                weight_sum.z += weight;
+                sum.z += runner.z * weight;
+            }
+        }
+    }
+    return sum / weight_sum;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB)
+{
+    return gaussian_blur((float)std, threshold, p_X, p_Y, p_TexR, p_TexG, p_TexB);
+}
