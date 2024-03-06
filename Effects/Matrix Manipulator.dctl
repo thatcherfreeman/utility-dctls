@@ -8,7 +8,6 @@ DEFINE_UI_PARAMS(blue_hue, Blue Hue, DCTLUI_SLIDER_FLOAT, 0, -60.0, 60.0, 0.1)
 DEFINE_UI_PARAMS(blue_sat, Blue Sat, DCTLUI_SLIDER_FLOAT, 1, 0.0, 3.0, 0.1)
 // clang-format on
 
-
 __DEVICE__ float3 hsv_to_rgb(float3 hsv) {
     float hue = hsv.x;
     float sat = hsv.y;
@@ -35,7 +34,6 @@ __DEVICE__ float3 hsv_to_rgb(float3 hsv) {
     }
     return rgbp + m;
 }
-
 
 __DEVICE__ float3 rgb_to_hsv(float3 rgb) {
     float r = rgb.x;
@@ -78,7 +76,6 @@ __DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
     return out;
 }
 
-
 __DEVICE__ void copy_mat_33(float from[3][3], float to[3][3]) {
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
@@ -104,13 +101,11 @@ __DEVICE__ void mat_inverse_33(float inv_buf[3][3], float m[3][3]) {
     inv_buf[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
 }
 
-
 __DEVICE__ float sum_f3(float3 x) {
     return x.x + x.y + x.z;
 }
 
-__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
-{
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 curr_color = make_float3(p_R, p_G, p_B);
 
     // requirements:
@@ -134,9 +129,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 green_target_rgb = hsv_to_rgb(green_hsv);
     float3 blue_target_rgb = hsv_to_rgb(blue_hsv);
     float mat[3][3] = {
-        red_target_rgb.x, green_target_rgb.x, blue_target_rgb.x,
-        red_target_rgb.y, green_target_rgb.y, blue_target_rgb.y,
-        red_target_rgb.z, green_target_rgb.z, blue_target_rgb.z,
+        red_target_rgb.x,
+        green_target_rgb.x,
+        blue_target_rgb.x,
+        red_target_rgb.y,
+        green_target_rgb.y,
+        blue_target_rgb.y,
+        red_target_rgb.z,
+        green_target_rgb.z,
+        blue_target_rgb.z,
     };
 
     // set these so that all rows sum to 1.0.

@@ -1,3 +1,4 @@
+// clang-format off
 DEFINE_UI_PARAMS(highlight_r, Highlight Color Red, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(highlight_g, Highlight Color Green, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(highlight_b, Highlight Color Blue, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
@@ -11,6 +12,7 @@ DEFINE_UI_PARAMS(highlight_zeros, Highlight == Lower, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(highlight_ones, Highlight == Upper, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(highlight_gt_ones, Highlight > Upper, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(highlight_pinfs, Highlight +Inf, DCTLUI_CHECK_BOX, 1)
+// clang-format on
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 curr_color = make_float3(p_R, p_G, p_B);
@@ -53,8 +55,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     if (highlight_ninfs) {
-        if ((isinf(curr_color.x) && curr_color.x < 0.0) ||
-            (isinf(curr_color.y) && curr_color.y < 0.0) ||
+        if ((isinf(curr_color.x) && curr_color.x < 0.0) || (isinf(curr_color.y) && curr_color.y < 0.0) ||
             (isinf(curr_color.z) && curr_color.z < 0.0)) {
             output = make_float3(highlight_r, highlight_g, highlight_b);
             flag = 1;
@@ -62,8 +63,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     if (highlight_pinfs) {
-        if ((isinf(curr_color.x) && curr_color.x > 0.0) ||
-            (isinf(curr_color.y) && curr_color.y > 0.0) ||
+        if ((isinf(curr_color.x) && curr_color.x > 0.0) || (isinf(curr_color.y) && curr_color.y > 0.0) ||
             (isinf(curr_color.z) && curr_color.z > 0.0)) {
             output = make_float3(highlight_r, highlight_g, highlight_b);
             flag = 1;

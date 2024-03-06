@@ -4,11 +4,7 @@ DEFINE_UI_PARAMS(color_b, Color B, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(inverse, Inverse, DCTLUI_CHECK_BOX, 0)
 
 __DEVICE__ float3 cross_product(float3 a, float3 b) {
-    float3 out = make_float3(
-        a.y * b.z - a.z * b.y,
-        a.z * b.x - a.x * b.z,
-        a.x * b.y - a.y * b.x
-    );
+    float3 out = make_float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
     return out;
 }
 
@@ -22,20 +18,14 @@ __DEVICE__ float dot_product(float3 a, float3 b) {
 
 __DEVICE__ float3 unit_vec(float3 a) {
     float norm = _sqrtf(pow2f(a.x) + pow2f(a.y) + pow2f(a.z));
-    float3 out = make_float3(
-        a.x / norm,
-        a.y / norm,
-        a.z / norm
-    );
+    float3 out = make_float3(a.x / norm, a.y / norm, a.z / norm);
     return out;
 }
 
 __DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
-    float3 out = make_float3(
-        mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
-        mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
-        mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z
-    );
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
     return out;
 }
 
@@ -55,8 +45,7 @@ __DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float
     mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
 }
 
-__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
-{
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 output;
     float3 curr_color = make_float3(p_R, p_G, p_B);
     float mat[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
@@ -74,4 +63,3 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     output = mv_33_3(mat, curr_color);
     return output;
 }
-

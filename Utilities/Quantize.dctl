@@ -2,7 +2,6 @@ DEFINE_UI_PARAMS(bit_depth, Bit Depth, DCTLUI_SLIDER_INT, 8, 1, 24, 1)
 DEFINE_UI_PARAMS(clip, Clip Blacks and Whites, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(rounding_opt, Quantization Method, DCTLUI_COMBO_BOX, 0, {ROUND, TRUNCATE, STOCHASTIC}, {Round, Truncate, Stochastic})
 
-
 typedef ulong rand_state;
 __DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
     rand_state x = *seed;
@@ -71,4 +70,3 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     return output_color;
 }
-

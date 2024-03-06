@@ -253,7 +253,6 @@ __DEVICE__ char digit2char(int i) {
     return (char)('0' + i);
 }
 
-
 __DEVICE__ void int2str(int f, char output[], int num_chars) {
     int runner = 0;
 
@@ -339,7 +338,7 @@ __DEVICE__ float bt1886_nits_to_cv(float l, float lw, float lb, float gamma) {
 //////////////////////////////
 __DEVICE__ float st2084_nits_to_cv(float n) {
     // n is scaled so 1.0 is 100 nits.
-    float Y = n / 10000.0;  // scale 10k nits to 1.0
+    float Y = n / 10000.0; // scale 10k nits to 1.0
     const float m1 = 2610.0 / 16384.0;
     const float m2 = 128.0 * 2523.0 / 4096.0;
     const float c2 = 32.0 * 2413.0 / 4096.0;
@@ -493,7 +492,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 substeps = 1;
             }
             for (int k = 0; k < substeps; ++k) {
-                minor_nits[j*3 + k] = mid_gray * _exp2f((float) stop + (k * 0.33333333));
+                minor_nits[j * 3 + k] = mid_gray * _exp2f((float)stop + (k * 0.33333333));
             }
         }
     }

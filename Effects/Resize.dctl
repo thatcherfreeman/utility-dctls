@@ -4,7 +4,6 @@ DEFINE_UI_PARAMS(scale, Scaling, DCTLUI_VALUE_BOX, 2.0)
 DEFINE_UI_PARAMS(resize_mode, Resize Mode, DCTLUI_COMBO_BOX, 0, {NN, LINEAR, CUBIC}, {Nearest Neighbors, BiLinear, BiCubic})
 // clang-format on
 
-
 __DEVICE__ float3 get_color(int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     float r = _tex2D(p_TexR, p_X, p_Y);
     float g = _tex2D(p_TexG, p_X, p_Y);
@@ -120,16 +119,16 @@ __DEVICE__ float3 sample_point_bicubic_3ch(float x, float y, __TEXTURE__ p_TexR,
 // init_height) at location (x,y) Return the pixel value if the image had been
 // rescaled to (new_width, new_height)
 __DEVICE__ void reduce_resolution(int x,
-                                    int y,
-                                    int init_width,
-                                    int init_height,
-                                    int new_width,
-                                    int new_height,
-                                    __TEXTURE__ pr,
-                                    __TEXTURE__ pg,
-                                    __TEXTURE__ pb,
-                                    int resize_mode,
-                                    __PRIVATE__ float3* ret) {
+                                  int y,
+                                  int init_width,
+                                  int init_height,
+                                  int new_width,
+                                  int new_height,
+                                  __TEXTURE__ pr,
+                                  __TEXTURE__ pg,
+                                  __TEXTURE__ pb,
+                                  int resize_mode,
+                                  __PRIVATE__ float3* ret) {
     float p_x = (float)x / (float)init_width;
     float p_y = (float)y / (float)init_height;
     float3 out = make_float3(0.0, 0.0, 0.0);

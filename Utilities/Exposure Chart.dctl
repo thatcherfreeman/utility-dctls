@@ -3,22 +3,21 @@ DEFINE_UI_PARAMS(mid_gray, Middle Gray Value, DCTLUI_SLIDER_FLOAT, 0.18, 0.0, 1.
 DEFINE_UI_PARAMS(opt_card, Show Mid Gray Card, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(opt_ramp, Show Linear Ramp, DCTLUI_CHECK_BOX, 1)
 
-
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
-    float x = (float) p_X / (p_Width - 1);
-    float y = (float) p_Y / (p_Height - 1);
+    float x = (float)p_X / (p_Width - 1);
+    float y = (float)p_Y / (p_Height - 1);
     float step_width = 1.0f / num_steps;
     int middle_step = num_steps / 2;
     float3 output_color;
 
     if (y <= 0.66f) {
         // Top half of chart, make steps
-        int curr_step = (int) (x / step_width);
-        float val = mid_gray * _exp2f((float) curr_step - middle_step);
+        int curr_step = (int)(x / step_width);
+        float val = mid_gray * _exp2f((float)curr_step - middle_step);
         output_color = make_float3(val, val, val);
     } else {
         // make exp ramp
-        float val = mid_gray * _exp2f((float) (x / step_width) - 0.5 - middle_step);
+        float val = mid_gray * _exp2f((float)(x / step_width) - 0.5 - middle_step);
         output_color = make_float3(val, val, val);
     }
     if (opt_ramp && y > 0.84f) {

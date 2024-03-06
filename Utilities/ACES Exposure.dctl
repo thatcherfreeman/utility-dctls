@@ -1,5 +1,7 @@
+// clang-format off
 DEFINE_UI_PARAMS(curve_opt, ACES Gamma, DCTLUI_COMBO_BOX, 0, {ACES, ACESCC, ACESCCT}, {ACES (Linear), ACEScc, ACEScct})
 DEFINE_UI_PARAMS(exposure, Exposure Adjustment, DCTLUI_SLIDER_FLOAT, 0.0, -8.0, 8.0, 0.333)
+// clang-format on
 
 // Transforms adapted from:
 // https://github.com/ampas/aces-dev
@@ -55,17 +57,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     if (curve_opt == ACES) {
         // Do nothing
     } else if (curve_opt == ACESCC) {
-        rgb = to_float3(
-            acescc_to_linear(rgb.x),
-            acescc_to_linear(rgb.y),
-            acescc_to_linear(rgb.z)
-        );
+        rgb = to_float3(acescc_to_linear(rgb.x), acescc_to_linear(rgb.y), acescc_to_linear(rgb.z));
     } else if (curve_opt == ACESCCT) {
-        rgb = to_float3(
-            acescct_to_linear(rgb.x),
-            acescct_to_linear(rgb.y),
-            acescct_to_linear(rgb.z)
-        );
+        rgb = to_float3(acescct_to_linear(rgb.x), acescct_to_linear(rgb.y), acescct_to_linear(rgb.z));
     }
 
     rgb = rgb * gain;
@@ -73,17 +67,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     if (curve_opt == ACES) {
         // Do nothing
     } else if (curve_opt == ACESCC) {
-        rgb = to_float3(
-            linear_to_acescc(rgb.x),
-            linear_to_acescc(rgb.y),
-            linear_to_acescc(rgb.z)
-        );
+        rgb = to_float3(linear_to_acescc(rgb.x), linear_to_acescc(rgb.y), linear_to_acescc(rgb.z));
     } else if (curve_opt == ACESCCT) {
-        rgb = to_float3(
-            linear_to_acescct(rgb.x),
-            linear_to_acescct(rgb.y),
-            linear_to_acescct(rgb.z)
-        );
+        rgb = to_float3(linear_to_acescct(rgb.x), linear_to_acescct(rgb.y), linear_to_acescct(rgb.z));
     }
     return rgb;
 }

@@ -12,10 +12,9 @@ DEFINE_UI_PARAMS(rgb_format, Target RGB Format, DCTLUI_COMBO_BOX, 0, {SCALE_0_1,
 DEFINE_UI_PARAMS(highlight_mode, Highlight Mode, DCTLUI_COMBO_BOX, 1, {GENERATE_COLOR, CV_WITHIN_RANGE, CV_OUTSIDE_RANGE}, {Generate Color, Code Value Within Bounds, Code Value Outside Bounds})
 // clang-format on
 
-__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
-{
-    float x = (float) p_X / (float) (p_Width - 1);
-    float y = (float) p_Y / (float) (p_Height - 1);
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float x = (float)p_X / (float)(p_Width - 1);
+    float y = (float)p_Y / (float)(p_Height - 1);
     float3 input = make_float3(p_R, p_G, p_B);
 
     float3 target_rgb;
@@ -29,7 +28,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 low_bound = target_rgb * (1.0 - (percent_error / 100.0));
     float3 high_bound = target_rgb * (1.0 + (percent_error / 100.0));
 
-    bool cv_is_within_range = (low_bound.x <= source_color.x && source_color.x <= high_bound.x) && (low_bound.y <= source_color.y && source_color.y <= high_bound.y) && (low_bound.z <= source_color.z && source_color.z <= high_bound.z);
+    bool cv_is_within_range = (low_bound.x <= source_color.x && source_color.x <= high_bound.x) &&
+                              (low_bound.y <= source_color.y && source_color.y <= high_bound.y) &&
+                              (low_bound.z <= source_color.z && source_color.z <= high_bound.z);
 
     float3 output = input;
     if (highlight_mode == CV_WITHIN_RANGE && cv_is_within_range) {

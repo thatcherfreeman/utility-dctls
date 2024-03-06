@@ -1,8 +1,8 @@
 #line 2
 // Based on the BT1886 OETF
 // clang-format off
-DEFINE_UI_PARAMS(x_shift, X Shift, DCTLUI_VALUE_BOX, 0.0)
-DEFINE_UI_PARAMS(y_shift, Y Shift, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(gamma, Gamma, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(offset, Offset, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(scale, Scale, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(slope, Slope, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(intercept, Intercept, DCTLUI_VALUE_BOX, 0.0)

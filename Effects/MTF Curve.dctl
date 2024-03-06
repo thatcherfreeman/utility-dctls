@@ -36,7 +36,8 @@ __DEVICE__ float sample_point_nn_1ch(float x, float y, __TEXTURE__ tex, float sc
     return c;
 }
 
-__DEVICE__ float3 sample_point_nn_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale, bool clamp) {
+__DEVICE__ float3
+sample_point_nn_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale, bool clamp) {
     float3 out = make_float3(0.0, 0.0, 0.0);
     out.x = sample_point_nn_1ch(x, y, p_TexR, scale, clamp);
     out.y = sample_point_nn_1ch(x, y, p_TexG, scale, clamp);

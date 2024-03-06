@@ -117,12 +117,12 @@ gaussian_blur(float radius, float x, float y, int p_Width, int p_Height, __TEXTU
     return sum / weight_sum;
 }
 
-
 __DEVICE__ inline float exp_k(float x, float y, float r0) {
     return _expf(-_hypotf(x, y) / r0);
 }
 
-__DEVICE__ float3 exp_blur(float radius, float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+__DEVICE__ float3
+exp_blur(float radius, float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     // Adapted from https://github.com/hotgluebanjo/halation-dctl/blob/master/halation.dctl
     int center_x = get_coord(x, p_Width);
     int center_y = get_coord(y, p_Height);
@@ -141,7 +141,6 @@ __DEVICE__ float3 exp_blur(float radius, float x, float y, int p_Width, int p_He
 
     return sum / weight_sum;
 }
-
 
 __DEVICE__ float3
 halation(float3 scene_color, float3 diffused_color, float exposure_lost_lin, float green_exposure_lost_lin, float blue_exposure_lost_lin) {

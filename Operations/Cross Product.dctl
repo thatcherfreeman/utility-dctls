@@ -16,6 +16,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         vec_b = make_float3(p_R, p_G, p_B);
     }
 
-    float3 out = make_float3(vec_a.y * vec_b.z - vec_a.z * vec_b.y, vec_a.z * vec_b.x - vec_a.x * vec_b.z, vec_a.x * vec_b.y - vec_a.y * vec_b.x);
+    float3 out =
+        make_float3(vec_a.y * vec_b.z - vec_a.z * vec_b.y, vec_a.z * vec_b.x - vec_a.x * vec_b.z, vec_a.x * vec_b.y - vec_a.y * vec_b.x);
     return out;
 }

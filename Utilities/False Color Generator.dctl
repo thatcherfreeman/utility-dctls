@@ -20,7 +20,6 @@ DEFINE_UI_PARAMS(brightness_mode, Brightness Mode, DCTLUI_COMBO_BOX, 0, {LUM, VA
 
 #define PI (3.14159265358979323)
 
-
 __DEVICE__ float mod(float x, float y) {
     if (x < 0) {
         return y + _fmod(x, y);
@@ -106,18 +105,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         }
     }
 
-
     float3 output_color;
     log_stops = _fmaxf(log_stops, 16.0);
     if (log_output) {
         output_color = make_float3(linear_to_tlog(linear_output_color.x, log_stops, 0.0),
                                    linear_to_tlog(linear_output_color.y, log_stops, 0.0),
                                    linear_to_tlog(linear_output_color.z, log_stops, 0.0));
-        output_color = make_float3(
-            isinf(output_color.x) || isnan(output_color.x) ? 0.0: output_color.x,
-            isinf(output_color.y) || isnan(output_color.y) ? 0.0: output_color.y,
-            isinf(output_color.z) || isnan(output_color.z) ? 0.0: output_color.z
-        );
+        output_color = make_float3(isinf(output_color.x) || isnan(output_color.x) ? 0.0 : output_color.x,
+                                   isinf(output_color.y) || isnan(output_color.y) ? 0.0 : output_color.y,
+                                   isinf(output_color.z) || isnan(output_color.z) ? 0.0 : output_color.z);
     } else {
         output_color = linear_output_color;
     }

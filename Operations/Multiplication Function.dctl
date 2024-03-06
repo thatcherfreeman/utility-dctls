@@ -4,10 +4,6 @@ DEFINE_UI_PARAMS(green_gain, Green Gain, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(blue_gain, Blue Gain, DCTLUI_VALUE_BOX, 1.0)
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
-    float3 output = make_float3(
-        p_R * all_gain * red_gain,
-        p_G * all_gain * green_gain,
-        p_B * all_gain * blue_gain
-    );
+    float3 output = make_float3(p_R * all_gain * red_gain, p_G * all_gain * green_gain, p_B * all_gain * blue_gain);
     return output;
 }

@@ -41,14 +41,12 @@ __DEVICE__ float3 mv_310_10(float mat[3][9], float vec[9]) {
     return make_float3(out[0], out[1], out[2]);
 }
 
-
 __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
 }
 
 __DEVICE__ float sigmoid_product(float a, float b, float power, float white_point) {
     return (powf(a * b, power)) / (powf(a * b, power) + white_point);
-
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {

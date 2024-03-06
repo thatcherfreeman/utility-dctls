@@ -21,12 +21,11 @@ DEFINE_UI_PARAMS(density_to_transmittance, Density to Transmittance, DCTLUI_CHEC
 DEFINE_UI_PARAMS(show_curve, Draw Characteristic Curve, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(curve_type, Curve Type, DCTLUI_COMBO_BOX, 0, {SIGMOID, QUAD_SIGMOID}, {Sigmoid, Quadratic Sigmoid})
 
-
 typedef struct {
-    float gamma;
-    float dmin, dmax;
-    float offset;
-    int curve_type;
+        float gamma;
+        float dmin, dmax;
+        float offset;
+        int curve_type;
 } characteristic_params_t;
 
 __DEVICE__ float sigmoid(float x) {
@@ -59,7 +58,7 @@ __DEVICE__ float characteristic_curve(float x, __PRIVATE__ characteristic_params
     if (params->curve_type == SIGMOID) {
         coeff = params->gamma / (0.25 * (params->dmax - params->dmin));
         out = sigmoid(coeff * (x + params->offset)) * (params->dmax - params->dmin) + params->dmin;
-    } else if (params->curve_type == QUAD_SIGMOID){
+    } else if (params->curve_type == QUAD_SIGMOID) {
         coeff = params->gamma / (params->dmax - params->dmin);
         out = quadratic_sigmoid(coeff * (x + params->offset)) * (params->dmax - params->dmin) + params->dmin;
     }
@@ -101,27 +100,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     curr_color *= 1.0 / mid_gray; // scale middle gray to the midpoint of sigmoid.
 
     if (exp_to_log_exp) {
-        curr_color = make_float3(
-            _log10f(curr_color.x),
-            _log10f(curr_color.y),
-            _log10f(curr_color.z)
-        );
+        curr_color = make_float3(_log10f(curr_color.x), _log10f(curr_color.y), _log10f(curr_color.z));
     }
 
     if (log_exp_to_density) {
-        curr_color = make_float3(
-            characteristic_curve(curr_color.x, &red_curve),
-            characteristic_curve(curr_color.y, &green_curve),
-            characteristic_curve(curr_color.z, &blue_curve)
-        );
+        curr_color = make_float3(characteristic_curve(curr_color.x, &red_curve),
+                                 characteristic_curve(curr_color.y, &green_curve),
+                                 characteristic_curve(curr_color.z, &blue_curve));
     }
 
     if (density_to_transmittance) {
-        curr_color = make_float3(
-            _exp10f(-1.0 * curr_color.x),
-            _exp10f(-1.0 * curr_color.y),
-            _exp10f(-1.0 * curr_color.z)
-        );
+        curr_color = make_float3(_exp10f(-1.0 * curr_color.x), _exp10f(-1.0 * curr_color.y), _exp10f(-1.0 * curr_color.z));
     }
 
     if (show_curve) {

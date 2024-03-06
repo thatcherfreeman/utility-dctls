@@ -4,7 +4,6 @@ DEFINE_UI_PARAMS(alpha, Alpha, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.1)
 DEFINE_UI_PARAMS(thickness, Line Thickness, DCTLUI_SLIDER_FLOAT, 0.002, 0.0, 0.005, 0.001)
 DEFINE_UI_PARAMS(shade_alpha, Shade Darkness, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.1)
 
-
 __DEVICE__ inline int target1d(int x, float target, int radius) {
     if (x > (target - radius) && x < (target + radius)) {
         return 1;
@@ -37,7 +36,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float center_x = p_Width * 0.5f;
     float center_y = p_Height * 0.5f;
     float image_aspect = (float)p_Width / p_Height;
-    const int radius = (int) (thickness * p_Height);
+    const int radius = (int)(thickness * p_Height);
     const float3 box_color = make_float3(1.0f, 1.0f, 1.0f);
     float3 curr_pixel_color = make_float3(p_R, p_G, p_B);
     float3 new_color = _mix(curr_pixel_color, box_color, alpha);
@@ -55,25 +54,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     if (draw_rectangle(
-            p_X,
-            p_Y,
-            center_x - major_radius,
-            center_x + major_radius,
-            center_y - minor_radius,
-            center_y + minor_radius,
-            radius
-        )) {
+            p_X, p_Y, center_x - major_radius, center_x + major_radius, center_y - minor_radius, center_y + minor_radius, radius)) {
         return new_color;
     }
 
     if (shade_outside(
-            p_X,
-            p_Y,
-            center_x - major_radius,
-            center_x + major_radius,
-            center_y - minor_radius,
-            center_y + minor_radius,
-            radius)) {
+            p_X, p_Y, center_x - major_radius, center_x + major_radius, center_y - minor_radius, center_y + minor_radius, radius)) {
         return shade_color;
     }
 

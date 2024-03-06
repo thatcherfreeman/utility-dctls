@@ -3,12 +3,10 @@ DEFINE_UI_PARAMS(eps, Eps, DCTLUI_SLIDER_FLOAT, 0.2, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(maintain_white, Maintain White, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(show_matrix_opt, Show Matrix, DCTLUI_COMBO_BOX, 0, {OFF, VALUE, SCALED}, {Off, Float Value, Scaled Ten Bit Value})
 
-
-typedef struct
-{
-    float c00, c01, c02;
-    float c10, c11, c12;
-    float c20, c21, c22;
+typedef struct {
+        float c00, c01, c02;
+        float c10, c11, c12;
+        float c20, c21, c22;
 } Matrix;
 
 __DEVICE__ float random(__PRIVATE__ uint* seed) {
@@ -17,7 +15,7 @@ __DEVICE__ float random(__PRIVATE__ uint* seed) {
     const uint a = 48271;
     uint new_seed = (a * old_seed) % m;
     *seed = new_seed;
-    return (((float) new_seed) / (float) m) * 2.0 - 1.0;
+    return (((float)new_seed) / (float)m) * 2.0 - 1.0;
 }
 
 __DEVICE__ float3 matmul(__PRIVATE__ Matrix* A, float3 rgb) {
@@ -77,7 +75,7 @@ __DEVICE__ float get_mat_value(__PRIVATE__ Matrix* A, float x, float y) {
         } else {
             out = A->c21;
         }
-    } else  {
+    } else {
         if (y < 1.0 / 3.0) {
             out = A->c02;
         } else if (1.0 / 3.0 <= y && y < 2.0 / 3.0) {
@@ -89,8 +87,7 @@ __DEVICE__ float get_mat_value(__PRIVATE__ Matrix* A, float x, float y) {
     return out;
 }
 
-__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
-{
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     uint state = seed;
 
     Matrix mat;
@@ -145,4 +142,3 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     return output_color;
 }
-

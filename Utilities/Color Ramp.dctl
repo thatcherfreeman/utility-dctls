@@ -28,7 +28,7 @@ __DEVICE__ float3 hsl_to_rgb(float h, float s, float l) {
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
-    float pos = ((float) p_X) / p_Width;
+    float pos = ((float)p_X) / p_Width;
     float3 output_color;
 
     if (ramp_opt == LUMINANCE) {

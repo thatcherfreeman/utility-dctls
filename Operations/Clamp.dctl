@@ -3,8 +3,7 @@ DEFINE_UI_PARAMS(clamp_max, Max Clamp, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(clamp_min_check, Clamp Min, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(clamp_max_check, Clamp Max, DCTLUI_CHECK_BOX, 1)
 
-__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
-{
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 curr_color = make_float3(p_R, p_G, p_B);
     if (clamp_max_check) {
         curr_color = make_float3(_fminf(curr_color.x, clamp_max), _fminf(curr_color.y, clamp_max), _fminf(curr_color.z, clamp_max));

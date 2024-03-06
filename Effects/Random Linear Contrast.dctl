@@ -22,7 +22,7 @@ __DEVICE__ float contrast(float x, float gamma, float mid_gray) {
 typedef unsigned int rand_state;
 
 // Returns value uniformly between 0 and 1.
-__DEVICE__ float randu(__PRIVATE__ rand_state *seed) {
+__DEVICE__ float randu(__PRIVATE__ rand_state* seed) {
     rand_state x = *seed;
     x ^= x << 13;
     x ^= x >> 17;
@@ -33,7 +33,7 @@ __DEVICE__ float randu(__PRIVATE__ rand_state *seed) {
 }
 
 // Returns float uniformly between a and b.
-__DEVICE__ float randu_interval(float a, float b, __PRIVATE__ rand_state *seed) {
+__DEVICE__ float randu_interval(float a, float b, __PRIVATE__ rand_state* seed) {
     return a + randu(seed) * (b - a);
 }
 
@@ -42,7 +42,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 output = make_float3(p_R, p_G, p_B);
 
     // Use the random number generator to get a new gamma for each channel.
-    __PRIVATE__ rand_state *seed = (__PRIVATE__ rand_state *) &user_seed;
+    __PRIVATE__ rand_state* seed = (__PRIVATE__ rand_state*)&user_seed;
     randu(seed);
     randu(seed);
     randu(seed);
