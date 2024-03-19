@@ -121,11 +121,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         y = temp;
     }
 
-    float curr_row, curr_col;
-    if (continuous == DISCRETE) {
-        curr_row = _floorf(y * (num_hues + gray_ramp)) - gray_ramp;
-        curr_col = _ceilf(x * num_cols);
-    }
+    float curr_row = _floorf(y * (num_hues + gray_ramp)) - gray_ramp;
+    float curr_col = _ceilf(x * num_cols);
+
     if (continuous == CONTINUOUS_HUE || continuous == CONTINUOUS_BOTH) {
         curr_row = y * (num_hues + gray_ramp) - gray_ramp;
     }
