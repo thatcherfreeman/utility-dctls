@@ -805,6 +805,7 @@ Multiplies the RGB values of the input by a 3x3 matrix with the specified entrie
 
 **Preserve Neutral**: Sends $(1, 1, 1)$ through the matrix and applies RGB gain to the output to ensure that $(1, 1, 1)$ is ultimately returned.
 
+**Invert**: computes the inverse of the matrix and then applies it.
 
 
 ---

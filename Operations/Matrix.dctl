@@ -9,6 +9,7 @@ DEFINE_UI_PARAMS(mat6, Red => Blue, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(mat7, Green => Blue, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(mat8, Blue => Blue, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(preserve_neutral, Preserve Neutral, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
 // clang-format on
 
 __DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
@@ -16,6 +17,33 @@ __DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
                              mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
                              mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
     return out;
+}
+
+__DEVICE__ void copy_mat_33(float to[3][3], float from[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            to[i][j] = from[i][j];
+        }
+    }
+}
+
+__DEVICE__ void mat_inverse_33(float m[3][3]) {
+    // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
+    float inv_buf[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+    inv_buf[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
+    inv_buf[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det;
+    inv_buf[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
+    inv_buf[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det;
+    inv_buf[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
+    inv_buf[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det;
+    inv_buf[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
+    inv_buf[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det;
+    inv_buf[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
+    copy_mat_33(m, inv_buf);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
@@ -26,6 +54,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         {mat3, mat4, mat5},
         {mat6, mat7, mat8},
     };
+    if (invert) {
+        // In-place inversion
+        mat_inverse_33(mat);
+    }
+
     float3 res = mv_33_3(mat, rgb);
     float3 white_out = mv_33_3(mat, make_float3(1.0, 1.0, 1.0));
     if (preserve_neutral) {
