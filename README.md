@@ -72,6 +72,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Chroma Subsampling DCTL](#chroma-subsampling-dctl)
         - [CIELUV DCTL](#cieluv-dctl)
         - [ColorChecker DCTL](#colorchecker-dctl)
+        - [Color Picker DCTL](#color-picker-dctl)
         - [Color Ramp DCTL](#color-ramp-dctl)
         - [Cube Rotate DCTL](#cube-rotate-dctl)
         - [DaVinci Tone Mapping DCTL](#davinci-tone-mapping-dctl)
@@ -1143,6 +1144,25 @@ Generates a synthetic image of the Macbeth ColorChecker based on one of two data
 
 **Adapt to D65**: Check this box to use a bradford chromatic adaptation matrix to best approximate what the chart would look like under a D65 illuminant. Leave unchecked to use the native white point for each dataset (Illuminant A for official, Illuminant C for McCamy).
 
+---
+### Color Picker DCTL
+
+Improves upon the color picker in the Color page by allowing you to see floating point code values that aren't clamped 0 to 1.
+
+#### DCTL Parameters
+**Color Picker X/Y**: Coordinates of the pixel you want to sample.
+
+**Sample Size px**: Size of the window of pixels you'd like to average. When this is 1, we only sample a single pixel.
+
+**Num Digits**: Number of digits to show in the legend.
+
+**Format**: Indicate whether to show floating point or integer values of a given bit depth.
+
+**Crosshair Type**: Indicate the shape of the crosshair, in case the large + is too distracting.
+
+**Legend Position**: Specify where you want the legend to be placed.
+
+**Legend Color**: Specify whether you want the text and crosshair to be White, black, gray, or the inverse of the underlying color.
 
 ---
 

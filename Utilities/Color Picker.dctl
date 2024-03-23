@@ -1,0 +1,514 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(sample_x, Color Picker X, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(sample_y, Color Picker Y, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
+
+DEFINE_UI_PARAMS(window_size, Sample Size px, DCTLUI_SLIDER_INT, 1, 1, 8, 1)
+DEFINE_UI_PARAMS(num_digits, Num Digits, DCTLUI_SLIDER_INT, 8, 3, 12, 1)
+
+DEFINE_UI_PARAMS(format, Format, DCTLUI_COMBO_BOX, 0, {FORMAT_FLOAT, FORMAT_8BIT, FORMAT_10BIT, FORMAT_12BIT, FORMAT_16BIT}, {Float, 8 Bit, 10 Bit, 12 Bit, 16 Bit})
+DEFINE_UI_PARAMS(crosshair_mode, Crosshair Type, DCTLUI_COMBO_BOX, 1, {CROSSHAIR_NONE, CROSSHAIR_HAIRS, CROSSHAIR_DOT}, {None, Crosshair, Dot})
+DEFINE_UI_PARAMS(legend_position, Legend Position, DCTLUI_COMBO_BOX, 0, {POSITION_BOTTOM, POSITION_TOP, POSITION_LEFT, POSITION_CROSSHAIR}, {Bottom, Top, Left, Crosshair})
+DEFINE_UI_PARAMS(legend_value, Legend Color, DCTLUI_COMBO_BOX, 0, {LEGCOL_WHITE, LEGCOL_BLACK, LEGCOL_GRAY, LEGCOL_INV}, {White, Black, Gray, Inverse})
+// clang-format on
+
+////////////////
+// FONT STUFF //
+////////////////
+
+#define FONT_WIDTH 10
+#define FONT_HEIGHT 16
+#define FONT_LENGTH 127
+
+__CONSTANT__ int font_widths[FONT_LENGTH] = {
+    10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+    10, 3,  4,  7,  6,  10, 8,  2,  4,  4,  6,  6,  3,  4,  3,  4,  6,  5,  6,  6,  7,  6,  6,  6,  6,  6,  3,  3,  7,  6,  7,  6,
+    10, 8,  7,  8,  8,  7,  7,  8,  8,  3,  5,  8,  7,  9,  7,  8,  7,  8,  8,  7,  6,  8,  8,  10, 7,  6,  7,  4,  4,  3,  6,  7,
+    3,  6,  7,  6,  6,  6,  4,  6,  7,  3,  3,  6,  3,  9,  7,  6,  7,  6,  6,  5,  4,  7,  6,  8,  6,  6,  6,  4,  3,  4,  6};
+__CONSTANT__ int font[FONT_LENGTH][FONT_HEIGHT] = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 0, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 20, 20, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 80, 80, 252, 40, 40, 252, 40, 40, 0, 0, 0, 0},
+                                                   {0, 0, 0, 16, 56, 84, 20, 56, 80, 84, 56, 16, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 272, 296, 168, 144, 576, 1344, 1312, 544, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 48, 72, 72, 48, 296, 196, 196, 312, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 16, 8, 8, 4, 4, 4, 4, 8, 8, 16, 0, 0},
+                                                   {0, 0, 0, 0, 4, 8, 8, 16, 16, 16, 16, 8, 8, 4, 0, 0},
+                                                   {0, 0, 0, 0, 0, 84, 56, 84, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 16, 16, 124, 16, 16, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 4, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 16, 16, 16, 8, 8, 8, 4, 4, 4, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 68, 68, 68, 68, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 32, 48, 40, 32, 32, 32, 32, 32, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 64, 32, 16, 8, 4, 124, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 64, 48, 64, 64, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 64, 96, 80, 72, 68, 252, 64, 64, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 124, 4, 4, 60, 64, 64, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 4, 60, 68, 68, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 124, 64, 32, 32, 16, 16, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 68, 56, 68, 68, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 68, 68, 120, 64, 64, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 8, 8, 4, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 192, 48, 12, 48, 192, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 124, 0, 124, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 12, 48, 192, 48, 12, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 68, 32, 16, 16, 0, 16, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 480, 528, 1480, 1320, 1320, 968, 1040, 992, 0, 0, 0},
+                                                   {0, 0, 0, 0, 32, 32, 80, 80, 136, 248, 260, 260, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 120, 136, 136, 120, 136, 136, 136, 120, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 240, 264, 4, 4, 4, 4, 264, 240, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 120, 136, 264, 264, 264, 264, 136, 120, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 248, 8, 8, 120, 8, 8, 8, 248, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 248, 8, 8, 120, 8, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 240, 264, 4, 4, 452, 260, 264, 240, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 264, 264, 264, 504, 264, 264, 264, 264, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 32, 32, 32, 32, 32, 32, 36, 24, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 136, 72, 40, 24, 40, 72, 136, 264, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 8, 248, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 520, 792, 792, 680, 680, 584, 584, 520, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 136, 152, 152, 168, 168, 200, 200, 136, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 112, 136, 260, 260, 260, 260, 136, 112, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 120, 136, 136, 136, 120, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 112, 136, 260, 260, 260, 260, 200, 496, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 248, 264, 264, 264, 248, 72, 136, 264, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 112, 136, 8, 48, 64, 128, 136, 112, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 124, 16, 16, 16, 16, 16, 16, 16, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 264, 264, 264, 264, 264, 264, 264, 240, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 260, 260, 136, 136, 80, 80, 32, 32, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 1092, 1092, 1092, 680, 680, 680, 272, 272, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 136, 80, 80, 32, 32, 80, 80, 136, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 68, 68, 40, 40, 16, 16, 16, 16, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 252, 128, 64, 32, 16, 8, 4, 252, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 24, 8, 8, 8, 8, 8, 8, 8, 8, 24, 0, 0},
+                                                   {0, 0, 0, 0, 4, 4, 4, 8, 8, 8, 16, 16, 16, 0, 0, 0},
+                                                   {0, 0, 0, 0, 12, 8, 8, 8, 8, 8, 8, 8, 8, 12, 0, 0},
+                                                   {0, 0, 0, 0, 16, 40, 40, 68, 68, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 252, 0, 0},
+                                                   {0, 0, 0, 0, 4, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 56, 68, 120, 68, 120, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 120, 136, 136, 136, 120, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 56, 68, 4, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 64, 64, 64, 120, 68, 68, 68, 120, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 56, 68, 124, 4, 120, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 16, 8, 8, 28, 8, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 120, 68, 68, 68, 120, 64, 56, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 120, 136, 136, 136, 136, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 8, 0, 8, 8, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 8, 0, 8, 8, 8, 8, 8, 8, 4, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 72, 40, 24, 40, 72, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 440, 584, 584, 584, 584, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 120, 136, 136, 136, 136, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 56, 68, 68, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 120, 136, 136, 136, 120, 8, 8, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 120, 68, 68, 68, 120, 64, 64, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 104, 24, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 56, 4, 24, 32, 28, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 8, 8, 28, 8, 8, 8, 16, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 136, 136, 136, 136, 240, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 68, 68, 40, 40, 16, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 292, 292, 340, 136, 136, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 68, 40, 16, 40, 68, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 68, 68, 40, 40, 16, 16, 12, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 124, 32, 16, 8, 124, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 16, 8, 8, 8, 8, 4, 8, 8, 8, 8, 16, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 0, 0},
+                                                   {0, 0, 0, 0, 4, 8, 8, 8, 8, 16, 8, 8, 8, 8, 4, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 80, 40, 0, 0, 0, 0, 0, 0, 0}};
+
+//////////////////
+// DRAWING TEXT //
+//////////////////
+
+typedef struct {
+        float x, y;  // some specified position on the screen, refers to the top left corner of a string or character.
+        float scale; // proportion of the height of the frame.
+} char_trans_t;
+
+typedef struct {
+        float x, y; // Current position on the screen, 0, 0 is top left corner, 1,1 is bottom right.
+} curr_pos_t;
+
+__DEVICE__ char_trans_t make_char_trans(float x, float y, float scale) {
+    char_trans_t result = {};
+    result.x = x;
+    result.y = y;
+    result.scale = scale;
+    return result;
+}
+
+__DEVICE__ curr_pos_t make_curr_pos(float x, float y) {
+    curr_pos_t result = {};
+    result.x = x;
+    result.y = y;
+    return result;
+}
+
+__DEVICE__ void draw_char(
+    char c, float3 char_color, __PRIVATE__ char_trans_t* char_trans, __PRIVATE__ curr_pos_t* curr_pos, __PRIVATE__ float3* curr_color) {
+    float char_height = char_trans->scale;
+    float char_width = char_trans->scale * FONT_WIDTH / FONT_HEIGHT;
+
+    // First check if currpos x and y are even within the domain of the char.
+    if (char_trans->x <= curr_pos->x && curr_pos->x <= char_trans->x + char_width && char_trans->y <= curr_pos->y &&
+        curr_pos->y <= char_trans->y + char_height) {
+
+        // Then see if the current pixel should be set to black.
+        __CONSTANTREF__ int* char_symbol = &font[c][0];
+
+        // Identify the current pixel index within the char_symbol.
+        int row = (int)_round((curr_pos->y - char_trans->y) / char_height * FONT_HEIGHT);
+        int col = (int)_round((curr_pos->x - char_trans->x) / char_width * FONT_WIDTH);
+
+        if (char_symbol[row] & (1 << col)) {
+            *curr_color = char_color;
+        }
+    }
+}
+
+__DEVICE__ void draw_string(
+    char str[], float3 str_color, __PRIVATE__ char_trans_t* char_trans, __PRIVATE__ curr_pos_t* curr_pos, __PRIVATE__ float3* curr_color) {
+    int i = 0;
+    char c = str[0];
+    float c_width;
+    char_trans_t c_trans = *char_trans;
+    while (c != '\0' && c != 0) {
+        draw_char(c, str_color, &c_trans, curr_pos, curr_color);
+
+        c_width = font_widths[c];
+        i += 1;
+        c = str[i];
+        // move one char to the right the width of the last drawn char on the screen.
+        c_trans.x += c_trans.scale * c_width / FONT_HEIGHT;
+        c_trans.y += 0;
+    }
+}
+
+__DEVICE__ void strcpy_idx(char str_src[], char str_dst[], int src_start_idx, int dst_start_idx, int num_chars) {
+    for (int i = 0; i < num_chars; ++i) {
+        str_dst[dst_start_idx + i] = str_src[src_start_idx + i];
+    }
+}
+
+__DEVICE__ int strlen(char a[]) {
+    int i = 0;
+    while (a[i] != '\0' && a[i] != 0) {
+        ++i;
+    }
+    return i;
+}
+
+__DEVICE__ void strcat(char a[], char b[], char dest[]) {
+    int len_a = strlen(a);
+    int len_b = strlen(b);
+    if (a != dest) {
+        strcpy_idx(a, dest, 0, 0, len_a);
+    }
+    strcpy_idx(b, dest, 0, len_a, len_b);
+    dest[len_a + len_b] = '\0';
+}
+
+__DEVICE__ char digit2char(int i) {
+    return (char)('0' + i);
+}
+
+/**
+ * converts `f` to a string, writing to `output`. Places up to `left_digits` on the left side
+ * of the decimal point, and places `right_digits` digits on the right side.
+ */
+__DEVICE__ void float2str(float f, char output[], int num_chars) {
+    int runner = 0;
+
+    // First char is neg sign, if necessary
+    char inf[] = "inf";
+    char nan[] = "NaN";
+    char zero[] = "0.";
+
+    if (f < 0) {
+        output[runner] = '-';
+        runner++;
+    }
+    if (isinf(f)) {
+        strcpy_idx(inf, output, 0, runner, strlen(inf));
+        runner += strlen(inf);
+    } else if (isnan(f)) {
+        strcpy_idx(nan, output, 0, runner, strlen(nan));
+        runner += strlen(nan);
+    } else if (f == 0.0) {
+        strcpy_idx(zero, output, 0, runner, strlen(zero));
+        // strcat(output, zero, output);
+        runner += strlen(zero);
+        for (; runner < num_chars; ++runner) {
+            output[runner] = '0';
+        }
+    } else {
+        // input is real number, print absolute value.
+        f = _fabs(f);
+        // num digits before decimal point
+        int left_digits = (int)(_log10f(f) + 1);
+        if (f < 1.0) {
+            // want to pad left side with zero.
+            left_digits = 1;
+        }
+        int right_digits = num_chars - left_digits - runner - 1;
+
+        // Extract left digits
+        for (int i = left_digits; i > 0 && runner < num_chars; --i, ++runner) {
+            float base = _powf(10.0, i - 1);
+            int d = (int)_truncf(f / base);
+            f = _fmod(f, base);
+            output[runner] = digit2char(d);
+        }
+        if (runner < num_chars) {
+            output[runner] = '.';
+            runner += 1;
+        }
+        for (int i = 0; i > (-1 * right_digits) && runner < num_chars; --i, ++runner) {
+            float base = _powf(10.0, i - 1);
+            int d = (int)_truncf(f / base);
+            f = _fmod(f, base);
+            output[runner] = digit2char(d);
+        }
+    }
+    output[runner] = '\0';
+}
+
+__DEVICE__ void int2str(int f, char output[], int num_chars) {
+    int runner = 0;
+
+    // First char is neg sign, if necessary
+    char zero[] = "0";
+
+    if (f < 0) {
+        output[runner] = '-';
+        runner++;
+    }
+    if (f == 0) {
+        strcpy_idx(zero, output, 0, runner, strlen(zero));
+        // strcat(output, zero, output);
+        runner += strlen(zero);
+    } else {
+        // input is real number, print absolute value.
+        f = (int)_round(_fabs((float)f));
+        // num digits before decimal point
+        int left_digits = (int)(_log10f((float)f) + 1);
+
+        // Extract left digits
+        for (int i = left_digits; i > 0 && runner < num_chars; --i, ++runner) {
+            float base = _powf(10.0, i - 1);
+            int d = (int)_truncf(f / base);
+            f = _fmod(f, base);
+            output[runner] = digit2char(d);
+        }
+    }
+    output[runner] = '\0';
+}
+
+__DEVICE__ float3
+sample_color(int window_size, int width, int height, int px, int py, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
+    float weight = 0.0;
+    float3 total = make_float3(0.0, 0.0, 0.0);
+
+    int left_margin = window_size / 2;
+    int right_margin = window_size / 2;
+    if (!(window_size & 1)) {
+        // window_size is even
+        left_margin -= 1;
+    }
+
+    for (int i = px - left_margin; i <= px + right_margin; ++i) {
+        for (int j = py - left_margin; j <= py + right_margin; ++j) {
+            // Check in bounds
+            if (0 <= i && i < width && 0 <= j && j < height) {
+                weight += 1.0;
+                total += make_float3(_tex2D(tex_r, i, j), _tex2D(tex_g, i, j), _tex2D(tex_b, i, j));
+            }
+        }
+    }
+    return total / weight;
+}
+
+__DEVICE__ int imax(int a, int b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+__DEVICE__ float3 convert_float3_to_format(float3 x, int format, __PRIVATE__ int* num_digits) {
+    float3 out;
+    int needed_digits = 0;
+    switch (format) {
+        case FORMAT_FLOAT:
+            out = x;
+            break;
+        case FORMAT_8BIT:
+            out = x * 255.0;
+            needed_digits = 3;
+            break;
+        case FORMAT_10BIT:
+            out = x * 1023.0;
+            needed_digits = 4;
+            break;
+        case FORMAT_12BIT:
+            out = x * 4095.0;
+            needed_digits = 4;
+            break;
+        case FORMAT_16BIT:
+            out = x * ((1 << 16) - 1);
+            needed_digits = 5;
+            break;
+        default:
+            out = x;
+            break;
+    }
+    *num_digits = imax(*num_digits, needed_digits);
+    return out;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+
+    float3 legend_color;
+    switch (legend_value) {
+        case LEGCOL_BLACK:
+            legend_color = make_float3(0.0, 0.0, 0.0);
+            break;
+        case LEGCOL_WHITE:
+            legend_color = make_float3(2.0, 2.0, 2.0);
+            break;
+        case LEGCOL_GRAY:
+            legend_color = make_float3(0.18, 0.18, 0.18);
+            break;
+        case LEGCOL_INV:
+            float lum = (curr_color.x + curr_color.y + curr_color.z) / 3.0;
+            legend_color = make_float3(1.0, 1.0, 1.0) - lum;
+            break;
+    }
+
+    // Desired sample center
+    int sample_pos_x_px = sample_x * (p_Width - 1);
+    int sample_pos_y_px = sample_y * (p_Height - 1);
+
+    if (crosshair_mode != CROSSHAIR_NONE) {
+        int left_margin = window_size / 2;
+        int right_margin = window_size / 2;
+        if (!(window_size & 1)) {
+            // window_size is even
+            left_margin -= 1;
+        }
+
+        if (crosshair_mode == CROSSHAIR_HAIRS) {
+            if (((sample_pos_x_px - left_margin <= p_X && p_X <= sample_pos_x_px + right_margin) ||
+                 (sample_pos_y_px - left_margin <= p_Y && p_Y <= sample_pos_y_px + right_margin)) &&
+                !((sample_pos_x_px - left_margin <= p_X && p_X <= sample_pos_x_px + right_margin) &&
+                  (sample_pos_y_px - left_margin <= p_Y && p_Y <= sample_pos_y_px + right_margin))) {
+                curr_color = legend_color;
+            }
+        } else if (crosshair_mode == CROSSHAIR_DOT) {
+            if ((sample_pos_x_px - left_margin <= p_X && p_X <= sample_pos_x_px + right_margin) &&
+                (sample_pos_y_px - left_margin <= p_Y && p_Y <= sample_pos_y_px + right_margin)) {
+                curr_color = legend_color;
+            }
+        }
+    }
+
+    curr_pos_t curr_pos =
+        make_curr_pos((float)p_X / ((float)p_Height - 1), // dividing by height instead of width to correct aspect ratio of characters.
+                      (float)p_Y / ((float)p_Height - 1));
+    char_trans_t str_trans;
+
+    const float scale = 0.05;
+
+    switch (legend_position) {
+        case POSITION_BOTTOM:
+            str_trans = make_char_trans(0.0, 1.0 - scale, scale);
+            break;
+        case POSITION_TOP:
+            str_trans = make_char_trans(0.0, 0.0, scale);
+            break;
+        case POSITION_LEFT:
+            str_trans = make_char_trans(0.0, 0.5, scale);
+            break;
+        case POSITION_CROSSHAIR:
+            if (sample_y < 1.0 - scale) {
+                str_trans = make_char_trans(0.0, sample_y, scale);
+            } else {
+                str_trans = make_char_trans(0.0, sample_y - scale, scale);
+            }
+            if (sample_x < 0.5) {
+                str_trans.x = sample_x * p_Width / p_Height;
+            }
+            break;
+    }
+    // Use bounding box to avoid sampling for the majority of the pixels where the legend won't be drawn.
+    float bounding_box_bottom = str_trans.y;
+    float bounding_box_top = str_trans.y + scale;
+    if (bounding_box_bottom <= curr_pos.y && curr_pos.y <= bounding_box_top) {
+        float3 color_picker_sample = sample_color(window_size, p_Width, p_Height, sample_pos_x_px, sample_pos_y_px, p_TexR, p_TexG, p_TexB);
+        color_picker_sample = convert_float3_to_format(color_picker_sample, format, &num_digits);
+
+        char red_str[] = "R: ";
+        char green_str[] = "  G: ";
+        char blue_str[] = "  B: ";
+        char string_buffer[100];
+        char number_buffer[16];
+
+        // Assemble strings together into one line.
+        // Red
+        float2str(color_picker_sample.x, number_buffer, num_digits);
+        strcat(red_str, number_buffer, string_buffer);
+
+        // Green
+        strcat(string_buffer, green_str, string_buffer);
+        float2str(color_picker_sample.y, number_buffer, num_digits);
+        strcat(string_buffer, number_buffer, string_buffer);
+
+        // Blue
+        strcat(string_buffer, blue_str, string_buffer);
+        float2str(color_picker_sample.z, number_buffer, num_digits);
+        strcat(string_buffer, number_buffer, string_buffer);
+
+        // Draw the string
+        draw_string(string_buffer, legend_color, &str_trans, &curr_pos, &curr_color);
+    }
+    return curr_color;
+}
