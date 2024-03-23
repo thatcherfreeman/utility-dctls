@@ -13,3 +13,4 @@ SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: ControlStatements
 IndentCaseBlocks: true
 IndentCaseLabels: true
+SeparateDefinitionBlocks: Always
