@@ -9,6 +9,7 @@ DEFINE_UI_PARAMS(intercept, Intercept, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(cut, Cut, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(gain, Linear Gain, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {GAMMA2LIN, LIN2GAMMA}, {Gamma to Lin, Lin to Gamma})
+
 // clang-format on
 
 typedef struct {

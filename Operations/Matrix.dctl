@@ -10,6 +10,7 @@ DEFINE_UI_PARAMS(mat7, Green => Blue, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(mat8, Blue => Blue, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(preserve_neutral, Preserve Neutral, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
+
 // clang-format on
 
 __DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {

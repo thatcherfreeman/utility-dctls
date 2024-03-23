@@ -10,6 +10,7 @@ DEFINE_UI_PARAMS(clamp_output_min, Min Clamp, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(clamp_output_max, Max Clamp, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(continuous, Continuous, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(clamp_output, Clamp Output, DCTLUI_CHECK_BOX, 0)
+
 // clang-format on
 
 __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {

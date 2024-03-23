@@ -6,6 +6,7 @@ DEFINE_UI_PARAMS(mid_grey, Mid Grey, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(center_feathering, Center Feathering at Thr., DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(selection, Selection, DCTLUI_COMBO_BOX, 0, {ZERO_TO_THR, THR_TO_INF}, {Select Shadows, Select Highlights})
 DEFINE_UI_PARAMS(channel, Channel, DCTLUI_COMBO_BOX, 0, {CHANNEL_R, CHANNEL_G, CHANNEL_B, CHANNEL_Y, CHANNEL_MEAN, CHANNEL_MAX, CHANNEL_MIN}, {Red Channel, Green Channel, Blue Channel, Luminance, Mean, RGB Max, RGB Min})
+
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {

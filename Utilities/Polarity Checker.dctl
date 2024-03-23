@@ -3,6 +3,7 @@
 DEFINE_UI_PARAMS(seed, Seed, DCTLUI_SLIDER_INT, 1, 1, 200, 1)
 DEFINE_UI_PARAMS(num_bands, Num Bands, DCTLUI_SLIDER_INT, 1, 1, 100, 1)
 DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 0, {GRADIENT_GENERATOR, GRADIENT_CHECKER}, {Gradient Generator, Gradient Checker})
+
 // clang-format on
 
 __DEVICE__ float randu(__PRIVATE__ uint* seed) {

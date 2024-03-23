@@ -28,6 +28,7 @@ DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(power_neutral, Identity Point for Products, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(preserve_gray, Preserve Gray, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(normalize_gray, Normalize Powers, DCTLUI_CHECK_BOX, 1)
+
 // clang-format on
 
 __DEVICE__ float3 mv_310_10(float mat[3][9], float vec[9]) {

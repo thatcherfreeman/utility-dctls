@@ -1,6 +1,7 @@
 // clang-format off
 DEFINE_UI_PARAMS(curve_opt, ACES Gamma, DCTLUI_COMBO_BOX, 0, {ACES, ACESCC, ACESCCT}, {ACES (Linear), ACEScc, ACEScct})
 DEFINE_UI_PARAMS(exposure, Exposure Adjustment, DCTLUI_SLIDER_FLOAT, 0.0, -8.0, 8.0, 0.333)
+
 // clang-format on
 
 // Transforms adapted from:

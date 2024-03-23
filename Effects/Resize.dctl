@@ -2,6 +2,7 @@
 // clang-format off
 DEFINE_UI_PARAMS(scale, Scaling, DCTLUI_VALUE_BOX, 2.0)
 DEFINE_UI_PARAMS(resize_mode, Resize Mode, DCTLUI_COMBO_BOX, 0, {NN, LINEAR, CUBIC}, {Nearest Neighbors, BiLinear, BiCubic})
+
 // clang-format on
 
 __DEVICE__ float3 get_color(int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {

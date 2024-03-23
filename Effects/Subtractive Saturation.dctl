@@ -7,11 +7,13 @@ DEFINE_UI_PARAMS(density, Density, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
 // MAKE SURE THESE OPERATIONS REMAIN IN THE SAME ORDER.
 DEFINE_UI_PARAMS(value_switcher, Value Calculation, DCTLUI_COMBO_BOX, 6, {BOLTZMAN, MAX, MIN, GEOM, MEAN, HARMONIC, L2_NORM}, {Boltzman Soft Maximum, Maximum Channel (Value), Minimum Channel, Geometric Mean, Arithmetic Mean, Harmonic Mean, L2 Norm})
 DEFINE_UI_PARAMS(density_switcher, Density Calculation, DCTLUI_COMBO_BOX, 5, {BOLTZMAN2, MAX2, MIN2, GEOM2, MEAN2, HARMONIC2, L2_NORM2}, {Boltzman Soft Maximum, Maximum Channel (Value), Minimum Channel, Geometric Mean, Arithmetic Mean, Harmonic Mean, L2 Norm})
+
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
 }
+
 __DEVICE__ float pow2f(float base) {
     return _powf(_fabs(base), 2.0);
 }
@@ -27,6 +29,7 @@ __DEVICE__ float minf3(float3 x) {
 __DEVICE__ float3 powf3(float3 base, float exp) {
     return make_float3(powf(base.x, exp), powf(base.y, exp), powf(base.z, exp));
 }
+
 __DEVICE__ float3 powf3_f3(float3 base, float3 exp) {
     return make_float3(powf(base.x, exp.x), powf(base.y, exp.y), powf(base.z, exp.z));
 }

@@ -7,6 +7,7 @@ DEFINE_UI_PARAMS(interval, Random Interval, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 
 DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(user_seed, Random Seed, DCTLUI_SLIDER_INT, 0, 0, 400, 1)
 DEFINE_UI_PARAMS(use_random, Use Random, DCTLUI_COMBO_BOX, 0, {NO_RANDOM, RAND_SPLIT_TONE, RAND_CONTRAST, RAND_BOTH}, {No Randomness, Random Split Tone, Random Contrast, Random Both})
+
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {

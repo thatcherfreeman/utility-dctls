@@ -12,6 +12,7 @@ DEFINE_UI_PARAMS(band_interval, Band Interval, DCTLUI_COMBO_BOX, 1, {EQUAL, EXPO
 DEFINE_UI_PARAMS(model, Model, DCTLUI_COMBO_BOX, 0, {HSV, SPHERICAL}, {HSV, Spherical})
 DEFINE_UI_PARAMS(continuous, Continuous Mode, DCTLUI_COMBO_BOX, 0, {DISCRETE, CONTINUOUS_HUE, CONTINUOUS_EXP, CONTINUOUS_BOTH}, {Discrete, Continuous Hue, Continuous Exp, Fully Continuous})
 DEFINE_UI_PARAMS(gaps, Row Gaps, DCTLUI_COMBO_BOX, 0, {GAPS_NONE, GAPS_BLACK, GAPS_WHITE, GAPS_MID_GREY}, {None, Black, White, Mid Grey})
+
 // clang-format on
 
 __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {

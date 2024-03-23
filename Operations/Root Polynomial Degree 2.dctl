@@ -18,6 +18,7 @@ DEFINE_UI_PARAMS(mat22, Mat 22, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(mat23, Mat 23, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(mat24, Mat 24, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(mat25, Mat 25, DCTLUI_VALUE_BOX, 0.0)
+
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {

@@ -6,6 +6,7 @@ DEFINE_UI_PARAMS(green_hue, Green Hue, DCTLUI_SLIDER_FLOAT, 0, -60.0, 60.0, 0.1)
 DEFINE_UI_PARAMS(green_sat, Green Sat, DCTLUI_SLIDER_FLOAT, 1, 0.0, 3.0, 0.1)
 DEFINE_UI_PARAMS(blue_hue, Blue Hue, DCTLUI_SLIDER_FLOAT, 0, -60.0, 60.0, 0.1)
 DEFINE_UI_PARAMS(blue_sat, Blue Sat, DCTLUI_SLIDER_FLOAT, 1, 0.0, 3.0, 0.1)
+
 // clang-format on
 
 __DEVICE__ float3 hsv_to_rgb(float3 hsv) {

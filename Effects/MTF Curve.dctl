@@ -6,6 +6,7 @@ DEFINE_UI_PARAMS(gain4, Band 2:1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0
 DEFINE_UI_PARAMS(debug_band, Debug Band, DCTLUI_SLIDER_INT, 4, 1, 4, 1)
 DEFINE_UI_PARAMS(debug_mode, Debug Mode, DCTLUI_COMBO_BOX, 0, {NONE, LP, HP, HPG}, {None, Low Pass Mode, High Pass Mode, High Pass Gray Mode})
 DEFINE_UI_PARAMS(method, Method, DCTLUI_COMBO_BOX, 1, {QUOTIENT, DIFFERENCE}, {Quotient, Difference})
+
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {

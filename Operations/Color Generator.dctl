@@ -5,6 +5,7 @@ DEFINE_UI_PARAMS(blue, Blue, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(red_pass_thru, Red Pass-Through, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(green_pass_thru, Green Pass-Through, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(blue_pass_thru, Blue Pass-Through, DCTLUI_CHECK_BOX, 0)
+
 // clang-format on
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {

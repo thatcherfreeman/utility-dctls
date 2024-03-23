@@ -3,6 +3,7 @@ DEFINE_UI_PARAMS(xoffset, X Offset, DCTLUI_SLIDER_INT, 0, 0, 3, 1)
 DEFINE_UI_PARAMS(yoffset, Y Offset, DCTLUI_SLIDER_INT, 0, 0, 1, 1)
 DEFINE_UI_PARAMS(convert_to_ycbcr, Convert to YCbCr, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(subsampling_type, Chroma Subsampling Type, DCTLUI_COMBO_BOX, 0, {CS444, CS440, CS422, CS420, CS411, CS410}, {4:4:4, 4:4:0, 4:2:2, 4:2:0, 4:1:1, 4:1:0})
+
 // clang-format on
 
 typedef struct {

@@ -1,6 +1,7 @@
 // clang-format off
 DEFINE_UI_PARAMS(norm_type, Norm Type, DCTLUI_COMBO_BOX, 1, {L1, L2, LP, MAX, MIN, AVG, GEOM, HARMONIC}, {L1 Norm, L2 Norm, Lp Norm, Maximum, Minimum, Arithmetic Mean, Geometric Mean, Harmonic Mean})
 DEFINE_UI_PARAMS(p, P-Norm Power, DCTLUI_VALUE_BOX, 2.0)
+
 // clang-format on
 
 __DEVICE__ float lp_norm(float3 in, float p) {

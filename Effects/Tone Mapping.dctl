@@ -5,6 +5,7 @@ DEFINE_UI_PARAMS(black_point, Black Point, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(mid_gray_in, Input Mid Gray, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(usr_mid_gray_out, Output Mid Gray, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(scale_mid_gray, Scale Mid Gray with White Point, DCTLUI_CHECK_BOX, 0)
+
 //clang-format on
 
 __DEVICE__ float powf(float base, float exp) {

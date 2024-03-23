@@ -9,6 +9,7 @@ DEFINE_UI_PARAMS(magenta, Magenta Trim, DCTLUI_SLIDER_FLOAT, 25, 0, 50, 0.25)
 DEFINE_UI_PARAMS(yellow, Yellow Trim, DCTLUI_SLIDER_FLOAT, 25, 0, 50, 0.25)
 
 DEFINE_UI_PARAMS(gamma, Neg Gamma, DCTLUI_SLIDER_FLOAT, 0.5, 0, 5, 0.01)
+
 // clang-format on
 
 __DEVICE__ float apply_lights(float input, float lights, float gamma) {

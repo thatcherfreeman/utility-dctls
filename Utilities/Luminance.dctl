@@ -9,6 +9,7 @@ DEFINE_UI_PARAMS(blue_y, Blue y, DCTLUI_VALUE_BOX, 0.06)
 DEFINE_UI_PARAMS(white_x, White x, DCTLUI_VALUE_BOX, 0.3127)
 DEFINE_UI_PARAMS(white_y, White y, DCTLUI_VALUE_BOX, 0.3290)
 DEFINE_UI_PARAMS(show_lum_vec, Show Luminance Vector, DCTLUI_CHECK_BOX, 0)
+
 // clang-format on
 
 typedef struct {

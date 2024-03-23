@@ -2,6 +2,7 @@
 // clang-format off
 DEFINE_UI_PARAMS(scaling, Scaling, DCTLUI_SLIDER_FLOAT, 0.8, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(white_point, White Point, DCTLUI_VALUE_BOX, 1.0)
+
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {

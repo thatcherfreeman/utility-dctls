@@ -8,6 +8,7 @@ DEFINE_UI_PARAMS(draw_curve, Draw Curve, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(curve_type, Hue Selection, DCTLUI_COMBO_BOX, 0, {SINGLE_HUE, COMPLEMENTARY_HUES}, {Single Hue, Complementary Hues})
 DEFINE_UI_PARAMS(control_type, Control Type, DCTLUI_COMBO_BOX, 0, {HUE_ROTATION, VARIATION_CONTROL}, {Hue Control, Variation Control})
 DEFINE_UI_PARAMS(channel, Channel, DCTLUI_COMBO_BOX, 0, {CHANNEL_1, CHANNEL_2, CHANNEL_3, CHANNEL_ALL}, {Channel 1, Channel 2, Channel 3, All Channels})
+
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {

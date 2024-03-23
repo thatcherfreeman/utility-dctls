@@ -233,6 +233,7 @@ __DEVICE__ float3 draw_grid_lines(float x, float y, float3 curr_color) {
     }
     return output_color;
 }
+
 __DEVICE__ void randomize_contrast(__PRIVATE__ contrast_params_t* params, __PRIVATE__ uint* seed) {
     params->black_y += randu_bi(seed) * 0.2;
     params->white_y += randu_bi(seed) * 0.2;

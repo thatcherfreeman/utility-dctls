@@ -12,6 +12,7 @@ DEFINE_UI_PARAMS(highlight_zeros, Highlight == Lower, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(highlight_ones, Highlight == Upper, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(highlight_gt_ones, Highlight > Upper, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(highlight_pinfs, Highlight +Inf, DCTLUI_CHECK_BOX, 1)
+
 // clang-format on
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {

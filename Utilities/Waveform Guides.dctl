@@ -14,6 +14,7 @@ DEFINE_UI_PARAMS(mid_gray, Mid Gray Nits, DCTLUI_VALUE_BOX, 10)
 
 DEFINE_UI_PARAMS(rescale_image, Rescale Mode, DCTLUI_COMBO_BOX, 2, {NONE, FILL, ASPECT}, {None, Fill, Aspect})
 DEFINE_UI_PARAMS(waveform_scale, Waveform Scale, DCTLUI_COMBO_BOX, 0, {BT1886_NITS, BT1886_STOPS, ST2084_NITS, ST2084_STOPS}, {BT.1886 Annex 1 Nits, BT.1886 Annex 1 Stops, ST.2084 Nits, ST.2084 Stops})
+
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {
@@ -326,6 +327,7 @@ typedef struct {
 __DEVICE__ float gamma_24_nits_to_cv(float n) {
     return powf(n / 100.0, 1.0 / 2.4);
 }
+
 __DEVICE__ float bt1886_nits_to_cv(float l, float lw, float lb, float gamma) {
     const float a = powf(powf(lw, 1.0 / gamma) - powf(lb, 1.0 / gamma), gamma);
     const float b = powf(lb, 1.0 / gamma) / (powf(lw, 1.0 / gamma) - powf(lb, 1.0 / gamma));
@@ -333,6 +335,7 @@ __DEVICE__ float bt1886_nits_to_cv(float l, float lw, float lb, float gamma) {
     float v = powf(l / a, 1.0 / gamma) - b;
     return v;
 }
+
 //////////////////////////////
 // ST2084 NITS              //
 //////////////////////////////

@@ -18,6 +18,7 @@ DEFINE_UI_PARAMS(mat14, Blue => Bias, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(mat15, Bias => Bias, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(preserve_neutral, Preserve Neutral, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(linear_white, Linearize White, DCTLUI_CHECK_BOX, 0)
+
 // clang-format on
 
 __DEVICE__ float4 mv_44_4(float mat[4][4], float4 v) {

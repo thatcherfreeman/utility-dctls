@@ -10,6 +10,7 @@ DEFINE_UI_PARAMS(green_ui, Target Color Green, DCTLUI_VALUE_BOX, 0)
 DEFINE_UI_PARAMS(blue_ui, Target Color Blue, DCTLUI_VALUE_BOX, 0)
 DEFINE_UI_PARAMS(rgb_format, Target RGB Format, DCTLUI_COMBO_BOX, 0, {SCALE_0_1, SCALE_0_255}, {Scale 0 to 1, Scale 0 to 255})
 DEFINE_UI_PARAMS(highlight_mode, Highlight Mode, DCTLUI_COMBO_BOX, 1, {GENERATE_COLOR, CV_WITHIN_RANGE, CV_OUTSIDE_RANGE}, {Generate Color, Code Value Within Bounds, Code Value Outside Bounds})
+
 // clang-format on
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
