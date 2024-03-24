@@ -8,7 +8,7 @@ DEFINE_UI_PARAMS(num_digits, Num Digits, DCTLUI_SLIDER_INT, 8, 3, 12, 1)
 
 DEFINE_UI_PARAMS(format, Format, DCTLUI_COMBO_BOX, 0, {FORMAT_FLOAT, FORMAT_8BIT, FORMAT_10BIT, FORMAT_12BIT, FORMAT_16BIT}, {Float, 8 Bit, 10 Bit, 12 Bit, 16 Bit})
 DEFINE_UI_PARAMS(crosshair_mode, Crosshair Type, DCTLUI_COMBO_BOX, 1, {CROSSHAIR_NONE, CROSSHAIR_HAIRS, CROSSHAIR_DOT}, {None, Crosshair, Dot})
-DEFINE_UI_PARAMS(legend_position, Legend Position, DCTLUI_COMBO_BOX, 0, {POSITION_BOTTOM, POSITION_TOP, POSITION_LEFT, POSITION_CROSSHAIR}, {Bottom, Top, Left, Crosshair})
+DEFINE_UI_PARAMS(legend_position, Legend Position, DCTLUI_COMBO_BOX, 0, {POSITION_BOTTOM, POSITION_BOTTOM_LETTERBOX, POSITION_TOP, POSITION_LEFT, POSITION_CROSSHAIR}, {Bottom, Bottom Letterboxed, Top, Left, Crosshair})
 DEFINE_UI_PARAMS(legend_value, Legend Color, DCTLUI_COMBO_BOX, 0, {LEGCOL_WHITE, LEGCOL_BLACK, LEGCOL_GRAY, LEGCOL_INV}, {White, Black, Gray, Inverse})
 // clang-format on
 
@@ -413,7 +413,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             legend_color = make_float3(0.0, 0.0, 0.0);
             break;
         case LEGCOL_WHITE:
-            legend_color = make_float3(2.0, 2.0, 2.0);
+            legend_color = make_float3(1.0, 1.0, 1.0);
             break;
         case LEGCOL_GRAY:
             legend_color = make_float3(0.18, 0.18, 0.18);
@@ -466,9 +466,27 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     convert_float3_to_format(make_float3(0.0, 0.0, 0.0), format, &num_digits_temp);
     float max_width = 0.45 * (strlen(red_str) + strlen(green_str) + strlen(blue_str)) * scale + (0.42) * scale * num_digits_temp * 3.0; // not a rigerous solution, hardcoded for this specific font and text.
 
+    // letterbox/pillarbox calculation
+    const float target_aspect = 2.40;
+    float curr_aspect = (float)p_Width / p_Height;
+    float left_margin = 0;
+    float bottom_margin = 0;
+    if (curr_aspect > target_aspect) {
+        // pillarboxed
+        left_margin = (curr_aspect - target_aspect) / 2.0 / curr_aspect;
+        left_margin *= (p_Width / p_Height);
+    } else {
+        // letterboxed
+        bottom_margin = (1.0 - curr_aspect / target_aspect) / 2.0;
+    }
+
+    // Legend position switcher
     switch (legend_position) {
         case POSITION_BOTTOM:
             str_trans = make_char_trans(0.0, 1.0 - scale, scale);
+            break;
+        case POSITION_BOTTOM_LETTERBOX:
+            str_trans = make_char_trans(left_margin, 1.0 - bottom_margin - scale, scale);
             break;
         case POSITION_TOP:
             str_trans = make_char_trans(0.0, 0.0, scale);
