@@ -382,19 +382,19 @@ __DEVICE__ float3 convert_float3_to_format(float3 x, int format, __PRIVATE__ int
             break;
         case FORMAT_8BIT:
             out = x * 255.0;
-            needed_digits = 3;
+            needed_digits = 4;
             break;
         case FORMAT_10BIT:
             out = x * 1023.0;
-            needed_digits = 4;
+            needed_digits = 5;
             break;
         case FORMAT_12BIT:
             out = x * 4095.0;
-            needed_digits = 4;
+            needed_digits = 5;
             break;
         case FORMAT_16BIT:
             out = x * ((1 << 16) - 1);
-            needed_digits = 5;
+            needed_digits = 6;
             break;
         default:
             out = x;
@@ -455,8 +455,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         make_curr_pos((float)p_X / ((float)p_Height - 1), // dividing by height instead of width to correct aspect ratio of characters.
                       (float)p_Y / ((float)p_Height - 1));
     char_trans_t str_trans;
-
     const float scale = 0.05;
+
+    char red_str[] = "R: ";
+    char green_str[] = "  G: ";
+    char blue_str[] = "  B: ";
+
+    // Guess max width from `format` and user's `num_digits`
+    int num_digits_temp = num_digits;
+    convert_float3_to_format(make_float3(0.0, 0.0, 0.0), format, &num_digits_temp);
+    float max_width = 0.45 * (strlen(red_str) + strlen(green_str) + strlen(blue_str)) * scale + (0.42) * scale * num_digits_temp * 3.0; // not a rigerous solution, hardcoded for this specific font and text.
 
     switch (legend_position) {
         case POSITION_BOTTOM:
@@ -474,21 +482,30 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             } else {
                 str_trans = make_char_trans(0.0, sample_y - scale, scale);
             }
-            if (sample_x < 0.5) {
+            if ((1.0 - sample_x) * p_Width / p_Height > max_width) {
+                // right side legend, left justified
                 str_trans.x = sample_x * p_Width / p_Height;
+            } else if (sample_x * p_Width / p_Height > max_width) {
+                // left side legend, right justified
+                str_trans.x = sample_x * p_Width / p_Height - max_width;
+            } else if (sample_x > 0.5) {
+                // left side legend, left justified
+                str_trans.x = 0.0;
+            } else {
+                // right side legend, right justified
+                str_trans.x = _fmaxf(0.0, 1.0 * p_Width / p_Height - max_width);
             }
             break;
     }
     // Use bounding box to avoid sampling for the majority of the pixels where the legend won't be drawn.
     float bounding_box_bottom = str_trans.y;
     float bounding_box_top = str_trans.y + scale;
-    if (bounding_box_bottom <= curr_pos.y && curr_pos.y <= bounding_box_top) {
+    float bounding_box_left = str_trans.x;
+    float bounding_box_right = str_trans.x + max_width;
+    if (bounding_box_bottom <= curr_pos.y && curr_pos.y <= bounding_box_top && bounding_box_left <= curr_pos.x && curr_pos.x <= bounding_box_right) {
         float3 color_picker_sample = sample_color(window_size, p_Width, p_Height, sample_pos_x_px, sample_pos_y_px, p_TexR, p_TexG, p_TexB);
         color_picker_sample = convert_float3_to_format(color_picker_sample, format, &num_digits);
 
-        char red_str[] = "R: ";
-        char green_str[] = "  G: ";
-        char blue_str[] = "  B: ";
         char string_buffer[100];
         char number_buffer[16];
 
