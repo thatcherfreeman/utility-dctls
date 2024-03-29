@@ -75,6 +75,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Color Picker DCTL](#color-picker-dctl)
         - [Color Ramp DCTL](#color-ramp-dctl)
         - [Cube Rotate DCTL](#cube-rotate-dctl)
+        - [Cylindrical DCTL](#cylindrical-dctl)
         - [DaVinci Tone Mapping DCTL](#davinci-tone-mapping-dctl)
         - [Exposure Chart DCTL](#exposure-chart-dctl)
         - [False Color Generator DCTL](#false-color-generator-dctl)
@@ -91,7 +92,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Quantize](#quantize)
         - [RGB Chips DCTL](#rgb-chips-dctl)
         - [Safety Lines DCTL](#safety-lines-dctl)
-        - [Spherical Color Space DCTL](#spherical-color-space-dctl)
+        - [Spherical DCTL](#spherical-dctl)
         - [T-Log Curve](#t-log-curve)
         - [Waveform Guides](#waveform-guides)
         - [White Mask DCTL](#white-mask-dctl)
@@ -1188,6 +1189,13 @@ Takes the specified vector and rotates the RGB cube (around 0,0,0) so that the g
 
 **Inverse**: Rotates the cube the opposite angle, so that the currently white vector rotates to the direction of the specified vector, therefore doing the opposite of the normal version.
 
+---
+
+### Cylindrical DCTL
+Converts between RGB and a Cylindrical color model. Outputs a 3-channel image, $(\theta, \phi \rho)$. $\rho$ represents `mean(rgb)`, $\theta$ is scaled 0-1 and represents the hue, and $\phi$ represents saturation and is scaled from 0 to 1.0 for inputs that are all nonnegative.
+
+#### DCTL Parameters
+**Direction**: Indicate whether to go from RGB to Cylindrical, or from Cylindrical to RGB.
 
 
 ---
@@ -1543,11 +1551,11 @@ DCTL that creates a white frame to indicate safety boundaries for the image.
 
 ---
 
-### Spherical Color Space DCTL
-Converts between RGB and a spherical color space. Outputs a 3-channel image, $(\rho, \theta, \phi)$. $\rho$ represents the radius, $\theta$ is scaled 0-1 and represents the hue, and $\phi$ represents saturation and is scaled from 0 to $\pi / 2$.
+### Spherical DCTL
+Converts between RGB and a spherical color model. Outputs a 3-channel image, $(\theta, \phi \rho)$. $\rho$ represents the magnitude of the input color (L2 norm), $\theta$ is scaled 0-1 and represents the hue, and $\phi$ represents saturation and is scaled from 0 to $\pi / 2$.
 
 #### DCTL Parameters
-**Invert**: When unchecked, converts from RGB to spherical, and when checked, converts from spherical to RGB.
+**Direction**: Indicate whether to go from RGB to spherical, or from spherical to RGB.
 
 
 

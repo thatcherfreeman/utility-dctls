@@ -464,7 +464,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     // Guess max width from `format` and user's `num_digits`
     int num_digits_temp = num_digits;
     convert_float3_to_format(make_float3(0.0, 0.0, 0.0), format, &num_digits_temp);
-    float max_width = 0.45 * (strlen(red_str) + strlen(green_str) + strlen(blue_str)) * scale + (0.42) * scale * num_digits_temp * 3.0; // not a rigerous solution, hardcoded for this specific font and text.
+    float max_width = 0.45 * (strlen(red_str) + strlen(green_str) + strlen(blue_str)) * scale +
+                      (0.42) * scale * num_digits_temp * 3.0; // not a rigerous solution, hardcoded for this specific font and text.
 
     // letterbox/pillarbox calculation
     const float target_aspect = 2.40;
@@ -520,7 +521,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float bounding_box_top = str_trans.y + scale;
     float bounding_box_left = str_trans.x;
     float bounding_box_right = str_trans.x + max_width;
-    if (bounding_box_bottom <= curr_pos.y && curr_pos.y <= bounding_box_top && bounding_box_left <= curr_pos.x && curr_pos.x <= bounding_box_right) {
+    if (bounding_box_bottom <= curr_pos.y && curr_pos.y <= bounding_box_top && bounding_box_left <= curr_pos.x &&
+        curr_pos.x <= bounding_box_right) {
         float3 color_picker_sample = sample_color(window_size, p_Width, p_Height, sample_pos_x_px, sample_pos_y_px, p_TexR, p_TexG, p_TexB);
         color_picker_sample = convert_float3_to_format(color_picker_sample, format, &num_digits);
 
