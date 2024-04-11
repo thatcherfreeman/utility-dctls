@@ -1,0 +1,52 @@
+#line 2
+// Code adapted from Thomas Berglund
+
+// clang-format off
+// UI PARAMETERS
+DEFINE_UI_PARAMS(frequency_start, Frequency Start, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1000.0, 1.0);
+DEFINE_UI_PARAMS(frequency_end, Frequency End, DCTLUI_SLIDER_FLOAT, 100.0, 0.0, 1000.0, 1.0);
+DEFINE_UI_PARAMS(amplitude_value, Amplitude, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.1);
+DEFINE_UI_PARAMS(square_wave, Square Wave, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 0, {RADIAL, LINEAR}, {Radial, Linear})
+// clang-format on
+#define PI (3.14159265358979323)
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+
+    // Calculate the center coordinates of the image
+    float centerX = p_Width / 2.0f;
+    float centerY = p_Height / 2.0f;
+
+    // Calculate the aspect ratio of the image
+    float aspectRatio = (float)p_Height / (float)p_Width;
+
+    // Normalize pixel positions with respect to the center.
+    float normX;
+    float normY;
+
+    if (mode == LINEAR) {
+        normY = 0.0;
+        normX = (float)p_X / p_Width;
+    } else if (mode == RADIAL) {
+        normX = (p_X - centerX) / centerX;
+        normY = ((p_Y - centerY) / centerY) * aspectRatio;
+    }
+    float radius = _sqrtf(normX * normX + normY * normY);
+
+    // Generate zone plate pattern
+    float frequencyChange = (frequency_end - frequency_start) * radius + frequency_start;
+
+    float sin_value = _sinf(2.0f * PI * frequencyChange * (radius));
+    if (square_wave) {
+        if (sin_value > 0.0) {
+            sin_value = 1.0;
+        }
+        if (sin_value < 0.0) {
+            sin_value = -1.0;
+        }
+    }
+    float pattern = 0.5f + amplitude_value * sin_value;
+
+    // Output
+    return make_float3(pattern, pattern, pattern);
+}

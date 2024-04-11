@@ -16,6 +16,16 @@ DEFINE_UI_PARAMS(mid_gray, Middle Gray Value, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(log_stops, Log Stops, DCTLUI_VALUE_BOX, 20.0)
 DEFINE_UI_PARAMS(clip_to_white, Clip to White, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(log_output, Log Output, DCTLUI_CHECK_BOX, 0)
+
+DEFINE_UI_PARAMS(disable_blacks, Disable Blacks, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(disable_near_blacks, Disable Near Blacks, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(disable_shadows, Disable Shadows, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(disable_gray, Disable Mid Gray, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(disable_highlights, Disable Highlights, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(disable_near_whites, Disable Near Whites, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(disable_whites, Disable Whites, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(disable_clipping, Disable Clipping, DCTLUI_CHECK_BOX, 0)
+
 DEFINE_UI_PARAMS(brightness_mode, Brightness Mode, DCTLUI_COMBO_BOX, 0, {LUM, VALUE}, {Luminance, Value})
 
 #define PI (3.14159265358979323)
@@ -73,31 +83,34 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     if (curr_lum < 0) {
         curr_stop = black_stop - 5;
     }
+    float3 linear_input_color = make_float3(p_R, p_G, p_B);
 
-    float3 linear_output_color;
-    if (curr_stop == 0) {
+    float3 linear_output_color = linear_input_color;
+    bool passthru = true;
+    if (curr_stop == 0 && !disable_gray) {
         linear_output_color = make_float3(mid_gray, mid_gray, mid_gray);
-
-    } else if (curr_stop < black_stop) {
+        passthru = false;
+    } else if (curr_stop < black_stop && !disable_blacks) {
         linear_output_color = hsv_to_rgb(black_hue, 1.0, mid_gray * _exp2f(curr_stop - black_stop + 1));
-
-    } else if (black_stop <= curr_stop && curr_stop < shadow_stop) {
+        passthru = false;
+    } else if (black_stop <= curr_stop && curr_stop < shadow_stop && !disable_near_blacks) {
         linear_output_color = hsv_to_rgb(dark_hue, 1.0, mid_gray * _exp2f(curr_stop - black_stop));
-
-    } else if (shadow_stop <= curr_stop && curr_stop < 0) {
+        passthru = false;
+    } else if (shadow_stop <= curr_stop && curr_stop < 0 && !disable_shadows) {
         linear_output_color = hsv_to_rgb(shadow_hue, 1.0, mid_gray * _exp2f(curr_stop - shadow_stop));
-
-    } else if (0 < curr_stop && curr_stop <= highlight_stop) {
+        passthru = false;
+    } else if (0 < curr_stop && curr_stop <= highlight_stop && !disable_highlights) {
         linear_output_color = hsv_to_rgb(highlight_hue, 1.0, mid_gray * _exp2f(curr_stop));
-
-    } else if (highlight_stop < curr_stop && curr_stop <= white_stop) {
+        passthru = false;
+    } else if (highlight_stop < curr_stop && curr_stop <= white_stop && !disable_near_whites) {
         linear_output_color = hsv_to_rgb(bright_hue, 1.0, mid_gray * _exp2f(curr_stop - highlight_stop + 1));
-
-    } else if (white_stop < curr_stop) {
+        passthru = false;
+    } else if (white_stop < curr_stop && !disable_whites) {
         linear_output_color = hsv_to_rgb(white_hue, 1.0, mid_gray * _exp2f(curr_stop - white_stop + 1));
+        passthru = false;
     }
 
-    if (_fmaxf(p_R, _fmaxf(p_G, p_B)) > clipping_point) {
+    if (_fmaxf(p_R, _fmaxf(p_G, p_B)) > clipping_point && !disable_clipping) {
         if (clip_to_white) {
             linear_output_color = make_float3(clipping_point, clipping_point, clipping_point);
         } else {
@@ -107,7 +120,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     float3 output_color;
     log_stops = _fmaxf(log_stops, 16.0);
-    if (log_output) {
+    if (log_output && !passthru) {
         output_color = make_float3(linear_to_tlog(linear_output_color.x, log_stops, 0.0),
                                    linear_to_tlog(linear_output_color.y, log_stops, 0.0),
                                    linear_to_tlog(linear_output_color.z, log_stops, 0.0));

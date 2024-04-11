@@ -79,6 +79,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [DaVinci Tone Mapping DCTL](#davinci-tone-mapping-dctl)
         - [Exposure Chart DCTL](#exposure-chart-dctl)
         - [False Color Generator DCTL](#false-color-generator-dctl)
+        - [Frequency Test Chart DCTL](#frequency-test-chart-dctl)
         - [Gamma Curve DCTL](#gamma-curve-dctl)
         - [Gradient Smoothness Chart DCTL](#gradient-smoothness-chart-dctl)
         - [Legacy Log Curve DCTL](#legacy-log-curve-dctl)
@@ -1284,7 +1285,22 @@ Generates a false color conversion for linear, computer generated images (not au
 
 **Log Output**: Check this box if this DCTL isn't going into another CST that converts to a display or log color space.
 
+**Disable Blacks/Near Blacks/Shadows/Gray/Highlights/Near Whites/Whites/Clipping**: Bypasses a specific set of colors.
+
 **Brightness Mode**: If Luminance, then we simply take a weighted average of the RGB channels. If Value, then we take the channel with the maximum value before comparing it to any of the cutoffs or mid gray.
+
+---
+### Frequency Test Chart DCTL
+Draws radial or vertical bars at the specified frequency. Code adapted from Thomas Berglund
+
+#### DCTL Parameters
+**Frequency Start/End**: Specifies the frequency near the origin vs far away.
+
+**Amplitude**: The difference between the brightest and the average value of the chart.
+
+**Square Wave**: If checked, returns values that are either `0.5 + amplitude` or `0.5 - amplitude` rather than smoothly going from peak to troth.
+
+**Mode**: Choose radial or linear.
 
 ---
 
