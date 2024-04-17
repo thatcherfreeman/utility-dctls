@@ -1,0 +1,25 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(black_point, Black Point, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(white_point, White Point, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
+
+// clang-format on
+
+__DEVICE__ float3 unmix(float3 x1, float3 x2, float3 x) {
+    // Returns a such that
+    // x = _mix(x1, x2, a)
+    return (x - x1) / (x2 - x1);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 input = make_float3(p_R, p_G, p_B);
+    float3 output = input;
+    if (invert) {
+        output = _mix(make_float3(black_point, black_point, black_point), make_float3(white_point, white_point, white_point), input);
+    } else {
+        output = unmix(make_float3(black_point, black_point, black_point), make_float3(white_point, white_point, white_point), input);
+    }
+    return output;
+}

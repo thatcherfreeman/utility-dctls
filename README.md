@@ -57,6 +57,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Power Function DCTL](#power-function-dctl)
         - [Projective Transformation Matrix DCTL](#projective-transformation-matrix-dctl)
         - [Root Polynomial Degree 2 DCTL](#root-polynomial-degree-2-dctl)
+        - [Scaled Gamut DCTL](#scaled-gamut-dctl)
         - [Sigmoid Function DCTL](#sigmoid-function-dctl)
         - [Sigmoid Kernel DCTL](#sigmoid-kernel-dctl)
         - [Softmax DCTL](#softmax-dctl)
@@ -923,6 +924,17 @@ You can fit this matrix with my tool in my [rgb-matrix-finder](https://github.co
 
 #### DCTL Parameters
 **Mat 00-25**: First digit is the row, second digit is the column of the matrix.
+
+---
+### Scaled Gamut DCTL
+Scales your selected black point and white point to the 0-1 range, essentially a gain+offset adjustment. Useful if you want to work in some log space that has a nonzero black point. Just measure the black point and white point of your working log curve (say, using a shot of a lens cap or just sending black or white through a lin to log conversion), enter those values and copy/paste the dctl to sandwich your LGGO primaries adjustments, in the latter one checking invert.
+
+#### DCTL Parameters
+**Black Point**: Indicate what value should be mapped down to 0.0.
+
+**White Point**: Indicate what value should be mapped to 1.0.
+
+**Invert**: Inverts the adjustment, so 0.0 is mapped to **Black Point** and 1.0 is mapped to **White Point**.
 
 ---
 
