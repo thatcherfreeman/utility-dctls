@@ -94,6 +94,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Quantize](#quantize)
         - [RGB Chips DCTL](#rgb-chips-dctl)
         - [Safety Lines DCTL](#safety-lines-dctl)
+        - [SNR Checker DCTL](#snr-checker-dctl)
         - [Spherical DCTL](#spherical-dctl)
         - [T-Log Curve](#t-log-curve)
         - [Waveform Guides](#waveform-guides)
@@ -1576,6 +1577,14 @@ DCTL that creates a white frame to indicate safety boundaries for the image.
 **Shade Darkness**: Indicates brightness of the region outside of the box.
 
 
+---
+### SNR Checker DCTL
+Estimates signal to noise ratio of parts of the image. The methodology is that for each pixel, we sample the local area around that pixel and compute the sample mean and standard deviation, and the ratio of those two numbers is the signal to noise ratio. This method is not accurate near the edges in the frame, where the signal changes rapidly, so it should only be used to evaluate SNR in regions of fixed signal/energy. You should run this on a scene linear image if you want your results to be comparable to cined's specs. Also note some caveats, that if you have errors in the linearization and you have a lifted black point, then the "Signal" part of the SNR ratio will be raised and therefore the SNR will bottom out at a higher value in your shadows. It may make sense to offset the black point towards zero.
+
+#### DCTL Parameters
+**Window Size**: For window size $n$, we sample a $n \times n$ region of pixels. Larger gives a better estimate of sample standard deviation, but will run more slowly and potentially include more edges.
+
+**Output Mode**: Choose whether to monitor the sample mean, sample standard deviation, sample variance, sample SNR, or a false color readout. Check the code to see what the colors in the false color readout map to, but red represents 16 and below, and cyan is 2 and below.
 
 ---
 

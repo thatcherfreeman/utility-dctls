@@ -1,0 +1,164 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(window_size, Sample Size px, DCTLUI_SLIDER_INT, 5, 2, 8, 1)
+DEFINE_UI_PARAMS(output_mode, Output Mode, DCTLUI_COMBO_BOX, 0, {OUTPUT_MEAN, OUTPUT_STD, OUTPUT_VAR, OUTPUT_SNR, OUTPUT_FALSE_COLOR}, {Sample Mean, Sample Std, Sample Var, SNR, False Color})
+// clang-format on
+
+// Color model for false color stuff.
+#define PI (3.14159265358979323)
+
+__DEVICE__ inline float pow2f(float base) {
+    return base * base;
+}
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
+    // Adapted from Juan Pablo Zambrano's code
+    float3 lsh = make_float3(hsv.z, hsv.y * 3.0, mod(hsv.x, 1.0) * 2.0 * PI);
+
+    float ctr = lsh.x * lsh.y * _cosf(lsh.z);
+    float ctg = lsh.x;
+    float ctb = lsh.x * lsh.y * _sinf(lsh.z);
+    float3 c = make_float3(ctr, ctg, ctb);
+
+    float mat[3][3] = {
+        {2.0 / 3.0, 1.0, 0.0},
+        {-1.0 / 3.0, 1.0, _sqrtf(3.0) / 3.0},
+        {-1.0 / 3.0, 1.0, -_sqrtf(3.0) / 3.0},
+    };
+
+    return mv_33_3(mat, c);
+}
+
+__DEVICE__ float3 rgb_to_cylindrical(float3 x) {
+
+    // Matrix aligns and scales achromatic white (1, 1, 1) with (0, 1, 0)
+    // Also rotates input (1, 0, 0) above the red axis and ensures that
+    // (1, 0, 0) input ends up having a red channel code value of (1).
+    float mat[3][3] = {
+        {1.0, -1.0 / 2.0, -1.0 / 2.0},
+        {1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0},
+        {0.0, _sqrtf(3.0) / 2.0, -_sqrtf(3.0) / 2.0},
+    };
+
+    float3 rotated_color = mv_33_3(mat, x);
+    float l = rotated_color.y;
+    float3 hsl = make_float3(0.0, 0.0, 0.0);
+
+    float3 normalized_color = rotated_color / l;
+    if (l == 0.0) {
+        hsl = make_float3(0.0, 0.0, l);
+    } else {
+        float theta = _atan2f(normalized_color.z, normalized_color.x);
+        hsl.x = mod(theta, 2.0 * PI) / (2.0 * PI);
+        hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0;
+        hsl.z = l;
+    }
+    return hsl;
+}
+
+// Pixel sampling stuff
+typedef struct {
+        float3 sample_mean;
+        float3 sample_var;
+        float3 sample_std;
+        float3 sample_snr;
+} pixel_stats_t;
+
+__DEVICE__ pixel_stats_t make_pixel_stats(float3 sample_mean, float3 sample_var) {
+    pixel_stats_t result = {};
+    result.sample_mean = sample_mean;
+    result.sample_var = sample_var;
+    result.sample_std = make_float3(_sqrtf(sample_var.x), _sqrtf(sample_var.y), _sqrtf(sample_var.z));
+    result.sample_snr = sample_mean / result.sample_std;
+    return result;
+}
+
+__DEVICE__ pixel_stats_t
+sample_color(int window_size, int width, int height, int px, int py, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
+    float weight = 0.0;
+    float3 total = make_float3(0.0, 0.0, 0.0);
+    float3 total_squared = make_float3(0.0, 0.0, 0.0);
+
+    int left_margin = window_size / 2;
+    int right_margin = window_size / 2;
+    if (!(window_size & 1)) {
+        // window_size is even
+        left_margin -= 1;
+    }
+
+    for (int i = px - left_margin; i <= px + right_margin; ++i) {
+        for (int j = py - left_margin; j <= py + right_margin; ++j) {
+            // Check in bounds
+            if (0 <= i && i < width && 0 <= j && j < height) {
+
+                float3 sample_color = make_float3(_tex2D(tex_r, i, j), _tex2D(tex_g, i, j), _tex2D(tex_b, i, j));
+
+                weight += 1.0;
+                total += sample_color;
+                total_squared += sample_color * sample_color;
+            }
+        }
+    }
+    float3 sample_mean = total / weight; // mean
+    total_squared /= (weight - 1.0);     // sample variance
+
+    float3 sample_var = (total_squared - (sample_mean * sample_mean * weight / (weight - 1.0)));
+    return make_pixel_stats(sample_mean, sample_var);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    pixel_stats_t curr_stats = sample_color(window_size, p_Width, p_Height, p_X, p_Y, p_TexR, p_TexG, p_TexB);
+    float3 output_color;
+
+    if (output_mode == OUTPUT_MEAN) {
+        output_color = curr_stats.sample_mean;
+    } else if (output_mode == OUTPUT_STD) {
+        output_color = curr_stats.sample_std;
+    } else if (output_mode == OUTPUT_VAR) {
+        output_color = curr_stats.sample_var;
+    } else if (output_mode == OUTPUT_SNR) {
+        output_color = curr_stats.sample_snr;
+    } else if (output_mode == OUTPUT_FALSE_COLOR) {
+        float3 curr_color_polar = rgb_to_cylindrical(curr_stats.sample_mean);
+        float false_color_sat = 0.5;
+        float false_color_luminance = 0.18;
+        float average_snr = (curr_stats.sample_snr.x + curr_stats.sample_snr.y + curr_stats.sample_snr.z) / 3.0;
+        if (average_snr < 0.5) {
+            // very noisy, magenta
+            output_color = cylindrical_to_rgb(make_float3(5.0 / 6.0, false_color_sat, false_color_luminance));
+        } else if (average_snr < 1.0) {
+            // blue
+            output_color = cylindrical_to_rgb(make_float3(4.0 / 6.0, false_color_sat, false_color_luminance));
+        } else if (average_snr < 2.0) {
+            // cyan
+            output_color = cylindrical_to_rgb(make_float3(3.0 / 6.0, false_color_sat, false_color_luminance));
+        } else if (average_snr < 4.0) {
+            // green
+            output_color = cylindrical_to_rgb(make_float3(2.0 / 6.0, false_color_sat, false_color_luminance));
+        } else if (average_snr < 8.0) {
+            // yellow
+            output_color = cylindrical_to_rgb(make_float3(1.0 / 6.0, false_color_sat, false_color_luminance));
+        } else if (average_snr < 16.0) {
+            // red
+            output_color = cylindrical_to_rgb(make_float3(0.0, false_color_sat, false_color_luminance));
+        } else {
+            output_color = cylindrical_to_rgb(make_float3(0.0, 0.0, 1.0));
+        }
+    }
+    return output_color;
+}
