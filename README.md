@@ -1584,6 +1584,10 @@ Estimates signal to noise ratio of parts of the image. The methodology is that f
 #### DCTL Parameters
 **Window Size**: For window size $n$, we sample a $n \times n$ region of pixels. Larger gives a better estimate of sample standard deviation, but will run more slowly and potentially include more edges.
 
+**Black Point**: Indicate the black point (corresponding to zero scene light) in case your camera's black point in linear is somehow nonzero.
+
+**Input Mode**: Choose whether to just send in the input rgb image, or if you already computed SNR elsewhere, to send in an image where the SNR of each channel is the code value for each pixel. When in SNR mode, we can only output SNR or False Color.
+
 **Output Mode**: Choose whether to monitor the sample mean, sample standard deviation, sample variance, sample SNR, or a false color readout. Check the code to see what the colors in the false color readout map to, but red represents 16 and below, and cyan is 2 and below.
 
 ---

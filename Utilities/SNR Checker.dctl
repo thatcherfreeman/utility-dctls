@@ -1,7 +1,9 @@
 #line 2
 // clang-format off
 DEFINE_UI_PARAMS(window_size, Sample Size px, DCTLUI_SLIDER_INT, 5, 2, 8, 1)
-DEFINE_UI_PARAMS(output_mode, Output Mode, DCTLUI_COMBO_BOX, 0, {OUTPUT_MEAN, OUTPUT_STD, OUTPUT_VAR, OUTPUT_SNR, OUTPUT_FALSE_COLOR}, {Sample Mean, Sample Std, Sample Var, SNR, False Color})
+DEFINE_UI_PARAMS(black_point, Black Point, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(input_mode, Input Mode, DCTLUI_COMBO_BOX, 0, {INPUT_IMAGE, INPUT_SNR}, {Input Image, Input SNR})
+DEFINE_UI_PARAMS(output_mode, Output Mode, DCTLUI_COMBO_BOX, 4, {OUTPUT_MEAN, OUTPUT_STD, OUTPUT_VAR, OUTPUT_SNR, OUTPUT_FALSE_COLOR}, {Sample Mean, Sample Std, Sample Var, SNR, False Color})
 // clang-format on
 
 // Color model for false color stuff.
@@ -89,7 +91,7 @@ __DEVICE__ pixel_stats_t make_pixel_stats(float3 sample_mean, float3 sample_var)
 }
 
 __DEVICE__ pixel_stats_t
-sample_color(int window_size, int width, int height, int px, int py, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
+sample_color(int window_size, float black_point, int width, int height, int px, int py, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
     float weight = 0.0;
     float3 total = make_float3(0.0, 0.0, 0.0);
     float3 total_squared = make_float3(0.0, 0.0, 0.0);
@@ -118,46 +120,61 @@ sample_color(int window_size, int width, int height, int px, int py, __TEXTURE__
     total_squared /= (weight - 1.0);     // sample variance
 
     float3 sample_var = (total_squared - (sample_mean * sample_mean * weight / (weight - 1.0)));
-    return make_pixel_stats(sample_mean, sample_var);
+    return make_pixel_stats(sample_mean - black_point, sample_var);
+}
+
+__DEVICE__ float3 snr_false_color(float sample_average_snr) {
+    float3 output_color;
+    const float false_color_sat = 0.5;
+    const float false_color_luminance = 0.18;
+    if (sample_average_snr < 0.5) {
+        // very noisy, magenta
+        output_color = cylindrical_to_rgb(make_float3(5.0 / 6.0, false_color_sat, false_color_luminance));
+    } else if (sample_average_snr < 1.0) {
+        // blue
+        output_color = cylindrical_to_rgb(make_float3(4.0 / 6.0, false_color_sat, false_color_luminance));
+    } else if (sample_average_snr < 2.0) {
+        // cyan
+        output_color = cylindrical_to_rgb(make_float3(3.0 / 6.0, false_color_sat, false_color_luminance));
+    } else if (sample_average_snr < 4.0) {
+        // green
+        output_color = cylindrical_to_rgb(make_float3(2.0 / 6.0, false_color_sat, false_color_luminance));
+    } else if (sample_average_snr < 8.0) {
+        // yellow
+        output_color = cylindrical_to_rgb(make_float3(1.0 / 6.0, false_color_sat, false_color_luminance));
+    } else if (sample_average_snr < 16.0) {
+        // red
+        output_color = cylindrical_to_rgb(make_float3(0.0, false_color_sat, false_color_luminance));
+    } else {
+        // white
+        output_color = cylindrical_to_rgb(make_float3(0.0, 0.0, 1.0));
+    }
+    return output_color;
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
-    pixel_stats_t curr_stats = sample_color(window_size, p_Width, p_Height, p_X, p_Y, p_TexR, p_TexG, p_TexB);
-    float3 output_color;
-
-    if (output_mode == OUTPUT_MEAN) {
-        output_color = curr_stats.sample_mean;
-    } else if (output_mode == OUTPUT_STD) {
-        output_color = curr_stats.sample_std;
-    } else if (output_mode == OUTPUT_VAR) {
-        output_color = curr_stats.sample_var;
-    } else if (output_mode == OUTPUT_SNR) {
-        output_color = curr_stats.sample_snr;
-    } else if (output_mode == OUTPUT_FALSE_COLOR) {
-        float3 curr_color_polar = rgb_to_cylindrical(curr_stats.sample_mean);
-        float false_color_sat = 0.5;
-        float false_color_luminance = 0.18;
-        float average_snr = (curr_stats.sample_snr.x + curr_stats.sample_snr.y + curr_stats.sample_snr.z) / 3.0;
-        if (average_snr < 0.5) {
-            // very noisy, magenta
-            output_color = cylindrical_to_rgb(make_float3(5.0 / 6.0, false_color_sat, false_color_luminance));
-        } else if (average_snr < 1.0) {
-            // blue
-            output_color = cylindrical_to_rgb(make_float3(4.0 / 6.0, false_color_sat, false_color_luminance));
-        } else if (average_snr < 2.0) {
-            // cyan
-            output_color = cylindrical_to_rgb(make_float3(3.0 / 6.0, false_color_sat, false_color_luminance));
-        } else if (average_snr < 4.0) {
-            // green
-            output_color = cylindrical_to_rgb(make_float3(2.0 / 6.0, false_color_sat, false_color_luminance));
-        } else if (average_snr < 8.0) {
-            // yellow
-            output_color = cylindrical_to_rgb(make_float3(1.0 / 6.0, false_color_sat, false_color_luminance));
-        } else if (average_snr < 16.0) {
-            // red
-            output_color = cylindrical_to_rgb(make_float3(0.0, false_color_sat, false_color_luminance));
-        } else {
-            output_color = cylindrical_to_rgb(make_float3(0.0, 0.0, 1.0));
+    float3 output_color = make_float3(1.0, 0.0, 0.0);
+    if (input_mode == INPUT_IMAGE) {
+        pixel_stats_t curr_stats = sample_color(window_size, black_point, p_Width, p_Height, p_X, p_Y, p_TexR, p_TexG, p_TexB);
+        if (output_mode == OUTPUT_MEAN) {
+            output_color = curr_stats.sample_mean;
+        } else if (output_mode == OUTPUT_STD) {
+            output_color = curr_stats.sample_std;
+        } else if (output_mode == OUTPUT_VAR) {
+            output_color = curr_stats.sample_var;
+        } else if (output_mode == OUTPUT_SNR) {
+            output_color = curr_stats.sample_snr;
+        } else if (output_mode == OUTPUT_FALSE_COLOR) {
+            float average_snr = (curr_stats.sample_snr.x + curr_stats.sample_snr.y + curr_stats.sample_snr.z) / 3.0;
+            output_color = snr_false_color(average_snr);
+        }
+    } else if (input_mode == INPUT_SNR) {
+        float3 curr_snr = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+        if (output_mode == OUTPUT_SNR) {
+            output_color = curr_snr;
+        } else if (output_mode == OUTPUT_FALSE_COLOR) {
+            float average_snr = (curr_snr.x + curr_snr.y + curr_snr.z) / 3.0;
+            output_color = snr_false_color(average_snr);
         }
     }
     return output_color;
