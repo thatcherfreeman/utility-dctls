@@ -1,0 +1,35 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 0, {MODE_REFERENCE, MODE_NORMALIZE}, {Reference White, Normalize White})
+DEFINE_UI_PARAMS(normalization_mode, Normalization Mode, 0, {NORMALIZE_MAX, NORMALIZE_MEAN}, {Normalize Max to 1, Normalize Mean to 1})
+// clang-format on
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    float3 output_color;
+    if (mode == MODE_REFERENCE) {
+        if (p_X == 0 && p_Y == 0) {
+            output_color = make_float3(1.0, 1.0, 1.0);
+        } else {
+            output_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+        }
+    } else if (mode == MODE_NORMALIZE) {
+        float3 curr_white = make_float3(_tex2D(p_TexR, 0, 0), _tex2D(p_TexG, 0, 0), _tex2D(p_TexB, 0, 0));
+        float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+        if (p_X == 0 && p_Y == 0) {
+            // average right and below pixel to clone over it.
+            float3 right_pixel = make_float3(_tex2D(p_TexR, p_X + 1, p_Y), _tex2D(p_TexG, p_X + 1, p_Y), _tex2D(p_TexB, p_X + 1, p_Y));
+            float3 down_pixel = make_float3(_tex2D(p_TexR, p_X, p_Y + 1), _tex2D(p_TexG, p_X, p_Y + 1), _tex2D(p_TexB, p_X, p_Y + 1));
+            curr_color = (right_pixel + down_pixel) / 2.0;
+        }
+
+        float magnitude;
+        if (normalization_mode == NORMALIZE_MAX) {
+            magnitude = _fmaxf(curr_white.x, _fmaxf(curr_white.y, curr_white.z));
+        } else {
+            magnitude = (curr_white.x + curr_white.y + curr_white.z) / 3.0;
+        }
+        output_color = curr_color / magnitude;
+    }
+    return output_color;
+}

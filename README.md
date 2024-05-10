@@ -25,6 +25,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Bleach Bypass DCTL](#bleach-bypass-dctl)
         - [Film Curve DCTL](#film-curve-dctl)
         - [Film Grain DCTL](#film-grain-dctl)
+        - [Gain Normalization](#gain-normalization)
         - [Halation DCTL](#halation-dctl)
         - [Hue Curve DCTL](#hue-curve-dctl)
         - [Lens Distortion DCTL](#lens-distortion-dctl)
@@ -375,7 +376,14 @@ Creates a random noise, inspired by statistical film models. You'll need to pass
 
 **Noise Mode**: Indicates a different noise mode. In RGB, noise is computed on each channel independently, In Monochrome Noise mode, I recycle the same random seed for all three channels to avoid introducing chroma noise.
 
+---
+### Gain Normalization
+Make a sandwich of two of these DCTLs, with the first set to Reference White and the second set to Normalize White. Put linear gain in between, and the normalize white node will apply a global gain adjustment (exposure) to all three channels such that the mean or max of a (1, 1, 1) input to your linear gain adjustment is restored to 1.0.
 
+#### DCTL Parameters
+**Mode**: If set to Reference white, this replaces the top left pixel with a (1, 1, 1) chip. If set to Normalize, this reads that chip, computes a normalization, and then applies an exposure adjustment to bring the rendered chip to 1. Also clones over the chip so that it's not visible in your image anymore.
+
+**Normalization**: Choose between Max or Mean to determine whether the max of the channels of the pixel in the corner is used, or the mean of its channels.
 
 
 ---
