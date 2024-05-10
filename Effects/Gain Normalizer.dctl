@@ -2,7 +2,7 @@
 
 // clang-format off
 DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 0, {MODE_REFERENCE, MODE_NORMALIZE}, {Reference White, Normalize White})
-DEFINE_UI_PARAMS(normalization_mode, Normalization, 0, {NORMALIZE_MAX, NORMALIZE_MEAN}, {Max, Mean})
+DEFINE_UI_PARAMS(normalization_mode, Normalization, DCTLUI_COMBO_BOX, 0, {NORMALIZE_MAX, NORMALIZE_MEAN}, {Max, Mean})
 // clang-format on
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
