@@ -1,63 +1,25 @@
 // clang-format off
-DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
-DEFINE_UI_PARAMS(gamma, Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 8.0, 0.01)
+DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 0.9, 0.0, 2.0, 0.01)
+DEFINE_UI_PARAMS(gamma, Gamma, DCTLUI_SLIDER_FLOAT, 1.1, 0.0, 2.0, 0.01)
 DEFINE_UI_PARAMS(mid_gray, Middle Gray, DCTLUI_VALUE_BOX, 0.18)
 // clang-format on
-
-__CONSTANT__ float3 lum_coeffs = {1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0};
-
-__DEVICE__ void make_sat_matrix(float mat[3][3], float sat) {
-    float sr = (1.0 - sat) * lum_coeffs.x;
-    float sg = (1.0 - sat) * lum_coeffs.y;
-    float sb = (1.0 - sat) * lum_coeffs.z;
-
-    mat[0][0] = sr + sat;
-    mat[0][1] = sr;
-    mat[0][2] = sr;
-    mat[1][0] = sg;
-    mat[1][1] = sg + sat;
-    mat[1][2] = sg;
-    mat[2][0] = sb;
-    mat[2][1] = sb;
-    mat[2][2] = sb + sat;
-}
-
-__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
-    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
-                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
-                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
-    return out;
-}
-
-__DEVICE__ float dot_product(float3 a, float3 b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-}
 
 __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
 }
 
-__DEVICE__ float overlay_linear(float a, float b, float threshold) {
-    float out;
-    if (a <= threshold) {
-        out = _sqrtf(a * b);
-    } else {
-        out = 0.5 * (a + b);
-    }
-    return out;
+__DEVICE__ float3 bleach_bypass(float3 input, float gamma, float amount) {
+    float highlight_mixture = input.x + input.y + input.z;
+    highlight_mixture = powf(highlight_mixture, gamma);
+    return _mix(input, make_float3(highlight_mixture, highlight_mixture, highlight_mixture), amount);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 curr_color = make_float3(p_R, p_G, p_B);
-
-    float sat_mat[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-    make_sat_matrix(sat_mat, saturation);
-    float3 sat_color = mv_33_3(sat_mat, curr_color);
-
-    float lum = dot_product(curr_color, lum_coeffs);
-    lum = mid_gray * powf(lum / mid_gray, gamma);
-
-    float3 out_color = make_float3(
-        overlay_linear(lum, sat_color.x, mid_gray), overlay_linear(lum, sat_color.y, mid_gray), overlay_linear(lum, sat_color.z, mid_gray));
-    return out_color;
+    float3 bleach_bypass_color = bleach_bypass(curr_color, gamma, 1.0 - saturation);
+    // Correct mid gray.
+    float3 gain = make_float3(mid_gray, mid_gray, mid_gray) /
+                    (bleach_bypass(make_float3(mid_gray, mid_gray, mid_gray), gamma, 1.0 - saturation));
+    bleach_bypass_color *= gain;
+    return bleach_bypass_color;
 }

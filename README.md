@@ -311,6 +311,8 @@ Rotate the input image in increments of 90 degrees, resizing the canvas as neces
 ### Bleach Bypass DCTL
 Applies a beach bypass look to the image. Expects a Linear image. Uses a custom Overlay implementation designed for Linear images.
 
+The underlying implementation was completely replaced on May 11, 2024 for improved continuity. You can download the previous version [here](https://github.com/thatcherfreeman/utility-dctls/blob/5e8f7adeba60c4697f35508079012f3f7becb285/Effects/Bleach%20Bypass.dctl).
+
 #### DCTL Parameters
 **Saturation**: Indicates how saturated or desaturated the result should be.
 
