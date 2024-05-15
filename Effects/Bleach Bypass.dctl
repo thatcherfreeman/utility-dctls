@@ -1,5 +1,5 @@
 // clang-format off
-DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 0.9, 0.0, 2.0, 0.01)
+DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 0.9, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(gamma, Gamma, DCTLUI_SLIDER_FLOAT, 1.1, 0.0, 2.0, 0.01)
 DEFINE_UI_PARAMS(mid_gray, Middle Gray, DCTLUI_VALUE_BOX, 0.18)
 // clang-format on
