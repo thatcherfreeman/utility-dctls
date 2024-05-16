@@ -90,8 +90,8 @@ __DEVICE__ pixel_stats_t make_pixel_stats(float3 sample_mean, float3 sample_var)
     return result;
 }
 
-__DEVICE__ pixel_stats_t
-sample_color(int window_size, float black_point, int width, int height, int px, int py, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
+__DEVICE__ pixel_stats_t sample_color(
+    int window_size, float black_point, int width, int height, int px, int py, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
     float weight = 0.0;
     float3 total = make_float3(0.0, 0.0, 0.0);
     float3 total_squared = make_float3(0.0, 0.0, 0.0);

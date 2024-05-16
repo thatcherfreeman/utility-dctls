@@ -2,6 +2,7 @@
 DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 0.9, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(gamma, Gamma, DCTLUI_SLIDER_FLOAT, 1.1, 0.0, 2.0, 0.01)
 DEFINE_UI_PARAMS(mid_gray, Middle Gray, DCTLUI_VALUE_BOX, 0.18)
+
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {
@@ -18,8 +19,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 curr_color = make_float3(p_R, p_G, p_B);
     float3 bleach_bypass_color = bleach_bypass(curr_color, gamma, 1.0 - saturation);
     // Correct mid gray.
-    float3 gain = make_float3(mid_gray, mid_gray, mid_gray) /
-                    (bleach_bypass(make_float3(mid_gray, mid_gray, mid_gray), gamma, 1.0 - saturation));
+    float3 gain =
+        make_float3(mid_gray, mid_gray, mid_gray) / (bleach_bypass(make_float3(mid_gray, mid_gray, mid_gray), gamma, 1.0 - saturation));
     bleach_bypass_color *= gain;
     return bleach_bypass_color;
 }
