@@ -1,7 +1,7 @@
 // clang-format off
 DEFINE_UI_PARAMS(xoffset, X Offset, DCTLUI_SLIDER_INT, 0, 0, 3, 1)
 DEFINE_UI_PARAMS(yoffset, Y Offset, DCTLUI_SLIDER_INT, 0, 0, 1, 1)
-DEFINE_UI_PARAMS(convert_to_ycbcr, Convert to YCbCr, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(convert_to_ycbcr, Convert to YCbCr, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(subsampling_type, Chroma Subsampling Type, DCTLUI_COMBO_BOX, 0, {CS444, CS440, CS422, CS420, CS411, CS410}, {4:4:4, 4:4:0, 4:2:2, 4:2:0, 4:1:1, 4:1:0})
 
 // clang-format on
@@ -14,23 +14,40 @@ __DEVICE__ float3 average(float3 a, float3 b) {
     return make_float3(a.x + b.x, a.y + b.y, a.z + b.z) * 0.5;
 }
 
-__DEVICE__ float3 rgb_to_ycrcb(float3 rgb) {
-    float kr = 0.2126, kg = 0.7152, kb = 0.0722;
-    float yp = rgb.x * kr + rgb.y * kg + rgb.z * kb;
-    float pb = 0.5 * (rgb.z - yp) / (1.0 - kb);
-    float pr = 0.5 * (rgb.x - yp) / (1.0 - kr);
-
-    float3 ycrcb = make_float3(yp, pb, pr);
-    return ycrcb;
+__DEVICE__ float3 rgb_to_rgb_d(float3 rgb) {
+    // Takes rgb as input, in range 0-1 where black is (0,0,0).
+    // outputs rgb_d as output, scaled 16-235.
+    float3 rgb_d = (219.0 * rgb + 16.0);
+    return rgb_d;
 }
 
-__DEVICE__ float3 ycrcb_to_rgb(float3 ycrcb) {
-    float kr = 0.2126, kg = 0.7152, kb = 0.0722;
-    float r = ycrcb.x + (2.0 - (2.0 * kr)) * ycrcb.z;
-    float g = ycrcb.x - (kb / kg) * (2.0 - (2.0 * kb)) * ycrcb.y - (kr / kg) * (2.0 - (2.0 * kr)) * ycrcb.z;
-    float b = ycrcb.x + (2.0 - (2.0 * kb)) * ycrcb.y;
-    float3 rgb = make_float3(r, g, b);
+__DEVICE__ float3 rgb_d_to_rgb(float3 rgb_d) {
+    // Takes rgb_d as input, scaled 16-235.
+    // outputs rgb, scaled 0-1
+    float3 rgb = (rgb_d - 16.0) / 219.0;
     return rgb;
+}
+
+__DEVICE__ float3 rgb_d_to_ycbcr(float3 rgb_d) {
+    // Takes rgb_d as input, scaled 16-235.
+    // Follows procedure from BT709 section 3
+    float3 y_cb_cr = make_float3(0.0, 0.0, 0.0);
+    y_cb_cr.x = 0.2126 * rgb_d.x + 0.7152 * rgb_d.y + 0.0722 * rgb_d.z;
+    y_cb_cr.y = ((-0.2126 * rgb_d.x - 0.7152 * rgb_d.y + 0.9278 * rgb_d.z) / 1.8556) * (224.0 / 219.0) + 128.0;
+    y_cb_cr.z = ((0.7874 * rgb_d.x - 0.7152 * rgb_d.y - 0.0722 * rgb_d.z) / 1.5748) * (224.0 / 219.0) + 128.0;
+    return y_cb_cr; // scaled 16-235, 16-240, 16-240.
+}
+
+__DEVICE__ float3 ycbcr_to_rgb_d(float3 y_cb_cr) {
+    float3 rgb_d = make_float3(0.0, 0.0, 0.0);
+    // blue_diff is equal to rgb_d.z - Y
+    // red_diff is equal to rgb_d.x - Y
+    float blue_diff = (y_cb_cr.y - 128.0) * (219.0 / 224.0) * 1.8556;
+    float red_diff = (y_cb_cr.z - 128.0) * (219.0 / 224.0) * 1.5748;
+    rgb_d.x = red_diff + y_cb_cr.x;
+    rgb_d.z = blue_diff + y_cb_cr.x;
+    rgb_d.y = (y_cb_cr.x - (0.2126 * rgb_d.x + 0.0722 * rgb_d.z)) / 0.7152;
+    return rgb_d;
 }
 
 __DEVICE__ float3 chroma_subsample(chroma_subsample_params_t cs, float3 region[2][4], int rx, int ry) {
@@ -85,9 +102,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             float3 color = make_float3(_tex2D(p_TexR, r_orig_x + c, r_orig_y + r),
                                        _tex2D(p_TexG, r_orig_x + c, r_orig_y + r),
                                        _tex2D(p_TexB, r_orig_x + c, r_orig_y + r));
-            if (convert_to_ycbcr) {
-                color = rgb_to_ycrcb(color);
-            }
+            color = rgb_d_to_ycbcr(rgb_to_rgb_d(color));
             region[r][c] = color;
         }
     }
@@ -121,11 +136,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             break;
     }
     float3 output_color_ycrcb = chroma_subsample(params, region, rx, ry);
-    float3 output_color;
+    float3 output_color = rgb_d_to_rgb(ycbcr_to_rgb_d(output_color_ycrcb));
     if (convert_to_ycbcr) {
-        output_color = ycrcb_to_rgb(output_color_ycrcb);
-    } else {
-        output_color = output_color_ycrcb;
+        output_color = output_color_ycrcb / 255.0;
     }
     return output_color;
 }
