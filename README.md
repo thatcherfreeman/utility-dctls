@@ -71,6 +71,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Blanking Checker DCTL](#blanking-checker-dctl)
         - [Brand Colors DCTL](#brand-colors-dctl)
         - [Channel Viewer DCTL](#channel-viewer-dctl)
+        - [Chroma Subsampling Chart DCTL](#chroma-subsampling-chart-dctl)
         - [Chroma Subsampling DCTL](#chroma-subsampling-dctl)
         - [CIELUV DCTL](#cieluv-dctl)
         - [ColorChecker DCTL](#colorchecker-dctl)
@@ -1129,6 +1130,9 @@ Emulates the Fusion channel viewer, for Red/Green/Blue channels.
 **Channel**: Allows you to choose whether the full color image will be returned, or only one of the red/green/blue channels (duplicated onto all three channels in the output for visibility).
 
 
+---
+### Chroma Subsampling Chart DCTL
+Chart to help you identify chroma subsampling issues by drawing one-pixel wide stripes every third row or column of pixels. If you have smearing between rows, then you know that the chroma vertical resolution is not full (the third digit in 4:4:4 is either 2 or 0). If you have smearing between columns, then you know the chroma horizontal resolution is not 4, so the second digit is either 2 or 1. Compare the GUI viewer with your external monitor and try applying the below Chroma Subsampling DCTL in the GUI for a low fidelity simulation of each kind of chroma subsampling.
 
 ---
 
