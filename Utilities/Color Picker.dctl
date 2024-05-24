@@ -9,7 +9,7 @@ DEFINE_UI_PARAMS(num_digits, Num Digits, DCTLUI_SLIDER_INT, 8, 3, 12, 1)
 DEFINE_UI_PARAMS(format, Format, DCTLUI_COMBO_BOX, 0, {FORMAT_FLOAT, FORMAT_8BIT, FORMAT_10BIT, FORMAT_12BIT, FORMAT_16BIT}, {Float, 8 Bit, 10 Bit, 12 Bit, 16 Bit})
 DEFINE_UI_PARAMS(crosshair_mode, Crosshair Type, DCTLUI_COMBO_BOX, 1, {CROSSHAIR_NONE, CROSSHAIR_HAIRS, CROSSHAIR_DOT}, {None, Crosshair, Dot})
 DEFINE_UI_PARAMS(legend_position, Legend Position, DCTLUI_COMBO_BOX, 0, {POSITION_BOTTOM, POSITION_BOTTOM_LETTERBOX, POSITION_TOP, POSITION_LEFT, POSITION_CROSSHAIR}, {Bottom, Bottom Letterboxed, Top, Left, Crosshair})
-DEFINE_UI_PARAMS(legend_value, Legend Color, DCTLUI_COMBO_BOX, 0, {LEGCOL_WHITE, LEGCOL_BLACK, LEGCOL_GRAY, LEGCOL_INV}, {White, Black, Gray, Inverse})
+DEFINE_UI_PARAMS(legend_value, Legend Color, DCTLUI_COMBO_BOX, 3, {LEGCOL_WHITE, LEGCOL_BLACK, LEGCOL_GRAY, LEGCOL_INV}, {White, Black, Gray, Inverse})
 // clang-format on
 
 ////////////////
@@ -420,6 +420,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             break;
         case LEGCOL_INV:
             float lum = (curr_color.x + curr_color.y + curr_color.z) / 3.0;
+            if (isnan(lum)) {
+                lum = 0.5;
+            }
             legend_color = make_float3(1.0, 1.0, 1.0) - lum;
             break;
     }
