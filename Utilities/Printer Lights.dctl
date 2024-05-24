@@ -14,7 +14,7 @@ DEFINE_UI_PARAMS(gamma, Neg Gamma, DCTLUI_SLIDER_FLOAT, 0.5, 0, 5, 0.01)
 
 __DEVICE__ float apply_lights(float input, float lights, float gamma) {
     // lights set so that zero is neutral
-    return input * _exp10f(lights * gamma * 0.025);
+    return input * _exp10f(lights * 0.025 / gamma);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
