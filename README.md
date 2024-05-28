@@ -1589,6 +1589,8 @@ In node (1) when the mode is set to "Inject Patches", this DCTL generates a sing
 
 **Max Normalized Gain**: Similar to Gain but makes it so that trackball adjustments cannot increase the signal in any channel, IE max(rgb) is fixed instead of just rec709 luminance.
 
+**Min Normalized Offset**: Sets up your offset trackball so that it always applies a positive offset unless you lower the global offset wheel.
+
 ---
 
 ### RGB Chips DCTL
