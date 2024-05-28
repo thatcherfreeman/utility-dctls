@@ -79,6 +79,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Color Ramp DCTL](#color-ramp-dctl)
         - [Cube Rotate DCTL](#cube-rotate-dctl)
         - [Cylindrical DCTL](#cylindrical-dctl)
+        - [DaVinci LGGO DCTL](#davinci-lggo-dctl)
         - [DaVinci Tone Mapping DCTL](#davinci-tone-mapping-dctl)
         - [Exposure Chart DCTL](#exposure-chart-dctl)
         - [False Color Generator DCTL](#false-color-generator-dctl)
@@ -1225,6 +1226,15 @@ Converts between RGB and a Cylindrical color model. Outputs a 3-channel image, $
 #### DCTL Parameters
 **Direction**: Indicate whether to go from RGB to Cylindrical, or from Cylindrical to RGB.
 
+---
+
+### DaVinci LGGO DCTL
+Recreation of DaVinci Resolve's Lift Gamma Gain Offset controls in the primaries, for reference for other developers. Recreates the global LGGO controls when lum mix is set to zero.
+
+#### DCTL Parameters
+**Lift/Gamma/Gain/Offset**: Recreation of the corresponding controls in the Primaries panel.
+
+**Invert**: Inverts the adjustment made by these controls.
 
 ---
 

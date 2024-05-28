@@ -1,0 +1,167 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(lift, Lift, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(gamma, Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(gain, Gain, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
+DEFINE_UI_PARAMS(offset, Offset, DCTLUI_SLIDER_FLOAT, 25.0, -125.0, 150.0, 0.01)
+
+DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
+// clang-format on
+
+// typedef struct {
+//         int x;
+//         int y;
+// } int2;
+
+// __DEVICE__ int2 make_int2(int x, int y) {
+//     int2 result = {};
+//     result.x = x;
+//     result.y = y;
+//     return result;
+// }
+
+__DEVICE__ inline bool int2_eq(int2 a, int2 b) {
+    return a.x == b.x && a.y == b.y;
+}
+
+__DEVICE__ float3 sample_color(int2 pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    return make_float3(_tex2D(p_TexR, pos.x, pos.y), _tex2D(p_TexG, pos.x, pos.y), _tex2D(p_TexB, pos.x, pos.y));
+}
+
+__DEVICE__ float convert_gamma_to_reals(float g) {
+    // Converts -1 to +1 range to an exponent
+    // Essentially what Resolve does with its gamma
+    // correction.
+    float out;
+    if (g <= 0) {
+        out = 1.0f + (-4.0f * g);
+    } else {
+        out = 1.0f / (4.0f * g + 1);
+    }
+    return out;
+}
+
+__DEVICE__ float convert_gamma_to_wheels(float g) {
+    // Converts the exponent we have to the gamma wheel control (-1 to +1 range)
+    float out;
+    if (g >= 1.0) {
+        out = (g - 1.0f) / -4.0;
+    } else {
+        out = ((1.0 / g) - 1.0) / 4.0;
+    }
+    return out;
+}
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float gamma_error_function(float gamma, float a, float b, float c) {
+    float term1 = powf(c, 1.0 / gamma);
+    float term2 = powf(b, 1.0 / gamma);
+    float term3 = powf(a, 1.0 / gamma);
+    return powf(term1 - term2 + term3, gamma) - b;
+}
+
+__DEVICE__ float continuous_binary_search(
+    float initial_guess, float a, float b, float c, float tolerance, int max_iterations, float lower_bound, float upper_bound) {
+    float gamma = initial_guess;
+    bool pos_slope = gamma_error_function(lower_bound + 0.01, a, b, c) < gamma_error_function(upper_bound, a, b, c);
+    for (int i = 0; i < max_iterations; ++i) {
+        float value = gamma_error_function(gamma, a, b, c);
+        float error = _fabs(value);
+        if (error < tolerance) {
+            break;
+        }
+        if ((pos_slope && value > 0) || (!pos_slope && value < 0)) {
+            upper_bound = gamma;
+        } else {
+            lower_bound = gamma;
+        }
+        gamma = (lower_bound + upper_bound) / 2;
+    }
+    return gamma;
+}
+
+__DEVICE__ float find_gamma(float black, float gray, float white) {
+    float initial_guess = _logf((gray - black) / (white - black)) / _logf(0.5);
+    float tolerance = 1e-9;
+    int max_iterations = 30;
+    float lower_bound = 0.0;
+    float upper_bound = 5.0;
+    return continuous_binary_search(initial_guess, black, gray, white, tolerance, max_iterations, lower_bound, upper_bound);
+}
+
+typedef struct {
+        float lift;
+        float gamma;
+        float gain;
+        float offset;
+        // Assumed to be wheels params.
+} lggo_params_t;
+
+typedef lggo_params_t lggo_params_reals_t;
+
+__DEVICE__ lggo_params_t make_lggo_params(float lift, float gamma, float gain, float offset) {
+    lggo_params_t result = {};
+    result.lift = lift;
+    result.gamma = gamma;
+    result.gain = gain;
+    result.offset = offset;
+    return result;
+}
+
+__DEVICE__ lggo_params_reals_t make_lggo_params_reals(float lift, float gamma, float gain, float offset) {
+    return (lggo_params_reals_t) make_lggo_params(lift, gamma, gain, offset);
+}
+
+// OFFSET_SCALING is a magic number measured from the default offset wheel values in Resolve.
+#define OFFSET_SCALING ((1.233137392 - 0.5) / 100.0)
+#define PRINTER_LIGHT_BASE (25.0)
+
+__DEVICE__ lggo_params_reals_t convert_lggo_to_reals(lggo_params_t params) {
+    // Convert each of the parameters from the Resolve wheels values to the underlying real values.
+    return make_lggo_params(params.lift * 2.0, convert_gamma_to_reals(params.gamma), params.gain, (params.offset - PRINTER_LIGHT_BASE) * OFFSET_SCALING);
+}
+
+__DEVICE__ lggo_params_t convert_lggo_to_wheels(lggo_params_reals_t params) {
+    // Convert each of the parameters from the underlying real values to the Resolve wheels values.
+    return make_lggo_params(params.lift / 2.0, convert_gamma_to_wheels(params.gamma), params.gain, (params.offset / OFFSET_SCALING) + PRINTER_LIGHT_BASE);
+}
+
+__DEVICE__ float apply_lggo(float x, lggo_params_reals_t params, bool invert) {
+    float white_out_x = 1.0 / params.gain;
+    float black_out_x = (1.0 - (1.0 / (1.0 - params.lift)));
+    float slope = 1.0 / (white_out_x - black_out_x);
+    float out;
+
+    if (invert) {
+        out = powf(x, 1.0 / params.gamma);
+        out = out - params.offset;
+        out = out / slope;
+        out = out + black_out_x;
+    } else {
+        out = slope * (x - black_out_x);
+        out = out + params.offset;
+        out = powf(out, params.gamma);
+    }
+    return out;
+}
+
+__DEVICE__ float3 apply_lggo_f3(float3 x, lggo_params_reals_t params, bool invert) {
+    return make_float3(apply_lggo(x.x, params, invert), apply_lggo(x.y, params, invert), apply_lggo(x.z, params, invert));
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    int2 curr_pos = make_int2(p_X, p_Y);
+    float3 curr_color = sample_color(curr_pos, p_TexR, p_TexG, p_TexB);
+
+    float3 output_color = curr_color;
+
+    lggo_params_t params = make_lggo_params_reals(lift, gamma, gain, offset);
+    lggo_params_reals_t params_reals = convert_lggo_to_reals(params);
+
+    output_color = apply_lggo_f3(curr_color, params_reals, invert);
+    return output_color;
+}
