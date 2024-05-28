@@ -7,6 +7,7 @@ DEFINE_UI_PARAMS(gain, Gain, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
 DEFINE_UI_PARAMS(offset, Offset, DCTLUI_SLIDER_FLOAT, 25.0, -125.0, 150.0, 0.01)
 
 DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
+
 // clang-format on
 
 // typedef struct {
@@ -113,7 +114,7 @@ __DEVICE__ lggo_params_t make_lggo_params(float lift, float gamma, float gain, f
 }
 
 __DEVICE__ lggo_params_reals_t make_lggo_params_reals(float lift, float gamma, float gain, float offset) {
-    return (lggo_params_reals_t) make_lggo_params(lift, gamma, gain, offset);
+    return (lggo_params_reals_t)make_lggo_params(lift, gamma, gain, offset);
 }
 
 // OFFSET_SCALING is a magic number measured from the default offset wheel values in Resolve.
@@ -122,12 +123,14 @@ __DEVICE__ lggo_params_reals_t make_lggo_params_reals(float lift, float gamma, f
 
 __DEVICE__ lggo_params_reals_t convert_lggo_to_reals(lggo_params_t params) {
     // Convert each of the parameters from the Resolve wheels values to the underlying real values.
-    return make_lggo_params(params.lift * 2.0, convert_gamma_to_reals(params.gamma), params.gain, (params.offset - PRINTER_LIGHT_BASE) * OFFSET_SCALING);
+    return make_lggo_params(
+        params.lift * 2.0, convert_gamma_to_reals(params.gamma), params.gain, (params.offset - PRINTER_LIGHT_BASE) * OFFSET_SCALING);
 }
 
 __DEVICE__ lggo_params_t convert_lggo_to_wheels(lggo_params_reals_t params) {
     // Convert each of the parameters from the underlying real values to the Resolve wheels values.
-    return make_lggo_params(params.lift / 2.0, convert_gamma_to_wheels(params.gamma), params.gain, (params.offset / OFFSET_SCALING) + PRINTER_LIGHT_BASE);
+    return make_lggo_params(
+        params.lift / 2.0, convert_gamma_to_wheels(params.gamma), params.gain, (params.offset / OFFSET_SCALING) + PRINTER_LIGHT_BASE);
 }
 
 __DEVICE__ float apply_lggo(float x, lggo_params_reals_t params, bool invert) {
