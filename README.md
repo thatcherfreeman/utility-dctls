@@ -95,6 +95,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Printer Lights](#printer-lights)
         - [Pure Log Curve DCTL](#pure-log-curve-dctl)
         - [Quantize](#quantize)
+        - [Rebind LGGO DCTL](#rebind-lggo-dctl)
         - [RGB Chips DCTL](#rgb-chips-dctl)
         - [Safety Lines DCTL](#safety-lines-dctl)
         - [SNR Checker DCTL](#snr-checker-dctl)
@@ -382,6 +383,8 @@ Creates a random noise, inspired by statistical film models. You'll need to pass
 
 ---
 ### Gain Normalization
+**Note**: Just use the [Rebind LGGO DCTL](#rebind-lggo-dctl) below.
+
 Make a sandwich of two of these DCTLs, with the first set to Reference White and the second set to Normalize White. Put linear gain in between, and the normalize white node will apply a global gain adjustment (exposure) to all three channels such that the mean or max of a (1, 1, 1) input to your linear gain adjustment is restored to 1.0.
 
 #### DCTL Parameters
@@ -1550,7 +1553,41 @@ Simulates the effect of saving the current image at a specified bit depth.
 **Quantization Method** [ROUND, TRUNCATE, STOCHASTIC]: If set to Round, round each value to the nearest code value, if set to truncate, simply round down to the nearest below code value. If set to Stochastic, round up or round down with a probability equal to how close the value is to the nearest integer.
 
 
+---
 
+### Rebind LGGO DCTL
+Allows you to rebind three of your LGGO controls to other controls.
+
+#### How it works
+Set up a sandwich of two of these DCTLs as the following three nodes.
+1. Rebind LGGO DCTL, with mode set to "Inject Patches".
+2. Lift/Gamma/Gain adjustments, or Gamma/Gain/Offset adjustments. **Make sure Lum Mix is set to 0**
+3. Rebind LGGO DCTL, with mode set to "Rebind Controls" and "Wheels" set to the three wheels you want to rebind, in agreement with step (2). Customize the rebinds for each of these wheels in the below settings.
+
+In node (1) when the mode is set to "Inject Patches", this DCTL generates a single black, white, and gray (50%) pixel in three of the corners of the frame. These three values are then sampled in node (3), where the DCTL figures out what you set for the three wheels specified in "Wheels". It then inverts your adjustment, clones out the three corner pixels, and applies an adjustment based on the rebinds and the extracted trackball values.
+
+#### DCTL Parameters
+**Mid Gray**: Indicate the value of mid gray used for the Mid Gray Preserving Gamma adjustment.
+
+**Film Negative Gamma**: Indicate the assumed negative film gamma for the Printer Lights Gain adjustment. Adjusts the sensitivity of Printer Lights adjustments, and 0.5 is representative of real negative film.
+
+**Flip Gamma Dir**: Inverts direction of wheels rebound to "Gamma"
+
+**Flip Mid Gray Pres. Gamma Dir**: Inverts direction of wheels rebound to "Mid Gray Preserving Gamma"
+
+**Mode**: Choose "Inject Patches" to insert three samples so that the primaries adjustments can be captured. Choose "Rebind Controls" after your primaries adjustments to rebind those controls
+
+**Wheels**: Choose the three wheels that can be rebound. Do not use any wheels other than these three in your sandwiched primaries adjustment.
+
+**Lift/Gamma/Gain/Offset Wheel Rebind**: Indicate what operation should be assigned to this wheel on your control surface.
+
+#### Supported Operations
+
+**Lift/Gamma/Gain/Offset**: Behaves the same as the wheel does in Resolve.
+
+**Mid Gray Preserving Gamma**: Gamma adjustment combined with a gain adjustment that restores mid gray. Similar to gamma, but pivots around the user selected Mid Gray at the top of this DCTL.
+
+**Max Normalized Gain**: Similar to Gain but makes it so that trackball adjustments cannot increase the signal in any channel, IE max(rgb) is fixed instead of just rec709 luminance.
 
 ---
 

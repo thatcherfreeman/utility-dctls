@@ -2,17 +2,19 @@
 
 // clang-format off
 
-DEFINE_UI_PARAMS(invert_gamma_direction, Switch Gamma Direction, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(film_negative_gamma, Film Negative Gamma, DCTLUI_VALUE_BOX, 0.5)
-DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 0, {MODE_REFERENCE, MODE_CAPTURE}, {Reference White, Rebind Controls})
+DEFINE_UI_PARAMS(invert_gamma_direction, Flip Gamma Dir, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(invert_mid_gray_gamma_direction, Flip Mid Gray Pres. Gamma Dir, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 1, {MODE_REFERENCE, MODE_CAPTURE}, {Inject Patches, Rebind Controls})
 DEFINE_UI_PARAMS(wheels, Wheels, DCTLUI_COMBO_BOX, 0, {WHEELS_LGG, WHEELS_OGG}, {Lift Gamma Gain, Gamma Gain Offset})
 
-DEFINE_UI_PARAMS(lift_wheel_rebind, Lift Wheel Rebind, DCTLUI_COMBO_BOX, 0, {LIFT_REBIND_TO_LIFT, LIFT_REBIND_TO_OFFSET}, {Lift, Offset})
-DEFINE_UI_PARAMS(gamma_wheel_rebind, Gamma Wheel Rebind, DCTLUI_COMBO_BOX, 0, {GAMMA_REBIND_TO_GAMMA, GAMMA_REBIND_TO_MID_GRAY_PRESERVING_GAMMA, GAMMA_REBIND_TO_OFFSET}, {Gamma, Mid Gray Preserving Gamma, Offset})
-DEFINE_UI_PARAMS(gain_wheel_rebind, Gain Wheel Rebind, DCTLUI_COMBO_BOX, 0, {GAIN_REBIND_TO_GAIN, GAIN_REBIND_TO_NORMALIZED_GAIN, GAIN_REBIND_TO_GAMMA, GAIN_REBIND_TO_MID_GRAY_PRESERVING_GAMMA}, {Gain, Max Normalized Gain, Gamma, Mid Gray Preserving Gamma})
-DEFINE_UI_PARAMS(offset_wheel_rebind, Offset Wheel Rebind, DCTLUI_COMBO_BOX, 0, {OFFSET_REBIND_TO_OFFSET, OFFSET_REBIND_TO_GAIN, OFFSET_REBIND_TO_NORMALIZED_GAIN, OFFSET_REBIND_TO_PRINTER_LIGHTS_EXPOSURE}, {Offset, Gain, Max Normalized Gain, Printer Lights Gain})
+DEFINE_UI_PARAMS(lift_wheel_rebind, Lift Wheel Rebind, DCTLUI_COMBO_BOX, 0, {LIFT_REBIND_TO_LIFT, LIFT_REBIND_TO_GAMMA, LIFT_REBIND_TO_MID_GRAY_PRESERVING_GAMMA, LIFT_REBIND_TO_GAIN, LIFT_REBIND_TO_NORMALIZED_GAIN, LIFT_REBIND_TO_OFFSET}, {Lift, Gamma, Mid Gray Pres. Gamma, Gain, Max Normalized Gain, Offset})
+DEFINE_UI_PARAMS(gamma_wheel_rebind, Gamma Wheel Rebind, DCTLUI_COMBO_BOX, 1, {GAMMA_REBIND_TO_LIFT, GAMMA_REBIND_TO_GAMMA, GAMMA_REBIND_TO_MID_GRAY_PRESERVING_GAMMA, GAMMA_REBIND_TO_GAIN, GAMMA_REBIND_TO_NORMALIZED_GAIN, GAMMA_REBIND_TO_OFFSET}, {Lift, Gamma, Mid Gray Pres. Gamma, Gain, Max Normalized Gain, Offset})
+DEFINE_UI_PARAMS(gain_wheel_rebind, Gain Wheel Rebind, DCTLUI_COMBO_BOX, 3, {GAIN_REBIND_TO_LIFT, GAIN_REBIND_TO_GAMMA, GAIN_REBIND_TO_MID_GRAY_PRESERVING_GAMMA, GAIN_REBIND_TO_GAIN, GAIN_REBIND_TO_NORMALIZED_GAIN, GAIN_REBIND_TO_OFFSET}, {Lift, Gamma, Mid Gray Pres. Gamma, Gain, Max Normalized Gain, Offset})
+DEFINE_UI_PARAMS(offset_wheel_rebind, Offset Wheel Rebind, DCTLUI_COMBO_BOX, 5, {OFFSET_REBIND_TO_LIFT, OFFSET_REBIND_TO_GAMMA, OFFSET_REBIND_TO_MID_GRAY_PRESERVING_GAMMA, OFFSET_REBIND_TO_GAIN, OFFSET_REBIND_TO_NORMALIZED_GAIN, OFFSET_REBIND_TO_OFFSET, OFFSET_REBIND_TO_PRINTER_LIGHTS_EXPOSURE}, {Lift, Gamma, Mid Gray Pres. Gamma, Gain, Max Normalized Gain, Offset, Printer Lights Gain})
 
-DEFINE_UI_PARAMS(debug_mode, Debug Mode, DCTLUI_COMBO_BOX, 0, {DEBUG_NONE, DEBUG_LIFT, DEBUG_GAMMA, DEBUG_GAIN, DEBUG_OFFSET, DEBUG_INVERSE}, {Debug None, Debug Lift, Debug Gamma, Debug Gain, Debug Offset, Debug Inverse})
+// DEFINE_UI_PARAMS(debug_mode, Debug Mode, DCTLUI_COMBO_BOX, 0, {DEBUG_NONE, DEBUG_LIFT, DEBUG_GAMMA, DEBUG_MID_GAMMA, DEBUG_GAIN, DEBUG_OFFSET, DEBUG_INVERSE}, {Debug None, Debug Lift, Debug Gamma, Debug Mid Gamma, Debug Gain, Debug Offset, Debug Inverse})
 // clang-format on
 
 // OFFSET_SCALING is a magic number measured from the default offset wheel values in Resolve.
@@ -70,10 +72,9 @@ __DEVICE__ float powf(float base, float exp) {
 /**
  * Other color operations
  */
-__DEVICE__ float mid_gray_preserving_gamma(float x, float exp) {
+__DEVICE__ float mid_gray_preserving_gamma(float x, float exp, float mid_gray) {
     // Uses a gain adjustment to preserve linear mid gray.
     float out = x;
-    const float mid_gray = 0.18;
     out /= mid_gray;
     out = powf(out, exp);
     out *= mid_gray;
@@ -235,29 +236,10 @@ __DEVICE__ lgg_params_reals_t estimate_lgg(float black, float gray, float white)
     return ogg_to_lgg_params(estimate_ogg(black, gray, white));
 }
 
-__DEVICE__ lgg_params_reals_t convert_lgg_to_reals(lgg_params_t params) {
-    // Convert each of the parameters from the Resolve wheels values to the underlying real values.
-    return make_lgg_params(params.lift * 2.0, convert_gamma_to_reals(params.gamma), params.gain);
-}
-
-__DEVICE__ lgg_params_t convert_lgg_to_wheels(lgg_params_reals_t params) {
-    // Convert each of the parameters from the underlying real values to the Resolve wheels values.
-    return make_lgg_params(params.lift / 2.0, convert_gamma_to_wheels(params.gamma), params.gain);
-}
-
-__DEVICE__ ogg_params_reals_t convert_ogg_to_reals(ogg_params_t params) {
-    // Convert each of the parameters from the Resolve wheels values to the underlying real values.
-    return make_ogg_params((params.offset - PRINTER_LIGHT_BASE) * OFFSET_SCALING, convert_gamma_to_reals(params.gamma), params.gain);
-}
-
-__DEVICE__ ogg_params_t convert_ogg_to_wheels(ogg_params_reals_t params) {
-    // Convert each of the parameters from the underlying real values to the Resolve wheels values.
-    return make_ogg_params((params.offset / OFFSET_SCALING) + PRINTER_LIGHT_BASE, convert_gamma_to_wheels(params.gamma), params.gain);
-}
-
 typedef struct {
         float lift;
         float gamma;
+        float mid_gamma;
         float gain;
         float offset;
         // Assumed to be wheels params.
@@ -265,37 +247,44 @@ typedef struct {
 
 typedef lggo_params_t lggo_params_reals_t;
 
-__DEVICE__ lggo_params_t make_lggo_params(float lift, float gamma, float gain, float offset) {
+__DEVICE__ lggo_params_t make_lggo_params(float lift, float gamma, float mid_gamma, float gain, float offset) {
     lggo_params_t result = {};
     result.lift = lift;
     result.gamma = gamma;
+    result.mid_gamma = mid_gamma; // gamma used for mid gray preserving gamma
     result.gain = gain;
     result.offset = offset;
     return result;
 }
 
 __DEVICE__ lggo_params_reals_t lgg_to_lggo_params(lgg_params_reals_t lgg_params) {
-    return make_lggo_params(lgg_params.lift, lgg_params.gamma, lgg_params.gain, 0.0);
+    return make_lggo_params(lgg_params.lift, lgg_params.gamma, 1.0, lgg_params.gain, 0.0);
 }
 
 __DEVICE__ lggo_params_reals_t ogg_to_lggo_params(ogg_params_reals_t ogg_params) {
-    return make_lggo_params(0.0, ogg_params.gamma, ogg_params.gain, ogg_params.offset);
+    return make_lggo_params(0.0, ogg_params.gamma, 1.0, ogg_params.gain, ogg_params.offset);
 }
 
-__DEVICE__ lggo_params_reals_t make_lggo_params_reals(float lift, float gamma, float gain, float offset) {
-    return (lggo_params_reals_t)make_lggo_params(lift, gamma, gain, offset);
+__DEVICE__ lggo_params_reals_t make_lggo_params_reals(float lift, float gamma, float mid_gamma, float gain, float offset) {
+    return (lggo_params_reals_t)make_lggo_params(lift, gamma, mid_gamma, gain, offset);
 }
 
 __DEVICE__ lggo_params_reals_t convert_lggo_to_reals(lggo_params_t params) {
     // Convert each of the parameters from the Resolve wheels values to the underlying real values.
-    return make_lggo_params(
-        params.lift * 2.0, convert_gamma_to_reals(params.gamma), params.gain, (params.offset - PRINTER_LIGHT_BASE) * OFFSET_SCALING);
+    return make_lggo_params(params.lift * 2.0,
+                            convert_gamma_to_reals(params.gamma),
+                            convert_gamma_to_reals(params.mid_gamma),
+                            params.gain,
+                            (params.offset - PRINTER_LIGHT_BASE) * OFFSET_SCALING);
 }
 
 __DEVICE__ lggo_params_t convert_lggo_to_wheels(lggo_params_reals_t params) {
     // Convert each of the parameters from the underlying real values to the Resolve wheels values.
-    return make_lggo_params(
-        params.lift / 2.0, convert_gamma_to_wheels(params.gamma), params.gain, (params.offset / OFFSET_SCALING) + PRINTER_LIGHT_BASE);
+    return make_lggo_params(params.lift / 2.0,
+                            convert_gamma_to_wheels(params.gamma),
+                            convert_gamma_to_wheels(params.mid_gamma),
+                            params.gain,
+                            (params.offset / OFFSET_SCALING) + PRINTER_LIGHT_BASE);
 }
 
 __DEVICE__ float convert_offset_real_to_printer_lights(float offset) {
@@ -306,29 +295,23 @@ __DEVICE__ float convert_offset_printer_lights_to_real(float offset) {
     return (offset - PRINTER_LIGHT_BASE) * OFFSET_SCALING;
 }
 
-__DEVICE__ float apply_lggo(float x, lggo_params_reals_t params, bool invert, bool gamma_preserve_mid_gray) {
+__DEVICE__ float apply_lggo(float x, lggo_params_reals_t params, bool invert, float mid_gray) {
     float white_out_x = 1.0 / params.gain;
     float black_out_x = (1.0 - (1.0 / (1.0 - params.lift)));
     float slope = 1.0 / (white_out_x - black_out_x);
     float out = x;
 
     if (invert) {
-        if (gamma_preserve_mid_gray) {
-            out = mid_gray_preserving_gamma(out, 1.0 / params.gamma);
-        } else {
-            out = powf(out, 1.0 / params.gamma);
-        }
+        out = mid_gray_preserving_gamma(out, 1.0 / params.mid_gamma, mid_gray);
+        out = powf(out, 1.0 / params.gamma);
         out = out - params.offset;
         out = out / slope;
         out = out + black_out_x;
     } else {
         out = slope * (out - black_out_x);
         out = out + params.offset;
-        if (gamma_preserve_mid_gray) {
-            out = mid_gray_preserving_gamma(out, params.gamma);
-        } else {
-            out = powf(out, params.gamma);
-        }
+        out = powf(out, params.gamma);
+        out = mid_gray_preserving_gamma(out, params.mid_gamma, mid_gray);
     }
     return out;
 }
@@ -377,14 +360,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
         output_color = curr_color;
 
-        // float magnitude;
-        // if (normalization_mode == NORMALIZE_MAX) {
-        //     magnitude = _fmaxf(curr_white.x, _fmaxf(curr_white.y, curr_white.z));
-        // } else {
-        //     magnitude = (curr_white.x + curr_white.y + curr_white.z) / 3.0;
-        // }
-        // output_color = curr_color / magnitude;
-
         lggo_params_reals_t lggo_params_r;
         lggo_params_reals_t lggo_params_g;
         lggo_params_reals_t lggo_params_b;
@@ -408,14 +383,13 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             lggo_params_b = ogg_to_lggo_params(ogg_params_b);
         }
 
-
         // Invert original adjustments.
-        output_color.x = apply_lggo(output_color.x, lggo_params_r, true, false);
-        output_color.y = apply_lggo(output_color.y, lggo_params_g, true, false);
-        output_color.z = apply_lggo(output_color.z, lggo_params_b, true, false);
-        if (debug_mode == DEBUG_INVERSE) {
-            return output_color;
-        }
+        output_color.x = apply_lggo(output_color.x, lggo_params_r, true, mid_gray);
+        output_color.y = apply_lggo(output_color.y, lggo_params_g, true, mid_gray);
+        output_color.z = apply_lggo(output_color.z, lggo_params_b, true, mid_gray);
+        // if (debug_mode == DEBUG_INVERSE) {
+        //     return output_color;
+        // }
 
         // Modify lggo parameters according to rebindings.
         // Original wheel settings
@@ -426,109 +400,165 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         float offset_real_g = lggo_params_g.offset;
         float offset_real_b = lggo_params_b.offset;
         // New ones to write to
-        bool gamma_preserve_mid_gray = false;
-        lggo_params_t default_wheels = make_lggo_params(0.0, 0.0, 1.0, PRINTER_LIGHT_BASE);
+        lggo_params_t default_wheels = make_lggo_params(0.0, 0.0, 0.0, 1.0, PRINTER_LIGHT_BASE);
         lggo_params_t new_lggo_params_r_wheels = default_wheels;
         lggo_params_t new_lggo_params_g_wheels = default_wheels;
         lggo_params_t new_lggo_params_b_wheels = default_wheels;
 
         float gamma_flip = invert_gamma_direction ? -1.0 : 1.0;
+        float mid_gray_gamma_flip = invert_mid_gray_gamma_direction ? -1.0 : 1.0;
 
         if (wheels == WHEELS_LGG) {
             if (lift_wheel_rebind == LIFT_REBIND_TO_LIFT) {
-                new_lggo_params_r_wheels.lift = lggo_params_r_wheels.lift;
-                new_lggo_params_g_wheels.lift = lggo_params_g_wheels.lift;
-                new_lggo_params_b_wheels.lift = lggo_params_b_wheels.lift;
+                new_lggo_params_r_wheels.lift += lggo_params_r_wheels.lift;
+                new_lggo_params_g_wheels.lift += lggo_params_g_wheels.lift;
+                new_lggo_params_b_wheels.lift += lggo_params_b_wheels.lift;
+            } else if (lift_wheel_rebind == LIFT_REBIND_TO_GAMMA) {
+                new_lggo_params_r_wheels.gamma += lggo_params_r_wheels.lift * gamma_flip;
+                new_lggo_params_g_wheels.gamma += lggo_params_g_wheels.lift * gamma_flip;
+                new_lggo_params_b_wheels.gamma += lggo_params_b_wheels.lift * gamma_flip;
+            } else if (lift_wheel_rebind == LIFT_REBIND_TO_MID_GRAY_PRESERVING_GAMMA) {
+                new_lggo_params_r_wheels.mid_gamma += lggo_params_r_wheels.lift * mid_gray_gamma_flip;
+                new_lggo_params_g_wheels.mid_gamma += lggo_params_g_wheels.lift * mid_gray_gamma_flip;
+                new_lggo_params_b_wheels.mid_gamma += lggo_params_b_wheels.lift * mid_gray_gamma_flip;
+            } else if (lift_wheel_rebind == LIFT_REBIND_TO_GAIN) {
+                new_lggo_params_r_wheels.gain *= _fmaxf(lggo_params_r_wheels.lift + 1.0, 0.0);
+                new_lggo_params_g_wheels.gain *= _fmaxf(lggo_params_g_wheels.lift + 1.0, 0.0);
+                new_lggo_params_b_wheels.gain *= _fmaxf(lggo_params_b_wheels.lift + 1.0, 0.0);
+            } else if (lift_wheel_rebind == LIFT_REBIND_TO_NORMALIZED_GAIN) {
+                float3 gains =
+                    make_float3(_fmaxf(lggo_params_r_wheels.lift + 1.0, 0.0), _fmaxf(lggo_params_g_wheels.lift + 1.0, 0.0), _fmaxf(lggo_params_b_wheels.lift + 1.0, 0.0));
+                float max_gain = _fmaxf(gains.x, _fmaxf(gains.y, gains.z));
+                float luminance = rec709_luminance(gains); // initially 1.0
+                float exposure_adjustment = luminance;
+                new_lggo_params_r_wheels.gain *= (gains.x / max_gain) * exposure_adjustment;
+                new_lggo_params_g_wheels.gain *= (gains.y / max_gain) * exposure_adjustment;
+                new_lggo_params_b_wheels.gain *= (gains.z / max_gain) * exposure_adjustment;
             } else if (lift_wheel_rebind == LIFT_REBIND_TO_OFFSET) {
-                new_lggo_params_r_wheels.offset = convert_offset_real_to_printer_lights(lggo_params_r_wheels.lift);
-                new_lggo_params_g_wheels.offset = convert_offset_real_to_printer_lights(lggo_params_g_wheels.lift);
-                new_lggo_params_b_wheels.offset = convert_offset_real_to_printer_lights(lggo_params_b_wheels.lift);
+                new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_r_wheels.lift) - PRINTER_LIGHT_BASE;
+                new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_g_wheels.lift) - PRINTER_LIGHT_BASE;
+                new_lggo_params_b_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_b_wheels.lift) - PRINTER_LIGHT_BASE;
             }
         }
 
-        if (gamma_wheel_rebind == GAMMA_REBIND_TO_GAMMA) {
-            gamma_preserve_mid_gray = false;
-            new_lggo_params_r_wheels.gamma = lggo_params_r_wheels.gamma * gamma_flip;
-            new_lggo_params_g_wheels.gamma = lggo_params_g_wheels.gamma * gamma_flip;
-            new_lggo_params_b_wheels.gamma = lggo_params_b_wheels.gamma * gamma_flip;
-        } else if (gamma_wheel_rebind == GAMMA_REBIND_TO_OFFSET) {
-            new_lggo_params_r_wheels.offset = convert_offset_real_to_printer_lights(lggo_params_r_wheels.gamma);
-            new_lggo_params_g_wheels.offset = convert_offset_real_to_printer_lights(lggo_params_g_wheels.gamma);
-            new_lggo_params_b_wheels.offset = convert_offset_real_to_printer_lights(lggo_params_b_wheels.gamma);
+        if (gamma_wheel_rebind == GAMMA_REBIND_TO_LIFT) {
+            new_lggo_params_r_wheels.lift += lggo_params_r_wheels.gamma;
+            new_lggo_params_g_wheels.lift += lggo_params_g_wheels.gamma;
+            new_lggo_params_b_wheels.lift += lggo_params_b_wheels.gamma;
+        } else if (gamma_wheel_rebind == GAMMA_REBIND_TO_GAMMA) {
+            new_lggo_params_r_wheels.gamma += lggo_params_r_wheels.gamma * gamma_flip;
+            new_lggo_params_g_wheels.gamma += lggo_params_g_wheels.gamma * gamma_flip;
+            new_lggo_params_b_wheels.gamma += lggo_params_b_wheels.gamma * gamma_flip;
         } else if (gamma_wheel_rebind == GAMMA_REBIND_TO_MID_GRAY_PRESERVING_GAMMA) {
-            gamma_preserve_mid_gray = true;
-            new_lggo_params_r_wheels.gamma = lggo_params_r_wheels.gamma * gamma_flip;
-            new_lggo_params_g_wheels.gamma = lggo_params_g_wheels.gamma * gamma_flip;
-            new_lggo_params_b_wheels.gamma = lggo_params_b_wheels.gamma * gamma_flip;
+            new_lggo_params_r_wheels.mid_gamma += lggo_params_r_wheels.gamma * mid_gray_gamma_flip;
+            new_lggo_params_g_wheels.mid_gamma += lggo_params_g_wheels.gamma * mid_gray_gamma_flip;
+            new_lggo_params_b_wheels.mid_gamma += lggo_params_b_wheels.gamma * mid_gray_gamma_flip;
+        } else if (gamma_wheel_rebind == GAMMA_REBIND_TO_GAIN) {
+            new_lggo_params_r_wheels.gain *= _fmaxf(lggo_params_r_wheels.gamma + 1.0, 0.0);
+            new_lggo_params_g_wheels.gain *= _fmaxf(lggo_params_g_wheels.gamma + 1.0, 0.0);
+            new_lggo_params_b_wheels.gain *= _fmaxf(lggo_params_b_wheels.gamma + 1.0, 0.0);
+        } else if (gamma_wheel_rebind == GAMMA_REBIND_TO_NORMALIZED_GAIN) {
+                float3 gains =
+                    make_float3(_fmaxf(lggo_params_r_wheels.gamma + 1.0, 0.0), _fmaxf(lggo_params_g_wheels.gamma + 1.0, 0.0), _fmaxf(lggo_params_b_wheels.gamma + 1.0, 0.0));
+                float max_gain = _fmaxf(gains.x, _fmaxf(gains.y, gains.z));
+                float luminance = rec709_luminance(gains); // initially 1.0
+                float exposure_adjustment = luminance;
+                new_lggo_params_r_wheels.gain *= (gains.x / max_gain) * exposure_adjustment;
+                new_lggo_params_g_wheels.gain *= (gains.y / max_gain) * exposure_adjustment;
+                new_lggo_params_b_wheels.gain *= (gains.z / max_gain) * exposure_adjustment;
+        } else if (gamma_wheel_rebind == GAMMA_REBIND_TO_OFFSET) {
+            new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_r_wheels.gamma) - PRINTER_LIGHT_BASE;
+            new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_g_wheels.gamma) - PRINTER_LIGHT_BASE;
+            new_lggo_params_b_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_b_wheels.gamma) - PRINTER_LIGHT_BASE;
         }
 
         if (gain_wheel_rebind == GAIN_REBIND_TO_GAIN) {
-            new_lggo_params_r_wheels.gain = lggo_params_r_wheels.gain;
-            new_lggo_params_g_wheels.gain = lggo_params_g_wheels.gain;
-            new_lggo_params_b_wheels.gain = lggo_params_b_wheels.gain;
+            new_lggo_params_r_wheels.gain *= lggo_params_r_wheels.gain;
+            new_lggo_params_g_wheels.gain *= lggo_params_g_wheels.gain;
+            new_lggo_params_b_wheels.gain *= lggo_params_b_wheels.gain;
+        } else if (gain_wheel_rebind == GAIN_REBIND_TO_LIFT) {
+            new_lggo_params_r_wheels.lift += (lggo_params_r_wheels.gain - 1.0);
+            new_lggo_params_g_wheels.lift += (lggo_params_g_wheels.gain - 1.0);
+            new_lggo_params_b_wheels.lift += (lggo_params_b_wheels.gain - 1.0);
         } else if (gain_wheel_rebind == GAIN_REBIND_TO_NORMALIZED_GAIN) {
             float3 gains = make_float3(lggo_params_r_wheels.gain, lggo_params_g_wheels.gain, lggo_params_b_wheels.gain);
             float max_gain = _fmaxf(gains.x, _fmaxf(gains.y, gains.z));
             float luminance = rec709_luminance(gains); // initially 1.0
             float exposure_adjustment = luminance;
-            new_lggo_params_r_wheels.gain = (gains.x / max_gain) * exposure_adjustment;
-            new_lggo_params_g_wheels.gain = (gains.y / max_gain) * exposure_adjustment;
-            new_lggo_params_b_wheels.gain = (gains.z / max_gain) * exposure_adjustment;
+            new_lggo_params_r_wheels.gain *= (gains.x / max_gain) * exposure_adjustment;
+            new_lggo_params_g_wheels.gain *= (gains.y / max_gain) * exposure_adjustment;
+            new_lggo_params_b_wheels.gain *= (gains.z / max_gain) * exposure_adjustment;
         } else if (gain_wheel_rebind == GAIN_REBIND_TO_GAMMA) {
-            gamma_preserve_mid_gray = false;
-            new_lggo_params_r_wheels.gamma = _clampf(lggo_params_r_wheels.gain - 1.0, -1.0, 1.0) * gamma_flip;
-            new_lggo_params_g_wheels.gamma = _clampf(lggo_params_g_wheels.gain - 1.0, -1.0, 1.0) * gamma_flip;
-            new_lggo_params_b_wheels.gamma = _clampf(lggo_params_b_wheels.gain - 1.0, -1.0, 1.0) * gamma_flip;
+            new_lggo_params_r_wheels.gamma += _clampf(lggo_params_r_wheels.gain - 1.0, -1.0, 1.0) * gamma_flip;
+            new_lggo_params_g_wheels.gamma += _clampf(lggo_params_g_wheels.gain - 1.0, -1.0, 1.0) * gamma_flip;
+            new_lggo_params_b_wheels.gamma += _clampf(lggo_params_b_wheels.gain - 1.0, -1.0, 1.0) * gamma_flip;
         } else if (gain_wheel_rebind == GAIN_REBIND_TO_MID_GRAY_PRESERVING_GAMMA) {
-            gamma_preserve_mid_gray = true;
-            new_lggo_params_r_wheels.gamma = _clampf(lggo_params_r_wheels.gain - 1.0, -1.0, 1.0) * gamma_flip;
-            new_lggo_params_g_wheels.gamma = _clampf(lggo_params_g_wheels.gain - 1.0, -1.0, 1.0) * gamma_flip;
-            new_lggo_params_b_wheels.gamma = _clampf(lggo_params_b_wheels.gain - 1.0, -1.0, 1.0) * gamma_flip;
+            new_lggo_params_r_wheels.mid_gamma += _clampf(lggo_params_r_wheels.gain - 1.0, -1.0, 1.0) * mid_gray_gamma_flip;
+            new_lggo_params_g_wheels.mid_gamma += _clampf(lggo_params_g_wheels.gain - 1.0, -1.0, 1.0) * mid_gray_gamma_flip;
+            new_lggo_params_b_wheels.mid_gamma += _clampf(lggo_params_b_wheels.gain - 1.0, -1.0, 1.0) * mid_gray_gamma_flip;
+        } else if (gain_wheel_rebind == GAIN_REBIND_TO_OFFSET) {
+            new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_r_wheels.gain - 1.0) - PRINTER_LIGHT_BASE;
+            new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_g_wheels.gain - 1.0) - PRINTER_LIGHT_BASE;
+            new_lggo_params_b_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_b_wheels.gain - 1.0) - PRINTER_LIGHT_BASE;
         }
 
         if (wheels == WHEELS_OGG) {
             if (offset_wheel_rebind == OFFSET_REBIND_TO_OFFSET) {
-                new_lggo_params_r_wheels.offset = lggo_params_r_wheels.offset;
-                new_lggo_params_g_wheels.offset = lggo_params_g_wheels.offset;
-                new_lggo_params_b_wheels.offset = lggo_params_b_wheels.offset;
+                new_lggo_params_r_wheels.offset += lggo_params_r_wheels.offset - PRINTER_LIGHT_BASE;
+                new_lggo_params_g_wheels.offset += lggo_params_g_wheels.offset - PRINTER_LIGHT_BASE;
+                new_lggo_params_b_wheels.offset += lggo_params_b_wheels.offset - PRINTER_LIGHT_BASE;
+            } else if (offset_wheel_rebind == OFFSET_REBIND_TO_LIFT) {
+                new_lggo_params_r_wheels.lift += offset_real_r;
+                new_lggo_params_g_wheels.lift += offset_real_g;
+                new_lggo_params_b_wheels.lift += offset_real_b;
+            } else if (offset_wheel_rebind == OFFSET_REBIND_TO_GAMMA) {
+                new_lggo_params_r_wheels.gamma += offset_real_r * gamma_flip;
+                new_lggo_params_g_wheels.gamma += offset_real_g * gamma_flip;
+                new_lggo_params_b_wheels.gamma += offset_real_b * gamma_flip;
+            } else if (offset_wheel_rebind == OFFSET_REBIND_TO_MID_GRAY_PRESERVING_GAMMA) {
+                new_lggo_params_r_wheels.mid_gamma += offset_real_r * mid_gray_gamma_flip;
+                new_lggo_params_g_wheels.mid_gamma += offset_real_g * mid_gray_gamma_flip;
+                new_lggo_params_b_wheels.mid_gamma += offset_real_b * mid_gray_gamma_flip;
             } else if (offset_wheel_rebind == OFFSET_REBIND_TO_GAIN) {
-                new_lggo_params_r_wheels.gain = _fmaxf(offset_real_r + 1.0, 0.0);
-                new_lggo_params_g_wheels.gain = _fmaxf(offset_real_g + 1.0, 0.0);
-                new_lggo_params_b_wheels.gain = _fmaxf(offset_real_b + 1.0, 0.0);
+                new_lggo_params_r_wheels.gain *= _fmaxf(offset_real_r + 1.0, 0.0);
+                new_lggo_params_g_wheels.gain *= _fmaxf(offset_real_g + 1.0, 0.0);
+                new_lggo_params_b_wheels.gain *= _fmaxf(offset_real_b + 1.0, 0.0);
             } else if (offset_wheel_rebind == OFFSET_REBIND_TO_NORMALIZED_GAIN) {
-                new_lggo_params_r_wheels.gain = _fmaxf(offset_real_r + 1.0, 0.0);
-                new_lggo_params_g_wheels.gain = _fmaxf(offset_real_g + 1.0, 0.0);
-                new_lggo_params_b_wheels.gain = _fmaxf(offset_real_b + 1.0, 0.0);
-                float3 gains = make_float3(new_lggo_params_r_wheels.gain, new_lggo_params_g_wheels.gain, new_lggo_params_b_wheels.gain);
+                float3 gains =
+                    make_float3(_fmaxf(offset_real_r + 1.0, 0.0), _fmaxf(offset_real_g + 1.0, 0.0), _fmaxf(offset_real_b + 1.0, 0.0));
                 float max_gain = _fmaxf(gains.x, _fmaxf(gains.y, gains.z));
                 float luminance = rec709_luminance(gains); // initially 1.0
                 float exposure_adjustment = luminance;
-                new_lggo_params_r_wheels.gain = (gains.x / max_gain) * exposure_adjustment;
-                new_lggo_params_g_wheels.gain = (gains.y / max_gain) * exposure_adjustment;
-                new_lggo_params_b_wheels.gain = (gains.z / max_gain) * exposure_adjustment;
+                new_lggo_params_r_wheels.gain *= (gains.x / max_gain) * exposure_adjustment;
+                new_lggo_params_g_wheels.gain *= (gains.y / max_gain) * exposure_adjustment;
+                new_lggo_params_b_wheels.gain *= (gains.z / max_gain) * exposure_adjustment;
             } else if (offset_wheel_rebind == OFFSET_REBIND_TO_PRINTER_LIGHTS_EXPOSURE) {
-                new_lggo_params_r_wheels.gain = printer_lights_gain(lggo_params_r_wheels.offset, film_negative_gamma);
-                new_lggo_params_g_wheels.gain = printer_lights_gain(lggo_params_g_wheels.offset, film_negative_gamma);
-                new_lggo_params_b_wheels.gain = printer_lights_gain(lggo_params_b_wheels.offset, film_negative_gamma);
+                new_lggo_params_r_wheels.gain *= printer_lights_gain(lggo_params_r_wheels.offset, film_negative_gamma);
+                new_lggo_params_g_wheels.gain *= printer_lights_gain(lggo_params_g_wheels.offset, film_negative_gamma);
+                new_lggo_params_b_wheels.gain *= printer_lights_gain(lggo_params_b_wheels.offset, film_negative_gamma);
             }
         }
 
-        if (debug_mode == DEBUG_LIFT) {
-            return make_float3(new_lggo_params_r_wheels.lift, new_lggo_params_g_wheels.lift, new_lggo_params_b_wheels.lift);
-        }
-        if (debug_mode == DEBUG_GAMMA) {
-            return make_float3(new_lggo_params_r_wheels.gamma, new_lggo_params_g_wheels.gamma, new_lggo_params_b_wheels.gamma);
-        }
-        if (debug_mode == DEBUG_GAIN) {
-            return make_float3(new_lggo_params_r_wheels.gain, new_lggo_params_g_wheels.gain, new_lggo_params_b_wheels.gain);
-        }
-        if (debug_mode == DEBUG_OFFSET) {
-            return make_float3(new_lggo_params_r_wheels.offset, new_lggo_params_g_wheels.offset, new_lggo_params_b_wheels.offset);
-        }
+        // if (debug_mode == DEBUG_LIFT) {
+        //     return make_float3(new_lggo_params_r_wheels.lift, new_lggo_params_g_wheels.lift, new_lggo_params_b_wheels.lift);
+        // }
+        // if (debug_mode == DEBUG_GAMMA) {
+        //     return make_float3(new_lggo_params_r_wheels.gamma, new_lggo_params_g_wheels.gamma, new_lggo_params_b_wheels.gamma);
+        // }
+        // if (debug_mode == DEBUG_MID_GAMMA) {
+        //     return make_float3(new_lggo_params_r_wheels.mid_gamma, new_lggo_params_g_wheels.mid_gamma,
+        //     new_lggo_params_b_wheels.mid_gamma);
+        // }
+        // if (debug_mode == DEBUG_GAIN) {
+        //     return make_float3(new_lggo_params_r_wheels.gain, new_lggo_params_g_wheels.gain, new_lggo_params_b_wheels.gain);
+        // }
+        // if (debug_mode == DEBUG_OFFSET) {
+        //     return make_float3(new_lggo_params_r_wheels.offset, new_lggo_params_g_wheels.offset, new_lggo_params_b_wheels.offset);
+        // }
 
-        output_color.x = apply_lggo(output_color.x, convert_lggo_to_reals(new_lggo_params_r_wheels), false, gamma_preserve_mid_gray);
-        output_color.y = apply_lggo(output_color.y, convert_lggo_to_reals(new_lggo_params_g_wheels), false, gamma_preserve_mid_gray);
-        output_color.z = apply_lggo(output_color.z, convert_lggo_to_reals(new_lggo_params_b_wheels), false, gamma_preserve_mid_gray);
+        output_color.x = apply_lggo(output_color.x, convert_lggo_to_reals(new_lggo_params_r_wheels), false, mid_gray);
+        output_color.y = apply_lggo(output_color.y, convert_lggo_to_reals(new_lggo_params_g_wheels), false, mid_gray);
+        output_color.z = apply_lggo(output_color.z, convert_lggo_to_reals(new_lggo_params_b_wheels), false, mid_gray);
     }
     return output_color;
 }
