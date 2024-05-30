@@ -1,0 +1,167 @@
+// clang-format off
+DEFINE_UI_PARAMS(opacity, Opacity, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(aspect_ratio, Aspect Ratio, DCTLUI_VALUE_BOX, 1.7777777)
+DEFINE_UI_PARAMS(use_timeline_aspect, Use Timeline Aspect, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(output_mode, Output Mode, DCTLUI_COMBO_BOX, 0, {OUTPUT_MODE_HIGHLIGHT_EDGES, OUTPUT_MODE_HIGHLIGHT_BLANKING, OUTPUT_MODE_FULL_SCREEN_WARNING}, {Highlight Edges, Highlight Blanking, Full Screen Warning})
+DEFINE_UI_PARAMS(performance_mode, Performance Mode, DCTLUI_COMBO_BOX, 0, {MODE_PERFORMANCE, MODE_QUALITY}, {Performance, Quality})
+
+// clang-format on
+
+__DEVICE__ float3 sample_color(int2 pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    return make_float3(_tex2D(p_TexR, pos.x, pos.y), _tex2D(p_TexG, pos.x, pos.y), _tex2D(p_TexB, pos.x, pos.y));
+}
+
+__DEVICE__ inline bool int2_eq(int2 a, int2 b) {
+    return a.x == b.x && a.y == b.y;
+}
+
+__DEVICE__ inline int2 mid_point(int2 a, int2 b) {
+    return make_int2((a.x + b.x) / 2, (a.y + b.y) / 2);
+}
+
+typedef struct {
+        int top;
+        int bottom;
+        int left;
+        int right;
+        // bottom and right are inclusive.
+} bounds_t;
+
+__DEVICE__ bounds_t make_bounds(int top, int bottom, int left, int right) {
+    bounds_t bounds = {};
+    bounds.top = top;
+    bounds.bottom = bottom;
+    bounds.left = left;
+    bounds.right = right;
+    return bounds;
+}
+
+__DEVICE__ bool on_bounds(int2 pos, bounds_t bounds) {
+    return (bounds.left <= pos.x && pos.x <= bounds.right && (pos.y == bounds.top || pos.y == bounds.bottom)) ||
+           (bounds.top <= pos.y && pos.y <= bounds.bottom && (pos.x == bounds.left || pos.x == bounds.right));
+}
+
+__DEVICE__ bool within_bounds(int2 pos, bounds_t bounds) {
+    return ((bounds.left <= pos.x && pos.x <= bounds.right) && (pos.y >= bounds.top && pos.y <= bounds.bottom));
+}
+
+__DEVICE__ bounds_t get_bounds(int2 dimensions, float aspect_ratio) {
+
+    // Compute the timeline aspect ratio p_Width / p_Height
+    float timeline_aspect_ratio = (float)dimensions.x / (float)dimensions.y;
+
+    // Compare it to aspect ratio, see which one is bigger.
+    float desired_width;
+    float desired_height;
+    if (timeline_aspect_ratio > aspect_ratio) {
+        desired_height = dimensions.y;
+        desired_width = desired_height * aspect_ratio;
+    } else {
+        desired_width = dimensions.x;
+        desired_height = desired_width / aspect_ratio;
+    }
+
+    // Figure out how large the side bars are
+    float side_bar_width = (dimensions.x - desired_width) / 2.0;
+    // Figure out how large the top/bottom bars are
+    float top_bar_width = (dimensions.y - desired_height) / 2.0;
+
+    bounds_t bounds = make_bounds((int)_round(top_bar_width),
+                                  (int)_round(dimensions.y - top_bar_width - 1),
+                                  (int)_round(side_bar_width),
+                                  (int)_round(dimensions.x - side_bar_width - 1));
+    return bounds;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    int2 curr_pos = make_int2(p_X, p_Y);
+    int2 dimensions = make_int2(p_Width, p_Height);
+
+    float3 curr_color = sample_color(curr_pos, p_TexR, p_TexG, p_TexB);
+
+    bounds_t bounds;
+    if (use_timeline_aspect) {
+        bounds = make_bounds(0, dimensions.y - 1, 0, dimensions.x - 1);
+    } else {
+        bounds = get_bounds(dimensions, aspect_ratio);
+    }
+
+    if (!within_bounds(curr_pos, bounds)) {
+        return curr_color;
+    }
+    float3 output_color = curr_color;
+
+    if (output_mode == OUTPUT_MODE_HIGHLIGHT_EDGES) {
+        if (on_bounds(curr_pos, bounds)) {
+            // Returns white border
+            output_color = make_float3(1.0, 1.0, 1.0);
+        }
+    } else if (output_mode == OUTPUT_MODE_HIGHLIGHT_BLANKING) {
+        if (curr_color.x == 0.0 && curr_color.y == 0.0 && curr_color.z == 0.0) {
+            // Returns green.
+            output_color = make_float3(0.0, 1.0, 0.0);
+        }
+    } else if (output_mode == OUTPUT_MODE_FULL_SCREEN_WARNING) {
+        if (curr_color.x == 0.0 && curr_color.y == 0.0 && curr_color.z == 0.0) {
+            // Returns green.
+            output_color = make_float3(0.0, 1.0, 0.0);
+        } else {
+            // Check if the border pixels are black, just checking the main eight pixels
+            if (performance_mode == MODE_PERFORMANCE) {
+                int2 samples[8] = {
+                    // Corners
+                    make_int2(bounds.left, bounds.top),
+                    make_int2(bounds.left, bounds.bottom),
+                    make_int2(bounds.right, bounds.top),
+                    make_int2(bounds.right, bounds.bottom),
+                    // Edge Midpoints
+                    mid_point(make_int2(bounds.left, bounds.top), make_int2(bounds.left, bounds.bottom)),
+                    mid_point(make_int2(bounds.left, bounds.top), make_int2(bounds.right, bounds.top)),
+                    mid_point(make_int2(bounds.right, bounds.top), make_int2(bounds.right, bounds.bottom)),
+                    mid_point(make_int2(bounds.left, bounds.bottom), make_int2(bounds.right, bounds.bottom)),
+                };
+
+                for (int i = 0; i < 8; i++) {
+                    float3 edge_color = sample_color(samples[i], p_TexR, p_TexG, p_TexB);
+                    if (edge_color.x == 0.0 && edge_color.y == 0.0 && edge_color.z == 0.0) {
+                        // Make current pixel pink, filling the frame.
+                        output_color = _mix(curr_color, make_float3(1.0, 0.0, 1.0), opacity);
+                        break;
+                    }
+                }
+            } else if (performance_mode == MODE_QUALITY) {
+                // Run through all pixels such that they are on the border and if any are black, return pink.
+                int2 curr_positions[4] = {
+                    make_int2(bounds.left, bounds.top),
+                    make_int2(bounds.left, bounds.bottom),
+                    make_int2(bounds.right, bounds.top),
+                    make_int2(bounds.left, bounds.top),
+                };
+                int2 next_positions[4] = {
+                    make_int2(bounds.left, bounds.bottom),
+                    make_int2(bounds.right, bounds.bottom),
+                    make_int2(bounds.right, bounds.bottom),
+                    make_int2(bounds.right, bounds.top),
+                };
+                for (int i = 0; i < 4; i++) {
+                    int2 runner_curr_pos = curr_positions[i];
+                    int2 runner_next_pos = next_positions[i];
+
+                    for (int x = runner_curr_pos.x; x <= runner_next_pos.x; x++) {
+                        for (int y = runner_curr_pos.y; y <= runner_next_pos.y; y++) {
+                            int2 pos = make_int2(x, y);
+                            float3 edge_color = sample_color(pos, p_TexR, p_TexG, p_TexB);
+                            if (edge_color.x == 0.0 && edge_color.y == 0.0 && edge_color.z == 0.0) {
+                                // Make current pixel pink, filling the frame.
+                                output_color = _mix(curr_color, make_float3(1.0, 0.0, 1.0), opacity);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return output_color;
+}

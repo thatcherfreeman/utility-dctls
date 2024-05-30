@@ -96,6 +96,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Pure Log Curve DCTL](#pure-log-curve-dctl)
         - [Quantize](#quantize)
         - [Rebind LGGO DCTL](#rebind-lggo-dctl)
+        - [Resize Checker DCTL](#resize-checker-dctl)
         - [RGB Chips DCTL](#rgb-chips-dctl)
         - [Safety Lines DCTL](#safety-lines-dctl)
         - [SNR Checker DCTL](#snr-checker-dctl)
@@ -1590,6 +1591,21 @@ In node (1) when the mode is set to "Inject Patches", this DCTL generates a sing
 **Max Normalized Gain**: Similar to Gain but makes it so that trackball adjustments cannot increase the signal in any channel, IE max(rgb) is fixed instead of just rec709 luminance.
 
 **Min Normalized Offset**: Sets up your offset trackball so that it always applies a positive offset unless you lower the global offset wheel.
+
+---
+### Resize Checker DCTL
+Helps you identify if you've rescaled a clip poorly, by lighting up the whole frame if the very border of the frame contains black pixels. Put this at the timeline level.
+
+#### DCTL Parameters
+**Opacity**: Choose the opacity of the magenta full frame resize warning.
+
+**Aspect Ratio**: The aspect ratio within which to search
+
+**Use Timeline Aspect**: If checked, ignores the **Aspect Ratio** argument and instead just uses the timeline aspect ratio.
+
+**Output Mode**: Choose what to display. If Highlight Edges is selected, then we draw a line indicating the exact pixels that will be checked in Quality mode. If any of these white pixels is black, then the entire frame will be drawn pink. Highlight Blanking simply highlights all black pixels as green. Full Screen Warning is the same as Highlight Blanking, but it also highlights the entire frame as pink if any pixel on the border of the frame is black.
+
+**Performance Mode**: "Performance" simply checks the pixels in the four corners and the midpoints of the edges, which will catch bad framing for all linear transforms (scale, aspect, panning, keystone correction). "Quality" mode instead checks every pixel along the border of the frame (indicated by Highlight Edges), which you'll need if you added pincushion lens distortion or corrected for barrel distortion. However, it has the downside that you're more likely to have a false positive if there's a spurrious black pixel.
 
 ---
 

@@ -102,30 +102,30 @@ def test(gamma, gain, offset):
 
 def main():
 
-    offset = -0.3
-    gain = 2.0
-    gamma = 0.3
+    offset = -1.0
+    gain = 1.0
+    gamma = 0.5555555555
 
     successes = 0
     failures = 0
 
-    # test(1.0, 0.287046, 0.0)
+    test(offset, gamma, gain)
 
-    for _ in range(100000):
-        offset = random.uniform(-0.5, .5)
-        gain = random.uniform(0.2, 3)
-        gamma = random.uniform(0.1, 4.5)
-        try:
-            result = test(gamma, gain, offset)
-            if result:
-                successes += 1
-            else:
-                failures += 1
-        except Exception as e:
-            print(f"Error: {e}")
-            failures += 1
-    print(f"Successes: {successes}")
-    print(f"Failures: {failures}")
+    # for _ in range(100000):
+    #     offset = random.uniform(-0.5, .5)
+    #     gain = random.uniform(0.2, 3)
+    #     gamma = random.uniform(0.1, 4.5)
+    #     try:
+    #         result = test(gamma, gain, offset)
+    #         if result:
+    #             successes += 1
+    #         else:
+    #             failures += 1
+    #     except Exception as e:
+    #         print(f"Error: {e}")
+    #         failures += 1
+    # print(f"Successes: {successes}")
+    # print(f"Failures: {failures}")
 
 
 if __name__ == "__main__":
