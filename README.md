@@ -1279,6 +1279,8 @@ Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and se
 
 **Show Linear Ramp**: Toggle to turn off the 0-1 scale ramp at the bottom.
 
+**Show Exponential Ramp**: Toggle to turn off the smooth stop ramp at the bottom.
+
 ---
 
 ### False Color Generator DCTL
