@@ -40,11 +40,11 @@ __DEVICE__ void mat_inverse_33(float inv_buf[3][3], float m[3][3]) {
 }
 
 __DEVICE__ int get_coord(float x, int width) {
-    return (int)_round((x + 0.5f) * (width + 1));
+    return (int)_round((x + 0.5f) * (width - 1));
 }
 
 __DEVICE__ float get_coord_float(float x, int width) {
-    return ((x + 0.5f) * (float)(width + 1));
+    return ((x + 0.5f) * (float)(width - 1));
 }
 
 __DEVICE__ float3 get_color(int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
