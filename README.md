@@ -495,6 +495,9 @@ Provides an HSV-like user interface for 3x3 Matrix operations, analogous to adju
 
 **Red/Green/Blue Sat**: Indicate the HSV sat adjustment you you want to make to a pure Red/Green/Blue input. This is multiplied by the input saturation.
 
+**Model**: Choose whether Hue and Saturation are computed in HSV or Cylindrical
+
+**Invert**: Check to invert the matrix so you can use this in a sandwich.
 
 ---
 

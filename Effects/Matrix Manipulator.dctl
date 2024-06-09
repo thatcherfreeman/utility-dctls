@@ -7,7 +7,98 @@ DEFINE_UI_PARAMS(green_sat, Green Sat, DCTLUI_SLIDER_FLOAT, 1, 0.0, 3.0, 0.1)
 DEFINE_UI_PARAMS(blue_hue, Blue Hue, DCTLUI_SLIDER_FLOAT, 0, -60.0, 60.0, 0.1)
 DEFINE_UI_PARAMS(blue_sat, Blue Sat, DCTLUI_SLIDER_FLOAT, 1, 0.0, 3.0, 0.1)
 
+DEFINE_UI_PARAMS(model, Model, DCTLUI_COMBO_BOX, 0, {MODEL_HSV, MODEL_CYLINDRICAL}, {HSV, Cylindrical})
+DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
+
 // clang-format on
+
+#define PI (3.1415926535897932384626)
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    // matrix * vector multiplication
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ void copy_mat_33(float from[3][3], float to[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            to[i][j] = from[i][j];
+        }
+    }
+}
+
+__DEVICE__ void mat_inverse_33(float dest[3][3], float m[3][3]) {
+    // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
+
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+    dest[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
+    dest[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det;
+    dest[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
+    dest[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det;
+    dest[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
+    dest[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det;
+    dest[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
+    dest[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det;
+    dest[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
+}
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
+    // Adapted from Juan Pablo Zambrano's code
+    float3 lsh = make_float3(hsv.z, hsv.y * 3.0, mod(hsv.x / 360.0, 1.0) * 2.0 * PI);
+
+    float ctr = lsh.x * lsh.y * _cosf(lsh.z);
+    float ctg = lsh.x;
+    float ctb = lsh.x * lsh.y * _sinf(lsh.z);
+    float3 c = make_float3(ctr, ctg, ctb);
+
+    float mat[3][3] = {
+        {2.0 / 3.0, 1.0, 0.0},
+        {-1.0 / 3.0, 1.0, _sqrtf(3.0) / 3.0},
+        {-1.0 / 3.0, 1.0, -_sqrtf(3.0) / 3.0},
+    };
+
+    return mv_33_3(mat, c);
+}
+
+__DEVICE__ float3 rgb_to_cylindrical(float3 x) {
+
+    // Matrix aligns and scales achromatic white (1, 1, 1) with (0, 1, 0)
+    // Also rotates input (1, 0, 0) above the red axis and ensures that
+    // (1, 0, 0) input ends up having a red channel code value of (1).
+    float mat[3][3] = {
+        {1.0, -1.0 / 2.0, -1.0 / 2.0},
+        {1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0},
+        {0.0, _sqrtf(3.0) / 2.0, -_sqrtf(3.0) / 2.0},
+    };
+
+    float3 rotated_color = mv_33_3(mat, x);
+    float l = rotated_color.y;
+    float3 hsl = make_float3(0.0, 0.0, 0.0);
+
+    float3 normalized_color = rotated_color / l;
+    if (l == 0.0) {
+        hsl = make_float3(0.0, 0.0, l);
+    } else {
+        float theta = _atan2f(normalized_color.z, normalized_color.x);
+        hsl.x = mod(theta, 2.0 * PI) / (2.0 * PI) * 360.0;
+        hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0;
+        hsl.z = l;
+    }
+    return hsl;
+}
 
 __DEVICE__ float3 hsv_to_rgb(float3 hsv) {
     float hue = hsv.x;
@@ -69,43 +160,6 @@ __DEVICE__ float3 rgb_to_hsv(float3 rgb) {
     return color;
 }
 
-__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
-    // matrix * vector multiplication
-    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
-                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
-                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
-    return out;
-}
-
-__DEVICE__ void copy_mat_33(float from[3][3], float to[3][3]) {
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            to[i][j] = from[i][j];
-        }
-    }
-}
-
-__DEVICE__ void mat_inverse_33(float inv_buf[3][3], float m[3][3]) {
-    // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
-
-    float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
-                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
-
-    inv_buf[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
-    inv_buf[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det;
-    inv_buf[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
-    inv_buf[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det;
-    inv_buf[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
-    inv_buf[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det;
-    inv_buf[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
-    inv_buf[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det;
-    inv_buf[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
-}
-
-__DEVICE__ float sum_f3(float3 x) {
-    return x.x + x.y + x.z;
-}
-
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 curr_color = make_float3(p_R, p_G, p_B);
 
@@ -114,9 +168,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     // same with green/blue
     // pure white in -> pure white out
 
-    float3 red_hsv = rgb_to_hsv(make_float3(1.0, 0.0, 0.0));
-    float3 green_hsv = rgb_to_hsv(make_float3(0.0, 1.0, 0.0));
-    float3 blue_hsv = rgb_to_hsv(make_float3(0.0, 0.0, 1.0));
+    float3 red_hsv, green_hsv, blue_hsv;
+    if (model == MODEL_HSV) {
+        red_hsv = rgb_to_hsv(make_float3(1.0, 0.0, 0.0));
+        green_hsv = rgb_to_hsv(make_float3(0.0, 1.0, 0.0));
+        blue_hsv = rgb_to_hsv(make_float3(0.0, 0.0, 1.0));
+    } else if (model == MODEL_CYLINDRICAL) {
+        red_hsv = rgb_to_cylindrical(make_float3(1.0, 0.0, 0.0));
+        green_hsv = rgb_to_cylindrical(make_float3(0.0, 1.0, 0.0));
+        blue_hsv = rgb_to_cylindrical(make_float3(0.0, 0.0, 1.0));
+    }
+
     red_hsv.x += red_hue;
     red_hsv.y *= red_sat;
 
@@ -126,27 +188,35 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     blue_hsv.x += blue_hue;
     blue_hsv.y *= blue_sat;
 
-    float3 red_target_rgb = hsv_to_rgb(red_hsv);
-    float3 green_target_rgb = hsv_to_rgb(green_hsv);
-    float3 blue_target_rgb = hsv_to_rgb(blue_hsv);
+    float3 red_target_rgb, green_target_rgb, blue_target_rgb;
+    if (model == MODEL_HSV) {
+        red_target_rgb = hsv_to_rgb(red_hsv);
+        green_target_rgb = hsv_to_rgb(green_hsv);
+        blue_target_rgb = hsv_to_rgb(blue_hsv);
+    } else if (model == MODEL_CYLINDRICAL) {
+        red_target_rgb = cylindrical_to_rgb(red_hsv);
+        green_target_rgb = cylindrical_to_rgb(green_hsv);
+        blue_target_rgb = cylindrical_to_rgb(blue_hsv);
+    }
+
     float mat[3][3] = {
-        red_target_rgb.x,
-        green_target_rgb.x,
-        blue_target_rgb.x,
-        red_target_rgb.y,
-        green_target_rgb.y,
-        blue_target_rgb.y,
-        red_target_rgb.z,
-        green_target_rgb.z,
-        blue_target_rgb.z,
+        {red_target_rgb.x, green_target_rgb.x, blue_target_rgb.x},
+        {red_target_rgb.y, green_target_rgb.y, blue_target_rgb.y},
+        {red_target_rgb.z, green_target_rgb.z, blue_target_rgb.z},
     };
 
     // set these so that all rows sum to 1.0.
-    float inv[3][3] = {0.0};
-
+    float inv[3][3] = {{0.0}};
     mat_inverse_33(inv, mat);
+
     float3 gains = mv_33_3(inv, make_float3(1.0, 1.0, 1.0));
 
-    float3 res = mv_33_3(mat, curr_color * gains);
-    return res;
+    float3 output;
+    if (invert) {
+        output = mv_33_3(inv, curr_color) / gains;
+    } else {
+        output = mv_33_3(mat, curr_color * gains);
+    }
+
+    return output;
 }

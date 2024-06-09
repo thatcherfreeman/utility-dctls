@@ -4,10 +4,6 @@ DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {TO_CYLINDRICAL, TO_
 
 #define PI 3.1415926535897932384626
 
-__DEVICE__ inline float pow2f(float base) {
-    return base * base;
-}
-
 __DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
     float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
                              mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
@@ -25,6 +21,7 @@ __DEVICE__ float mod(float x, float y) {
 
 __DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
     // Adapted from Juan Pablo Zambrano's code
+    // hue is in range of 0-1
     float3 lsh = make_float3(hsv.z, hsv.y * 3.0, mod(hsv.x, 1.0) * 2.0 * PI);
 
     float ctr = lsh.x * lsh.y * _cosf(lsh.z);
@@ -46,6 +43,7 @@ __DEVICE__ float3 rgb_to_cylindrical(float3 x) {
     // Matrix aligns and scales achromatic white (1, 1, 1) with (0, 1, 0)
     // Also rotates input (1, 0, 0) above the red axis and ensures that
     // (1, 0, 0) input ends up having a red channel code value of (1).
+    // outputs hue in range 0-1
     float mat[3][3] = {
         {1.0, -1.0 / 2.0, -1.0 / 2.0},
         {1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0},
