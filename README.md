@@ -32,6 +32,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Linear Contrast DCTL](#linear-contrast-dctl)
         - [Matrix Manipulator](#matrix-manipulator)
         - [MTF Curve DCTL](#mtf-curve-dctl)
+        - [Parametric Blur DCTL](#parametric-blur-dctl)
         - [Photon Noise DCTL](#photon-noise-dctl)
         - [Random Channel Mixer](#random-channel-mixer)
         - [Random Contrast Curve](#random-contrast-curve)
@@ -517,7 +518,20 @@ quotient_out := (input_value / low_pass5)^band5_contrast * (low_pass5 / low_pass
 difference_out := (input_value - low_pass5)*band5_contrast + (low_pass5 - low_pass4)*band4_contrast + ... + low_pass1
 ```
 
+---
+### Parametric Blur DCTL
+Blur kernel where you can choose the Distance vs Weight function. Use this on a linear image.
 
+#### DCTL Parameters
+**Falloff Start**: Distance to Blur Radius that should be assigned weight 1.0.
+
+**Falloff Gamma**: Adjusts the curvature of the spread function.
+
+**Blur Radius**: Adjusts the radius of the blur kernel. This is normalized to a 2048 pixel wide frame so that when you change timeline resolution, the appearance of the blur should remain unchanged.
+
+**Blur Opacity**: Adjust the opacity of the blur. If you want to emulate a diffusion filter, set this to around 0.2.
+
+**Draw Curve**: Shows you the distance vs weight function of the kernel. The dashed line in the middle represents the center of the kernel, and the dashed lines on the left and right side represent a distance equal to **blur radius**. The curve represents the weight assigned at each distance. Under the hood, the area under the curve is normalized to equal 1.0.
 
 
 ---

@@ -1,0 +1,141 @@
+#line 2
+
+// clang-format off
+
+DEFINE_UI_PARAMS(falloff_start, Falloff Start, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(gamma, Falloff Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.01)
+
+DEFINE_UI_PARAMS(blur_rad, Blur Radius, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 20.0, 0.1)
+DEFINE_UI_PARAMS(blur_opacity, Blur Opacity, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(draw_curve, Draw Curve, DCTLUI_CHECK_BOX, 0)
+
+// clang-format on
+
+__DEVICE__ float3 sample_color(int2 pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    return make_float3(_tex2D(p_TexR, pos.x, pos.y), _tex2D(p_TexG, pos.x, pos.y), _tex2D(p_TexB, pos.x, pos.y));
+}
+
+__DEVICE__ float powi(float x, int exp) {
+    float out = 1.0;
+    int abs_exp = exp < 0 ? exp * -1 : exp;
+    for (int i = 0; i < abs_exp; ++i) {
+        out *= x;
+    }
+    if (exp < 0) {
+        out = 1.0 / out;
+    }
+    return out;
+}
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float smoothstep2(float start, float end, float alpha) {
+    // alpha expected to be from 0 to 1.
+    // https://www.desmos.com/calculator/pernscu1gx
+    alpha = _clampf(alpha, 0.0, 1.0);
+    float factor;
+    if (alpha < 0.5) {
+        factor = 0.5 * powi(alpha * 2.0, 3);
+    } else {
+        factor = 0.5 * (2.0 - powi(2.0 - (alpha * 2.0), 3));
+    }
+    return _mix(start, end, factor);
+}
+
+__DEVICE__ float convert_gamma_to_reals(float g) {
+    // Converts -1 to +1 range to an exponent
+    // Essentially what Resolve does with its gamma
+    // correction.
+    float out;
+    if (g <= 0) {
+        out = 1.0f + (-4.0f * g);
+    } else {
+        out = 1.0f / (4.0f * g + 1);
+    }
+    return out;
+}
+
+typedef struct {
+        float blur_rad; // radius from center of blur that has zero weight.
+        float falloff_start;
+        float gamma;
+} kernel_params_t;
+
+__DEVICE__ kernel_params_t make_kernel_params(float blur_rad, float falloff_start, float gamma) {
+    kernel_params_t params;
+    params.blur_rad = blur_rad;
+    params.falloff_start = falloff_start;
+    params.gamma = gamma;
+    return params;
+}
+
+__DEVICE__ float blur_kernel(float2 pos_trans, kernel_params_t params) {
+    // pos_trans is number of pixels away from the center of the blur. IE curr_pos - center_pos
+    float distance = _hypotf(pos_trans.x, pos_trans.y);
+    if (distance > params.blur_rad) {
+        return 0.0;
+    }
+
+    return smoothstep2(1.0,
+                       0.0,
+                       powf((distance / params.blur_rad - params.falloff_start) / (1.0 - params.falloff_start),
+                            convert_gamma_to_reals(-1 * params.gamma)));
+}
+
+__DEVICE__ float3
+blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, kernel_params_t params) {
+    float3 total_color = make_float3(0.0, 0.0, 0.0);
+    float weight = 0.0;
+    if (params.blur_rad < 1) {
+        return sample_color(center_pos, p_TexR, p_TexG, p_TexB);
+    }
+    int num_pixels = 0;
+    for (int y = -params.blur_rad; y <= params.blur_rad; y++) {
+        for (int x = -params.blur_rad; x <= params.blur_rad; x++) {
+            int2 runner_pos = center_pos + make_int2(x, y);
+            float3 curr_color = sample_color(runner_pos, p_TexR, p_TexG, p_TexB);
+
+            float w = blur_kernel(make_float2(x, y), params);
+            total_color += curr_color * w;
+            weight += w;
+            num_pixels++;
+        }
+    }
+    return total_color / weight;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    int2 curr_pos = make_int2(p_X, p_Y);
+
+    float3 curr_color = sample_color(curr_pos, p_TexR, p_TexG, p_TexB);
+    kernel_params_t params = make_kernel_params(blur_rad, falloff_start, gamma);
+    // kernel_params_t params = make_kernel_params(blur_rad * p_Width / 2048.0, center_slope, midpoint_height, edge_height, edge_slope);
+    float3 blur_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
+    float3 output_color = _mix(curr_color, blur_color, blur_opacity);
+
+    if (draw_curve) {
+        float max_weight = blur_kernel(make_float2(0, 0), params);
+        float x = (float)p_X / (float)(p_Width - 1);
+        float y = (float)p_Y / (float)(p_Height - 1);
+        x = (x * 2.0) - 1.0; // normalize so that middle is zero
+        x = x * 1.2;         // Go a little wider so that we can see the smoothness of the PSF.
+        y = 1 - y;
+        y = y * 2.0;
+        params.blur_rad = 1.0;
+
+        float curr_weight = blur_kernel(make_float2(x, 0), params);
+        if (_fabs(y - (curr_weight / max_weight)) < 0.002) {
+            output_color = make_float3(1.0, 1.0, 1.0);
+        }
+        if (_fabs(_fabs(x) - params.blur_rad) < 0.002 && _fmod(y, 0.1) < 0.05) {
+            output_color = make_float3(0.2, 0.2, 0.2);
+        }
+        if (_fabs(x) < 0.002 && _fmod(y, 0.15) < 0.1) {
+            output_color = make_float3(0.5, 0.5, 0.5);
+        }
+    }
+
+    return output_color;
+}
