@@ -95,9 +95,12 @@ blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__
     for (int y = -params.blur_rad; y <= params.blur_rad; y++) {
         for (int x = -params.blur_rad; x <= params.blur_rad; x++) {
             int2 runner_pos = center_pos + make_int2(x, y);
+            float w = blur_kernel(make_float2(x, y), params);
+            if (w == 0.0) {
+                continue;
+            }
             float3 curr_color = sample_color(runner_pos, p_TexR, p_TexG, p_TexB);
 
-            float w = blur_kernel(make_float2(x, y), params);
             total_color += curr_color * w;
             weight += w;
             num_pixels++;
@@ -110,7 +113,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     int2 curr_pos = make_int2(p_X, p_Y);
 
     float3 curr_color = sample_color(curr_pos, p_TexR, p_TexG, p_TexB);
-    kernel_params_t params = make_kernel_params(blur_rad, falloff_start, gamma);
+    kernel_params_t params = make_kernel_params(blur_rad * p_Width / 2048.0, falloff_start, gamma);
     // kernel_params_t params = make_kernel_params(blur_rad * p_Width / 2048.0, center_slope, midpoint_height, edge_height, edge_slope);
     float3 blur_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
     float3 output_color = _mix(curr_color, blur_color, blur_opacity);
