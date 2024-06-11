@@ -78,9 +78,8 @@ __DEVICE__ kernel_params_t make_kernel_params(float blur_rad) {
 
 __DEVICE__ kernel_params_t compute_kernel(float2 xy, float2 dimensions, float2 protected_radius, float edge_blur_strength) {
     // normalized_pos is normalized so that left edge is x=-1, right edge is x=1, and it's square coordinates.
-    float2 normalized_pos = make_float2(
-        ((xy.x / (dimensions.x - 1.0)) - 0.5) * 2.0,
-        ((xy.y / (dimensions.y - 1.0)) - 0.5) * 2.0 // dimensions.y / dimensions.x
+    float2 normalized_pos = make_float2(((xy.x / (dimensions.x - 1.0)) - 0.5) * 2.0,
+                                        ((xy.y / (dimensions.y - 1.0)) - 0.5) * 2.0 // dimensions.y / dimensions.x
     );
 
     float blur_rad = edge_blur_strength * dimensions.x / 2048.0; // max radius in pixels of blur.
@@ -90,7 +89,8 @@ __DEVICE__ kernel_params_t compute_kernel(float2 xy, float2 dimensions, float2 p
     // float protected_radius_threshold = _hypotf(protected_radius.x * _cosf(curr_angle), protected_radius.y * _sinf(curr_angle));
     // float protected_radius_threshold = powi(protected_radius.x * _cosf(curr_angle), 2) + powi(protected_radius.y * _sinf(curr_angle), 2);
 
-    float protected_radius_curr_x = _sqrtf(1.0 / (1.0 / powi(protected_radius.x, 2) + powi(normalized_pos.y / (normalized_pos.x * protected_radius.y), 2)));
+    float protected_radius_curr_x =
+        _sqrtf(1.0 / (1.0 / powi(protected_radius.x, 2) + powi(normalized_pos.y / (normalized_pos.x * protected_radius.y), 2)));
     float protected_radius_curr_y = protected_radius_curr_x * normalized_pos.y / normalized_pos.x;
     float protected_radius_threshold = _hypotf(protected_radius_curr_x, protected_radius_curr_y);
 
@@ -107,16 +107,16 @@ __DEVICE__ kernel_params_t compute_kernel(float2 xy, float2 dimensions, float2 p
         max_blur_ellipse.y = protected_radius.y / protected_radius.x * max_blur_ellipse.x;
     }
 
-    float max_radius_curr_x = _sqrtf(1.0 / (1.0 / powi(max_blur_ellipse.x, 2) + powi(normalized_pos.y / (normalized_pos.x * max_blur_ellipse.y), 2)));
+    float max_radius_curr_x =
+        _sqrtf(1.0 / (1.0 / powi(max_blur_ellipse.x, 2) + powi(normalized_pos.y / (normalized_pos.x * max_blur_ellipse.y), 2)));
     float max_radius_curr_y = max_radius_curr_x * normalized_pos.y / normalized_pos.x;
     float max_radius_threshold = _hypotf(max_radius_curr_x, max_radius_curr_y);
     max_radius_threshold = _fmaxf(protected_radius_threshold, max_radius_threshold);
 
     float curr_factor = _clampf((curr_radius - protected_radius_threshold) / (max_radius_threshold - protected_radius_threshold), 0.0, 1.0);
 
-    return make_kernel_params(
-        smoothstep2(0.0, blur_rad, curr_factor)
-        // curr_factor
+    return make_kernel_params(smoothstep2(0.0, blur_rad, curr_factor)
+                              // curr_factor
     );
 }
 
@@ -161,7 +161,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         protected_radius_y = protected_radius_x;
     }
 
-    kernel_params_t params = compute_kernel(make_float2((float)p_X, (float)p_Y),  make_float2(p_Width, p_Height), make_float2(protected_radius_x, protected_radius_y), edge_blur_strength);
+    kernel_params_t params = compute_kernel(make_float2((float)p_X, (float)p_Y),
+                                            make_float2(p_Width, p_Height),
+                                            make_float2(protected_radius_x, protected_radius_y),
+                                            edge_blur_strength);
     // return make_float3(params.blur_rad, params.blur_rad, params.blur_rad);
 
     float3 output_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
@@ -178,7 +181,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         y = y - 0.5;
         y *= 3.0;
 
-        params = compute_kernel(make_float2((float)p_X, (p_Height - 1.0) / 2.0),  make_float2(p_Width, p_Height), make_float2(protected_radius_x, protected_radius_x), edge_blur_strength / 20.0);
+        params = compute_kernel(make_float2((float)p_X, (p_Height - 1.0) / 2.0),
+                                make_float2(p_Width, p_Height),
+                                make_float2(protected_radius_x, protected_radius_x),
+                                edge_blur_strength / 20.0);
 
         if (_fabs(y - params.blur_rad) < 0.002) {
             output_color = make_float3(1.0, 1.0, 1.0);
