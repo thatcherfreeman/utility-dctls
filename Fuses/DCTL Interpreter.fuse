@@ -836,7 +836,7 @@ __DEVICE__ float __tex2D_override(__TEXTURESTRUCT__ ptex, int x, int y) {
 
     -- Rename kernel so that each dctl has a unique kernel. This fixes a bug with Fusion caching where
     -- multiple DCTL Interpreters in a row would be broken.
-    local kernel_name = string.gsub(string.gsub(dctl_fn, "%.dctl", ""), "[^%w]", "__")
+    local kernel_name = self.Name..string.gsub(string.gsub(dctl_fn, "%.dctl", ""), "[^%w]", "__")
     local parameters_name = kernel_name .. "_parameters_t"
     -- We'll append the necessary kernel function to the bottom of the DCTL, and we'll call the DCTL's transform function.
     local kernel_function_str = string.format([[
