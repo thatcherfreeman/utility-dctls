@@ -114,7 +114,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     float3 curr_color = sample_color(curr_pos, p_TexR, p_TexG, p_TexB);
     kernel_params_t params = make_kernel_params(blur_rad * p_Width / 2048.0, falloff_start, gamma);
-    // kernel_params_t params = make_kernel_params(blur_rad * p_Width / 2048.0, center_slope, midpoint_height, edge_height, edge_slope);
+
     float3 blur_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
     float3 output_color = _mix(curr_color, blur_color, blur_opacity);
 
