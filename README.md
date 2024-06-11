@@ -86,6 +86,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [False Color Generator DCTL](#false-color-generator-dctl)
         - [Frequency Test Chart DCTL](#frequency-test-chart-dctl)
         - [Gamma Curve DCTL](#gamma-curve-dctl)
+        - [Gamut Primaries Conversion DCTL](#gamut-primaries-conversion-dctl)
         - [Gradient Smoothness Chart DCTL](#gradient-smoothness-chart-dctl)
         - [Legacy Log Curve DCTL](#legacy-log-curve-dctl)
         - [Levels Converter](#levels-converter)
@@ -1387,6 +1388,20 @@ def linear2gamma(y):
 **Linear Gain**: This applies an exposure correction to the resulting image. If you're running Gamma2Lin, then the linear image is multiplied by this value. If you're running Lin2Gamma, then the linear image is divided by this value.
 
 **Direction**: This allows you to specify whether to convert Gamma to Linear, or Linear to Gamma.
+
+---
+
+### Gamut Primaries Conversion DCTL
+Converts from one set of x,y chromaticity coordinates to another. Equivalent to a CST node with the input and output gamma set to Linear and without tone mapping or OOTF. It's just a 3x3 matrix under the hood. The bulk of the logic is taken from Bruce Lindbloom's incredible [website](http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html)
+
+#### DCTL Parameters
+**Source/Target Red/Green/Blue/White x/y**: Chromaticity coordinates for the source and target color spaces, if you have either **Source Primaries** or **Target Primaries** set to Custom.
+
+**Chromatic Adaptation**: If checked, applies CAT02 chromatic adaptation if the source and target white points are not matched, so that the net matrix maps (1, 1, 1) on the input to (1, 1, 1) on the output.
+
+**Source/Target Primaries**: Specify your source or target primaries. If set to Custom, we will use the previous value boxes as the primaries.
+
+**Direction**: Specify whether you want to convert from Source Primaries to the Target Primaries, or the other direction. Effectively, if set to "Target to Source" we will invert the transform.
 
 ---
 

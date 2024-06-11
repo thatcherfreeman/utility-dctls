@@ -1,0 +1,254 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(source_red_x, Source Red x, DCTLUI_VALUE_BOX, 0.64)
+DEFINE_UI_PARAMS(source_red_y, Source Red y, DCTLUI_VALUE_BOX, 0.33)
+DEFINE_UI_PARAMS(source_green_x, Source Green x, DCTLUI_VALUE_BOX, 0.3)
+DEFINE_UI_PARAMS(source_green_y, Source Green y, DCTLUI_VALUE_BOX, 0.6)
+DEFINE_UI_PARAMS(source_blue_x, Source Blue x, DCTLUI_VALUE_BOX, 0.15)
+DEFINE_UI_PARAMS(source_blue_y, Source Blue y, DCTLUI_VALUE_BOX, 0.06)
+DEFINE_UI_PARAMS(source_white_x, Source White x, DCTLUI_VALUE_BOX, 0.3127)
+DEFINE_UI_PARAMS(source_white_y, Source White y, DCTLUI_VALUE_BOX, 0.3290)
+
+DEFINE_UI_PARAMS(target_red_x, Target Red x, DCTLUI_VALUE_BOX, 0.64)
+DEFINE_UI_PARAMS(target_red_y, Target Red y, DCTLUI_VALUE_BOX, 0.33)
+DEFINE_UI_PARAMS(target_green_x, Target Green x, DCTLUI_VALUE_BOX, 0.3)
+DEFINE_UI_PARAMS(target_green_y, Target Green y, DCTLUI_VALUE_BOX, 0.6)
+DEFINE_UI_PARAMS(target_blue_x, Target Blue x, DCTLUI_VALUE_BOX, 0.15)
+DEFINE_UI_PARAMS(target_blue_y, Target Blue y, DCTLUI_VALUE_BOX, 0.06)
+DEFINE_UI_PARAMS(target_white_x, Target White x, DCTLUI_VALUE_BOX, 0.3127)
+DEFINE_UI_PARAMS(target_white_y, Target White y, DCTLUI_VALUE_BOX, 0.3290)
+
+DEFINE_UI_PARAMS(chromatic_adaptation, Chromatic Adaptation, DCTLUI_CHECK_BOX, 1)
+
+DEFINE_UI_PARAMS(source_gamut, Source Primaries, DCTLUI_COMBO_BOX, 0, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_DWG, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_XYZ, SRC_GAMUT_XYZ_D65}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, Rec. 709, Rec. 2020, XYZ, XYZ D65})
+DEFINE_UI_PARAMS(target_gamut, Target Primaries, DCTLUI_COMBO_BOX, 0, {TARGET_GAMUT_CUSTOM, TARGET_GAMUT_ACES_AP0, TARGET_GAMUT_ACES_AP1, TARGET_GAMUT_AWG3, TARGET_GAMUT_AWG4, TARGET_GAMUT_DWG, TARGET_GAMUT_REC709, TARGET_GAMUT_REC2020, TARGET_GAMUT_XYZ, TARGET_GAMUT_XYZ_D65}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, Rec. 709, Rec. 2020, XYZ, XYZ D65})
+
+DEFINE_UI_PARAMS(swap, Direction, DCTLUI_COMBO_BOX, 0, {SWAP_OFF, SWAP_ON}, {Source to Target, Target to Source})
+
+// clang-format on
+
+typedef struct {
+        float2 red_xy;
+        float2 green_xy;
+        float2 blue_xy;
+        float2 white_xy;
+} gamut_primaries_t;
+
+__DEVICE__ gamut_primaries_t make_gamut_primaries(float2 red_xy, float2 green_xy, float2 blue_xy, float2 white_xy) {
+    gamut_primaries_t gamut_primaries;
+    gamut_primaries.red_xy = red_xy;
+    gamut_primaries.green_xy = green_xy;
+    gamut_primaries.blue_xy = blue_xy;
+    gamut_primaries.white_xy = white_xy;
+    return gamut_primaries;
+}
+
+__DEVICE__ float3 xy_to_XYZ(float2 xy) {
+    float3 xyz = make_float3(xy.x / xy.y, 1.0, (1.0 - xy.x - xy.y) / xy.y);
+    if (xy.y == 0.0) {
+        xyz = make_float3(xy.x, 0.0, 1.0 - xy.x);
+    }
+    return xyz;
+}
+
+__DEVICE__ void mat_inverse_33(float dest[3][3], float m[3][3]) {
+    // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
+
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+    dest[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
+    dest[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det;
+    dest[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
+    dest[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det;
+    dest[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
+    dest[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det;
+    dest[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
+    dest[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det;
+    dest[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
+}
+
+__DEVICE__ void copy_mat_33(float to[3][3], float from[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            to[i][j] = from[i][j];
+        }
+    }
+}
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    // matrix * vector multiplication
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ void rgb_to_XYZ_mat_from_gamut(float dest[3][3], gamut_primaries_t primaries) {
+    // From http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
+    float3 red_xyz = xy_to_XYZ(primaries.red_xy);
+    float3 green_xyz = xy_to_XYZ(primaries.green_xy);
+    float3 blue_xyz = xy_to_XYZ(primaries.blue_xy);
+    float3 white_xyz = xy_to_XYZ(primaries.white_xy);
+
+    float temp[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+    temp[0][0] = red_xyz.x;
+    temp[1][0] = red_xyz.y;
+    temp[2][0] = red_xyz.z;
+    temp[0][1] = green_xyz.x;
+    temp[1][1] = green_xyz.y;
+    temp[2][1] = green_xyz.z;
+    temp[0][2] = blue_xyz.x;
+    temp[1][2] = blue_xyz.y;
+    temp[2][2] = blue_xyz.z;
+    copy_mat_33(dest, temp); // dest is now cols of { red_xyz, green_xyz, blue_xyz }
+
+    float temp2[3][3] = {};
+    mat_inverse_33(temp2, temp);
+
+    float3 s = mv_33_3(temp2, white_xyz);
+    for (int r = 0; r < 3; ++r) {
+        dest[r][0] *= s.x;
+        dest[r][1] *= s.y;
+        dest[r][2] *= s.z;
+    }
+}
+
+__DEVICE__ void mm_33_33(float dest[3][3], float a[3][3], float b[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            dest[i][j] = a[i][0] * b[0][j] + a[i][1] * b[1][j] + a[i][2] * b[2][j];
+        }
+    }
+}
+
+__DEVICE__ void mat_fill(float dest[3][3], float fill) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            dest[i][j] = fill;
+        }
+    }
+}
+
+__DEVICE__ void diagonal_matrix(float dest[3][3], float3 diagonal) {
+    mat_fill(dest, 0.0);
+    dest[0][0] = diagonal.x;
+    dest[1][1] = diagonal.y;
+    dest[2][2] = diagonal.z;
+}
+
+__DEVICE__ void identity_matrix(float dest[3][3]) {
+    mat_fill(dest, 0.0);
+    dest[0][0] = 1.0;
+    dest[1][1] = 1.0;
+    dest[2][2] = 1.0;
+}
+
+__DEVICE__ void cat02_adaptation_matrix(float dest[3][3], gamut_primaries_t source, gamut_primaries_t target) {
+    float cat02[3][3] = {
+        {0.7328, 0.4296, -0.1624},
+        {-0.7036, 1.6975, 0.0061},
+        {0.0030, 0.0136, 0.9834},
+    };
+    float cat02_inv[3][3] = {};
+    mat_inverse_33(cat02_inv, cat02);
+
+    float3 source_white = xy_to_XYZ(source.white_xy);
+    float3 target_white = xy_to_XYZ(target.white_xy);
+    float3 source_lms = mv_33_3(cat02, source_white);
+    float3 target_lms = mv_33_3(cat02, target_white);
+    float diag[3][3] = {};
+    diagonal_matrix(diag, target_lms / source_lms);
+    float temp[3][3] = {};
+    mm_33_33(temp, diag, cat02);
+    mm_33_33(dest, cat02_inv, temp);
+}
+
+__DEVICE__ void
+get_gamut_transform_matrix(float dest[3][3], gamut_primaries_t source, gamut_primaries_t target, bool chromatic_adaptation) {
+    float source_to_XYZ[3][3] = {};
+    rgb_to_XYZ_mat_from_gamut(source_to_XYZ, source);
+
+    float target_to_XYZ[3][3] = {};
+    rgb_to_XYZ_mat_from_gamut(target_to_XYZ, target);
+
+    float XYZ_to_target[3][3] = {};
+    mat_inverse_33(XYZ_to_target, target_to_XYZ);
+
+    if (chromatic_adaptation) {
+        float chromatic_adaptation_matrix[3][3] = {};
+        cat02_adaptation_matrix(chromatic_adaptation_matrix, source, target);
+
+        float temp[3][3] = {};
+        mm_33_33(temp, chromatic_adaptation_matrix, source_to_XYZ);
+        mm_33_33(dest, XYZ_to_target, temp);
+    } else {
+        mm_33_33(dest, XYZ_to_target, source_to_XYZ);
+    }
+}
+
+__DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t default_gamut) {
+
+    switch (gamut) {
+        case SRC_GAMUT_ACES_AP0:
+            return make_gamut_primaries(
+                make_float2(0.7347, 0.2653), make_float2(0.0, 1.0), make_float2(0.0001, -0.0770), make_float2(0.32168, 0.33767));
+        case SRC_GAMUT_ACES_AP1:
+            return make_gamut_primaries(
+                make_float2(0.713, 0.293), make_float2(0.165, 0.830), make_float2(0.128, 0.0444), make_float2(0.32168, 0.33767));
+        case SRC_GAMUT_AWG3:
+            return make_gamut_primaries(
+                make_float2(0.6840, 0.3130), make_float2(0.2210, 0.8480), make_float2(0.0861, -0.1020), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_AWG4:
+            return make_gamut_primaries(
+                make_float2(0.7347, 0.2653), make_float2(0.1424, 0.8576), make_float2(0.0991, -0.0308), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_DWG:
+            return make_gamut_primaries(
+                make_float2(0.8000, 0.3130), make_float2(0.1682, 0.9877), make_float2(0.0790, -0.1155), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_REC709:
+            return make_gamut_primaries(
+                make_float2(0.64, 0.33), make_float2(0.30, 0.60), make_float2(0.15, 0.06), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_REC2020:
+            return make_gamut_primaries(
+                make_float2(0.708, 0.292), make_float2(0.170, 0.797), make_float2(0.131, 0.046), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_XYZ:
+            return make_gamut_primaries(
+                make_float2(1.0, 0.0), make_float2(0.0, 1.0), make_float2(0.0, 0.0), make_float2(1.0 / 3.0, 1.0 / 3.0));
+        case SRC_GAMUT_XYZ_D65:
+            return make_gamut_primaries(make_float2(1.0, 0.0), make_float2(0.0, 1.0), make_float2(0.0, 0.0), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_CUSTOM:
+        default:
+            return default_gamut;
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+
+    gamut_primaries_t source_primaries, target_primaries;
+
+    gamut_primaries_t custom_source_primaries = make_gamut_primaries(make_float2(source_red_x, source_red_y),
+                                                                     make_float2(source_green_x, source_green_y),
+                                                                     make_float2(source_blue_x, source_blue_y),
+                                                                     make_float2(source_white_x, source_white_y));
+
+    source_primaries = get_gamut_primaries(source_gamut, custom_source_primaries);
+    gamut_primaries_t custom_target_primaries = make_gamut_primaries(make_float2(target_red_x, target_red_y),
+                                                                     make_float2(target_green_x, target_green_y),
+                                                                     make_float2(target_blue_x, target_blue_y),
+                                                                     make_float2(target_white_x, target_white_y));
+    target_primaries = get_gamut_primaries(target_gamut, custom_target_primaries);
+
+    if (swap == SWAP_ON) {
+        gamut_primaries_t temp = source_primaries;
+        source_primaries = target_primaries;
+        target_primaries = temp;
+    }
+
+    float transform_matrix[3][3] = {{0.0}};
+    get_gamut_transform_matrix(transform_matrix, source_primaries, target_primaries, chromatic_adaptation);
+
+    float3 input = make_float3(p_R, p_G, p_B);
+    float3 output = mv_33_3(transform_matrix, input);
+    return output;
+}
