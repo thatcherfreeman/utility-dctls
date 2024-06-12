@@ -23,6 +23,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
 - [The DCTLs:](#the-dctls)
     - [Effects](#effects)
         - [Bleach Bypass DCTL](#bleach-bypass-dctl)
+        - [Field Curvature DCTL](#field-curvature-dctl)
         - [Film Curve DCTL](#film-curve-dctl)
         - [Film Grain DCTL](#film-grain-dctl)
         - [Gain Normalization](#gain-normalization)
@@ -84,6 +85,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [DaVinci Tone Mapping DCTL](#davinci-tone-mapping-dctl)
         - [Exposure Chart DCTL](#exposure-chart-dctl)
         - [False Color Generator DCTL](#false-color-generator-dctl)
+        - [Grid Chart DCTL](#grid-chart-dctl)
         - [Frequency Test Chart DCTL](#frequency-test-chart-dctl)
         - [Gamma Curve DCTL](#gamma-curve-dctl)
         - [Gamut Primaries Conversion DCTL](#gamut-primaries-conversion-dctl)
@@ -327,6 +329,26 @@ The underlying implementation was completely replaced on May 11, 2024 for improv
 **Middle Gray**: Indicates the middle gray value that will be preserved.
 
 
+---
+### Field Curvature DCTL
+Applies an effect as if the lens has a strong field curvature, so the edges of the frame are out of focus, using a circular blur kernel with the ability to emulate cats eye in on the edges. Use this on a linear image. We strategically avoid sampling pixels that are not blurred, so the less blurry the image is, the faster this DCTL will run.
+
+#### DCTL Parameters
+**Protected Radius X/Y**: Choose what portion of the center of the frame is not blurred at all.
+
+**Max Blur Strength**: Choose the maximum radius of the blur in the image, which will occur in the corners of the frame.
+
+**Cats Eye**: Choose how much cats eye there will be in the blur at the edges. Higher is more cats eye and slightly faster playback performance
+
+**Couple XY**: If checked, we substitute **Protected Radius Y** with your value entered for **Protected Radius X**
+
+**Distort**: If checked, the cats eye will be computed in a way that more accurately reflects how cats eye perceptually distorts the blurred parts of the image. This happens because the center of the bokeh ball is not actually located on part of the frame that is responsible for it; the bokeh ball is cut from one side.
+
+**Radius vs Strength Curve**: Shows you the blur radius used for different distances from the center of the frame, The x-axis represents location from the bottom left corner to the top right corner.
+
+**Draw Blur Map**: Shows the blur radius for each pixel in the frame, scaled 0-1.
+
+**Blur Falloff Function**: Controls how the blur strength maps from zero to **Max Blur Strength** as radius increases.
 
 ---
 
@@ -1349,6 +1371,20 @@ Generates a false color conversion for linear, computer generated images (not au
 **Disable Blacks/Near Blacks/Shadows/Gray/Highlights/Near Whites/Whites/Clipping**: Bypasses a specific set of colors.
 
 **Brightness Mode**: If Luminance, then we simply take a weighted average of the RGB channels. If Value, then we take the channel with the maximum value before comparing it to any of the cutoffs or mid gray.
+
+---
+
+### Grid Chart DCTL
+Draws a grid or a grid of dots so you can see how the [Field Curvature DCTL](#field-curvature-dctl) behaves. Or to photograph with your real lenses and see how their cats eye looks.
+
+#### DCTL Parameters
+**Number of Grids**: Amount of boxes to put on the X-axis.
+
+**Grid Thickness**: Thickness of the lines in the grid or dots.
+
+**Invert**: Invert the color of the chart so it's black lines on a white backdrop.
+
+**Chart Type**: Choose whether to draw the grid or to draw dots.
 
 ---
 ### Frequency Test Chart DCTL

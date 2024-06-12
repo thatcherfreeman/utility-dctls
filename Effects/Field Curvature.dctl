@@ -4,11 +4,14 @@
 
 DEFINE_UI_PARAMS(protected_radius_x, Protected Radius X, DCTLUI_SLIDER_FLOAT, 0.5, 0.001, 1.5, 0.01)
 DEFINE_UI_PARAMS(protected_radius_y, Protected Radius Y, DCTLUI_SLIDER_FLOAT, 0.5, 0.001, 1.5, 0.01)
-DEFINE_UI_PARAMS(edge_blur_strength, Max Blur Strength, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 20.0, 0.01)
+DEFINE_UI_PARAMS(edge_blur_strength, Max Blur Strength, DCTLUI_SLIDER_FLOAT, 10.0, 0.0, 100.0, 0.01)
+DEFINE_UI_PARAMS(cats_eye, Cats Eye, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(couple_xy, Couple XY, DCTLUI_CHECK_BOX, 1)
-
+DEFINE_UI_PARAMS(distort, Distort, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(draw_curve, Radius vs Strength Curve, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(draw_heat_map, Draw Blur Map, DCTLUI_CHECK_BOX, 0)
+
+DEFINE_UI_PARAMS(curve_type, Blur Falloff Function, DCTLUI_COMBO_BOX, 0, {CURVE_SIGMOID, CURVE_ELLIPSE}, {Sigmoid, Ellipse})
 
 // clang-format on
 
@@ -53,6 +56,12 @@ __DEVICE__ float smoothstep2(float start, float end, float alpha) {
     return _mix(start, end, factor);
 }
 
+__DEVICE__ float ellipse_step(float start, float end, float alpha) {
+    // Bottom right corner of ellipse given by
+    // alpha^2 + ((y - end - start)/end))^2 = 1
+    return -_sqrtf(1.0 - alpha * alpha) * end + start + end;
+}
+
 __DEVICE__ float convert_gamma_to_reals(float g) {
     // Converts -1 to +1 range to an exponent
     // Essentially what Resolve does with its gamma
@@ -68,15 +77,22 @@ __DEVICE__ float convert_gamma_to_reals(float g) {
 
 typedef struct {
         float blur_rad; // radius from center of blur that has zero weight.
+        float cats_eye; // strength of cats eye
+        bool distort;
+        float factor;
 } kernel_params_t;
 
-__DEVICE__ kernel_params_t make_kernel_params(float blur_rad) {
+__DEVICE__ kernel_params_t make_kernel_params(float blur_rad, float cats_eye, bool distort, float factor) {
     kernel_params_t params;
     params.blur_rad = blur_rad;
+    params.cats_eye = cats_eye; // 0.0 is no cats eye, 1.0 is full cats eye (zero bokeh left)
+    params.distort = distort;
+    params.factor = factor;
     return params;
 }
 
-__DEVICE__ kernel_params_t compute_kernel(float2 xy, float2 dimensions, float2 protected_radius, float edge_blur_strength) {
+__DEVICE__ kernel_params_t compute_kernel(
+    float2 xy, float2 dimensions, float2 protected_radius, float edge_blur_strength, float cats_eye, bool distort, int curve_type) {
     // normalized_pos is normalized so that left edge is x=-1, right edge is x=1, and it's square coordinates.
     float2 normalized_pos = make_float2(((xy.x / (dimensions.x - 1.0)) - 0.5) * 2.0,
                                         ((xy.y / (dimensions.y - 1.0)) - 0.5) * 2.0 // dimensions.y / dimensions.x
@@ -115,16 +131,46 @@ __DEVICE__ kernel_params_t compute_kernel(float2 xy, float2 dimensions, float2 p
 
     float curr_factor = _clampf((curr_radius - protected_radius_threshold) / (max_radius_threshold - protected_radius_threshold), 0.0, 1.0);
 
-    return make_kernel_params(smoothstep2(0.0, blur_rad, curr_factor)
-                              // curr_factor
-    );
+    float kernel_blur_factor;
+    if (curve_type == CURVE_SIGMOID) {
+        kernel_blur_factor = smoothstep2(0.0, 1.0, curr_factor);
+    } else {
+        kernel_blur_factor = ellipse_step(0.0, 1.0, curr_factor);
+    }
+
+    return make_kernel_params(kernel_blur_factor * blur_rad, _mix(0.0, cats_eye, curr_factor), distort, kernel_blur_factor);
 }
 
-__DEVICE__ float blur_kernel(float2 pos_trans, kernel_params_t params) {
-    // pos_trans is number of pixels away from the center of the blur. IE curr_pos - center_pos
+__DEVICE__ float blur_kernel(float2 pos_trans, float2 window_center, float2 dimensions, kernel_params_t params) {
+    // window_center and dimensions are in pixels.
+    // pos_trans is number of pixels away from the center of the blur. IE curr_pos - window_center
     float distance = _hypotf(pos_trans.x, pos_trans.y);
-    if (distance > params.blur_rad) {
+    if ((params.distort || params.cats_eye == 0.0) && distance > params.blur_rad) {
         return 0.0;
+    }
+
+    // Cats eye second circle is going to be offset by distance blur_rad * cats_eye towards the center of the frame.
+    if (params.cats_eye > 0.0) {
+        float second_circle_radius = params.blur_rad * (1.2);
+
+        float offset_factor = 1;
+        if (params.distort) {
+            offset_factor *= 2.0;
+        }
+        float2 frame_center = 0.5 * (dimensions - 1.0);
+
+        float2 frame_center_direction = frame_center - window_center;
+        frame_center_direction = frame_center_direction / _hypotf(frame_center_direction.x, frame_center_direction.y);
+        float2 second_circle_center = frame_center_direction * params.blur_rad * params.cats_eye * offset_factor;
+        float2 primary_circle_center = -1.0 * frame_center_direction * params.blur_rad * params.cats_eye * offset_factor;
+        if (params.distort) {
+            primary_circle_center = make_float2(0.0, 0.0);
+        }
+
+        if (_hypotf(second_circle_center.x - pos_trans.x, second_circle_center.y - pos_trans.y) > second_circle_radius ||
+            _hypotf(primary_circle_center.x - pos_trans.x, primary_circle_center.y - pos_trans.y) > params.blur_rad) {
+            return 0.0;
+        }
     }
     return 1.0;
 }
@@ -137,14 +183,19 @@ blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__
         return sample_color(center_pos, p_TexR, p_TexG, p_TexB);
     }
     int num_pixels = 0;
+
+    float2 center_pos_f = make_float2(center_pos.x, center_pos.y);
+    float2 dimensions = make_float2(p_Width, p_Height);
+    float3 curr_color;
     for (int y = -params.blur_rad; y <= params.blur_rad; y++) {
         for (int x = -params.blur_rad; x <= params.blur_rad; x++) {
-            int2 runner_pos = center_pos + make_int2(x, y);
-            float w = blur_kernel(make_float2(x, y), params);
+            float w = blur_kernel(make_float2(x, y), center_pos_f, dimensions, params);
             if (w == 0.0) {
                 continue;
             }
-            float3 curr_color = sample_color(runner_pos, p_TexR, p_TexG, p_TexB);
+
+            int2 runner_pos = center_pos + make_int2(x, y);
+            curr_color = sample_color(runner_pos, p_TexR, p_TexG, p_TexB);
 
             total_color += curr_color * w;
             weight += w;
@@ -164,13 +215,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     kernel_params_t params = compute_kernel(make_float2((float)p_X, (float)p_Y),
                                             make_float2(p_Width, p_Height),
                                             make_float2(protected_radius_x, protected_radius_y),
-                                            edge_blur_strength);
+                                            edge_blur_strength,
+                                            cats_eye,
+                                            distort,
+                                            curve_type);
     // return make_float3(params.blur_rad, params.blur_rad, params.blur_rad);
 
     float3 output_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
 
     if (draw_heat_map) {
-        return make_float3(params.blur_rad, params.blur_rad, params.blur_rad);
+        output_color = make_float3(params.factor, params.factor, params.factor);
     }
 
     if (draw_curve) {
@@ -178,13 +232,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         float y = (float)p_Y / (float)(p_Height - 1);
         x = (x * 2.0) - 1.0; // normalize so that middle is zero
         y = 1 - y;
-        y = y - 0.5;
         y *= 3.0;
 
-        params = compute_kernel(make_float2((float)p_X, (p_Height - 1.0) / 2.0),
+        params = compute_kernel(_mix(make_float2(0.0, 0.0), make_float2(p_Width, p_Height) - 1.0, p_X / (p_Width - 1.0)),
                                 make_float2(p_Width, p_Height),
                                 make_float2(protected_radius_x, protected_radius_x),
-                                edge_blur_strength / 20.0);
+                                edge_blur_strength / 20.0,
+                                cats_eye,
+                                distort,
+                                curve_type);
 
         if (_fabs(y - params.blur_rad) < 0.002) {
             output_color = make_float3(1.0, 1.0, 1.0);
