@@ -1,7 +1,7 @@
 FuRegisterClass("Recenter",
     CT_Tool, {
         REGS_Name = "Recenter",
-        REGS_Category = "Fuses\\Util\\Recenter",
+        REGS_Category = "Fuses\\Util",
         REGS_OpIconString = "Rcnt",
         REGS_OpDescription = "Translates the image to move the specified coordinate to a given location."
     }

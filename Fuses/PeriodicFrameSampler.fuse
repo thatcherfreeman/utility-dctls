@@ -1,7 +1,7 @@
 FuRegisterClass("PeriodicFrameSampler",
     CT_Tool, {
         REGS_Name = "Periodic Frame Sampler",
-        REGS_Category = "Fuses\\Util\\PeriodicFrameSampler",
+        REGS_Category = "Fuses\\Util",
         REGS_OpIconString = "PrFrSm",
         REGS_OpDescription = "Extracts one frame along the specified period, starting at the specified time."
     }

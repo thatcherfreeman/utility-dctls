@@ -2,7 +2,7 @@
 FuRegisterClass("FrameAvg",
     CT_Tool, {
         REGS_Name = "Frame Averager",
-        REGS_Category = "Fuses\\Util\\FrameAvg",
+        REGS_Category = "Fuses\\Util",
         REGS_OpIconString = "FrAvg",
         REGS_OpDescription = "Averages the following several frames together."
     }

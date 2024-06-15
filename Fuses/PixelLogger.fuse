@@ -1,7 +1,7 @@
 FuRegisterClass("PixelLogger",
     CT_Tool, {
         REGS_Name = "Pixel Logger",
-        REGS_Category = "Fuses\\Util\\PixelLogger",
+        REGS_Category = "Fuses\\Util",
         REGS_OpIconString = "PixLg",
         REGS_OpDescription = "Extracts the RGB value at the specified pixel and prints it to console."
     }
