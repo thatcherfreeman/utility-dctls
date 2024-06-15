@@ -141,45 +141,64 @@ __DEVICE__ kernel_params_t compute_kernel(
     return make_kernel_params(kernel_blur_factor * blur_rad, _mix(0.0, cats_eye, curr_factor), distort, kernel_blur_factor);
 }
 
+__DEVICE__ float approx_circle_weight(float2 pos_trans, float radius) {
+    // pos_trans is in pixels.
+    float distance = _hypotf(pos_trans.x, pos_trans.y);
+
+    if (distance > radius + 0.5) {
+        return 0.0;
+    } else if (distance < radius - 0.5) {
+        return 1.0;
+    } else {
+        return smoothstep2(1.0, 0.0, distance - (radius - 0.5));
+    }
+}
+
 __DEVICE__ float blur_kernel(float2 pos_trans, float2 window_center, float2 dimensions, kernel_params_t params) {
     // window_center and dimensions are in pixels.
     // pos_trans is number of pixels away from the center of the blur. IE curr_pos - window_center
     float distance = _hypotf(pos_trans.x, pos_trans.y);
-    if ((params.distort || params.cats_eye == 0.0) && distance > params.blur_rad) {
-        return 0.0;
+    if (params.cats_eye == 0.0) {
+        // one circle situation
+        return approx_circle_weight(pos_trans, params.blur_rad);
     }
 
     // Cats eye second circle is going to be offset by distance blur_rad * cats_eye towards the center of the frame.
-    if (params.cats_eye > 0.0) {
-        float second_circle_radius = params.blur_rad * (1.2);
+    float second_circle_radius = params.blur_rad * (1.2);
 
-        float offset_factor = 1;
-        if (params.distort) {
-            offset_factor *= 2.0;
-        }
-        float2 frame_center = 0.5 * (dimensions - 1.0);
-
-        float2 frame_center_direction = frame_center - window_center;
-        frame_center_direction = frame_center_direction / _hypotf(frame_center_direction.x, frame_center_direction.y);
-        float2 second_circle_center = frame_center_direction * params.blur_rad * params.cats_eye * offset_factor;
-        float2 primary_circle_center = -1.0 * frame_center_direction * params.blur_rad * params.cats_eye * offset_factor;
-        if (params.distort) {
-            primary_circle_center = make_float2(0.0, 0.0);
-        }
-
-        if (_hypotf(second_circle_center.x - pos_trans.x, second_circle_center.y - pos_trans.y) > second_circle_radius ||
-            _hypotf(primary_circle_center.x - pos_trans.x, primary_circle_center.y - pos_trans.y) > params.blur_rad) {
-            return 0.0;
-        }
+    float offset_factor = 1;
+    if (params.distort) {
+        offset_factor *= 2.0;
     }
-    return 1.0;
+    float2 frame_center = 0.5 * (dimensions - 1.0);
+
+    float2 frame_center_direction = frame_center - window_center;
+    frame_center_direction = frame_center_direction / _hypotf(frame_center_direction.x, frame_center_direction.y);
+    float2 second_circle_center = frame_center_direction * params.blur_rad * params.cats_eye * offset_factor;
+    float2 primary_circle_center = -1.0 * frame_center_direction * params.blur_rad * params.cats_eye * offset_factor;
+    if (params.distort) {
+        primary_circle_center = make_float2(0.0, 0.0);
+    }
+
+    // intersection of two circles
+    float circle_1_weight = approx_circle_weight(primary_circle_center - pos_trans, params.blur_rad);
+    float circle_2_weight = approx_circle_weight(second_circle_center - pos_trans, second_circle_radius);
+
+    if (params.distort) {
+        // intersection of three circles
+        float circle_3_weight = approx_circle_weight(pos_trans, params.blur_rad);
+        return circle_1_weight * circle_2_weight * circle_3_weight;
+    } else {
+
+        return circle_1_weight * circle_2_weight;
+    }
 }
 
 __DEVICE__ float3
 blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, kernel_params_t params) {
     float3 total_color = make_float3(0.0, 0.0, 0.0);
     float weight = 0.0;
-    if (params.blur_rad < 1) {
+    if (params.blur_rad < 0.5) {
         return sample_color(center_pos, p_TexR, p_TexG, p_TexB);
     }
     int num_pixels = 0;
@@ -224,7 +243,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float3 output_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
 
     if (draw_heat_map) {
-        output_color = make_float3(params.factor, params.factor, params.factor);
+        // output_color = make_float3(params.factor, params.factor, params.factor);
+        output_color = make_float3(params.blur_rad, params.blur_rad, params.blur_rad);
     }
 
     if (draw_curve) {
