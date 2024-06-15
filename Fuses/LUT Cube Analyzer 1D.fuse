@@ -1,0 +1,104 @@
+FuRegisterClass("LUTCubeAnalyzer1D",
+    CT_Tool, {
+        REGS_Name = "LUT Cube Analyzer 1D",
+        REGS_Category = "Fuses\\Util",
+        REGS_OpIconString = "LCA1D",
+        REGS_OpDescription = "Writes 1D LUT Gray Ramp to file",
+    }
+)
+
+function Create()
+    FileType = self:AddInput("Type", "Type", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "MultiButtonControl",
+        INP_Default = 0.0,
+        { MBTNC_AddButton = "CUBE", MBTNCD_ButtonWidth = 0.50, },
+        { MBTNC_AddButton = "SPI1D", MBTNCD_ButtonWidth = 0.50, },
+        INP_DoNotifyChanged = true,
+    })
+
+    Filename = self:AddInput("Filename", "Filename", {
+        LINKID_DataType = "Text",
+        INPID_InputControl = "FileControl",
+        FC_ClipBrowse = false,
+        FC_IsSaver = true,
+        FC_PathBrowse = false,
+        FCS_FilterString = "CUBE Files (*.cube)|*.cube|SPI1D Files (*.spi1d)|*.spi1d",
+        INP_DoNotifyChanged = true,
+        INP_ForceNotify = false,
+        INP_InitialNotify = true,
+    })
+
+    -- Inputs
+    WriteButton = self:AddInput("Write File", "WriteFile", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ButtonControl",
+        INP_DoNotifyChanged = true,
+        INP_External = false,
+    })
+
+    InImage = self:AddInput("Input", "Input", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+end
+
+
+function NotifyChanged(inp, param, time)
+    if ((inp == WriteButton) and (param.Value == 1)) then
+        local img = InImage:GetSource(time)
+        assert(img ~= nil, "No input image")
+        local lut_size = img.Width
+
+        local filetype_int = FileType:GetSource(time).Value
+        local filetype_str = ""
+        if filetype_int == 1 then
+            filetype_str = "spi1d"
+        elseif filetype_int == 0 then
+            filetype_str = "cube"
+        end
+
+        local filename = Filename:GetSource(time).Value
+        assert(filename ~= "", "No filename specified")
+        local expected_suffix = "." .. filetype_str
+        if string.sub(filename, -1 * expected_suffix:len()):lower() ~= expected_suffix then
+            filename = filename .. expected_suffix
+        end
+        assert(string.sub(filename, -1 * expected_suffix:len()):lower() == expected_suffix, "Filename does not end with " .. expected_suffix)
+
+        print("Writing LUT file to " .. filename)
+
+        local file = io.open(filename, "w")
+        -- Write header
+        if filetype_str == "cube" then
+            file:write("LUT_1D_SIZE " .. lut_size .. "\n\n")
+        elseif filetype_str == "spi1d" then
+            file:write(string.format("Version 1\nFrom 0.0 1.0\nLength %s\nComponents 3\n{\n", lut_size))
+        end
+
+        -- Write data
+        local p = Pixel()
+        for i = 0, lut_size - 1 do
+            img:GetPixel(i, 0, p)
+            file:write(p.R .. " " .. p.G .. " " .. p.B .. "\n")
+        end
+
+        -- Write footer
+        if filetype_str == "spi1d" then
+            file:write("}\n")
+        end
+        file:close()
+    end
+end
+
+function Process(req)
+    -- Get values from the UI Tools
+    local img = InImage:GetValue(req)
+    local out = img:Copy()
+    OutImage:Set(req, out)
+end

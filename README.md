@@ -13,6 +13,9 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [FrameAvg Fuse](#frameavg-fuse)
         - [HDR Blending Fuse](#hdr-blending-fuse)
         - [Linear Exposure Fuse](#linear-exposure-fuse)
+        - [LUT Cube Analyzer 1D Fuse](#lut-cube-analyzer-1d-fuse)
+        - [LUT Cube Apply 1D Fuse](#lut-cube-apply-1d-fuse)
+        - [LUT Cube Creator 1D Fuse](#lut-cube-creator-1d-fuse)
         - [LUT Smoother Fuse](#lut-smoother-fuse)
         - [Merge Adjacent Fuse](#merge-adjacent-fuse)
         - [MTF Curve Fuse](#mtf-curve-fuse)
@@ -198,6 +201,33 @@ Simply multiplies the input values by `2^x`, where `x` is the specified Exposure
 
 #### Parameters
 **Exposure (Stops)**: Exposure compensation to make in stops.
+
+---
+### LUT Cube Analyzer 1D Fuse
+1D LUT alternative to Fusion's LUT Cube Analyzer node. Writes a 1D LUT to disk in CUBE or SPI1D format, interpreting the first row of the input image as a 1D LUT.
+
+#### Parameters
+**Type**: Indicate whether you want to output .cube or .spi1d
+
+**Filename**: Indicate where you want to write to. If you don't provide a .cube or .spi1d extension, we will add it for you.
+
+**Write File**: Hit this button to write the 1D LUT to the specified file.
+
+---
+### LUT Cube Apply 1D Fuse
+1D LUT alternative to Fusion's LUT Cube Apply node. Given a 1D LUT in the form of the first row of the "LUT Cube Image" input and your background image sent to the "Image" input, we apply the LUT to the image and return the resulting image. Uses linear interpolation on each of the three channels.
+
+#### Parameters
+**Clamp**: If checked, we clamp the input to the 0-1 range. If not checked, then we extend the 1D LUT by matching the slope in the samples of the first or last two points.
+
+---
+### LUT Cube Creator 1D Fuse
+Generates a one-pixel tall grey ramp in the specified size. You can apply manipulations to the output of this and send it to the LUT Cube Analyzer 1D or LUT Cube Apply 1D nodes. Alternatively you can use a 0-1 gradient background node with the desired width.
+
+#### Parameters
+**Size**: Indicates the quantity of samples you want in the 1D LUT.
+
+
 
 ---
 ### LUT Smoother Fuse

@@ -1,0 +1,103 @@
+FuRegisterClass("LUTCubeApply1D",
+    CT_Tool, {
+        REGS_Name = "LUT Cube Apply 1D",
+        REGS_Category = "Fuses\\Util",
+        REGS_OpIconString = "LCP1D",
+        REGS_OpDescription = "Apply a 1D LUT HALD Image to an image",
+    }
+)
+
+function Create()
+    -- Inputs
+    Clamp = self:AddInput("Clamp", "Clamp", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "CheckboxControl",
+        INP_Integer = true,
+        INP_Default = 1.0,
+    })
+
+    InImage = self:AddInput("Image", "Image", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+
+    LUTCubeImage = self:AddInput("LUT Cube Image", "LUTCubeImage", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1,
+    })
+end
+
+local apply_1d_lut = function(x, y, p1)
+    local process_channel = function(channel, px, lut, lut_size, clamp)
+        -- Channel is 1-indexed (1, 2, 3)
+        -- LUT is 0-indexed.
+        -- 0, 0.33, 0.66, 1.0
+        local curr_value = px[channel]
+        if clamp then
+            if curr_value >= 1.0 then
+                return lut[lut_size - 1][channel]
+            elseif curr_value <= 0.0 then
+                return lut[0][channel]
+            end
+        else
+            if curr_value >= 1.0 then
+                -- use point slope, where the point is 1, lut[lut_size-1][channel] and the slope is the last two points:
+                -- y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
+                local x1 = 1.0
+                local x2 = (lut_size - 2) / (lut_size - 1)
+                local y1 = lut[lut_size - 1][channel]
+                local y2 = lut[lut_size - 2][channel]
+                return y1 + (curr_value - x1) * (y2 - y1) / (x2 - x1)
+            elseif curr_value <= 0.0 then
+                local x1 = 0.0
+                local x2 = 1.0 / (lut_size - 1)
+                local y1 = lut[0][channel]
+                local y2 = lut[1][channel]
+                return y1 + (curr_value - x1) * (y2 - y1) / (x2 - x1)
+            end
+        end
+
+        local idx_pos = curr_value * (lut_size - 1)
+        local left_idx = math.floor(idx_pos)
+        local right_idx = left_idx + 1
+        local left_val = lut[left_idx][channel]
+        local right_val = lut[right_idx][channel]
+
+        local mix_factor = idx_pos - left_idx
+        return left_val + (right_val - left_val) * mix_factor
+    end
+
+    local px = {p1.R, p1.G, p1.B}
+    p1.R = process_channel(1, px, lut, lut_size, clamp)
+    p1.G = process_channel(2, px, lut, lut_size, clamp)
+    p1.B = process_channel(3, px, lut, lut_size, clamp)
+    return p1
+end
+
+function Process(req)
+    -- Get values from the UI Tools
+    local img = InImage:GetValue(req)
+    local lut_cube = LUTCubeImage:GetValue(req)
+    local clamp = Clamp:GetValue(req).Value > 0.5
+
+    -- Read first row of LUT cube in to a table
+    local lut = {} -- 0-indexed.
+    local lut_size = lut_cube.Width
+    assert(lut_size > 0, "LUT Cube Image must have at least one pixel.")
+
+    local p = Pixel()
+    for x = 0, lut_cube.Width - 1 do
+        lut_cube:GetPixel(x, 0, p)
+        lut[x] = {p.R, p.G, p.B}
+    end
+
+    -- Apply LUT to image
+    local out = img:Copy()
+    out:MultiProcessPixels(nil, {lut=lut, lut_size=lut_size, clamp=clamp}, 0, 0, img.Width, img.Height, img, apply_1d_lut)
+    OutImage:Set(req, out)
+end
