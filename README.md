@@ -1380,7 +1380,7 @@ Draws a grid or a grid of dots so you can see how the [Field Curvature DCTL](#fi
 #### DCTL Parameters
 **Number of Grids**: Amount of boxes to put on the X-axis.
 
-**Grid Thickness**: Thickness of the lines in the grid or dots.
+**Grid Thickness Px**: Thickness of the lines in the grid or dots, in pixels
 
 **Invert**: Invert the color of the chart so it's black lines on a white backdrop.
 

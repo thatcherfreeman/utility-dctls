@@ -2,7 +2,7 @@
 
 // clang-format off
 DEFINE_UI_PARAMS(num_grids, Number of Grids, DCTLUI_SLIDER_INT, 10, 1, 100, 1)
-DEFINE_UI_PARAMS(grid_thickness_f, Grid Thickness, DCTLUI_SLIDER_FLOAT, 0.05, 0.001, 1.0, 0.01)
+DEFINE_UI_PARAMS(grid_thickness, Grid Thickness Px, DCTLUI_SLIDER_INT, 2, 0, 100, 1)
 DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(chart_type, Chart Type, DCTLUI_COMBO_BOX, 0, {CHART_GRID, CHART_DOTS}, {Grid, Dots})
 
@@ -19,7 +19,6 @@ __DEVICE__ float mod(float x, float y) {
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 output = make_float3(0.0, 0.0, 0.0);
     const int grid_spacing = p_Width / num_grids;
-    const int grid_thickness = grid_spacing * grid_thickness_f;
     const int grid_offset_x = p_Width / 2.0;
     const int grid_offset_y = p_Height / 2.0;
 
