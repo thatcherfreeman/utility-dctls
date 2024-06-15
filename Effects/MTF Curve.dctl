@@ -5,6 +5,7 @@ DEFINE_UI_PARAMS(gain3, Band 4:1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0
 DEFINE_UI_PARAMS(gain4, Band 2:1 Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.1)
 DEFINE_UI_PARAMS(debug_band, Debug Band, DCTLUI_SLIDER_INT, 4, 1, 4, 1)
 DEFINE_UI_PARAMS(debug_mode, Debug Mode, DCTLUI_COMBO_BOX, 0, {NONE, LP, HP, HPG}, {None, Low Pass Mode, High Pass Mode, High Pass Gray Mode})
+DEFINE_UI_PARAMS(performance_mode, Performance Mode, DCTLUI_COMBO_BOX, 0, {PEROFRMANCE, QUALITY}, {Performance, Quality})
 DEFINE_UI_PARAMS(method, Method, DCTLUI_COMBO_BOX, 1, {QUOTIENT, DIFFERENCE}, {Quotient, Difference})
 
 // clang-format on
@@ -154,6 +155,55 @@ __DEVICE__ void get_blur_bands(int px, int py, __TEXTURE__ pr, __TEXTURE__ pg, _
     ret[0] = total / coeff_sum;
 }
 
+__DEVICE__ void
+get_blur_bands_quality(int px, int py, __TEXTURE__ pr, __TEXTURE__ pg, __TEXTURE__ pb, float scale, float3 ret[4], bool clamp) {
+    // Blurs the image by four different amounts, returns each one in ret.
+    scale = _fmaxf(1.0, scale);
+
+    float3 value;
+    int window_radius = 8 * scale;
+    float3 band_total_values[4] = {
+        make_float3(0.0, 0.0, 0.0), make_float3(0.0, 0.0, 0.0), make_float3(0.0, 0.0, 0.0), make_float3(0.0, 0.0, 0.0)};
+    float band_total_weights[4] = {0.0, 0.0, 0.0, 0.0};
+
+    for (int y = -window_radius; y <= window_radius; y++) {
+        for (int x = -window_radius; x <= window_radius; x++) {
+            float curr_distance = _hypotf((float)x, (float)y) / scale;
+            float curr_weight = 1.0;
+            int ret_idx;
+            if (curr_distance < 2) {
+                ret_idx = 3;
+                // curr_weight = 1.0;
+            } else if (curr_distance < 3) {
+                ret_idx = 2;
+                // curr_weight = 1.0;
+            } else if (curr_distance < 5) {
+                ret_idx = 1;
+                curr_weight = 0.75;
+            } else if (curr_distance <= 8) {
+                // Low pass
+                ret_idx = 0;
+                curr_weight = 0.50;
+            } else {
+                continue;
+            }
+
+            value = sample_point_nn_3ch(px + x, py + y, pr, pg, pb, 1.0, clamp);
+
+            band_total_values[ret_idx] += value * curr_weight;
+            band_total_weights[ret_idx] += curr_weight;
+        }
+    }
+
+    ret[3] = band_total_values[3] / band_total_weights[3];
+    for (int i = 2; i >= 0; i--) {
+        // Aggregate it so the low frequency bands include the weights and samples from the higher frequency bands.
+        band_total_values[i] += band_total_values[i + 1];
+        band_total_weights[i] += band_total_weights[i + 1];
+        ret[i] = band_total_values[i] / band_total_weights[i];
+    }
+}
+
 // Return the minimum new_width that would resolve the line pairs.
 __DEVICE__ int compute_scale(float gate_width, float lpmm) {
     // By nyquist, x line pairs requires 2x samples to resolve. Thus:
@@ -179,7 +229,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     };
     float gains[4] = {gain1, gain2, gain3, gain4};
 
-    get_blur_bands(p_X, p_Y, p_TexR, p_TexG, p_TexB, scale, downres, method == QUOTIENT);
+    if (performance_mode == PEROFRMANCE) {
+        get_blur_bands(p_X, p_Y, p_TexR, p_TexG, p_TexB, scale, downres, method == QUOTIENT);
+    } else if (performance_mode == QUALITY) {
+        get_blur_bands_quality(p_X, p_Y, p_TexR, p_TexG, p_TexB, scale * 0.75, downres, method == QUOTIENT);
+    }
 
     float3 result = downres[0];
     if (method == QUOTIENT) {

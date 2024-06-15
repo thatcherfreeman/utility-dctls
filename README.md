@@ -535,11 +535,14 @@ Gives you control over a MTF-like curve. Internally makes passes of different fr
 
 **Debug Mode**: This pull-down allows you to figure out what each band targets. You can choose from None (runs the plugin normally), Low Pass Mode (shows you the information that's too low frequency to be captured in this band), High Pass Mode (shows the information that's in this band), and High Pass Gray Mode (Same as High Pass mode, but normalized to 0.5 so that the frequency data in this band is more visible).
 
+**Performance Mode**: Choose between Quality and Performance. Performance mode takes fewer samples when computing the blur which can cause very subtle artifacts, whereas Quality densely samples the region of the blur kernel.
+
 **Method**: Allows you to choose between Quotient and Difference, which correspond to different ways to compute the frequency bands. In most real-world scenarios, the Quotient method provides better looking results, but the Difference method performs more accurately on zebra striped test charts. Here's the math:
 ```
 quotient_out := (input_value / low_pass5)^band5_contrast * (low_pass5 / low_pass4)^band4_contrast * ... * low_pass1
 difference_out := (input_value - low_pass5)*band5_contrast + (low_pass5 - low_pass4)*band4_contrast + ... + low_pass1
 ```
+
 
 ---
 ### Parametric Blur DCTL
