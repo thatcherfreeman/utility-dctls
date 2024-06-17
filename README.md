@@ -26,6 +26,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
 - [The DCTLs:](#the-dctls)
     - [Effects](#effects)
         - [Bleach Bypass DCTL](#bleach-bypass-dctl)
+        - [Daniele Curve DCTL](#daniele-curve-dctl)
         - [Field Curvature DCTL](#field-curvature-dctl)
         - [Film Curve DCTL](#film-curve-dctl)
         - [Film Grain DCTL](#film-grain-dctl)
@@ -357,6 +358,24 @@ The underlying implementation was completely replaced on May 11, 2024 for improv
 **Gamma**: Controls the contrast of the image.
 
 **Middle Gray**: Indicates the middle gray value that will be preserved.
+
+---
+### Daniele Curve DCTL
+
+Applies a tone mapping operation adopted from Daniele Siragusano's [ACES Central post here](https://community.acescentral.com/t/output-transform-tone-scale/3498/14). Expects a scene linear input.
+
+#### DCTL Parameters
+**Peak Luminance Nits**: Indicates the maximum output nits.
+
+**Normalized White Nits**: Indicates what 100 nits input (1.0 linear) will be mapped to
+
+**Contrast**: Indicate the midtone gamma.
+
+**Exposure**: Choose brightness of output
+
+**Flare Compensation**: Adjust the toe of the curve
+
+**Invert**: Inverts the Daniele Curve.
 
 
 ---

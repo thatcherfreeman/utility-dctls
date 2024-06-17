@@ -1,0 +1,53 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(peak_luminance, Peak Luminance Nits, DCTLUI_SLIDER_FLOAT, 100.0, 1.0, 10000.0, 0.01)
+DEFINE_UI_PARAMS(normalized_white, Normalized White Nits, DCTLUI_SLIDER_FLOAT, 100.0, 1.0, 10000.0, 0.01) // what 1.0 should map to.
+DEFINE_UI_PARAMS(contrast_gamma, Contrast, DCTLUI_SLIDER_FLOAT, 1.2, 0.5, 2.0, 0.01)
+DEFINE_UI_PARAMS(exposure, Exposure, DCTLUI_SLIDER_FLOAT, 1.0, 0.1, 10.0, 0.01)
+DEFINE_UI_PARAMS(toe, Flare Compensation, DCTLUI_SLIDER_FLOAT, 0.05, 0.0, 0.1, 0.01)
+DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
+
+// clang-format on
+
+// Based on this desmos: https://www.desmos.com/calculator/rboxfu8hjb
+// From Daniele Siragusano's post here: https://community.acescentral.com/t/output-transform-tone-scale/3498/14
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float daniele_curve(float x, float peak_luminance, float normalized_white, float contrast_gamma, float exposure, float toe) {
+    const float m = peak_luminance / normalized_white;
+    const float s = exposure * powf(m, 1.0 / contrast_gamma);
+    float fx = m * powf(_fmaxf(0.0, x) / (x + s), contrast_gamma);
+    float y = _fmaxf(0.0, fx * fx / (fx + toe));
+    return y;
+}
+
+__DEVICE__ float
+daniele_curve_inverse(float y, float peak_luminance, float normalized_white, float contrast_gamma, float exposure, float toe) {
+    const float m = peak_luminance / normalized_white;
+    const float s = exposure * powf(m, 1.0 / contrast_gamma);
+
+    float fx = 0.5 * (y + powf(y, 0.5) * powf(4.0 * toe + y, 0.5));
+    float u = powf(fx / m, 1.0 / contrast_gamma);
+    float x = u * s / (1.0 - u);
+
+    return x;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 input = make_float3(p_R, p_G, p_B);
+    float3 output;
+    if (invert) {
+        output = make_float3(daniele_curve_inverse(input.x, peak_luminance, normalized_white, contrast_gamma, exposure, toe),
+                             daniele_curve_inverse(input.y, peak_luminance, normalized_white, contrast_gamma, exposure, toe),
+                             daniele_curve_inverse(input.z, peak_luminance, normalized_white, contrast_gamma, exposure, toe));
+    } else {
+        output = make_float3(daniele_curve(input.x, peak_luminance, normalized_white, contrast_gamma, exposure, toe),
+                             daniele_curve(input.y, peak_luminance, normalized_white, contrast_gamma, exposure, toe),
+                             daniele_curve(input.z, peak_luminance, normalized_white, contrast_gamma, exposure, toe));
+    }
+    return output;
+}
