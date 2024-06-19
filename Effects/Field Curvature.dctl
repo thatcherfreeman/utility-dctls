@@ -206,8 +206,8 @@ blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__
     float2 center_pos_f = make_float2(center_pos.x, center_pos.y);
     float2 dimensions = make_float2(p_Width, p_Height);
     float3 curr_color;
-    for (int y = -params.blur_rad; y <= params.blur_rad; y++) {
-        for (int x = -params.blur_rad; x <= params.blur_rad; x++) {
+    for (int y = -params.blur_rad - 1; y <= params.blur_rad + 1; y++) {
+        for (int x = -params.blur_rad - 1; x <= params.blur_rad + 1; x++) {
             float w = blur_kernel(make_float2(x, y), center_pos_f, dimensions, params);
             if (w == 0.0) {
                 continue;
