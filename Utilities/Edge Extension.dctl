@@ -1,0 +1,57 @@
+#line 2
+// clang-format off
+
+// Parameter for aspect ratio
+DEFINE_UI_PARAMS(aspect_ratio, Aspect Ratio, DCTLUI_SLIDER_FLOAT, 1.7777, 0.0, 4.0, 0.01)
+// clang-format on
+
+__DEVICE__ float3 sample_color(int2 pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    return make_float3(_tex2D(p_TexR, pos.x, pos.y), _tex2D(p_TexG, pos.x, pos.y), _tex2D(p_TexB, pos.x, pos.y));
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    // Compute the timeline aspect ratio p_Width / p_Height
+    float timeline_aspect_ratio = (float)p_Width / (float)p_Height;
+
+    // Compare it to aspect ratio, see which one is bigger.
+    float desired_width;
+    float desired_height;
+    if (timeline_aspect_ratio > aspect_ratio) {
+        desired_height = p_Height;
+        desired_width = desired_height * aspect_ratio;
+    } else {
+        desired_width = p_Width;
+        desired_height = desired_width / aspect_ratio;
+    }
+
+    // Black out the region outside the computed width and height
+
+    // Figure out how large the side bars are
+    float side_bar_width = (p_Width - desired_width) / 2.0;
+    // Figure out how large the top/bottom bars are
+    float top_bar_width = (p_Height - desired_height) / 2.0;
+
+    float3 curr_color;
+
+    // Check if the current pixel is within one of the bars on the sides of the screen
+    if (p_X < _round(side_bar_width)) {
+        // left bar.
+        curr_color = sample_color(make_int2((int)_round(side_bar_width), p_Y), p_TexR, p_TexG, p_TexB);
+    } else if (p_X > _round(p_Width - side_bar_width - 1)) {
+        // right bar.
+        curr_color = sample_color(make_int2((int)_round(p_Width - side_bar_width - 1), p_Y), p_TexR, p_TexG, p_TexB);
+    } else if (p_Y < _round(top_bar_width)) {
+        // Top bar
+        curr_color = sample_color(make_int2(p_X, (int)_round(top_bar_width)), p_TexR, p_TexG, p_TexB);
+
+    } else if (p_Y > _round(p_Height - top_bar_width - 1)) {
+        // Bottom bar
+        curr_color = sample_color(make_int2(p_X, (int)_round(p_Height - top_bar_width - 1)), p_TexR, p_TexG, p_TexB);
+    } else {
+        // Not in a bar, sample the texture
+        curr_color = sample_color(make_int2(p_X, p_Y), p_TexR, p_TexG, p_TexB);
+    }
+
+    // Return out
+    return curr_color;
+}

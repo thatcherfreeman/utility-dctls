@@ -87,6 +87,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Cylindrical DCTL](#cylindrical-dctl)
         - [DaVinci LGGO DCTL](#davinci-lggo-dctl)
         - [DaVinci Tone Mapping DCTL](#davinci-tone-mapping-dctl)
+        - [Edge Extension DCTL](#edge-extension-dctl)
         - [Exposure Chart DCTL](#exposure-chart-dctl)
         - [False Color Generator DCTL](#false-color-generator-dctl)
         - [Grid Chart DCTL](#grid-chart-dctl)
@@ -1355,7 +1356,12 @@ DaVinci Tone Mapping is simply a function of $f(x) = a \frac{x}{x + b}$, with so
 
 **Clamp**: Allows you to disable white point clamping. Resolve would have this permanently enabled.
 
+---
+### Edge Extension DCTL
+Opposite of Output Blanking, replaces black bars outside of the given aspect ratio with the nearest pixel along the nonzero edge of the frame.
 
+#### DCTL Parameters
+**Aspect Ratio**: Ratio you have set for Ouput Blanking.
 
 ---
 
