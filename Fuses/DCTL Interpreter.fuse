@@ -212,7 +212,7 @@ function StripComments(text)
 end
 
 function StripACESParams(text)
-    local text = string.gsub(text, "DEFINE_ACES_PARAM%(%s*IS_PARAMETRIC_ACES_TRANSFORM%:%s*0%)", "")
+    local text = string.gsub(text, "DEFINE_ACES_PARAM%(%s*IS_PARAMETRIC_ACES_TRANSFORM%s*%:%s*0%)", "")
     return text
 end
 
