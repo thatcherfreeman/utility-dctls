@@ -41,6 +41,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Photon Noise DCTL](#photon-noise-dctl)
         - [Random Channel Mixer](#random-channel-mixer)
         - [Random Contrast Curve](#random-contrast-curve)
+        - [Random LGGO](#random-lggo)
         - [Random Linear Contrast](#random-linear-contrast)
         - [RGB Linear Contrast DCTL](#rgb-linear-contrast-dctl)
         - [Subtractive Saturation DCTL](#subtractive-saturation-dctl)
@@ -667,6 +668,21 @@ Constructs a contrast curve, has the option to procedurally generate one with ra
 **Randomize**: Check this box to randomly select parameters for the curve (excluding pivot).
 
 **Ungroup RGB**: When checked, if Randomize is also checked, then this will randomize a contrast curve for each of the RGB channels.
+
+---
+### Random LGGO
+Applies LGGO adjustment, based on the specified seed.
+
+#### DCTL Parameters
+**Eps Lift/Gamma/Gain/Offset**: Maximum amount to move each wheel. Set to 0 to disable a wheel.
+
+**Seed**: Random seed that determines which the values of the Lift/Gamma/Gain/Offset adjustment.
+
+**Neutral Lift/Gamma/Gain/Offset**: If checked, makes it so the corresponding wheel can only make adjustments where `R == G == B`.
+
+**Gray Ramp**: Draws 0-1 gray ramp on bottom of the frame
+
+**Draw Curve**: Draws the effective curve applied by the LGGO adjustment.
 
 
 

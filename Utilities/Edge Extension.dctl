@@ -3,6 +3,7 @@
 
 // Parameter for aspect ratio
 DEFINE_UI_PARAMS(aspect_ratio, Aspect Ratio, DCTLUI_SLIDER_FLOAT, 1.7777, 0.0, 4.0, 0.01)
+
 // clang-format on
 
 __DEVICE__ float3 sample_color(int2 pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {

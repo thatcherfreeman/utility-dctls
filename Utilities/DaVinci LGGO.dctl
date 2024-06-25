@@ -58,42 +58,6 @@ __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
 }
 
-__DEVICE__ float gamma_error_function(float gamma, float a, float b, float c) {
-    float term1 = powf(c, 1.0 / gamma);
-    float term2 = powf(b, 1.0 / gamma);
-    float term3 = powf(a, 1.0 / gamma);
-    return powf(term1 - term2 + term3, gamma) - b;
-}
-
-__DEVICE__ float continuous_binary_search(
-    float initial_guess, float a, float b, float c, float tolerance, int max_iterations, float lower_bound, float upper_bound) {
-    float gamma = initial_guess;
-    bool pos_slope = gamma_error_function(lower_bound + 0.01, a, b, c) < gamma_error_function(upper_bound, a, b, c);
-    for (int i = 0; i < max_iterations; ++i) {
-        float value = gamma_error_function(gamma, a, b, c);
-        float error = _fabs(value);
-        if (error < tolerance) {
-            break;
-        }
-        if ((pos_slope && value > 0) || (!pos_slope && value < 0)) {
-            upper_bound = gamma;
-        } else {
-            lower_bound = gamma;
-        }
-        gamma = (lower_bound + upper_bound) / 2;
-    }
-    return gamma;
-}
-
-__DEVICE__ float find_gamma(float black, float gray, float white) {
-    float initial_guess = _logf((gray - black) / (white - black)) / _logf(0.5);
-    float tolerance = 1e-9;
-    int max_iterations = 30;
-    float lower_bound = 0.0;
-    float upper_bound = 5.0;
-    return continuous_binary_search(initial_guess, black, gray, white, tolerance, max_iterations, lower_bound, upper_bound);
-}
-
 typedef struct {
         float lift;
         float gamma;
