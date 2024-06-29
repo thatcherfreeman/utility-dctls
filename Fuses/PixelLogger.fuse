@@ -97,13 +97,14 @@ function NotifyChanged(inp, param, time)
         print(curr_line)
         file:write(curr_line.."\n")
 
-        local first_frame = FirstFrame:GetSource(0).Value
-        local last_frame = LastFrame:GetSource(0).Value
-        local idx_offset = IndexOffset:GetSource(0).Value
-        local skip_missing_frames = SkipMissingFrames:GetSource(0).Value
+        -- Write rest of CSV file
+        local first_frame = FirstFrame:GetSource(time).Value
+        local last_frame = LastFrame:GetSource(time).Value
+        local idx_offset = IndexOffset:GetSource(time).Value
+        local skip_missing_frames = SkipMissingFrames:GetSource(time).Value
         local p = Pixel()
         for i = first_frame, last_frame do
-            local curr_location = PixelLocation:GetSource(0)
+            local curr_location = PixelLocation:GetSource(i)
             local img = InImage:GetSource(i)
             if img == nil then
                 if skip_missing_frames < 0.5 then
