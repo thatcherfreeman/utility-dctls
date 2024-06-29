@@ -306,6 +306,8 @@ For the given range of frames, samples the indicated coordinate and writes the v
 
 **First/Last Frame**: Frame numbers to sample from, with each frame in between being sampled. Inclusive on both sides
 
+**Sampling Period**: Indicate how many frames to skip between each sample. IE 1 samples every frame, but 100 samples every 100th frame (First Frame, First Frame + 100, ...)
+
 **Index Offset**: Indicates a number to be added to the first frame in the Frame column in the resulting CSV file.
 
 **Skip Missing Frames**: If a pixel cannot be decoded, check this box to simply skip the row. If unchecked, an error will be printed to the console and CSV generation will be halted.

@@ -31,12 +31,20 @@ function Create()
         IC_DisplayedPrecision = 0,
     })
 
+    SamplingPeriod = self:AddInput("Sampling Period", "Sampling Period", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ScrewControl",
+        INP_Default = 1.0,
+        INP_INTEGER = true,
+        INP_MinAllowed = 1.0,
+        IC_DisplayedPrecision = 0,
+    })
+
     IndexOffset = self:AddInput("Index Offset", "IndexOffset", {
         LINKID_DataType = "Number",
         INPID_InputControl = "ScrewControl",
         INP_Default = 0.0,
         INP_INTEGER = true,
-        INP_MinAllowed = 0.0,
         IC_DisplayedPrecision = 0,
     })
 
@@ -102,8 +110,12 @@ function NotifyChanged(inp, param, time)
         local last_frame = LastFrame:GetSource(time).Value
         local idx_offset = IndexOffset:GetSource(time).Value
         local skip_missing_frames = SkipMissingFrames:GetSource(time).Value
+        local sampling_period = SamplingPeriod:GetSource(time).Value
+        if first_frame > last_frame then
+            sampling_period = sampling_period * -1
+        end
         local p = Pixel()
-        for i = first_frame, last_frame do
+        for i = first_frame, last_frame, sampling_period do
             local curr_location = PixelLocation:GetSource(i)
             local img = InImage:GetSource(i)
             if img == nil then
