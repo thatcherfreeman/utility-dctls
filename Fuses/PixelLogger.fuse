@@ -14,30 +14,59 @@ function Create()
         INPID_PreviewControl = "CrosshairControl",
         INP_DoNotifyChanged = true,
     })
-    Tags = self:AddInput("Tags", "Tags", {
-        LINKID_DataType = "Text",
-        INPID_InputControl = "TextEditControl",
-        INPS_DefaultText = "",
-        TEC_Lines = 1,
-        TEC_Wrap = true,
-        TEC_DeferSetInputs = true,
-        INP_DoNotifyChanged = true,
-    })
-    LogHeader = self:AddInput("Log Header", "LogHeader", {
-        LINKID_DataType = "Number",
-        INPID_InputControl = "CheckboxControl",
-        INP_Integer = true,
-        INP_Default = 1.0,
-    })
-    FrameNum = self:AddInput("Frame Number", "FrameNum", {
+
+    FirstFrame = self:AddInput("First Frame", "FirstFrame", {
         LINKID_DataType = "Number",
         INPID_InputControl = "ScrewControl",
-        INP_Default = -1.0,
+        INP_Default = 0.0,
         INP_INTEGER = true,
         IC_DisplayedPrecision = 0,
-        IC_Visible = false,
-        INP_DoNotifyChanged = false,
     })
+
+    LastFrame = self:AddInput("Last Frame", "LastFrame", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ScrewControl",
+        INP_Default = 1000.0,
+        INP_INTEGER = true,
+        IC_DisplayedPrecision = 0,
+    })
+
+    IndexOffset = self:AddInput("Index Offset", "IndexOffset", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ScrewControl",
+        INP_Default = 0.0,
+        INP_INTEGER = true,
+        INP_MinAllowed = 0.0,
+        IC_DisplayedPrecision = 0,
+    })
+
+    SkipMissingFrames = self:AddInput("Skip Missing Frames", "SkipMissingFrames", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "CheckboxControl",
+        INP_Default = 1.0,
+        INP_INTEGER = true,
+    })
+
+    Filename = self:AddInput("CSV Filename", "Filename", {
+        LINKID_DataType = "Text",
+        INPID_InputControl = "FileControl",
+        FC_ClipBrowse = false,
+        FC_IsSaver = true,
+        FC_PathBrowse = false,
+        FCS_FilterString = "CSV Files (*.csv)|*.csv",
+        INP_DoNotifyChanged = true,
+        INP_ForceNotify = false,
+        INP_InitialNotify = true,
+    })
+    WriteButton = self:AddInput("Write File", "WriteFile", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ButtonControl",
+        INP_DoNotifyChanged = true,
+        INP_External = false,
+    })
+
+    -- Inputs
+
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
         LINK_Main = 1,
@@ -49,38 +78,51 @@ function Create()
 end
 
 function NotifyChanged(inp, param, time)
-    if inp == Tags or inp == PixelLocation then
-        FrameNum:SetSource(Number(time-1.0), time)
+    if ((inp == WriteButton) and (param.Value == 1)) then
+
+        local filetype_str = "csv"
+
+        local filename = Filename:GetSource(time).Value
+        assert(filename ~= "", "No filename specified")
+        local expected_suffix = "." .. filetype_str
+        if string.sub(filename, -1 * expected_suffix:len()):lower() ~= expected_suffix then
+            filename = filename .. expected_suffix
+        end
+        assert(string.sub(filename, -1 * expected_suffix:len()):lower() == expected_suffix, "Filename does not end with " .. expected_suffix)
+        print("Writing CSV file to " .. filename)
+
+        local file = io.open(filename, "w")
+        -- Write header
+        local curr_line = "frame,red,green,blue"
+        print(curr_line)
+        file:write(curr_line.."\n")
+
+        local first_frame = FirstFrame:GetSource(0).Value
+        local last_frame = LastFrame:GetSource(0).Value
+        local idx_offset = IndexOffset:GetSource(0).Value
+        local skip_missing_frames = SkipMissingFrames:GetSource(0).Value
+        local p = Pixel()
+        for i = first_frame, last_frame do
+            local curr_location = PixelLocation:GetSource(0)
+            local img = InImage:GetSource(i)
+            if img == nil then
+                if skip_missing_frames < 0.5 then
+                    file:close()
+                    assert(img ~= nil, "Missing frame " .. i .. " in input image sequence")
+                end
+            else
+                img:GetPixel(curr_location.X, curr_location.Y, p)
+                curr_line = (i + idx_offset) .. "," .. p.R .. "," .. p.G .. "," .. p.B
+                print(curr_line)
+                file:write(curr_line.."\n")
+            end
+        end
+        file:close()
     end
 end
 
 function Process(req)
-    -- Get values from the UI Tools
-    local pixel_location = PixelLocation:GetValue(req)
-    local text = Tags:GetValue(req).Value
-    local img = InImage:GetSource(req.Time)
-    local log_header = LogHeader:GetValue(req).Value
-
-    -- Have to use this SetSource hack in order to void the cache, but
-    -- this code would otherwise run continuously so we just need to
-    -- save whether we ran the function by holding it in FrameNum.
-    if log_header == 1 and FrameNum:GetValue(req).Value == -1.0 then
-        local tags_title = ""
-        if text ~= "" then
-            tags_title = ",tags"
-        end
-        print(string.format("frame,red,green,blue%s", tags_title))
-    end
-    if FrameNum:GetValue(req).Value ~= req.Time then
-        FrameNum:SetSource(Number(req.Time), 0)
-        local p = Pixel()
-        img:GetPixel(pixel_location.X * (img.Width - 1), pixel_location.Y * (img.Height - 1), p)
-        local tag_str = text
-        if text ~= "" then
-            tag_str = string.format(",%s", text)
-        end
-        print(string.format("%d,%.9f,%.9f,%.9f%s", req.Time, p.R, p.G, p.B, tag_str))
-    end
-
-    OutImage:Set(req, img)
+    local img = InImage:GetValue(req)
+    local out = img:Copy()
+    OutImage:Set(req, out)
 end
