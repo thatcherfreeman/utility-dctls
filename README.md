@@ -438,6 +438,8 @@ In practice, you should use the following pipeline: `1. Clamp 0+ ==> 2. Film Cur
 ### Film Grain DCTL
 Creates a random noise, inspired by statistical film models. You'll need to pass in a linear image and use two of these DCTLs in a pipeline, one for the Neg stock and one for the print stock, as each one returns the Transmittance of the film stock.
 
+In order for the math to work out correctly, this DCTL expects that all inputs are nonnegative (and it has a clamp to remove any negative values when they arise). I would recommend using this DCTL when the image is in such a state.
+
 #### DCTL Parameters
 **D Max**: Maximum density
 
@@ -613,6 +615,8 @@ Blur kernel where you can choose the Distance vs Weight function. Use this on a 
 
 ### Photon Noise DCTL
 Helps simulate the effect of photon noise, a noise that's approximately poisson distributed, where the variance is proportional to the intensity of the signal. Apply this to a linear image.
+
+In order for the math to work out correctly, this DCTL expects that all inputs are nonnegative (and it has a clamp to remove any negative values when they arise). I would recommend using this DCTL when the image is in such a state.
 
 #### DCTL Parameters
 **Photon Exposure** (stops): The input signal is multiplied by `_exp2f(photon exposure)`to compute the variance
