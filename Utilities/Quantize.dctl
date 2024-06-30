@@ -1,8 +1,12 @@
+#line 2
+// clang-format off
 DEFINE_UI_PARAMS(bit_depth, Bit Depth, DCTLUI_SLIDER_INT, 8, 1, 24, 1)
 DEFINE_UI_PARAMS(clip, Clip Blacks and Whites, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(rounding_opt, Quantization Method, DCTLUI_COMBO_BOX, 0, {ROUND, TRUNCATE, STOCHASTIC}, {Round, Truncate, Stochastic})
 
-typedef ulong rand_state;
+// clang-format on
+
+typedef uint rand_state;
 
 __DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
     rand_state x = *seed;
