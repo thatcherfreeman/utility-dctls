@@ -30,6 +30,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Field Curvature DCTL](#field-curvature-dctl)
         - [Film Curve DCTL](#film-curve-dctl)
         - [Film Grain DCTL](#film-grain-dctl)
+        - [Fixed SNR Noise DCTL](#fixed-snr-noise-dctl)
         - [Gain Normalization](#gain-normalization)
         - [Halation DCTL](#halation-dctl)
         - [Hue Curve DCTL](#hue-curve-dctl)
@@ -456,6 +457,17 @@ In order for the math to work out correctly, this DCTL expects that all inputs a
 **Seed Position X/Y**: Indicates where in the image to pull a pixel to start the random seed. Change this if the noise is fixed.
 
 **Noise Mode**: Indicates a different noise mode. In RGB, noise is computed on each channel independently, In Monochrome Noise mode, I recycle the same random seed for all three channels to avoid introducing chroma noise.
+
+---
+### Fixed SNR Noise DCTL
+Applies noise such that the Signal to Noise ratio is fixed; IE the standard deviation of the noise distribution applied at each pixel is contrived to be a fixed ratio of the input signal. I would not recommend running this with an SNR below 3.0.
+
+#### DCTL Parameters
+**Target SNR**: The desired SNR, not including the noise already present in the image.
+
+**Noise Mode**: Indicates a different noise mode. In RGB, noise is computed on each channel independently, In Monochrome Noise mode, I recycle the same random seed for all three channels to avoid introducing chroma noise.
+
+**Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
 
 ---
 ### Gain Normalization

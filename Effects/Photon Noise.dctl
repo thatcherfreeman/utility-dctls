@@ -1,7 +1,11 @@
+#line 2
+// clang-format off
 DEFINE_UI_PARAMS(photon_exp, Photon Exposure, DCTLUI_VALUE_BOX, -9.0)
 DEFINE_UI_PARAMS(noise_mode, Noise Mode, DCTLUI_COMBO_BOX, 1, {RGB, MONO}, {RGB Noise, Monochrome Noise})
 DEFINE_UI_PARAMS(seed_position_x, Seed Position X, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(seed_position_y, Seed Position Y, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
+
+// clang-format on
 
 /////////////////////////////////////////////
 // PDFs and CDFs
@@ -52,7 +56,7 @@ __DEVICE__ float norm_pdf(float z, float mean, float var) {
 // Random Number Generator
 /////////////////////////////////////////////
 
-typedef ulong rand_state;
+typedef uint rand_state;
 
 __DEVICE__ float _randu_lcg(__PRIVATE__ rand_state* seed) {
     // Returns random number in interval [0, 1)

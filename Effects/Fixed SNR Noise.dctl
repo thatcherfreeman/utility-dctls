@@ -1,7 +1,6 @@
 #line 2
 // clang-format off
-DEFINE_UI_PARAMS(mean, Noise Mean, DCTLUI_VALUE_BOX, 0.01)
-DEFINE_UI_PARAMS(stddev, Noise Std. Dev, DCTLUI_VALUE_BOX, 0.001)
+DEFINE_UI_PARAMS(target_snr, Target SNR, DCTLUI_VALUE_BOX, 6.0)
 DEFINE_UI_PARAMS(noise_mode, Noise Mode, DCTLUI_COMBO_BOX, 1, {RGB, MONO}, {RGB Noise, Monochrome Noise})
 DEFINE_UI_PARAMS(seed_position_x, Seed Position X, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(seed_position_y, Seed Position Y, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
@@ -59,6 +58,16 @@ __DEVICE__ float norm_pdf(float z, float mean, float var) {
 
 typedef uint rand_state;
 
+__DEVICE__ float _randu_lcg(__PRIVATE__ rand_state* seed) {
+    // Returns random number in interval [0, 1)
+    rand_state old_seed = *seed;
+    const rand_state m = (~((rand_state)0));
+    const rand_state a = 48271;
+    rand_state new_seed = (a * old_seed) % m;
+    *seed = new_seed;
+    return (((float)new_seed) / (float)m);
+}
+
 __DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
     rand_state x = *seed;
     x ^= (x << 13 | x >> 19);
@@ -91,15 +100,20 @@ __DEVICE__ float sample_norm(float mean, float var, __PRIVATE__ rand_state* seed
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
 
     // Obtain random seed.
-    float seed = _tex2D(p_TexR, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height));
+    int2 seed_position = make_int2((int)(seed_position_x * (p_Width - 1)), (int)(seed_position_y * (p_Height - 1)));
+    float seed;
+    seed = _tex2D(p_TexR, seed_position.x, seed_position.y);
     seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0;
     seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0;
     rand_state state_value = *((__PRIVATE__ rand_state*)&seed);
     __PRIVATE__ rand_state* state = &state_value;
+    // return make_float3(
+    // (float)(state_value), (float)(state_value), (float)(state_value));
 
     float val;
     *state ^= p_Width * p_Height;
     *state ^= (p_Width * p_Y + p_X) << 5;
+    *state ^= (p_Height * p_X + p_Y) << 10;
     val = randu(state);
     val = randu(state);
     val = randu(state);
@@ -107,20 +121,24 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     *state = *((__PRIVATE__ rand_state*)&val);
 
     // Apply noise.
-    float3 output_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
-    float variance = stddev * stddev;
+    target_snr = _fmaxf(target_snr, 0.0);
+    // target_snr = curr_color / sqrt(variance)
+    // variance = curr_color^2 / target_snr^2
+    float target_snr_sq = target_snr * target_snr;
+    float3 output_color = make_float3(0.0, 0.0, 0.0);
+    float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
 
     if (noise_mode == MONO) {
         rand_state initial_state_value_red = *state;
         rand_state initial_state_value_green = *state;
         rand_state initial_state_value_blue = *state;
-        output_color.x += sample_norm(mean, variance, &initial_state_value_red);
-        output_color.y += sample_norm(mean, variance, &initial_state_value_green);
-        output_color.z += sample_norm(mean, variance, &initial_state_value_blue);
+        output_color.x = sample_norm(curr_color.x, curr_color.x * curr_color.x / target_snr_sq, &initial_state_value_red);
+        output_color.y = sample_norm(curr_color.y, curr_color.y * curr_color.y / target_snr_sq, &initial_state_value_green);
+        output_color.z = sample_norm(curr_color.z, curr_color.z * curr_color.z / target_snr_sq, &initial_state_value_blue);
     } else {
-        output_color.x += sample_norm(mean, variance, state);
-        output_color.y += sample_norm(mean, variance, state);
-        output_color.z += sample_norm(mean, variance, state);
+        output_color.x = sample_norm(curr_color.x, curr_color.x * curr_color.x / target_snr_sq, state);
+        output_color.y = sample_norm(curr_color.y, curr_color.y * curr_color.y / target_snr_sq, state);
+        output_color.z = sample_norm(curr_color.z, curr_color.z * curr_color.z / target_snr_sq, state);
     }
 
     return output_color;
