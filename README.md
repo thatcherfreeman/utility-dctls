@@ -41,7 +41,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Photon Noise DCTL](#photon-noise-dctl)
         - [Random Channel Mixer](#random-channel-mixer)
         - [Random Contrast Curve](#random-contrast-curve)
-        - [Random LGGO](#random-lggo)
+        - [Random LGGO DCTL](#random-lggo-dctl)
         - [Random Linear Contrast](#random-linear-contrast)
         - [RGB Linear Contrast DCTL](#rgb-linear-contrast-dctl)
         - [Subtractive Saturation DCTL](#subtractive-saturation-dctl)
@@ -668,7 +668,7 @@ Constructs a contrast curve, has the option to procedurally generate one with ra
 **Ungroup RGB**: When checked, if Randomize is also checked, then this will randomize a contrast curve for each of the RGB channels.
 
 ---
-### Random LGGO
+### Random LGGO DCTL
 Applies LGGO adjustment, based on the specified seed.
 
 #### DCTL Parameters

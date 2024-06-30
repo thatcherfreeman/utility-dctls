@@ -115,6 +115,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float photon_gain = _exp2f(photon_exp);
     float3 output_color = make_float3(0.0, 0.0, 0.0);
     float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+    curr_color = make_float3(_fmaxf(curr_color.x, 0.0), _fmaxf(curr_color.y, 0.0), _fmaxf(curr_color.z, 0.0));
 
     if (noise_mode == MONO) {
         rand_state initial_state_value_red = *state;

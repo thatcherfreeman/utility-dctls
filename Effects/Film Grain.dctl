@@ -200,6 +200,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     float3 output_color = make_float3(0.0, 0.0, 0.0);
     float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y)) * photon_gain;
+    curr_color = make_float3(_fmaxf(curr_color.x, 0.0), _fmaxf(curr_color.y, 0.0), _fmaxf(curr_color.z, 0.0));
 
     if (noise_mode == MONO) {
         // As the seed of the random number generators is only dependent

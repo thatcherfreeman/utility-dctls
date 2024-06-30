@@ -1,0 +1,201 @@
+
+// clang-format offf
+DEFINE_UI_PARAMS(seed, Seed, DCTLUI_SLIDER_INT, 1, 1, 500, 1)
+DEFINE_UI_PARAMS(eps_lift, Eps Lift, DCTLUI_SLIDER_FLOAT, 0.03, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(eps_gamma, Eps Gamma, DCTLUI_SLIDER_FLOAT, 0.03, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(eps_gain, Eps Gain, DCTLUI_SLIDER_FLOAT, 0.03, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(eps_offset, Eps Offset, DCTLUI_SLIDER_FLOAT, 0.03, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(neutral_lift, Neutral Lift, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(neutral_gamma, Neutral Gamma, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(neutral_gain, Neutral Gain, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(neutral_offset, Neutral Offset, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(gray_ramp, Gray Ramp, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(draw_curve, Draw Curve, DCTLUI_CHECK_BOX, 0)
+
+// clang-format on
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+typedef struct {
+        float lift;
+        float gamma;
+        float gain;
+        float offset;
+        // Assumed to be wheels params.
+} lggo_params_t;
+
+typedef lggo_params_t lggo_params_reals_t;
+
+__DEVICE__ lggo_params_t make_lggo_params(float lift, float gamma, float gain, float offset) {
+    lggo_params_t result = {};
+    result.lift = lift;
+    result.gamma = gamma;
+    result.gain = gain;
+    result.offset = offset;
+    return result;
+}
+
+__DEVICE__ lggo_params_reals_t make_lggo_params_reals(float lift, float gamma, float gain, float offset) {
+    return (lggo_params_reals_t)make_lggo_params(lift, gamma, gain, offset);
+}
+
+// OFFSET_SCALING is a magic number measured from the default offset wheel values in Resolve.
+#define OFFSET_SCALING ((1.233137392 - 0.5) / 100.0)
+#define PRINTER_LIGHT_BASE (25.0)
+
+__DEVICE__ inline float convert_offset_wheel_to_real(float offset_wheel) {
+    return (offset_wheel - PRINTER_LIGHT_BASE) * OFFSET_SCALING;
+}
+
+__DEVICE__ inline float convert_offset_real_to_wheel(float offset_real) {
+    return (offset_real / OFFSET_SCALING) + PRINTER_LIGHT_BASE;
+}
+
+__DEVICE__ float convert_gamma_to_reals(float g) {
+    // Converts -1 to +1 range to an exponent
+    // Essentially what Resolve does with its gamma
+    // correction.
+    float out;
+    if (g <= 0) {
+        out = 1.0f + (-4.0f * g);
+    } else {
+        out = 1.0f / (4.0f * g + 1);
+    }
+    return out;
+}
+
+__DEVICE__ lggo_params_reals_t convert_lggo_to_reals(lggo_params_t params) {
+    // Convert each of the parameters from the Resolve wheels values to the underlying real values.
+    return make_lggo_params(
+        params.lift * 2.0, convert_gamma_to_reals(params.gamma), params.gain, convert_offset_wheel_to_real(params.offset));
+}
+
+__DEVICE__ float apply_lggo(float x, lggo_params_reals_t params, bool invert) {
+    float white_out_x = 1.0 / params.gain;
+    float black_out_x = (1.0 - (1.0 / (1.0 - params.lift)));
+    float slope = 1.0 / (white_out_x - black_out_x);
+    float out;
+
+    if (invert) {
+        out = powf(x, 1.0 / params.gamma);
+        out = out - params.offset;
+        out = out / slope;
+        out = out + black_out_x;
+    } else {
+        out = slope * (x - black_out_x);
+        out = out + params.offset;
+        out = powf(out, params.gamma);
+    }
+    return out;
+}
+
+__DEVICE__ float3
+apply_lggo_f3(float3 x, lggo_params_reals_t r_params, lggo_params_reals_t g_params, lggo_params_reals_t b_params, bool invert) {
+    return make_float3(apply_lggo(x.x, r_params, invert), apply_lggo(x.y, g_params, invert), apply_lggo(x.z, b_params, invert));
+}
+
+__DEVICE__ float random(__PRIVATE__ uint* seed) {
+    uint old_seed = *seed;
+    const uint m = (1 << 31) - 1;
+    const uint a = 48271;
+    uint new_seed = (a * old_seed) % m;
+    *seed = new_seed;
+    return (((float)new_seed) / (float)m);
+}
+
+__DEVICE__ float random_range(float low, float high, __PRIVATE__ uint* seed) {
+    return _mix(low, high, random(seed));
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    uint state = seed;
+    random(&state);
+
+    float3 input_color = make_float3(p_R, p_G, p_B);
+    float x = (float)p_X / (p_Width - 1);
+    float y = (float)p_Y / (p_Height - 1);
+    bool skip_chart = ((p_X == 0 && p_Y == p_Height - 1) || (p_X == p_Width - 1 && p_Y == 0) || (p_X == 0 && p_Y == 0) ||
+                       (p_X == p_Width - 1 && p_Y == p_Height - 1));
+
+    if (!skip_chart && gray_ramp && y > 0.9) {
+        input_color = make_float3(x, x, x);
+    }
+
+    lggo_params_t r_params_wheels = make_lggo_params(0.0, 0.0, 1.0, PRINTER_LIGHT_BASE);
+    lggo_params_t g_params_wheels = make_lggo_params(0.0, 0.0, 1.0, PRINTER_LIGHT_BASE);
+    lggo_params_t b_params_wheels = make_lggo_params(0.0, 0.0, 1.0, PRINTER_LIGHT_BASE);
+
+    float neut_lift_param = random_range(-eps_lift, eps_lift, &state);
+    r_params_wheels.lift = random_range(-eps_lift, eps_lift, &state);
+    g_params_wheels.lift = random_range(-eps_lift, eps_lift, &state);
+    b_params_wheels.lift = random_range(-eps_lift, eps_lift, &state);
+    if (neutral_lift) {
+        r_params_wheels.lift = neut_lift_param;
+        g_params_wheels.lift = neut_lift_param;
+        b_params_wheels.lift = neut_lift_param;
+    }
+
+    float neut_gamma_param = random_range(-eps_gamma, eps_gamma, &state);
+    r_params_wheels.gamma = random_range(-eps_gamma, eps_gamma, &state);
+    g_params_wheels.gamma = random_range(-eps_gamma, eps_gamma, &state);
+    b_params_wheels.gamma = random_range(-eps_gamma, eps_gamma, &state);
+    if (neutral_gamma) {
+        r_params_wheels.gamma = neut_gamma_param;
+        g_params_wheels.gamma = neut_gamma_param;
+        b_params_wheels.gamma = neut_gamma_param;
+    }
+
+    float neut_gain_param = random_range(-eps_gain, eps_gain, &state) + 1.0;
+    r_params_wheels.gain = random_range(-eps_gain, eps_gain, &state) + 1.0;
+    g_params_wheels.gain = random_range(-eps_gain, eps_gain, &state) + 1.0;
+    b_params_wheels.gain = random_range(-eps_gain, eps_gain, &state) + 1.0;
+    if (neutral_gain) {
+        r_params_wheels.gain = neut_gain_param;
+        g_params_wheels.gain = neut_gain_param;
+        b_params_wheels.gain = neut_gain_param;
+    }
+
+    float neut_offset_param = convert_offset_real_to_wheel(random_range(-eps_offset, eps_offset, &state));
+    r_params_wheels.offset = convert_offset_real_to_wheel(random_range(-eps_offset, eps_offset, &state));
+    g_params_wheels.offset = convert_offset_real_to_wheel(random_range(-eps_offset, eps_offset, &state));
+    b_params_wheels.offset = convert_offset_real_to_wheel(random_range(-eps_offset, eps_offset, &state));
+    if (neutral_offset) {
+        r_params_wheels.offset = neut_offset_param;
+        g_params_wheels.offset = neut_offset_param;
+        b_params_wheels.offset = neut_offset_param;
+    }
+
+    lggo_params_reals_t r_params_reals = convert_lggo_to_reals(r_params_wheels);
+    lggo_params_reals_t g_params_reals = convert_lggo_to_reals(g_params_wheels);
+    lggo_params_reals_t b_params_reals = convert_lggo_to_reals(b_params_wheels);
+
+    float3 output_color = apply_lggo_f3(input_color, r_params_reals, g_params_reals, b_params_reals, false);
+
+    if (!skip_chart && draw_curve) {
+        float3 chart_rgb = apply_lggo_f3(make_float3(x, x, x), r_params_reals, g_params_reals, b_params_reals, false);
+        float3 chart_color = make_float3(0.0, 0.0, 0.0);
+        float chart_eps = 0.001;
+        bool output_chart = false;
+        y = 1 - y;
+        if (_fabs(y - chart_rgb.x) < chart_eps) {
+            chart_color.x += 1.0;
+            output_chart = true;
+        }
+        if (_fabs(y - chart_rgb.y) < chart_eps) {
+            chart_color.y += 1.0;
+            output_chart = true;
+        }
+        if (_fabs(y - chart_rgb.z) < chart_eps) {
+            chart_color.z += 1.0;
+            output_chart = true;
+        }
+
+        if (output_chart) {
+            output_color = chart_color;
+        }
+    }
+
+    return output_color;
+}
