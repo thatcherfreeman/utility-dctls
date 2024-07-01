@@ -99,16 +99,20 @@ __DEVICE__ float sample_norm(float mean, float var, __PRIVATE__ rand_state* seed
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
 
+    float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+    curr_color = make_float3(_fmaxf(curr_color.x, 0.0), _fmaxf(curr_color.y, 0.0), _fmaxf(curr_color.z, 0.0));
+
     // Obtain random seed.
     float seed = _tex2D(p_TexR, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height));
     seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0;
     seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0;
+    seed += curr_color.x * 10 + curr_color.y * 100 + curr_color.z * 1000;
     rand_state state_value = *((__PRIVATE__ rand_state*)&seed);
     __PRIVATE__ rand_state* state = &state_value;
 
     float val;
     *state ^= p_Width * p_Height;
-    *state ^= (p_Width * p_Y + p_X) << 5;
+    *state ^= (p_Width * p_Y + p_X) << 10;
     val = randu(state);
     val = randu(state);
     val = randu(state);
@@ -118,8 +122,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     // Apply noise.
     float photon_gain = _exp2f(photon_exp);
     float3 output_color = make_float3(0.0, 0.0, 0.0);
-    float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
-    curr_color = make_float3(_fmaxf(curr_color.x, 0.0), _fmaxf(curr_color.y, 0.0), _fmaxf(curr_color.z, 0.0));
 
     if (noise_mode == MONO) {
         rand_state initial_state_value_red = *state;
