@@ -1,20 +1,24 @@
-FuRegisterClass("LUTCubeAnalyzer1D",
-    CT_Tool, {
-        REGS_Name = "LUT Cube Analyzer 1D",
-        REGS_Category = "Fuses\\Util",
-        REGS_OpIconString = "LCA1D",
-        REGS_OpDescription = "Writes 1D LUT Gray Ramp to file",
-    }
-)
+FuRegisterClass("LUTCubeAnalyzer1D", CT_Tool, {
+    REGS_Name = "LUT Cube Analyzer 1D",
+    REGS_Category = "LUT",
+    REGS_OpIconString = "LCA1D",
+    REGS_OpDescription = "Writes 1D LUT Gray Ramp to file"
+})
 
 function Create()
     FileType = self:AddInput("Type", "Type", {
         LINKID_DataType = "Number",
         INPID_InputControl = "MultiButtonControl",
         INP_Default = 0.0,
-        { MBTNC_AddButton = "CUBE", MBTNCD_ButtonWidth = 0.50, },
-        { MBTNC_AddButton = "SPI1D", MBTNCD_ButtonWidth = 0.50, },
-        INP_DoNotifyChanged = true,
+        {
+            MBTNC_AddButton = "CUBE",
+            MBTNCD_ButtonWidth = 0.50
+        },
+        {
+            MBTNC_AddButton = "SPI1D",
+            MBTNCD_ButtonWidth = 0.50
+        },
+        INP_DoNotifyChanged = true
     })
 
     Filename = self:AddInput("Filename", "Filename", {
@@ -26,7 +30,7 @@ function Create()
         FCS_FilterString = "CUBE Files (*.cube)|*.cube|SPI1D Files (*.spi1d)|*.spi1d",
         INP_DoNotifyChanged = true,
         INP_ForceNotify = false,
-        INP_InitialNotify = true,
+        INP_InitialNotify = true
     })
 
     -- Inputs
@@ -34,20 +38,19 @@ function Create()
         LINKID_DataType = "Number",
         INPID_InputControl = "ButtonControl",
         INP_DoNotifyChanged = true,
-        INP_External = false,
+        INP_External = false
     })
 
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
 
     OutImage = self:AddOutput("Output", "Output", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
 end
-
 
 function NotifyChanged(inp, param, time)
     if ((inp == WriteButton) and (param.Value == 1)) then
@@ -69,7 +72,8 @@ function NotifyChanged(inp, param, time)
         if string.sub(filename, -1 * expected_suffix:len()):lower() ~= expected_suffix then
             filename = filename .. expected_suffix
         end
-        assert(string.sub(filename, -1 * expected_suffix:len()):lower() == expected_suffix, "Filename does not end with " .. expected_suffix)
+        assert(string.sub(filename, -1 * expected_suffix:len()):lower() == expected_suffix,
+            "Filename does not end with " .. expected_suffix)
 
         print("Writing LUT file to " .. filename)
 

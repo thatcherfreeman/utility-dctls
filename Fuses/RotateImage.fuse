@@ -1,19 +1,17 @@
-FuRegisterClass("RotateImage",
-    CT_Tool, {
-        REGS_Category = "Fuses\\Util",
-        REGS_OpIconString = "RotImg",
-        REGS_OpDescription = "Quickly rotate an image in increments of 90 degrees."
-    }
-)
+FuRegisterClass("RotateImage", CT_Tool, {
+    REGS_Category = "Transform",
+    REGS_OpIconString = "RotImg",
+    REGS_OpDescription = "Quickly rotate an image in increments of 90 degrees."
+})
 
 function Create()
     BackImage = self:AddInput("Background", "Background", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
     OutImage = self:AddOutput("Output", "Output", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
 
     Direction = self:AddInput("Rotation", "Rotation", {
@@ -21,13 +19,20 @@ function Create()
         INPID_InputControl = "ComboControl",
         INP_Default = 0,
         INP_Integer = true,
-        {CCS_AddString = "0"},
-        {CCS_AddString = "90"},
-        {CCS_AddString = "180"},
-        {CCS_AddString = "270"},
+        {
+            CCS_AddString = "0"
+        },
+        {
+            CCS_AddString = "90"
+        },
+        {
+            CCS_AddString = "180"
+        },
+        {
+            CCS_AddString = "270"
+        }
     })
 end
-
 
 function Process(req)
     local background = BackImage:GetValue(req)
@@ -45,8 +50,19 @@ function Process(req)
         new_height = background.Height
     end
 
-    local out_image = Image({IMG_Depth=background.Depth, IMG_Height = new_height, IMG_Width = new_width, IMAT_OriginalWidth=new_width, IMAT_OriginalHeight=new_height})
-    out_image:Fill(Pixel({R = 0, G = 0, B = 0, A = 0.0}))
+    local out_image = Image({
+        IMG_Depth = background.Depth,
+        IMG_Height = new_height,
+        IMG_Width = new_width,
+        IMAT_OriginalWidth = new_width,
+        IMAT_OriginalHeight = new_height
+    })
+    out_image:Fill(Pixel({
+        R = 0,
+        G = 0,
+        B = 0,
+        A = 0.0
+    }))
 
     -- Copy background and foreground images in.
     if direction == 0 then
@@ -54,13 +70,31 @@ function Process(req)
         out_image = background:CopyOf()
     elseif direction == 1 then
         -- 90
-        out_image:Merge(background, {MO_EdgeMode="Canvas", MO_ApplyMode="Merge", MO_XOffset=0.5, MO_YOffset=0.5, MO_Angle = 90})
+        out_image:Merge(background, {
+            MO_EdgeMode = "Canvas",
+            MO_ApplyMode = "Merge",
+            MO_XOffset = 0.5,
+            MO_YOffset = 0.5,
+            MO_Angle = 90
+        })
     elseif direction == 2 then
         -- 180
-        out_image:Merge(background, {MO_EdgeMode="Canvas", MO_ApplyMode="Merge", MO_XOffset=0.5, MO_YOffset=0.5, MO_Angle = 180})
+        out_image:Merge(background, {
+            MO_EdgeMode = "Canvas",
+            MO_ApplyMode = "Merge",
+            MO_XOffset = 0.5,
+            MO_YOffset = 0.5,
+            MO_Angle = 180
+        })
     elseif direction == 3 then
         -- 270
-        out_image:Merge(background, {MO_EdgeMode="Canvas", MO_ApplyMode="Merge", MO_XOffset=0.5, MO_YOffset=0.5, MO_Angle = 270})
+        out_image:Merge(background, {
+            MO_EdgeMode = "Canvas",
+            MO_ApplyMode = "Merge",
+            MO_XOffset = 0.5,
+            MO_YOffset = 0.5,
+            MO_Angle = 270
+        })
     end
 
     OutImage:Set(req, out_image)

@@ -1,11 +1,9 @@
-FuRegisterClass("LinearExposure",
-    CT_Tool, {
-        REGS_Name = "Linear Exposure",
-        REGS_Category = "Fuses\\Photometric",
-        REGS_OpIconString = "Exp",
-        REGS_OpDescription = "Applies stops of exposure"
-    }
-)
+FuRegisterClass("LinearExposure", CT_Tool, {
+    REGS_Name = "Linear Exposure",
+    REGS_Category = "Color",
+    REGS_OpIconString = "Exp",
+    REGS_OpDescription = "Applies stops of exposure"
+})
 
 function Create()
     Exp = self:AddInput("Exposure (Stops)", "ExpAdjustment", {
@@ -13,15 +11,15 @@ function Create()
         INPID_InputControl = "SliderControl",
         INP_MinScale = -8.0,
         INP_MaxScale = 8.0,
-        INP_Default = 0.0,
+        INP_Default = 0.0
     })
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
     OutImage = self:AddOutput("Output", "Output", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
 end
 

@@ -1,11 +1,9 @@
-FuRegisterClass("LUTCubeCreator1D",
-    CT_Tool, {
-        REGS_Name = "LUT Cube Creator 1D",
-        REGS_Category = "Fuses\\Util",
-        REGS_OpIconString = "LCC1D",
-        REGS_OpDescription = "Generates grey ramp for 1D LUT",
-    }
-)
+FuRegisterClass("LUTCubeCreator1D", CT_Tool, {
+    REGS_Name = "LUT Cube Creator 1D",
+    REGS_Category = "LUT",
+    REGS_OpIconString = "LCC1D",
+    REGS_OpDescription = "Generates grey ramp for 1D LUT"
+})
 
 function Create()
     Size = self:AddInput("Size", "Size", {
@@ -16,21 +14,27 @@ function Create()
         INP_Default = 4096.0,
         INP_INTEGER = true,
         INP_MinAllowed = 1.0,
-        IC_DisplayedPrecision = 0,
+        IC_DisplayedPrecision = 0
     })
     OutImage = self:AddOutput("Output", "Output", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
 end
 
 function Process(req)
     -- Get values from the UI Tools
     local output_size = Size:GetValue(req).Value
-    local out = Image({IMG_Height = 1, IMG_Depth = 8, IMG_Width = output_size})
-    local p = Pixel({A=1})
-    for x=0,output_size-1 do
-        local curr_value = x / (output_size-1)
+    local out = Image({
+        IMG_Height = 1,
+        IMG_Depth = 8,
+        IMG_Width = output_size
+    })
+    local p = Pixel({
+        A = 1
+    })
+    for x = 0, output_size - 1 do
+        local curr_value = x / (output_size - 1)
         p.R = curr_value
         p.G = curr_value
         p.B = curr_value

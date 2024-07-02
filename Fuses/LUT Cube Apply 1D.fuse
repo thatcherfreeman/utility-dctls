@@ -1,11 +1,9 @@
-FuRegisterClass("LUTCubeApply1D",
-    CT_Tool, {
-        REGS_Name = "LUT Cube Apply 1D",
-        REGS_Category = "Fuses\\Util",
-        REGS_OpIconString = "LCP1D",
-        REGS_OpDescription = "Apply a 1D LUT HALD Image to an image",
-    }
-)
+FuRegisterClass("LUTCubeApply1D", CT_Tool, {
+    REGS_Name = "LUT Cube Apply 1D",
+    REGS_Category = "LUT",
+    REGS_OpIconString = "LCP1D",
+    REGS_OpDescription = "Apply a 1D LUT HALD Image to an image"
+})
 
 function Create()
     -- Inputs
@@ -13,22 +11,22 @@ function Create()
         LINKID_DataType = "Number",
         INPID_InputControl = "CheckboxControl",
         INP_Integer = true,
-        INP_Default = 1.0,
+        INP_Default = 1.0
     })
 
     InImage = self:AddInput("Image", "Image", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
 
     LUTCubeImage = self:AddInput("LUT Cube Image", "LUTCubeImage", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
 
     OutImage = self:AddOutput("Output", "Output", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
 end
 
@@ -98,6 +96,10 @@ function Process(req)
 
     -- Apply LUT to image
     local out = img:Copy()
-    out:MultiProcessPixels(nil, {lut=lut, lut_size=lut_size, clamp=clamp}, 0, 0, img.Width, img.Height, img, apply_1d_lut)
+    out:MultiProcessPixels(nil, {
+        lut = lut,
+        lut_size = lut_size,
+        clamp = clamp
+    }, 0, 0, img.Width, img.Height, img, apply_1d_lut)
     OutImage:Set(req, out)
 end

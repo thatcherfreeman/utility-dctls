@@ -1,11 +1,9 @@
-FuRegisterClass("LUTSmoother",
-    CT_Tool, {
-        REGS_Name = "LUT Smoother",
-        REGS_Category = "Fuses\\Util",
-        REGS_OpIconString = "LSmth",
-        REGS_OpDescription = "Applies 3D blur to your HALD image."
-    }
-)
+FuRegisterClass("LUTSmoother", CT_Tool, {
+    REGS_Name = "LUT Smoother",
+    REGS_Category = "LUT",
+    REGS_OpIconString = "LSmth",
+    REGS_OpDescription = "Applies 3D blur to your HALD image."
+})
 
 function Create()
     Blur = self:AddInput("Saturated Blur Strength", "BlurStrength", {
@@ -13,29 +11,29 @@ function Create()
         INPID_InputControl = "SliderControl",
         INP_MinScale = 0.0,
         INP_MaxScale = 5.0,
-        INP_Default = 0.0,
+        INP_Default = 0.0
     })
     AchromaticBlur = self:AddInput("Achromatic Blur Strength", "AchromBlurStrength", {
         LINKID_DataType = "Number",
         INPID_InputControl = "SliderControl",
         INP_MinScale = 0.0,
         INP_MaxScale = 5.0,
-        INP_Default = 0.0,
+        INP_Default = 0.0
     })
     Threshold = self:AddInput("Saturation Threshold", "SatThresh", {
         LINKID_DataType = "Number",
         INPID_InputControl = "SliderControl",
         INP_MinScale = 0.0,
         INP_MaxScale = 1.0,
-        INP_Default = 0.3,
+        INP_Default = 0.3
     })
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
     OutImage = self:AddOutput("Output", "Output", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
 end
 
@@ -71,8 +69,8 @@ function get_sample(img, r, g, b, cube_size)
     -- for horizontal LUTs.
     x = r + (b * cube_size)
     y = g
-    x = math.max(math.min(x, img.Width-1), 0)
-    y = math.max(math.min(y, img.Height-1), 0)
+    x = math.max(math.min(x, img.Width - 1), 0)
+    y = math.max(math.min(y, img.Height - 1), 0)
     img:GetPixel(x, y, p)
     p.R = zero_nans(p.R)
     p.G = zero_nans(p.G)
@@ -85,8 +83,8 @@ function set_sample(img, r, g, b, cube_size, p)
     -- for horizontal LUTs.
     x = r + (b * cube_size)
     y = g
-    x = math.max(math.min(x, img.Width-1), 0)
-    y = math.max(math.min(y, img.Height-1), 0)
+    x = math.max(math.min(x, img.Width - 1), 0)
+    y = math.max(math.min(y, img.Height - 1), 0)
     img:SetPixel(x, y, p)
     return p
 end
@@ -107,7 +105,12 @@ function lut_blur(img, std, achromatic_std, threshold, cube_size)
         for r = 0, cube_size - 1 do
             for g = 0, cube_size - 1 do
                 for b = 0, cube_size - 1 do
-                    local total = Pixel({R = 0.0, G = 0.0, B = 0.0, A = 1.0})
+                    local total = Pixel({
+                        R = 0.0,
+                        G = 0.0,
+                        B = 0.0,
+                        A = 1.0
+                    })
                     local total_weight = 0.0
                     for i = -k, k do
                         local ri = ternary(c == 1, r + i, r)

@@ -9,6 +9,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
 - [Installation](#installation)
 - [The Fuses](#the-fuses)
     - [Fuses](#fuses)
+        - [Corner Repositioner](#corner-repositioner)
         - [DCTL Interpreter](#dctl-interpreter)
         - [FrameAvg Fuse](#frameavg-fuse)
         - [HDR Blending Fuse](#hdr-blending-fuse)
@@ -145,6 +146,20 @@ If a DCTL is not working, you can usually find logs in these directories. If you
 # The Fuses
 
 ## Fuses
+
+---
+
+### Corner Repositioner
+Corner positioning tool that actually works. You place four control points on the source image and choose their new locations on the destination side. Unlike Grid Warp, we do not delete the image outside of the source points. Unlike Corner Positioner and Perspective Positioner, you can choose for the source positions to not sit at the outer corners.
+
+#### Parameters
+**Show**: Indicate whether you want to show the source or destination control points. Set to Destination to see the output of the projective transform.
+
+**Src/Dst Top/Bottom Left/Right Position**: Indicate the source or destination position for each of these pixels
+
+**Reset Points to Corners**: Resets the coordinates of the four corners corresponding to the currently active/modifiable control points.
+
+**Copy Src to Dest/Dest to Src**: Copies the coordinates of one set of control points to the other.
 
 
 ---

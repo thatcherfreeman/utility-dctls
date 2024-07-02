@@ -1,0 +1,393 @@
+FuRegisterClass("CornerRepositioner", CT_Tool, {
+    REGS_Name = "CornerRepositioner",
+    REGS_Category = "Warp",
+    REGS_OpIconString = "CRPn",
+    REGS_OpDescription = "Better version of the Corner Positioner tool."
+})
+
+function Create()
+    Mode = self:AddInput("Show", "Show", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "MultiButtonControl",
+        INP_Default = 0.0,
+        {
+            MBTNC_AddButton = "Source",
+            MBTNCD_ButtonWidth = 0.50
+        },
+        {
+            MBTNC_AddButton = "Destination",
+            MBTNCD_ButtonWidth = 0.50
+        },
+        INP_DoNotifyChanged = true
+    })
+    SrcTLPos = self:AddInput("Src Top Left Position", "SrcTLPos", {
+        LINKID_DataType = "Point",
+        INPID_InputControl = "OffsetControl",
+        INPID_PreviewControl = "CrosshairControl",
+        INP_DefaultX = 0.0,
+        INP_DefaultY = 1.0
+    })
+    SrcTRPos = self:AddInput("Src Top Right Position", "SrcTRPos", {
+        LINKID_DataType = "Point",
+        INPID_InputControl = "OffsetControl",
+        INPID_PreviewControl = "CrosshairControl",
+        INP_DefaultX = 1.0,
+        INP_DefaultY = 1.0
+    })
+    SrcBLPos = self:AddInput("Src Bottom Left Position", "SrcBLPos", {
+        LINKID_DataType = "Point",
+        INPID_InputControl = "OffsetControl",
+        INPID_PreviewControl = "CrosshairControl",
+        INP_DefaultX = 0.0,
+        INP_DefaultY = 0.0
+    })
+    SrcBRPos = self:AddInput("Src Bottom Right Position", "SrcBRPos", {
+        LINKID_DataType = "Point",
+        INPID_InputControl = "OffsetControl",
+        INPID_PreviewControl = "CrosshairControl",
+        INP_DefaultX = 1.0,
+        INP_DefaultY = 0.0
+    })
+    DestTLPos = self:AddInput("Dst Top Left Position ", "DestTLPos", {
+        LINKID_DataType = "Point",
+        INPID_InputControl = "OffsetControl",
+        INPID_PreviewControl = "CrosshairControl",
+        INP_DefaultX = 0.0,
+        INP_DefaultY = 1.0
+    })
+    DestTRPos = self:AddInput("Dst Top Right Position ", "DestTRPos", {
+        LINKID_DataType = "Point",
+        INPID_InputControl = "OffsetControl",
+        INPID_PreviewControl = "CrosshairControl",
+        INP_DefaultX = 1.0,
+        INP_DefaultY = 1.0
+    })
+    DestBLPos = self:AddInput("Dst Bottom Left Position ", "DestBLPos", {
+        LINKID_DataType = "Point",
+        INPID_InputControl = "OffsetControl",
+        INPID_PreviewControl = "CrosshairControl",
+        INP_DefaultX = 0.0,
+        INP_DefaultY = 0.0
+    })
+    DestBRPos = self:AddInput("Dst Bottom Right Position ", "DestBRPos", {
+        LINKID_DataType = "Point",
+        INPID_InputControl = "OffsetControl",
+        INPID_PreviewControl = "CrosshairControl",
+        INP_DefaultX = 1.0,
+        INP_DefaultY = 0.0
+    })
+
+    Reset = self:AddInput("Reset Points to Corners", "Reset", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ButtonControl",
+        INP_DoNotifyChanged = true,
+        INP_External = false,
+        ICD_Width = 1.0
+    })
+    CopySrcDst = self:AddInput("Copy Src to Dest", "CopySrcDst", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ButtonControl",
+        INP_DoNotifyChanged = true,
+        INP_External = false,
+        ICD_Width = 0.5
+    })
+    CopyDstSrc = self:AddInput("Copy Dest to Src", "CopyDstSrc", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ButtonControl",
+        INP_DoNotifyChanged = true,
+        INP_External = false,
+        ICD_Width = 0.5
+    })
+
+    InImage = self:AddInput("Input", "Input", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1
+
+    })
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1
+    })
+end
+
+function NotifyChanged(inp, param, time)
+    if inp == Mode and param.Value == 1 then
+        -- Dest mode
+        SrcTLPos:SetAttrs({
+            PC_Visible = false
+            -- IC_VISIBLE = false,
+        })
+        DestTLPos:SetAttrs({
+            PC_Visible = true
+            -- IC_VISIBLE = true,
+        })
+        SrcTRPos:SetAttrs({
+            PC_Visible = false
+            -- IC_VISIBLE = false,
+        })
+        DestTRPos:SetAttrs({
+            PC_Visible = true
+            -- IC_VISIBLE = true,
+        })
+        SrcBLPos:SetAttrs({
+            PC_Visible = false
+            -- IC_VISIBLE = false,
+        })
+        DestBLPos:SetAttrs({
+            PC_Visible = true
+            -- IC_VISIBLE = true,
+        })
+        SrcBRPos:SetAttrs({
+            PC_Visible = false
+            -- IC_VISIBLE = false,
+        })
+        DestBRPos:SetAttrs({
+            PC_Visible = true
+            -- IC_VISIBLE = true,
+        })
+    elseif inp == Mode and param.Value == 0 then
+        -- Source Mode
+        SrcTLPos:SetAttrs({
+            PC_Visible = true
+            -- IC_VISIBLE = true,
+        })
+        DestTLPos:SetAttrs({
+            PC_Visible = false
+            -- IC_VISIBLE = false,
+        })
+        SrcTRPos:SetAttrs({
+            PC_Visible = true
+            -- IC_VISIBLE = true,
+        })
+        DestTRPos:SetAttrs({
+            PC_Visible = false
+            -- IC_VISIBLE = false,
+        })
+        SrcBLPos:SetAttrs({
+            PC_Visible = true
+            -- IC_VISIBLE = true,
+        })
+        DestBLPos:SetAttrs({
+            PC_Visible = false
+            -- IC_VISIBLE = false,
+        })
+        SrcBRPos:SetAttrs({
+            PC_Visible = true
+            -- IC_VISIBLE = true,
+        })
+        DestBRPos:SetAttrs({
+            PC_Visible = false
+            -- IC_VISIBLE = false,
+        })
+
+    elseif inp == Reset and param.Value == 1 and Mode:GetSource(time).Value == 1 then
+        -- Reset Destination
+        DestTLPos:SetSource(Point(0.0, 1.0), time)
+        DestBLPos:SetSource(Point(0.0, 0.0), time)
+        DestTRPos:SetSource(Point(1.0, 1.0), time)
+        DestBRPos:SetSource(Point(1.0, 0.0), time)
+    elseif inp == Reset and param.Value == 1 and Mode:GetSource(time).Value == 0 then
+        -- Reset Source
+        SrcTLPos:SetSource(Point(0.0, 1.0), time)
+        SrcBLPos:SetSource(Point(0.0, 0.0), time)
+        SrcTRPos:SetSource(Point(1.0, 1.0), time)
+        SrcBRPos:SetSource(Point(1.0, 0.0), time)
+    elseif inp == CopyDstSrc and param.Value == 1 then
+        SrcTLPos:SetSource(DestTLPos:GetSource(time), time)
+        SrcTRPos:SetSource(DestTRPos:GetSource(time), time)
+        SrcBLPos:SetSource(DestBLPos:GetSource(time), time)
+        SrcBRPos:SetSource(DestBRPos:GetSource(time), time)
+
+    elseif inp == CopySrcDst and param.Value == 1 then
+        DestTLPos:SetSource(SrcTLPos:GetSource(time), time)
+        DestTRPos:SetSource(SrcTRPos:GetSource(time), time)
+        DestBLPos:SetSource(SrcBLPos:GetSource(time), time)
+        DestBRPos:SetSource(SrcBRPos:GetSource(time), time)
+    end
+end
+
+function print_table(t, indentation)
+    if indentation == nil then
+        indentation = 0
+    end
+    local outer_prefix = string.rep("    ", indentation)
+    local inner_prefix = string.rep("    ", indentation + 1)
+    print(outer_prefix, "{")
+    for k, v in pairs(t) do
+        if type(v) == "table" then
+            print(inner_prefix, k, ": ")
+            print_table(v, indentation + 1)
+        elseif type(v) == "string" then
+            print(inner_prefix, k, string.format([[: "%s"]], v))
+        else
+            print(inner_prefix, k, ": ", v)
+        end
+    end
+    print(outer_prefix, "}")
+end
+
+function inverse(mat)
+    assert(type(mat) == "table" and #mat == 9, "inverse() called on matrix with incorrect size")
+    local out = {}
+    local det = mat[1] * (mat[5] * mat[9] - mat[6] * mat[8]) - mat[2] * (mat[4] * mat[9] - mat[6] * mat[7]) + mat[3] *
+                    (mat[4] * mat[8] - mat[5] * mat[7])
+    out[1] = (mat[5] * mat[9] - mat[6] * mat[8]) / det
+    out[2] = (mat[3] * mat[8] - mat[2] * mat[9]) / det
+    out[3] = (mat[2] * mat[6] - mat[3] * mat[5]) / det
+    out[4] = (mat[6] * mat[7] - mat[4] * mat[9]) / det
+    out[5] = (mat[1] * mat[9] - mat[3] * mat[7]) / det
+    out[6] = (mat[3] * mat[4] - mat[1] * mat[6]) / det
+    out[7] = (mat[4] * mat[8] - mat[5] * mat[7]) / det
+    out[8] = (mat[2] * mat[7] - mat[1] * mat[8]) / det
+    out[9] = (mat[1] * mat[5] - mat[2] * mat[4]) / det
+    return out
+end
+
+function diagonal(vec)
+    assert(type(vec) == "table" and #vec == 3, "diagonal() called on vec with incorrect size")
+    local output = {vec[1], 0, 0, 0, vec[2], 0, 0, 0, vec[3]}
+    return output
+end
+
+function adjugate(m)
+    assert(type(m) == "table" and #m == 9)
+    local out = {m[5] * m[9] - m[6] * m[8], m[3] * m[8] - m[2] * m[9], m[2] * m[6] - m[3] * m[5],
+                 m[6] * m[7] - m[4] * m[9], m[1] * m[9] - m[3] * m[7], m[3] * m[4] - m[1] * m[6],
+                 m[4] * m[8] - m[5] * m[7], m[2] * m[7] - m[1] * m[8], m[1] * m[5] - m[2] * m[4]}
+    return out
+end
+
+function mv_33_3(m, v)
+    assert(type(m) == "table" and #m == 9)
+    assert(type(v) == "table" and #v == 3)
+    local out = {}
+    out[1] = m[1] * v[1] + m[2] * v[2] + m[3] * v[3]
+    out[2] = m[4] * v[1] + m[5] * v[2] + m[6] * v[3]
+    out[3] = m[7] * v[1] + m[8] * v[2] + m[9] * v[3]
+    return out
+end
+
+function mm_33_33(m1, m2)
+    assert(type(m1) == "table" and #m1 == 9)
+    assert(type(m2) == "table" and #m2 == 9)
+    local out = {}
+    out[1] = m1[1] * m2[1] + m1[2] * m2[4] + m1[3] * m2[7]
+    out[2] = m1[1] * m2[2] + m1[2] * m2[5] + m1[3] * m2[8]
+    out[3] = m1[1] * m2[3] + m1[2] * m2[6] + m1[3] * m2[9]
+    out[4] = m1[4] * m2[1] + m1[5] * m2[4] + m1[6] * m2[7]
+    out[5] = m1[4] * m2[2] + m1[5] * m2[5] + m1[6] * m2[8]
+    out[6] = m1[4] * m2[3] + m1[5] * m2[6] + m1[6] * m2[9]
+    out[7] = m1[7] * m2[1] + m1[8] * m2[4] + m1[9] * m2[7]
+    out[8] = m1[7] * m2[2] + m1[8] * m2[5] + m1[9] * m2[8]
+    out[9] = m1[7] * m2[3] + m1[8] * m2[6] + m1[9] * m2[9]
+    return out
+end
+
+function multiply(mat1, mat2)
+    assert(type(mat1) == "table" and #mat1 == 9)
+    assert(type(mat2) == "table" and (#mat2 == 9 or #mat2 == 3))
+    local out = {}
+    if #mat2 == 3 then
+        out = mv_33_3(mat1, mat2)
+    elseif #mat2 == 9 then
+        out = mm_33_33(mat1, mat2)
+    else
+        assert(false, string.format("Unexpected mat2 matrix dimension: %d", #mat2))
+    end
+    return out
+end
+
+function scale(mat, s)
+    assert(type(mat) == "table" and type(s) == "number")
+    local out = {}
+    for i = 1, #mat do
+        out[i] = s * mat[i]
+    end
+    return out
+end
+
+function scale_cols(mat, weights)
+    assert(type(mat) == "table" and type(weights) == "table" and #mat == 9 and #weights == 3)
+    local out = multiply(mat, diagonal(weights))
+    return out
+end
+
+function compute_proj_transform_matrix(src_coords, dest_coords)
+    -- https://math.stackexchange.com/questions/296794/finding-the-transform-matrix-from-4-projected-points-with-javascript
+
+    -- Step 1 solve this equation
+    local A = {src_coords.tl.X, src_coords.br.X, src_coords.bl.X, src_coords.tl.Y, src_coords.br.Y, src_coords.bl.Y, 1,
+               1, 1}
+    local A_target = {src_coords.tr.X, src_coords.tr.Y, 1}
+    local A_coefficients = multiply(adjugate(A), A_target)
+
+    -- Repeat above with dest_coords
+    local B = {dest_coords.tl.X, dest_coords.br.X, dest_coords.bl.X, dest_coords.tl.Y, dest_coords.br.Y,
+               dest_coords.bl.Y, 1, 1, 1}
+    local B_target = {dest_coords.tr.X, dest_coords.tr.Y, 1}
+    local B_coefficients = multiply(adjugate(B), B_target)
+
+    -- Step 2, scale columns of A by coeffieicents
+    local scaled_A = scale_cols(A, A_coefficients)
+    local scaled_B = scale_cols(B, B_coefficients)
+
+    -- Step 3, compute C = scaled_B @ inverse(scaled_A)
+    local C = adjugate(multiply(scaled_B, adjugate(scaled_A)))
+    return C
+end
+
+local resample_image = function(x, y, p1)
+    -- local result_point = transform_point(proj_transform_matrix, {x, y})
+    local homogeneous_coord = {x / width, y / height, 1}
+    local result_coord = mv_33_3(proj_transform_matrix, homogeneous_coord)
+    local result_point = {result_coord[1] / result_coord[3], result_coord[2] / result_coord[3]}
+    src_img:SamplePixelB(result_point[1] * width, result_point[2] * height, p1)
+    return p1
+end
+
+function Process(req)
+    -- Get values from the UI Tools
+    local src_tl = SrcTLPos:GetValue(req)
+    local src_tr = SrcTRPos:GetValue(req)
+    local src_bl = SrcBLPos:GetValue(req)
+    local src_br = SrcBRPos:GetValue(req)
+    local src_coords = {
+        tl = src_tl,
+        tr = src_tr,
+        bl = src_bl,
+        br = src_br
+    }
+
+    local dest_tl = DestTLPos:GetValue(req)
+    local dest_tr = DestTRPos:GetValue(req)
+    local dest_bl = DestBLPos:GetValue(req)
+    local dest_br = DestBRPos:GetValue(req)
+    local dest_coords = {
+        tl = dest_tl,
+        tr = dest_tr,
+        bl = dest_bl,
+        br = dest_br
+    }
+
+    local mode = Mode:GetValue(req).Value
+    local img = InImage:GetValue(req)
+
+    if mode == 1 then
+        local out_img = Image({
+            IMG_Like = img
+        })
+        local proj_transform_matrix = compute_proj_transform_matrix(src_coords, dest_coords)
+
+        out_img:MultiProcessPixels(nil, {
+            src_img = img,
+            proj_transform_matrix = proj_transform_matrix,
+            mv_33_3 = mv_33_3,
+            transform_point = transform_point,
+            width = img.Width,
+            height = img.Height
+        }, 0, 0, img.Width, img.Height, img, resample_image)
+        OutImage:Set(req, out_img)
+    else
+        OutImage:Set(req, img)
+    end
+end

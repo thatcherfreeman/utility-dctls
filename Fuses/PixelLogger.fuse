@@ -1,18 +1,16 @@
-FuRegisterClass("PixelLogger",
-    CT_Tool, {
-        REGS_Name = "Pixel Logger",
-        REGS_Category = "Fuses\\Util",
-        REGS_OpIconString = "PixLg",
-        REGS_OpDescription = "Extracts the RGB value at the specified pixel and prints it to console."
-    }
-)
+FuRegisterClass("PixelLogger", CT_Tool, {
+    REGS_Name = "Pixel Logger",
+    REGS_Category = "Fuses\\Util",
+    REGS_OpIconString = "PixLg",
+    REGS_OpDescription = "Extracts the RGB value at the specified pixel and prints it to console."
+})
 
 function Create()
     PixelLocation = self:AddInput("Pixel Location", "PixelLocation", {
         LINKID_DataType = "Point",
         INPID_InputControl = "OffsetControl",
         INPID_PreviewControl = "CrosshairControl",
-        INP_DoNotifyChanged = true,
+        INP_DoNotifyChanged = true
     })
 
     FirstFrame = self:AddInput("First Frame", "FirstFrame", {
@@ -20,7 +18,7 @@ function Create()
         INPID_InputControl = "ScrewControl",
         INP_Default = 0.0,
         INP_INTEGER = true,
-        IC_DisplayedPrecision = 0,
+        IC_DisplayedPrecision = 0
     })
 
     LastFrame = self:AddInput("Last Frame", "LastFrame", {
@@ -28,7 +26,7 @@ function Create()
         INPID_InputControl = "ScrewControl",
         INP_Default = 1000.0,
         INP_INTEGER = true,
-        IC_DisplayedPrecision = 0,
+        IC_DisplayedPrecision = 0
     })
 
     SamplingPeriod = self:AddInput("Sampling Period", "Sampling Period", {
@@ -37,7 +35,7 @@ function Create()
         INP_Default = 1.0,
         INP_INTEGER = true,
         INP_MinAllowed = 1.0,
-        IC_DisplayedPrecision = 0,
+        IC_DisplayedPrecision = 0
     })
 
     IndexOffset = self:AddInput("Index Offset", "IndexOffset", {
@@ -45,14 +43,14 @@ function Create()
         INPID_InputControl = "ScrewControl",
         INP_Default = 0.0,
         INP_INTEGER = true,
-        IC_DisplayedPrecision = 0,
+        IC_DisplayedPrecision = 0
     })
 
     SkipMissingFrames = self:AddInput("Skip Missing Frames", "SkipMissingFrames", {
         LINKID_DataType = "Number",
         INPID_InputControl = "CheckboxControl",
         INP_Default = 1.0,
-        INP_INTEGER = true,
+        INP_INTEGER = true
     })
 
     Filename = self:AddInput("CSV Filename", "Filename", {
@@ -64,24 +62,24 @@ function Create()
         FCS_FilterString = "CSV Files (*.csv)|*.csv",
         INP_DoNotifyChanged = true,
         INP_ForceNotify = false,
-        INP_InitialNotify = true,
+        INP_InitialNotify = true
     })
     WriteButton = self:AddInput("Write File", "WriteFile", {
         LINKID_DataType = "Number",
         INPID_InputControl = "ButtonControl",
         INP_DoNotifyChanged = true,
-        INP_External = false,
+        INP_External = false
     })
 
     -- Inputs
 
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
     OutImage = self:AddOutput("Output", "Output", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
 end
 
@@ -96,14 +94,15 @@ function NotifyChanged(inp, param, time)
         if string.sub(filename, -1 * expected_suffix:len()):lower() ~= expected_suffix then
             filename = filename .. expected_suffix
         end
-        assert(string.sub(filename, -1 * expected_suffix:len()):lower() == expected_suffix, "Filename does not end with " .. expected_suffix)
+        assert(string.sub(filename, -1 * expected_suffix:len()):lower() == expected_suffix,
+            "Filename does not end with " .. expected_suffix)
         print("Writing CSV file to " .. filename)
 
         local file = io.open(filename, "w")
         -- Write header
         local curr_line = "frame,red,green,blue"
         print(curr_line)
-        file:write(curr_line.."\n")
+        file:write(curr_line .. "\n")
 
         -- Write rest of CSV file
         local first_frame = FirstFrame:GetSource(time).Value
@@ -127,7 +126,7 @@ function NotifyChanged(inp, param, time)
                 img:GetPixel(curr_location.X, curr_location.Y, p)
                 curr_line = (i + idx_offset) .. "," .. p.R .. "," .. p.G .. "," .. p.B
                 print(curr_line)
-                file:write(curr_line.."\n")
+                file:write(curr_line .. "\n")
             end
         end
         file:close()

@@ -1,11 +1,9 @@
-FuRegisterClass("PeriodicFrameSampler",
-    CT_Tool, {
-        REGS_Name = "Periodic Frame Sampler",
-        REGS_Category = "Fuses\\Util",
-        REGS_OpIconString = "PrFrSm",
-        REGS_OpDescription = "Extracts one frame along the specified period, starting at the specified time."
-    }
-)
+FuRegisterClass("PeriodicFrameSampler", CT_Tool, {
+    REGS_Name = "Periodic Frame Sampler",
+    REGS_Category = "Fuses\\Util",
+    REGS_OpIconString = "PrFrSm",
+    REGS_OpDescription = "Extracts one frame along the specified period, starting at the specified time."
+})
 
 function Create()
     SourceTime = self:AddInput("Source Time Start", "SourceTime", {
@@ -13,14 +11,14 @@ function Create()
         INPID_InputControl = "ScrewControl",
         INP_Default = 0.0,
         INP_INTEGER = true,
-        IC_DisplayedPrecision = 0,
+        IC_DisplayedPrecision = 0
     })
     DestTime = self:AddInput("Destination Time Start", "DestTime", {
         LINKID_DataType = "Number",
         INPID_InputControl = "ScrewControl",
         INP_Default = 0.0,
         INP_INTEGER = true,
-        IC_DisplayedPrecision = 0,
+        IC_DisplayedPrecision = 0
     })
     Period = self:AddInput("Period", "Period", {
         LINKID_DataType = "Number",
@@ -29,15 +27,15 @@ function Create()
         INP_MaxScale = 10.0,
         INP_Default = 1.0,
         INP_INTEGER = true,
-        IC_DisplayedPrecision = 0,
+        IC_DisplayedPrecision = 0
     })
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
     OutImage = self:AddOutput("Output", "Output", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
 end
 

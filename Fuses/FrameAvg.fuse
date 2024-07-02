@@ -1,12 +1,10 @@
 -- Resolve Studio's Frame averaging doesn't seem to work for me.
-FuRegisterClass("FrameAvg",
-    CT_Tool, {
-        REGS_Name = "Frame Averager",
-        REGS_Category = "Fuses\\Util",
-        REGS_OpIconString = "FrAvg",
-        REGS_OpDescription = "Averages the following several frames together."
-    }
-)
+FuRegisterClass("FrameAvg", CT_Tool, {
+    REGS_Name = "Frame Averager",
+    REGS_Category = "Fuses\\Util",
+    REGS_OpIconString = "FrAvg",
+    REGS_OpDescription = "Averages the following several frames together."
+})
 
 function Create()
     NumFrames = self:AddInput("Number of Frames", "FramesNum", {
@@ -17,7 +15,7 @@ function Create()
         INP_Default = 1.0,
         INP_INTEGER = true,
         INP_MinAllowed = 1.0,
-        IC_DisplayedPrecision = 0,
+        IC_DisplayedPrecision = 0
     })
     Modulus = self:AddInput("Frame Hold", "FrameHold", {
         LINKID_DataType = "Number",
@@ -27,15 +25,15 @@ function Create()
         INP_Default = 1.0,
         INP_INTEGER = true,
         INP_MinAllowed = 1.0,
-        IC_DisplayedPrecision = 0,
+        IC_DisplayedPrecision = 0
     })
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
     OutImage = self:AddOutput("Output", "Output", {
         LINKID_DataType = "Image",
-        LINK_Main = 1,
+        LINK_Main = 1
     })
 end
 
@@ -48,11 +46,21 @@ function Process(req)
     if num_frames == 1 and mod_frames == 1 then
         OutImage:Set(req, img)
     else
-        img:Fill(Pixel({R = 0.0, G = 0.0, B = 0.0, A = 1.0}))
+        img:Fill(Pixel({
+            R = 0.0,
+            G = 0.0,
+            B = 0.0,
+            A = 1.0
+        }))
         local gain = 1.0 / num_frames
-        for i = 0, num_frames-1 do
+        for i = 0, num_frames - 1 do
             local thisFrame = InImage:GetSource(mod_frames * math.floor(req.Time / mod_frames) + i)
-            img = img:ChannelOpOf("Add", thisFrame, {R = "fg.R", G = "fg.G", B = "fg.B", A = nil})
+            img = img:ChannelOpOf("Add", thisFrame, {
+                R = "fg.R",
+                G = "fg.G",
+                B = "fg.B",
+                A = nil
+            })
         end
         img:Gain(gain, gain, gain, 1.0)
         OutImage:Set(req, img)
