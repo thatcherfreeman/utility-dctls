@@ -10,7 +10,8 @@ function Create()
         LINKID_DataType = "Point",
         INPID_InputControl = "OffsetControl",
         INPID_PreviewControl = "CrosshairControl",
-        INP_DoNotifyChanged = true
+        INP_DoNotifyChanged = false,
+        INP_External = true,
     })
 
     FirstFrame = self:AddInput("First Frame", "FirstFrame", {
