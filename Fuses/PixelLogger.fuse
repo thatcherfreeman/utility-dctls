@@ -124,7 +124,7 @@ function NotifyChanged(inp, param, time)
                     assert(img ~= nil, "Missing frame " .. i .. " in input image sequence")
                 end
             else
-                img:GetPixel(curr_location.X, curr_location.Y, p)
+                img:GetPixel(curr_location.X * img.Width, curr_location.Y * img.Height, p)
                 curr_line = (i + idx_offset) .. "," .. p.R .. "," .. p.G .. "," .. p.B
                 print(curr_line)
                 file:write(curr_line .. "\n")
