@@ -180,12 +180,12 @@ Adds support for DCTLs within Fusion Studio rather than just Resolve. This is do
 ---
 
 ### FrameAvg Fuse
-Blends together several frames, can be used to retime projects shot at high frame rates. Should certainly be used with a float input, and likely be used with a Linear input.
+Blends together several frames, can be used to retime projects shot at high frame rates. Should certainly be used with a float input, and likely be used with a Linear input. Follow this up with PeriodicFrameSampler to trim out the duplicate frames, by setting its sampling period to be equal to the **Frame Hold** parameter here.
 
 #### Parameters
-**Number of Frames**: quantity of frames to look ahead, including this frame.
+**Number of Frames**: quantity of frames to look ahead, including this frame. IE fill in the blank "Each output frame's blur should be comprised of the following ___ frames".
 
-**Frame Hold**: How long to hold the current frame (units are quantity of frames), allowing you to control it so that your resulting frames average nonoverlapping input frames.
+**Frame Hold**: How long to hold the current frame (units are quantity of frames), allowing you to control it so that your resulting frames average nonoverlapping input frames. IE fill in the blank "I want to sample every ___th frame"
 
 #### Examples:
 Suppose you shot a video at 240fps, 360degree shutter. To simulate 24fps 360degree shutter, you would set Number of Frames to 10, Frame Hold to 10. To simulate 30fps 180degree shutter, you would set Number of Frames to 4, Frame Hold to 8.
