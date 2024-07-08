@@ -408,6 +408,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
 
     float3 legend_color;
+    float lum = 0.0;
     switch (legend_value) {
         case LEGCOL_BLACK:
             legend_color = make_float3(0.0, 0.0, 0.0);
@@ -419,7 +420,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             legend_color = make_float3(0.18, 0.18, 0.18);
             break;
         case LEGCOL_INV:
-            float lum = (curr_color.x + curr_color.y + curr_color.z) / 3.0;
+            lum = (curr_color.x + curr_color.y + curr_color.z) / 3.0f;
             if (isnan(lum)) {
                 lum = 0.5;
             }
