@@ -1792,6 +1792,8 @@ Creates rows of colored chips at the specified increment of stops. Outputs a Lin
 
 **Number of Columns**: Number of columns to generate
 
+**Seed**: Random seed if shuffle is turned on.
+
 **Mid Gray**: Indicates the Value that will be assigned to the middle chip
 
 **Min/Max Clamp**: If Clamp Output is checked, then if any channel falls outside the range [Min Clamp, Max Clamp], it will be replaced with white.
@@ -1805,6 +1807,8 @@ Creates rows of colored chips at the specified increment of stops. Outputs a Lin
 **Band Interval**: Indicate whether bands should be placed equidistantly (Equal), or one-stop apart (Exponential). The latter is better suited for pipelines that expect a Linear image.
 
 **Model**: Choose whether to use HSV or Spherical to generate the chips. The spherical model is scaled such that at 1.0 saturation, all tiles will fit within the cube, and at 1.0 value, white is (1.0, 1.0, 1.0).
+
+**Shuffle**: Choose whether to shuffle the hues or not.
 
 **Continuous Mode**: Choose whether each chip should be discrete, or if hue, exposure, or both should be continuous.
 
