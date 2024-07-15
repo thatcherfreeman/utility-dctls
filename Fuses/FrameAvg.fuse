@@ -50,7 +50,7 @@ function Process(req)
             R = 0.0,
             G = 0.0,
             B = 0.0,
-            A = 1.0
+            A = 0.0,
         }))
         local gain = 1.0 / num_frames
         for i = 0, num_frames - 1 do
@@ -59,10 +59,10 @@ function Process(req)
                 R = "fg.R",
                 G = "fg.G",
                 B = "fg.B",
-                A = nil
+                A = "fg.A",
             })
         end
-        img:Gain(gain, gain, gain, 1.0)
+        img:Gain(gain, gain, gain, gain)
         OutImage:Set(req, img)
     end
 end
