@@ -396,7 +396,7 @@ Applies a tone mapping operation adopted from Daniele Siragusano's [ACES Central
 
 ---
 ### Dye Simulator DCTL
-You specify the bell curve spectral densities of three dyes (at 1.0 units of concentration), the input image specifies the concentration of each dye for each pixel. We then measure the resulting spectra using a specified observer function.
+You specify the bell curve spectral densities of three dyes (at 1.0 units of concentration), the input image specifies the concentration of each dye for each pixel. Under the hood, the DCTL computes the density of each dye using Beer's law, adds up the densities, and then we then measure the resulting spectra using a specified observer function.
 
 #### Input Constraints and Recommendations
 * This DCTL first clamps off any negative values (as negative concentrations are not meaningful).
