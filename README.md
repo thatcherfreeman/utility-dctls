@@ -404,7 +404,7 @@ You specify the bell curve spectral densities of three dyes (at 1.0 units of con
 * The default parameters are contrived so that a mid gray input of 1.0 (ie 1.0 units of concentration) will output about 1.0 Status A density.
 * Concentrations can be large, but it's recommended that they max out at some value of your choice, prior to this DCTL.
 
-#### Usage Example:
+#### Usage Example (positive image):
 1. Start off with a balanced, linear image that is entirely nonnegative.
 2. Tone map the image to the 0-1 range.
 3. Convert to Log, in my case I used T-Log 16.
