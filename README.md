@@ -28,6 +28,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
     - [Effects](#effects)
         - [Bleach Bypass DCTL](#bleach-bypass-dctl)
         - [Daniele Curve DCTL](#daniele-curve-dctl)
+        - [Dye Simulator DCTL](#dye-simulator-dctl)
         - [Field Curvature DCTL](#field-curvature-dctl)
         - [Film Curve DCTL](#film-curve-dctl)
         - [Film Grain DCTL](#film-grain-dctl)
@@ -393,6 +394,46 @@ Applies a tone mapping operation adopted from Daniele Siragusano's [ACES Central
 
 **Invert**: Inverts the Daniele Curve.
 
+---
+### Dye Simulator DCTL
+You specify the bell curve spectral densities of three dyes (at 1.0 units of concentration), the input image specifies the concentration of each dye for each pixel. We then measure the resulting spectra using a specified observer function.
+
+#### Input Constraints and Recommendations
+* This DCTL first clamps off any negative values (as negative concentrations are not meaningful).
+* You want your concentration to be roughly proportional to the *log* of the linear signal for the most part.
+* The default parameters are contrived so that a mid gray input of 1.0 (ie 1.0 units of concentration) will output about 1.0 Status A density.
+* Concentrations can be large, but it's recommended that they max out at some value of your choice, prior to this DCTL.
+
+#### Usage Example:
+1. Start off with a balanced, linear image that is entirely nonnegative.
+2. Tone map the image to the 0-1 range.
+3. Convert to Log, in my case I used T-Log 16.
+4. Invert the image via 1-X (invert DCTL in log mode)
+5. use offset so that the maximum value from (2) is mapped to zero, being 0 concentration of dye.
+6. Gain so that mid gray is placed at 1.0.
+7. Dye Sim DCTL set to one of the Transmittance or Projection modes. I found that the "Mean" sliders were often the best ones to move first, to adjust the image.
+8. Display encoding
+
+#### DCTL Parameters
+**Cyan/Magenta/Yellow/Silver Mean**: Indicates the wavelength center of the bell curves, units are nm.
+
+**Cyan/Magenta/Yellow/Silver Std**: Indicates the standard deviation of each bell curve, units are nm.
+
+**Cyan/Magenta/Yellow/Silver Max Value**: Indicates the height of each bell curve, in density units for concentration of 1.0
+
+**Cyan/Magenta/Yellow/Silver Min Value**: Indicates the floor of each bell curve in density units for concentration of 1.0. Importantly, this is also gained by concentration, so at a concentration of 0.0, the floor is 0.0 density.
+
+**Silver Ratio**: Indicates $k$ in the expression $k \cdot (\textit{Cyan Concentration} + \textit{Magenta Concentration} + \textit{Yellow concentration})$. The result of this expression is the concentration of silver dye, which is added on.
+
+**Input Gain**: Indicate how much to gain the input by. Raising this makes the image darker.
+
+**Draw Dye Density Chart**: Draws the spectral dye density chart for an input of (1.0, 1.0, 1.0). The left edge of the frame is 360nm, the right edge is 780nm, and the height is 2.0 density.
+
+**Draw Observer Chart**: Draws the spectral sensitivity of the selected observer.
+
+**Input Metric**: Indicates what units the input code value will be mapped to.
+
+**Observer**: Choose your desired observer.
 
 ---
 ### Field Curvature DCTL
