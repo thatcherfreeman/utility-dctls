@@ -100,6 +100,10 @@ gaussian_blur(float radius, float x, float y, int p_Width, int p_Height, __TEXTU
     int center_x = get_coord(x, p_Width);
     int center_y = get_coord(y, p_Height);
 
+    if (window_size / 2 <= 0) {
+        return get_color(center_x, center_y, p_TexR, p_TexG, p_TexB);
+    }
+
     float3 curr_pixel = get_color(center_x, center_y, p_TexR, p_TexG, p_TexB);
 
     float3 sum = make_float3(0, 0, 0);
@@ -128,6 +132,9 @@ exp_blur(float radius, float x, float y, int p_Width, int p_Height, __TEXTURE__ 
     int center_y = get_coord(y, p_Height);
 
     int window_size = (int)_ceilf(2 * radius * 4.5);
+    if (window_size / 2 <= 0) {
+        return get_color(center_x, center_y, p_TexR, p_TexG, p_TexB);
+    }
     float3 sum = make_float3(0.0f, 0.0f, 0.0f);
     float weight_sum = 0.0f;
     for (int i = center_x - (window_size / 2); i <= center_x + (window_size / 2); ++i) {
