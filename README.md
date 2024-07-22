@@ -1953,3 +1953,7 @@ Draws a white matte around the border of the frame, in case you need to spice up
 **Scaling**: The original image is resized down to this scale.
 
 **White Point**: Code value to draw for the matte.
+
+**Aspect Ratio**: When using a letterboxed or pillar boxed timeline, this allows you to specify what the active portion of the frame is.
+
+**Use Timeline Aspect Ratio**: If unchecked, uses the aspect ratio specified by **Aspect Ratio** instead of the timeline res.

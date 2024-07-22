@@ -270,15 +270,15 @@ __DEVICE__ void int2str(int f, char output[], int num_chars) {
         runner += strlen(zero);
     } else {
         // input is real number, print absolute value.
-        f = (int)_round(_fabs(f));
+        f = (int)_round(_fabs((float)f));
         // num digits before decimal point
-        int left_digits = (int)(_log10f(f) + 1);
+        int left_digits = (int)(_log10f((float)f) + 1);
 
         // Extract left digits
         for (int i = left_digits; i > 0 && runner < num_chars; --i, ++runner) {
             float base = _powf(10.0, i - 1);
-            int d = (int)_truncf(f / base);
-            f = _fmod(f, base);
+            int d = (int)_truncf((float)f / base);
+            f = _fmod((float)f, base);
             output[runner] = digit2char(d);
         }
     }

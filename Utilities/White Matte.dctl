@@ -2,6 +2,8 @@
 // clang-format off
 DEFINE_UI_PARAMS(scaling, Scaling, DCTLUI_SLIDER_FLOAT, 0.8, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(white_point, White Point, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(aspect_ratio, Aspect Ratio, DCTLUI_VALUE_BOX, 2.40)
+DEFINE_UI_PARAMS(use_timeline_aspect_ratio, Use Timeline Aspect Ratio, DCTLUI_CHECK_BOX, 1)
 
 // clang-format on
 
@@ -42,12 +44,32 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     float x = (float)p_X / ((float)p_Width - 1) - 0.5;
     float y = (float)p_Y / ((float)p_Height - 1) - 0.5;
+    float desired_width = p_Width;
+    float desired_height = p_Height;
+    if (!use_timeline_aspect_ratio) {
+        // Compute the timeline aspect ratio p_Width / p_Height
+        float timeline_aspect_ratio = (float)p_Width / (float)p_Height;
 
-    float x_sample = (((x / scaling) + 0.5) * (p_Width - 1));
-    float y_sample = (((y / scaling) + 0.5) * (p_Height - 1));
+        // Compare it to aspect ratio, see which one is bigger.
+        if (timeline_aspect_ratio > aspect_ratio) {
+            desired_height = p_Height;
+            desired_width = desired_height * aspect_ratio;
+        } else {
+            desired_width = p_Width;
+            desired_height = desired_width / aspect_ratio;
+        }
+        x *= p_Width / desired_width;
+        y *= p_Height / desired_height;
+    }
+    float side_bar_width = (p_Width - desired_width) / 2.0;
+    float top_bar_width = (p_Height - desired_height) / 2.0;
+
+    float x_sample = (((x / scaling) + 0.5) * (desired_width - 1)) + side_bar_width;
+    float y_sample = (((y / scaling) + 0.5) * (desired_height - 1)) + top_bar_width;
 
     float3 out;
-    if (_fabs(x) > (scaling / 2.0) || _fabs(y) > (scaling / 2.0)) {
+    if (x_sample < side_bar_width || x_sample >= desired_width +
+            side_bar_width || y_sample < top_bar_width || y_sample >= desired_height + top_bar_width) {
         out = make_float3(white_point, white_point, white_point);
     } else {
         out = sample_point_bilinear_3ch(x_sample, y_sample, p_TexR, p_TexG, p_TexB, 1.0);
