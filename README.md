@@ -429,7 +429,7 @@ You specify the bell curve spectral densities of three dyes (at 1.0 units of con
 
 **Input Gain**: Indicate how much to gain the input by. Raising this makes the image darker.
 
-**Draw Dye Density Chart**: Draws the spectral dye density chart for an input of (1.0, 1.0, 1.0). The left edge of the frame is 360nm, the right edge is 780nm, and the height is 2.0 density. The dashed lines exist at multipled of 50nm, IE 400nm, 450nm, etc.
+**Draw Dye Density Chart**: Draws the spectral dye density chart for an input of (1.0, 1.0, 1.0). The left edge of the frame is 360nm, the right edge is 780nm, and the height is 2.0 density. The dashed lines exist at multipled of 50nm, IE 400nm, 450nm, etc. The horizontal lines exist in 1.0 density units.
 
 **Draw Observer Chart**: Draws the spectral sensitivity of the selected observer.
 

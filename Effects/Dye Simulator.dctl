@@ -457,6 +457,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float x = (float)(p_X) / (p_Width - 1);
     float y = 1.0 - (float)(p_Y) / (p_Height - 1);
 
+    const float chart_max_density = 2.0;
     if (density_charts || observer_charts) {
         // Draw vertical wavelength lines
         float threshold = 0.5;
@@ -469,7 +470,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     if (density_charts) {
-        const float chart_max_density = 2.0;
+        // draw horizontal density lines
+        if (_fabs(_fmod(y * chart_max_density + 0.5, 1.0) - 0.5) < 0.005 && _fmod(x, 0.1) < 0.05) {
+            output_color = make_float3(0.25, 0.25, 0.25);
+        }
+
+        // Draw density curves
         float curr_wavelength = MIN_WAVELENGTH + (MAX_WAVELENGTH - MIN_WAVELENGTH) * x;
 
         gaussian_piecewise_params_t scaled_dyes_for_charts[4] = {
@@ -501,6 +507,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     if (observer_charts) {
+        // Draw sensitivity curves
         const float chart_max_sensitivity = 1.0;
         float curr_wavelength = MIN_WAVELENGTH + (MAX_WAVELENGTH - MIN_WAVELENGTH) * x;
 
