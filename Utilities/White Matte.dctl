@@ -68,8 +68,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float y_sample = (((y / scaling) + 0.5) * (desired_height - 1)) + top_bar_width;
 
     float3 out;
-    if (x_sample < side_bar_width || x_sample >= desired_width +
-            side_bar_width || y_sample < top_bar_width || y_sample >= desired_height + top_bar_width) {
+    if (x_sample < side_bar_width || x_sample >= desired_width + side_bar_width || y_sample < top_bar_width ||
+        y_sample >= desired_height + top_bar_width) {
         out = make_float3(white_point, white_point, white_point);
     } else {
         out = sample_point_bilinear_3ch(x_sample, y_sample, p_TexR, p_TexG, p_TexB, 1.0);

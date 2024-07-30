@@ -6,10 +6,15 @@ DEFINE_UI_PARAMS(magenta_mean, Magenta Mean, DCTLUI_SLIDER_FLOAT, 522, 380, 800,
 DEFINE_UI_PARAMS(yellow_mean, Yellow Mean, DCTLUI_SLIDER_FLOAT, 420, 380, 800, 0.01)
 DEFINE_UI_PARAMS(silver_mean, Silver Mean, DCTLUI_SLIDER_FLOAT, 500, 380, 800, 0.01)
 
-DEFINE_UI_PARAMS(cyan_std, Cyan Std, DCTLUI_SLIDER_FLOAT, 60, 1, 200, 0.01)
-DEFINE_UI_PARAMS(magenta_std, Magenta Std, DCTLUI_SLIDER_FLOAT, 50, 1, 200, 0.01)
-DEFINE_UI_PARAMS(yellow_std, Yellow Std, DCTLUI_SLIDER_FLOAT, 60, 1, 200, 0.01)
-DEFINE_UI_PARAMS(silver_std, Silver Std, DCTLUI_SLIDER_FLOAT, 300, 1, 300, 0.01)
+DEFINE_UI_PARAMS(cyan_left_std, Cyan Left Std, DCTLUI_SLIDER_FLOAT, 60, 1, 200, 0.01)
+DEFINE_UI_PARAMS(magenta_left_std, Magenta Left Std, DCTLUI_SLIDER_FLOAT, 50, 1, 200, 0.01)
+DEFINE_UI_PARAMS(yellow_left_std, Yellow Left Std, DCTLUI_SLIDER_FLOAT, 60, 1, 200, 0.01)
+DEFINE_UI_PARAMS(silver_left_std, Silver Left Std, DCTLUI_SLIDER_FLOAT, 300, 1, 300, 0.01)
+
+DEFINE_UI_PARAMS(cyan_right_std, Cyan Right Std, DCTLUI_SLIDER_FLOAT, 60, 1, 200, 0.01)
+DEFINE_UI_PARAMS(magenta_right_std, Magenta Right Std, DCTLUI_SLIDER_FLOAT, 50, 1, 200, 0.01)
+DEFINE_UI_PARAMS(yellow_right_std, Yellow Right Std, DCTLUI_SLIDER_FLOAT, 60, 1, 200, 0.01)
+DEFINE_UI_PARAMS(silver_right_std, Silver Right Std, DCTLUI_SLIDER_FLOAT, 300, 1, 300, 0.01)
 
 DEFINE_UI_PARAMS(cyan_max_value, Cyan Max Value, DCTLUI_SLIDER_FLOAT, 1.08, 0, 2, 0.01)
 DEFINE_UI_PARAMS(magenta_max_value, Magenta Max Value, DCTLUI_SLIDER_FLOAT, 0.75, 0, 2, 0.01)
@@ -45,15 +50,18 @@ __DEVICE__ float pow2(float x) {
 
 typedef struct {
         float mean;
-        float std;
+        float left_std;
+        float right_std;
         float max_value;
         float min_value;
 } gaussian_piecewise_params_t;
 
-__DEVICE__ gaussian_piecewise_params_t make_gaussian_piecewise_params(float mean, float std, float max_value, float min_value) {
+__DEVICE__ gaussian_piecewise_params_t
+make_gaussian_piecewise_params(float mean, float left_std, float right_std, float max_value, float min_value) {
     gaussian_piecewise_params_t out;
     out.mean = mean;
-    out.std = std;
+    out.left_std = left_std;
+    out.right_std = right_std;
     out.max_value = max_value;
     out.min_value = min_value;
     return out;
@@ -61,8 +69,12 @@ __DEVICE__ gaussian_piecewise_params_t make_gaussian_piecewise_params(float mean
 
 __DEVICE__ float gaussian_piecewise(float x, gaussian_piecewise_params_t params) {
     float out;
-    // Control it only with left std
-    out = _expf(-1 * pow2(1.0 / params.std) * pow2(x - params.mean) / 2.0);
+    if (x < params.mean) {
+        // Control it only with left std
+        out = _expf(-1 * pow2(1.0 / params.left_std) * pow2(x - params.mean) / 2.0);
+    } else {
+        out = _expf(-1 * pow2(1.0 / params.right_std) * pow2(x - params.mean) / 2.0);
+    }
     out = out * (params.max_value - params.min_value) + params.min_value;
     return out;
 }
@@ -70,7 +82,8 @@ __DEVICE__ float gaussian_piecewise(float x, gaussian_piecewise_params_t params)
 __DEVICE__ gaussian_piecewise_params_t scale_gaussian_piecewise_params(gaussian_piecewise_params_t params, float scale) {
     gaussian_piecewise_params_t out;
     out.mean = params.mean;
-    out.std = params.std;
+    out.left_std = params.left_std;
+    out.right_std = params.right_std;
     out.max_value = params.max_value * scale;
     out.min_value = params.min_value * scale;
     return out;
@@ -415,13 +428,14 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         gel_concentration = input * input_gain;
     }
 
-    gaussian_piecewise_params_t cyan_density = make_gaussian_piecewise_params(cyan_mean, cyan_std, cyan_max_value, cyan_min_value);
+    gaussian_piecewise_params_t cyan_density =
+        make_gaussian_piecewise_params(cyan_mean, cyan_left_std, cyan_right_std, cyan_max_value, cyan_min_value);
     gaussian_piecewise_params_t magenta_density =
-        make_gaussian_piecewise_params(magenta_mean, magenta_std, magenta_max_value, magenta_min_value);
+        make_gaussian_piecewise_params(magenta_mean, magenta_left_std, magenta_right_std, magenta_max_value, magenta_min_value);
     gaussian_piecewise_params_t yellow_density =
-        make_gaussian_piecewise_params(yellow_mean, yellow_std, yellow_max_value, yellow_min_value);
+        make_gaussian_piecewise_params(yellow_mean, yellow_left_std, yellow_right_std, yellow_max_value, yellow_min_value);
     gaussian_piecewise_params_t silver_density =
-        make_gaussian_piecewise_params(silver_mean, silver_std, silver_max_value, silver_min_value);
+        make_gaussian_piecewise_params(silver_mean, silver_left_std, silver_right_std, silver_max_value, silver_min_value);
 
     gaussian_piecewise_params_t dyes[4] = {
         cyan_density,
@@ -442,6 +456,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 output_color = observed_color;
     float x = (float)(p_X) / (p_Width - 1);
     float y = 1.0 - (float)(p_Y) / (p_Height - 1);
+
+    if (density_charts || observer_charts) {
+        // Draw vertical wavelength lines
+        float threshold = 0.5;
+        float curr_wavelength = MIN_WAVELENGTH + (MAX_WAVELENGTH - MIN_WAVELENGTH) * x;
+        if (_fabs(_fmod(curr_wavelength + 50, 100.0) - 50) < threshold || _fabs(_fmod(curr_wavelength, 100) - 50) < threshold) {
+            if (_fmod(y, 0.1) < 0.05) {
+                output_color = make_float3(0.5, 0.5, 0.5);
+            }
+        }
+    }
 
     if (density_charts) {
         const float chart_max_density = 2.0;

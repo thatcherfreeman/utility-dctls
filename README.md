@@ -417,7 +417,9 @@ You specify the bell curve spectral densities of three dyes (at 1.0 units of con
 #### DCTL Parameters
 **Cyan/Magenta/Yellow/Silver Mean**: Indicates the wavelength center of the bell curves, units are nm.
 
-**Cyan/Magenta/Yellow/Silver Std**: Indicates the standard deviation of each bell curve, units are nm.
+**Cyan/Magenta/Yellow/Silver Left Std**: Indicates the standard deviation of each bell curve on the left side of the mean point, units are nm.
+
+**Cyan/Magenta/Yellow/Silver Right Std**: Indicates the standard deviation of each bell curve on the right side of the mean point, units are nm.
 
 **Cyan/Magenta/Yellow/Silver Max Value**: Indicates the height of each bell curve, in density units for concentration of 1.0
 
@@ -427,7 +429,7 @@ You specify the bell curve spectral densities of three dyes (at 1.0 units of con
 
 **Input Gain**: Indicate how much to gain the input by. Raising this makes the image darker.
 
-**Draw Dye Density Chart**: Draws the spectral dye density chart for an input of (1.0, 1.0, 1.0). The left edge of the frame is 360nm, the right edge is 780nm, and the height is 2.0 density.
+**Draw Dye Density Chart**: Draws the spectral dye density chart for an input of (1.0, 1.0, 1.0). The left edge of the frame is 360nm, the right edge is 780nm, and the height is 2.0 density. The dashed lines exist at multipled of 50nm, IE 400nm, 450nm, etc.
 
 **Draw Observer Chart**: Draws the spectral sensitivity of the selected observer.
 
