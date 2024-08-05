@@ -141,7 +141,8 @@ __DEVICE__ kernel_params_t compute_kernel(
     float max_radius_threshold = _hypotf(max_radius_curr_x, max_radius_curr_y);
     max_radius_threshold = maxf(protected_radius_threshold, max_radius_threshold);
 
-    float curr_factor = _clampf((curr_radius - protected_radius_threshold) / (max_radius_threshold - protected_radius_threshold), 0.0f, 1.0f);
+    float curr_factor =
+        _clampf((curr_radius - protected_radius_threshold) / (max_radius_threshold - protected_radius_threshold), 0.0f, 1.0f);
 
     float kernel_blur_factor;
     if (curve_type == CURVE_SIGMOID) {

@@ -111,9 +111,8 @@ gaussian_blur(float radius, float x, float y, int p_Width, int p_Height, __TEXTU
     for (int i = center_x - (window_size / 2); i <= center_x + (window_size / 2); ++i) {
         for (int j = center_y - (window_size / 2); j <= center_y + (window_size / 2); ++j) {
             float3 runner = get_color(i, j, p_TexR, p_TexG, p_TexB);
-            float weight =
-                1.0 / (2.0 * PI * std * std) *
-                _expf((powf(_fabs((float)(center_x - i)), 2.0) + powf(_fabs((float)(center_y - j)), 2.0)) / (-2.0 * std * std));
+            float weight = 1.0 / (2.0 * PI * std * std) *
+                           _expf((powf(_fabs((float)(center_x - i)), 2.0) + powf(_fabs((float)(center_y - j)), 2.0)) / (-2.0 * std * std));
             weight_sum += weight;
             sum += runner * weight;
         }
