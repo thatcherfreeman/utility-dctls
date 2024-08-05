@@ -6,9 +6,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 output_color;
     if (log_mode) {
         // log(1/x) = log 1 - log x
-        output_color = 1.0 - input_color;
+        output_color = 1.0f - input_color;
     } else {
-        output_color = 1.0 / input_color;
+        output_color = 1.0f / input_color;
     }
     return output_color;
 }

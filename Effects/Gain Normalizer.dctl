@@ -21,7 +21,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             // average right and below pixel to clone over it.
             float3 right_pixel = make_float3(_tex2D(p_TexR, p_X + 1, p_Y), _tex2D(p_TexG, p_X + 1, p_Y), _tex2D(p_TexB, p_X + 1, p_Y));
             float3 down_pixel = make_float3(_tex2D(p_TexR, p_X, p_Y + 1), _tex2D(p_TexG, p_X, p_Y + 1), _tex2D(p_TexB, p_X, p_Y + 1));
-            curr_color = (right_pixel + down_pixel) / 2.0;
+            curr_color = (right_pixel + down_pixel) / 2.0f;
         }
 
         float magnitude;

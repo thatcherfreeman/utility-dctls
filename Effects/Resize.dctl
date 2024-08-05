@@ -77,9 +77,9 @@ __DEVICE__ float bicubic_h(const float t, const float scale) {
     const float B = 1.0;
     const float C = 0.0;
     if (x <= 1.0) {
-        return (2.0 - 1.5 * B - C) * _powf(x, 3.0) + (-3.0 + 2.0 * B + C) * _powf(x, 2.0) + (1.0 - (B / 3.0));
+        return (2.0 - 1.5 * B - C) * _powf(x, 3.0f) + (-3.0 + 2.0 * B + C) * _powf(x, 2.0f) + (1.0 - (B / 3.0));
     } else if (x <= 2.0) {
-        return (-B / 6.0 - C) * _powf(x, 3.0) + (B + 5.0 * C) * _powf(x, 2.0) + (-2.0 * B - 8.0 * C) * x + (4.0 / 3.0 * B + 4.0 * C);
+        return (-B / 6.0 - C) * _powf(x, 3.0f) + (B + 5.0 * C) * _powf(x, 2.0f) + (-2.0 * B - 8.0 * C) * x + (4.0 / 3.0 * B + 4.0 * C);
     }
     return 0.0;
 }

@@ -34,7 +34,7 @@ __DEVICE__ float powf(float base, float exp) {
 __DEVICE__ float smoothstep2(float start, float end, float alpha) {
     // alpha expected to be from 0 to 1.
     // https://www.desmos.com/calculator/pernscu1gx
-    alpha = _clampf(alpha, 0.0, 1.0);
+    alpha = _clampf(alpha, 0.0f, 1.0f);
     float factor;
     if (alpha < 0.5) {
         factor = 0.5 * powi(alpha * 2.0, 3);
@@ -132,10 +132,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         if (_fabs(y - (curr_weight / max_weight)) < 0.002) {
             output_color = make_float3(1.0, 1.0, 1.0);
         }
-        if (_fabs(_fabs(x) - params.blur_rad) < 0.002 && _fmod(y, 0.1) < 0.05) {
+        if (_fabs(_fabs(x) - params.blur_rad) < 0.002 && _fmod(y, 0.1f) < 0.05) {
             output_color = make_float3(0.2, 0.2, 0.2);
         }
-        if (_fabs(x) < 0.002 && _fmod(y, 0.15) < 0.1) {
+        if (_fabs(x) < 0.002 && _fmod(y, 0.15f) < 0.1) {
             output_color = make_float3(0.5, 0.5, 0.5);
         }
     }

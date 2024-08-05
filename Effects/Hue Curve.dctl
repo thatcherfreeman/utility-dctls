@@ -16,7 +16,7 @@ __DEVICE__ float powf(float base, float exp) {
 }
 
 __DEVICE__ float smoothstep(float x) {
-    x = _clampf(x, 0.0, 1.0);
+    x = _clampf(x, 0.0f, 1.0f);
     return 3.0 * powf(x, 2.0) - 2.0 * powf(x, 3.0);
 }
 
@@ -26,6 +26,10 @@ __DEVICE__ float mod(float x, float y) {
     } else {
         return _fmod(x, y);
     }
+}
+
+__DEVICE__ float mixf(float x, float y, float a) {
+    return x * (1.0 - a) + y * a;
 }
 
 typedef struct {
@@ -74,9 +78,9 @@ __DEVICE__ float single_hue_variation_curve(float x, control_params_t params) {
 
     if (left_bound <= curr_hue && curr_hue <= 0.5) {
         // left sigmoid case
-        curr_hue = _mix(curr_hue, (target_slope * (curr_hue - 0.5) + 0.5), smoothstep((curr_hue - left_bound) / (0.5 - left_bound)));
+        curr_hue = mixf(curr_hue, (target_slope * (curr_hue - 0.5) + 0.5), smoothstep((curr_hue - left_bound) / (0.5 - left_bound)));
     } else if (0.5 <= curr_hue && curr_hue <= right_bound) {
-        curr_hue = _mix((target_slope * (curr_hue - 0.5) + 0.5), curr_hue, smoothstep((curr_hue - 0.5) / (right_bound - 0.5)));
+        curr_hue = mixf((target_slope * (curr_hue - 0.5) + 0.5), curr_hue, smoothstep((curr_hue - 0.5) / (right_bound - 0.5)));
     }
     float output = mod(curr_hue - offset, 1.0);
     return output;
@@ -136,16 +140,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     } else if (channel == CHANNEL_ALL) {
         output_mask = make_float3(1.0, 1.0, 1.0);
     }
-    output_color = curr_color * (1.0 - output_mask) + shifted_color * output_mask;
+    output_color = curr_color * (1.0f - output_mask) + shifted_color * output_mask;
 
     // Rendering the curve on the screen.
     if (draw_curve) {
         if (_fabs(curve_pos_y - curr_pos_y) < 0.003 || _fabs(curr_pos_x - selected_hue) < 0.003) {
-            output_color = 0.5 * (1.0 - output_mask) + output_mask * curve_pos_y;
+            output_color = 0.5f * (1.0f - output_mask) + output_mask * curve_pos_y;
         }
         if (curve_type == COMPLEMENTARY_HUES && _fabs(mod(selected_hue + 0.5 - curr_pos_x, 1.0)) < 0.003 && mod(curr_pos_y, 0.05) < 0.02) {
             // Draw position of complementary hue.
-            output_color = 0.5 * (1.0 - output_mask) + output_mask * curve_pos_y;
+            output_color = 0.5f * (1.0f - output_mask) + output_mask * curve_pos_y;
         }
     }
     return output_color;

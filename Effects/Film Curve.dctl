@@ -36,7 +36,7 @@ __DEVICE__ float smoothrelu(float x, float window) {
     if (x <= -1.0 * window) {
         return 0.0;
     } else if (-1.0 * window <= x && x <= window) {
-        float coeff = window / _powf(window * 2.0, 2.0);
+        float coeff = window / _powf(window * 2.0f, 2.0f);
         return coeff * (x + window) * (x + window);
     } else {
         return x;
@@ -66,12 +66,12 @@ __DEVICE__ float characteristic_curve(float x, __PRIVATE__ characteristic_params
 }
 
 __DEVICE__ float3 draw_grid_lines(float x, float y, float3 curr_color) {
-    float major_line_x = _fabs(_fmod(_fabs(x) + 0.1, 1.0) - 0.1);
+    float major_line_x = _fabs(_fmod(_fabs(x) + 0.1f, 1.0f) - 0.1f);
     float zero_line_x = _fabs(x - 0.0);
-    float major_line_y = _fabs(_fmod(y, 1.0));
+    float major_line_y = _fabs(_fmod(y, 1.0f));
     float3 output_color = curr_color;
     if (-4.0 < x && x < 4.0 && 0.0 < y && y < 6.0 && (major_line_x <= 0.02 || major_line_y <= 0.02 || zero_line_x <= 0.05)) {
-        output_color += 0.1;
+        output_color += 0.1f;
     }
     return output_color;
 }
@@ -97,7 +97,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         curr_color *= exposure;
     }
 
-    curr_color *= 1.0 / mid_gray; // scale middle gray to the midpoint of sigmoid.
+    curr_color *= 1.0f / mid_gray; // scale middle gray to the midpoint of sigmoid.
 
     if (exp_to_log_exp) {
         curr_color = make_float3(_log10f(curr_color.x), _log10f(curr_color.y), _log10f(curr_color.z));
@@ -117,8 +117,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         float x = (float)p_X / p_Width;
         x = (x - 0.5) * p_Width / p_Height + 0.5;
         float y = 1.0 - (float)p_Y / p_Height;
-        x = _mix(-4.0, 4.0, x);
-        y = _mix(0.0, 6.0, y);
+        x = _mix(-4.0f, 4.0f, x);
+        y = _mix(0.0f, 6.0f, y);
         curr_color = draw_grid_lines(x, y, curr_color);
         curr_color += draw_curve(x, y, make_float3(1.0, 0.0, 0.0), &red_curve);
         curr_color += draw_curve(x, y, make_float3(0.0, 1.0, 0.0), &green_curve);

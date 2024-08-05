@@ -120,7 +120,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     *state = *((__PRIVATE__ rand_state*)&val);
 
     // Apply noise.
-    target_snr = _fmaxf(target_snr, 0.0);
+    target_snr = _fmaxf(target_snr, 0.0f);
     // target_snr = curr_color / sqrt(variance)
     // variance = curr_color^2 / target_snr^2
     float target_snr_sq = target_snr * target_snr;

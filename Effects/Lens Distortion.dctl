@@ -8,6 +8,10 @@ DEFINE_UI_PARAMS(uniform_distortion, Couple XY, DCTLUI_CHECK_BOX, 1)
 
 // clang-format on
 
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
 ///////////////////////////////
 // Bilinear sampling
 //////////////////////////////
@@ -58,8 +62,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         k_1_y = k_1_x;
         k_2_y = k_2_x;
     }
-    float x_u = x_d * (1.0 + k_1_x * _powf(r_d, 2.0) + k_2_x * _powf(r_d, 4.0));
-    float y_u = y_d * (1.0 + k_1_y * _powf(r_d, 2.0) + k_2_y * _powf(r_d, 4.0));
+    float x_u = x_d * (1.0 + k_1_x * powf(r_d, 2.0) + k_2_x * powf(r_d, 4.0));
+    float y_u = y_d * (1.0 + k_1_y * powf(r_d, 2.0) + k_2_y * powf(r_d, 4.0));
 
     // Transform x_u, y_u into new p_X_u, p_Y_u coordinates where the origin is in the top left
     float p_x_u_scaled = (x_u / aspect_ratio) + 0.5;

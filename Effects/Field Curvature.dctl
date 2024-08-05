@@ -19,6 +19,10 @@ __DEVICE__ float3 sample_color(int2 pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG,
     return make_float3(_tex2D(p_TexR, pos.x, pos.y), _tex2D(p_TexG, pos.x, pos.y), _tex2D(p_TexB, pos.x, pos.y));
 }
 
+__DEVICE__ inline float maxf(float x, float y) {
+    return _fmaxf((float)x, (float)y);
+}
+
 __DEVICE__ float powi(float x, int exp) {
     float out = 1.0;
     int abs_exp = exp < 0 ? exp * -1 : exp;
@@ -43,17 +47,25 @@ __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
 }
 
+__DEVICE__ float mixf(float x, float y, float a) {
+    return x * (1.0 - a) + y * a;
+}
+
+__DEVICE__ float2 mixf2(float2 x, float2 y, float a) {
+    return make_float2(mixf(x.x, y.x, a), mixf(x.y, y.y, a));
+}
+
 __DEVICE__ float smoothstep2(float start, float end, float alpha) {
     // alpha expected to be from 0 to 1.
     // https://www.desmos.com/calculator/pernscu1gx
-    alpha = _clampf(alpha, 0.0, 1.0);
+    alpha = _clampf(alpha, 0.0f, 1.0f);
     float factor;
     if (alpha < 0.5) {
         factor = 0.5 * powi(alpha * 2.0, 3);
     } else {
         factor = 0.5 * (2.0 - powi(2.0 - (alpha * 2.0), 3));
     }
-    return _mix(start, end, factor);
+    return _mixf(start, end, factor);
 }
 
 __DEVICE__ float ellipse_step(float start, float end, float alpha) {
@@ -127,9 +139,9 @@ __DEVICE__ kernel_params_t compute_kernel(
         _sqrtf(1.0 / (1.0 / powi(max_blur_ellipse.x, 2) + powi(normalized_pos.y / (normalized_pos.x * max_blur_ellipse.y), 2)));
     float max_radius_curr_y = max_radius_curr_x * normalized_pos.y / normalized_pos.x;
     float max_radius_threshold = _hypotf(max_radius_curr_x, max_radius_curr_y);
-    max_radius_threshold = _fmaxf(protected_radius_threshold, max_radius_threshold);
+    max_radius_threshold = maxf(protected_radius_threshold, max_radius_threshold);
 
-    float curr_factor = _clampf((curr_radius - protected_radius_threshold) / (max_radius_threshold - protected_radius_threshold), 0.0, 1.0);
+    float curr_factor = _clampf((curr_radius - protected_radius_threshold) / (max_radius_threshold - protected_radius_threshold), 0.0f, 1.0f);
 
     float kernel_blur_factor;
     if (curve_type == CURVE_SIGMOID) {
@@ -138,7 +150,7 @@ __DEVICE__ kernel_params_t compute_kernel(
         kernel_blur_factor = ellipse_step(0.0, 1.0, curr_factor);
     }
 
-    return make_kernel_params(kernel_blur_factor * blur_rad, _mix(0.0, cats_eye, curr_factor), distort, kernel_blur_factor);
+    return make_kernel_params(kernel_blur_factor * blur_rad, _mixf(0.0, cats_eye, curr_factor), distort, kernel_blur_factor);
 }
 
 __DEVICE__ float approx_circle_weight(float2 pos_trans, float radius) {
@@ -170,12 +182,12 @@ __DEVICE__ float blur_kernel(float2 pos_trans, float2 window_center, float2 dime
     if (params.distort) {
         offset_factor *= 2.0;
     }
-    float2 frame_center = 0.5 * (dimensions - 1.0);
+    float2 frame_center = 0.5f * (dimensions - 1.0f);
 
     float2 frame_center_direction = frame_center - window_center;
     frame_center_direction = frame_center_direction / _hypotf(frame_center_direction.x, frame_center_direction.y);
     float2 second_circle_center = frame_center_direction * params.blur_rad * params.cats_eye * offset_factor;
-    float2 primary_circle_center = -1.0 * frame_center_direction * params.blur_rad * params.cats_eye * offset_factor;
+    float2 primary_circle_center = -1.0f * frame_center_direction * params.blur_rad * params.cats_eye * offset_factor;
     if (params.distort) {
         primary_circle_center = make_float2(0.0, 0.0);
     }
@@ -254,7 +266,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         y = 1 - y;
         y *= 3.0;
 
-        params = compute_kernel(_mix(make_float2(0.0, 0.0), make_float2(p_Width, p_Height) - 1.0, p_X / (p_Width - 1.0)),
+        params = compute_kernel(mixf2(make_float2(0.0, 0.0), make_float2(p_Width, p_Height) - 1.0f, p_X / (p_Width - 1.0)),
                                 make_float2(p_Width, p_Height),
                                 make_float2(protected_radius_x, protected_radius_x),
                                 edge_blur_strength / 20.0,

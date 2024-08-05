@@ -219,17 +219,17 @@ __DEVICE__ float3 draw_contrast_curve(__PRIVATE__ contrast_params_t* contrast_r,
 }
 
 __DEVICE__ float3 draw_grid_lines(float x, float y, float3 curr_color) {
-    float major_line_x = _fabs(_fmod(x + 0.1, 0.2) - 0.1);
-    float minor_line_x = _fabs(_fmod(x + 0.02, 1.0 / 25.0) - 0.02);
-    float major_line_y = _fabs(_fmod(y + 0.1, 0.2) - 0.1);
-    float minor_line_y = _fabs(_fmod(y + 0.02, 1.0 / 25.0) - 0.02);
+    float major_line_x = _fabs(_fmod(x + 0.1f, 0.2f) - 0.1);
+    float minor_line_x = _fabs(_fmod(x + 0.02f, 1.0f / 25.0f) - 0.02f);
+    float major_line_y = _fabs(_fmod(y + 0.1f, 0.2f) - 0.1f);
+    float minor_line_y = _fabs(_fmod(y + 0.02f, 1.0f / 25.0f) - 0.02f);
 
     float3 output_color = curr_color;
     if (0 < x && x < 1.0 && 0 < y && y < 1.0 && (major_line_x <= 0.002 || major_line_y <= 0.002)) {
-        output_color += 0.1;
+        output_color += 0.1f;
     }
     if (0 < x && x < 1.0 && 0 < y && y < 1.0 && (minor_line_x <= 0.001 || minor_line_y <= 0.001)) {
-        output_color += 0.05;
+        output_color += 0.05f;
     }
     return output_color;
 }
@@ -271,23 +271,23 @@ __DEVICE__ void compute_toe_shoulder_cubic(__PRIVATE__ contrast_params_t* params
         // Low contrast, highlights.
         params->shoulder_x = _mix(params->pivot_x, params->white_x, params->shoulder);
         params->shoulder_y = point_slope(params->shoulder_x, params->pivot_x, params->pivot_y, params->pivot_slope);
-        params->white_slope = _powf((params->white_y - params->shoulder_y) / (params->white_x - params->shoulder_x), 2.0);
+        params->white_slope = _powf((params->white_y - params->shoulder_y) / (params->white_x - params->shoulder_x), 2.0f);
     } else {
         // High contrast, highlights
         params->shoulder_y = _mix(params->pivot_y, params->white_y, params->shoulder);
         params->shoulder_x = point_slope_inv(params->shoulder_y, params->pivot_x, params->pivot_y, params->pivot_slope);
-        params->white_slope = _powf((params->white_y - params->shoulder_y) / (params->white_x - params->shoulder_x), 2.0);
+        params->white_slope = _powf((params->white_y - params->shoulder_y) / (params->white_x - params->shoulder_x), 2.0f);
     }
 
     if (point_slope(params->black_x, params->pivot_x, params->pivot_y, params->pivot_slope) >= params->black_y) {
         // Low contrast, shadows
         params->toe_x = _mix(params->pivot_x, params->black_x, params->toe);
         params->toe_y = point_slope(params->toe_x, params->pivot_x, params->pivot_y, params->pivot_slope);
-        params->black_slope = _powf((params->black_y - params->toe_y) / (params->black_x - params->toe_x), 2.0);
+        params->black_slope = _powf((params->black_y - params->toe_y) / (params->black_x - params->toe_x), 2.0f);
     } else {
         params->toe_y = _mix(params->pivot_y, params->black_y, params->toe);
         params->toe_x = point_slope_inv(params->toe_y, params->pivot_x, params->pivot_y, params->pivot_slope);
-        params->black_slope = _powf((params->black_y - params->toe_y) / (params->black_x - params->toe_x), 2.0);
+        params->black_slope = _powf((params->black_y - params->toe_y) / (params->black_x - params->toe_x), 2.0f);
     }
 }
 

@@ -101,6 +101,10 @@ __DEVICE__ inline float randu(__PRIVATE__ rand_state* seed) {
 // Distribution Sampling functions
 /////////////////////////////////////////////
 
+__DEVICE__ float maxf(float x, float y) {
+    return _fmaxf(x, y);
+}
+
 __DEVICE__ float sample_uniform(float a, float b, __PRIVATE__ rand_state* seed) {
     float range = b - a;
     float x = randu(seed);
@@ -116,7 +120,7 @@ __DEVICE__ float sample_norm(float mean, float var, __PRIVATE__ rand_state* seed
 __DEVICE__ float sample_poisson(float lambda, __PRIVATE__ rand_state* seed) {
     // approximate just using normal distribution.
     float sample = sample_norm(lambda, lambda, seed);
-    return _fmaxf(0.001, sample);
+    return maxf(0.001, sample);
 }
 
 __DEVICE__ float sample_bernoulli(float p, __PRIVATE__ rand_state* seed) {
@@ -179,13 +183,13 @@ __DEVICE__ float convert_photons_to_transmittance(
         float T_i = layer_transmittance - (grain_absorption * (N / num_grains));
         T *= T_i;
     }
-    T = _clampf(T, 0.0, 1.0);
+    T = _clampf(T, 0.0f, 1.0f);
     return T;
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y)) * photon_gain;
-    curr_color = make_float3(_fmaxf(curr_color.x, 0.0), _fmaxf(curr_color.y, 0.0), _fmaxf(curr_color.z, 0.0));
+    curr_color = make_float3(maxf(curr_color.x, 0.0), maxf(curr_color.y, 0.0), maxf(curr_color.z, 0.0));
 
     float seed = _tex2D(p_TexR, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height));
     seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0;

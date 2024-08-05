@@ -34,7 +34,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         if ((curr_x - (window_size / 2) <= p_X && p_X < curr_x - (window_size / 2) + window_size) ||
             (curr_y - (window_size / 2) <= p_Y && p_Y < curr_y - (window_size / 2) + window_size)) {
             // Within crosshair, gets inverse of current color so it's visible.
-            curr_color = 1.0 - curr_color;
+            curr_color = 1.0f - curr_color;
         }
         output = curr_color;
     } else if (mode == COLOR) {

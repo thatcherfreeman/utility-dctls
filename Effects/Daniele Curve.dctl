@@ -17,11 +17,15 @@ __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
 }
 
+__DEVICE__ inline float maxf(float x, float y) {
+    return _fmaxf((float)x, (float)y);
+}
+
 __DEVICE__ float daniele_curve(float x, float peak_luminance, float normalized_white, float contrast_gamma, float exposure, float toe) {
     const float m = peak_luminance / normalized_white;
     const float s = exposure * powf(m, 1.0 / contrast_gamma);
-    float fx = m * powf(_fmaxf(0.0, x) / (x + s), contrast_gamma);
-    float y = _fmaxf(0.0, fx * fx / (fx + toe));
+    float fx = m * powf(maxf(0.0, x) / (x + s), contrast_gamma);
+    float y = maxf(0.0, fx * fx / (fx + toe));
     return y;
 }
 

@@ -15,7 +15,7 @@ __DEVICE__ float powf(float base, float exp) {
 }
 
 __DEVICE__ float pow2f(float base) {
-    return _powf(_fabs(base), 2.0);
+    return powf(_fabs(base), 2.0);
 }
 
 __DEVICE__ float maxf3(float3 x) {
