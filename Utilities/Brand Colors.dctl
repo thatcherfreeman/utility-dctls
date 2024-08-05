@@ -22,12 +22,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     if (rgb_format == SCALE_0_1) {
         target_rgb = make_float3(red_ui, green_ui, blue_ui);
     } else if (rgb_format == SCALE_0_255) {
-        target_rgb = make_float3(red_ui, green_ui, blue_ui) / 255.0;
+        target_rgb = make_float3(red_ui, green_ui, blue_ui) / 255.0f;
     }
     float3 highlight_color = make_float3(highlight_r, highlight_g, highlight_b);
     float3 source_color = input;
-    float3 low_bound = target_rgb * (1.0 - (percent_error / 100.0));
-    float3 high_bound = target_rgb * (1.0 + (percent_error / 100.0));
+    float3 low_bound = target_rgb * (1.0f - (percent_error / 100.0f));
+    float3 high_bound = target_rgb * (1.0f + (percent_error / 100.0f));
 
     bool cv_is_within_range = (low_bound.x <= source_color.x && source_color.x <= high_bound.x) &&
                               (low_bound.y <= source_color.y && source_color.y <= high_bound.y) &&

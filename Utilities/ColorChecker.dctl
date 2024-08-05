@@ -126,8 +126,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     if (col < 0 || row < 0 || col >= 6 || row >= 4) {
         return output;
     }
-    float inner_posx = _fmod(col, 1.0);
-    float inner_posy = _fmod(row, 1.0);
+    float inner_posx = _fmod(col, 1.0f);
+    float inner_posy = _fmod(row, 1.0f);
     if (inner_posx < inner_border_width || inner_posy < inner_border_width || inner_posx >= 1.0 - inner_border_width ||
         inner_posy >= 1.0 - inner_border_width) {
         return output;
@@ -165,7 +165,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         adapted_colors = mv_33_3(adaptation_matrix, tile_color_XYZ);
     }
 
-    float exposure_gain = _powf(2.0, exposure);
+    float exposure_gain = _powf(2.0f, exposure);
     adapted_colors.x *= exposure_gain;
     adapted_colors.y *= exposure_gain;
     adapted_colors.z *= exposure_gain;

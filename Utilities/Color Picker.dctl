@@ -381,15 +381,15 @@ __DEVICE__ float3 convert_float3_to_format(float3 x, int format, __PRIVATE__ int
             out = x;
             break;
         case FORMAT_8BIT:
-            out = x * 255.0;
+            out = x * 255.0f;
             needed_digits = 4;
             break;
         case FORMAT_10BIT:
-            out = x * 1023.0;
+            out = x * 1023.0f;
             needed_digits = 5;
             break;
         case FORMAT_12BIT:
-            out = x * 4095.0;
+            out = x * 4095.0f;
             needed_digits = 5;
             break;
         case FORMAT_16BIT:

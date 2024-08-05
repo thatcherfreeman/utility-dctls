@@ -11,20 +11,20 @@ typedef struct {
 } chroma_subsample_params_t;
 
 __DEVICE__ float3 average(float3 a, float3 b) {
-    return make_float3(a.x + b.x, a.y + b.y, a.z + b.z) * 0.5;
+    return make_float3(a.x + b.x, a.y + b.y, a.z + b.z) * 0.5f;
 }
 
 __DEVICE__ float3 rgb_to_rgb_d(float3 rgb) {
     // Takes rgb as input, in range 0-1 where black is (0,0,0).
     // outputs rgb_d as output, scaled 16-235.
-    float3 rgb_d = (219.0 * rgb + 16.0);
+    float3 rgb_d = (219.0f * rgb + 16.0f);
     return rgb_d;
 }
 
 __DEVICE__ float3 rgb_d_to_rgb(float3 rgb_d) {
     // Takes rgb_d as input, scaled 16-235.
     // outputs rgb, scaled 0-1
-    float3 rgb = (rgb_d - 16.0) / 219.0;
+    float3 rgb = (rgb_d - 16.0f) / 219.0f;
     return rgb;
 }
 
@@ -138,7 +138,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float3 output_color_ycrcb = chroma_subsample(params, region, rx, ry);
     float3 output_color = rgb_d_to_rgb(ycbcr_to_rgb_d(output_color_ycrcb));
     if (convert_to_ycbcr) {
-        output_color = output_color_ycrcb / 255.0;
+        output_color = output_color_ycrcb / 255.0f;
     }
     return output_color;
 }

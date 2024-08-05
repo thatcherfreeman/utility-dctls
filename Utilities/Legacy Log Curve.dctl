@@ -17,7 +17,7 @@ typedef struct {
 } log_params_t;
 
 __DEVICE__ float log2lin(float x, log_params_t params) {
-    float tmp = _powf(2.0, x * params.scale + params.y_shift) + params.x_shift;
+    float tmp = _powf(2.0f, x * params.scale + params.y_shift) + params.x_shift;
     if (tmp < params.cut) {
         return tmp * params.slope + params.intercept;
     } else {

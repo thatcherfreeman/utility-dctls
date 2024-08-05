@@ -22,16 +22,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     if (mode == TO_LEGAL) {
         output_color = make_float3(convert_to_legal(input_color.x), convert_to_legal(input_color.y), convert_to_legal(input_color.z));
         if (clip) {
-            output_color.x = _clampf(output_color.x, 64.0 / 1023, 940.0 / 1023);
-            output_color.y = _clampf(output_color.y, 64.0 / 1023, 940.0 / 1023);
-            output_color.z = _clampf(output_color.z, 64.0 / 1023, 940.0 / 1023);
+            output_color.x = _clampf(output_color.x, 64.0f / 1023.0f, 940.0f / 1023.0f);
+            output_color.y = _clampf(output_color.y, 64.0f / 1023.0f, 940.0f / 1023.0f);
+            output_color.z = _clampf(output_color.z, 64.0f / 1023.0f, 940.0f / 1023.0f);
         }
     } else { // if (mode == TO_FULL) {
         output_color = make_float3(convert_to_full(input_color.x), convert_to_full(input_color.y), convert_to_full(input_color.z));
         if (clip) {
-            output_color.x = _clampf(output_color.x, 0.0, 1.0);
-            output_color.y = _clampf(output_color.y, 0.0, 1.0);
-            output_color.z = _clampf(output_color.z, 0.0, 1.0);
+            output_color.x = _clampf(output_color.x, 0.0f, 1.0f);
+            output_color.y = _clampf(output_color.y, 0.0f, 1.0f);
+            output_color.z = _clampf(output_color.z, 0.0f, 1.0f);
         }
     }
     return output_color;

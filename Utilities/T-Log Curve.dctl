@@ -3,7 +3,7 @@ DEFINE_UI_PARAMS(exposure_comp, Exposure Compensation, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {LIN2LOG, LOG2LIN}, {Lin to Log, Log to Lin})
 
 __DEVICE__ float linear_to_tlog(float x, float stops, float exp) {
-    float l = _fmaxf(x, 0.0) * (1.0 / 0.18) * _exp2f(exp); // scale middle gray to 1.0
+    float l = _fmaxf(x, 0.0f) * (1.0 / 0.18) * _exp2f(exp); // scale middle gray to 1.0
     float lin_max = _exp2f(stops / 2.0);
     float lin_min = _exp2f(-1.0 * stops / 2.0);
 
@@ -15,7 +15,7 @@ __DEVICE__ float tlog_to_linear(float y, float stops, float exp) {
     float lin_min = _exp2f(-1.0 * stops / 2.0);
     float l = _exp2f(y * (_log2f(lin_max) - _log2f(lin_min)) + _log2f(lin_min));
     float x = l * 0.18 / _exp2f(exp); // scale 1.0 to middle gray
-    return _fmaxf(x, 0.0);
+    return _fmaxf(x, 0.0f);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {

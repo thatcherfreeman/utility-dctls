@@ -117,9 +117,9 @@ __DEVICE__ pixel_stats_t sample_color(
         }
     }
     float3 sample_mean = total / weight; // mean
-    total_squared /= (weight - 1.0);     // sample variance
+    total_squared /= (weight - 1.0f);    // sample variance
 
-    float3 sample_var = (total_squared - (sample_mean * sample_mean * weight / (weight - 1.0)));
+    float3 sample_var = (total_squared - (sample_mean * sample_mean * weight / (weight - 1.0f)));
     return make_pixel_stats(sample_mean - black_point, sample_var);
 }
 

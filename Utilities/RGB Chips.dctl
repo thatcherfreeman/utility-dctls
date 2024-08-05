@@ -19,9 +19,9 @@ DEFINE_UI_PARAMS(gaps, Row Gaps, DCTLUI_COMBO_BOX, 0, {GAPS_NONE, GAPS_BLACK, GA
 
 __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
     // assume hue is in degrees
-    hue = _fmod(hue, 360.0);
+    hue = _fmod(hue, 360.0f);
     float c = val * sat;
-    float x = c * (1.0 - _fabs(_fmod(hue / 60.0, 2.0) - 1.0));
+    float x = c * (1.0 - _fabs(_fmod(hue / 60.0f, 2.0f) - 1.0f));
     float m = val - c;
     float3 rgbp;
     if (0.0 <= hue && hue < 60.0) {

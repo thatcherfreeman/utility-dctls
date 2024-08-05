@@ -120,9 +120,8 @@ __DEVICE__ float3 apply_lggo_f3(float3 x, lggo_params_reals_t params, bool inver
     return make_float3(apply_lggo(x.x, params, invert), apply_lggo(x.y, params, invert), apply_lggo(x.z, params, invert));
 }
 
-__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
-    int2 curr_pos = make_int2(p_X, p_Y);
-    float3 curr_color = sample_color(curr_pos, p_TexR, p_TexG, p_TexB);
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 curr_color = make_float3(p_R, p_G, p_B);
 
     float3 output_color = curr_color;
 

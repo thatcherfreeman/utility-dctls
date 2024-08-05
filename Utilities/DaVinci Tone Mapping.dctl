@@ -56,9 +56,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     // Resolve clamps to the output white point.
     if (clamp_toggle) {
-        out.x = _clampf(out.x, 0.0, output_white);
-        out.y = _clampf(out.y, 0.0, output_white);
-        out.z = _clampf(out.z, 0.0, output_white);
+        out.x = _clampf(out.x, 0.0f, output_white);
+        out.y = _clampf(out.y, 0.0f, output_white);
+        out.z = _clampf(out.z, 0.0f, output_white);
     }
     return out;
 }

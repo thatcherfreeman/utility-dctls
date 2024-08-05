@@ -351,15 +351,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             // average right and below pixel to clone over it.
             float3 right_pixel = sample_color(make_int2(white_corner.x + 1, white_corner.y), p_TexR, p_TexG, p_TexB);
             float3 down_pixel = sample_color(make_int2(white_corner.x, white_corner.y + 1), p_TexR, p_TexG, p_TexB);
-            curr_color = (right_pixel + down_pixel) / 2.0;
+            curr_color = (right_pixel + down_pixel) / 2.0f;
         } else if (int2_eq(curr_pos, black_corner)) {
             float3 left_pixel = sample_color(make_int2(black_corner.x - 1, black_corner.y), p_TexR, p_TexG, p_TexB);
             float3 down_pixel = sample_color(make_int2(black_corner.x, black_corner.y + 1), p_TexR, p_TexG, p_TexB);
-            curr_color = (left_pixel + down_pixel) / 2.0;
+            curr_color = (left_pixel + down_pixel) / 2.0f;
         } else if (int2_eq(curr_pos, gray_corner)) {
             float3 right_pixel = sample_color(make_int2(gray_corner.x + 1, gray_corner.y), p_TexR, p_TexG, p_TexB);
             float3 up_pixel = sample_color(make_int2(gray_corner.x, gray_corner.y - 1), p_TexR, p_TexG, p_TexB);
-            curr_color = (right_pixel + up_pixel) / 2.0;
+            curr_color = (right_pixel + up_pixel) / 2.0f;
         }
 
         output_color = curr_color;

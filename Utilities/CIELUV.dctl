@@ -6,9 +6,9 @@ DEFINE_UI_PARAMS(white_point_y, White Point y, DCTLUI_SLIDER_FLOAT, 0.32902, 0.2
 DEFINE_UI_PARAMS(white_point_luminance, White Point Luminance, DCTLUI_VALUE_BOX, 100.0)
 // clang-format on
 
-#define PI (3.14159265358979)
-#define WHITE_SCALE (100.0)
-#define SAT_SCALE (10.0)
+#define PI (3.14159265358979f)
+#define WHITE_SCALE (100.0f)
+#define SAT_SCALE (10.0f)
 
 __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);

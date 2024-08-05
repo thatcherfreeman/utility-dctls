@@ -63,7 +63,7 @@ __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
 }
 
 __DEVICE__ float linear_to_tlog(float x, float stops, float exp) {
-    float l = _fmaxf(x, 0.0) * (1.0 / 0.18) * _exp2f(exp); // scale middle gray to 1.0
+    float l = _fmaxf(x, 0.0f) * (1.0 / 0.18) * _exp2f(exp); // scale middle gray to 1.0
     float lin_max = _exp2f(stops / 2.0);
     float lin_min = _exp2f(-1.0 * stops / 2.0);
 
@@ -119,7 +119,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     float3 output_color;
-    log_stops = _fmaxf(log_stops, 16.0);
+    log_stops = _fmaxf(log_stops, 16.0f);
     if (log_output && !passthru) {
         output_color = make_float3(linear_to_tlog(linear_output_color.x, log_stops, 0.0),
                                    linear_to_tlog(linear_output_color.y, log_stops, 0.0),
