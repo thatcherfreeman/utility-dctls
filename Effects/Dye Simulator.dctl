@@ -48,6 +48,18 @@ __DEVICE__ float pow2(float x) {
     return x * x;
 }
 
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float maxf(float x, float y) {
+    return _fmaxf(x, y);
+}
+
 typedef struct {
         float mean;
         float left_std;
@@ -383,7 +395,7 @@ __DEVICE__ float3 get_observer_weight(float wavelength, int observer_type) {
         int index_high = _ceilf((wavelength - MIN_WAVELENGTH) / WAVELENGTH_STEP) * WAVELENGTH_STEP + MIN_WAVELENGTH;
         float3 weights_low = get_observer_weight_stepped(index_low, observer_type);
         float3 weights_high = get_observer_weight_stepped(index_high, observer_type);
-        weights = _mix(weights_low, weights_high, _fmod(wavelength, WAVELENGTH_STEP) / WAVELENGTH_STEP);
+        weights = _mix(weights_low, weights_high, mod(wavelength, WAVELENGTH_STEP) / WAVELENGTH_STEP);
     }
     return weights;
 }
@@ -420,7 +432,7 @@ __DEVICE__ float3 get_observer_value(gaussian_piecewise_params_t dyes[3], int ob
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 input = make_float3(p_R, p_G, p_B);
-    input = make_float3(_fmaxf(input.x, 0.0), _fmaxf(input.y, 0.0), _fmaxf(input.z, 0.0));
+    input = make_float3(maxf(input.x, 0.0), maxf(input.y, 0.0), maxf(input.z, 0.0));
 
     float3 gel_concentration = input * input_gain;
     // TODO: Implement other input metrics
@@ -462,8 +474,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         // Draw vertical wavelength lines
         float threshold = 0.5;
         float curr_wavelength = MIN_WAVELENGTH + (MAX_WAVELENGTH - MIN_WAVELENGTH) * x;
-        if (_fabs(_fmod(curr_wavelength + 50, 100.0) - 50) < threshold || _fabs(_fmod(curr_wavelength, 100) - 50) < threshold) {
-            if (_fmod(y, 0.1) < 0.05) {
+        if (_fabs(mod(curr_wavelength + 50.0, 100.0) - 50.0) < threshold || _fabs(mod(curr_wavelength, 100.0) - 50.0) < threshold) {
+            if (mod(y, 0.1) < 0.05) {
                 output_color = make_float3(0.5, 0.5, 0.5);
             }
         }
@@ -471,7 +483,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     if (density_charts) {
         // draw horizontal density lines
-        if (_fabs(_fmod(y * chart_max_density + 0.5, 1.0) - 0.5) < 0.005 && _fmod(x, 0.1) < 0.05) {
+        if (_fabs(mod(y * chart_max_density + 0.5, 1.0) - 0.5) < 0.005 && mod(x, 0.1) < 0.05) {
             output_color = make_float3(0.25, 0.25, 0.25);
         }
 
