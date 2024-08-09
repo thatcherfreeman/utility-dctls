@@ -65,7 +65,7 @@ __DEVICE__ float smoothstep2(float start, float end, float alpha) {
     } else {
         factor = 0.5 * (2.0 - powi(2.0 - (alpha * 2.0), 3));
     }
-    return _mixf(start, end, factor);
+    return mixf(start, end, factor);
 }
 
 __DEVICE__ float ellipse_step(float start, float end, float alpha) {
@@ -151,7 +151,7 @@ __DEVICE__ kernel_params_t compute_kernel(
         kernel_blur_factor = ellipse_step(0.0, 1.0, curr_factor);
     }
 
-    return make_kernel_params(kernel_blur_factor * blur_rad, _mixf(0.0, cats_eye, curr_factor), distort, kernel_blur_factor);
+    return make_kernel_params(kernel_blur_factor * blur_rad, mixf(0.0, cats_eye, curr_factor), distort, kernel_blur_factor);
 }
 
 __DEVICE__ float approx_circle_weight(float2 pos_trans, float radius) {
