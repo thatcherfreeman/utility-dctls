@@ -22,6 +22,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [MTF Curve Fuse](#mtf-curve-fuse)
         - [Periodic Frame Sampler Fuse](#periodic-frame-sampler-fuse)
         - [Pixel Logger Fuse](#pixel-logger-fuse)
+        - [Print Dimensions Fuse](#print-dimensions-fuse)
         - [Recenter Fuse](#recenter-fuse)
         - [RotateImage Fuse](#rotateimage-fuse)
 - [The DCTLs:](#the-dctls)
@@ -333,6 +334,10 @@ For the given range of frames, samples the indicated coordinate and writes the v
 
 **Write file**: When clicked, writes the CSV file.
 
+---
+
+### Print Dimensions Fuse
+Prints the dimensions and DoD and ROI in the console, for the input image.
 
 ---
 ### Recenter Fuse

@@ -1,0 +1,33 @@
+FuRegisterClass("PrintDimensions", CT_Tool, {
+    REGS_Category = "Fuses\\Util",
+    REGS_OpIconString = "PrDim",
+    REGS_OpDescription = "Print DoD and other info",
+    REG_SupportsDoD = true,
+})
+
+function Create()
+    BackImage = self:AddInput("Background", "Background", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1
+    })
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1
+    })
+end
+
+function Process(req)
+    local background = BackImage:GetValue(req)
+    local dod, roi = req:GetInputDoD(BackImage), req:GetRoI()
+
+
+    print("------ DIMENSIONS ------")
+    print("width: ", background.Width)
+    print("height: ", background.Height)
+    print("datawindow: ", background.DataWindow)
+    print("validwindow: ", background.ValidWindow)
+    print("dod: ", dod)
+    print("roi: ", roi)
+
+    OutImage:Set(req, background)
+end
