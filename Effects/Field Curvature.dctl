@@ -74,19 +74,6 @@ __DEVICE__ float ellipse_step(float start, float end, float alpha) {
     return -_sqrtf(1.0 - alpha * alpha) * end + start + end;
 }
 
-__DEVICE__ float convert_gamma_to_reals(float g) {
-    // Converts -1 to +1 range to an exponent
-    // Essentially what Resolve does with its gamma
-    // correction.
-    float out;
-    if (g <= 0) {
-        out = 1.0f + (-4.0f * g);
-    } else {
-        out = 1.0f / (4.0f * g + 1);
-    }
-    return out;
-}
-
 typedef struct {
         float blur_rad; // radius from center of blur that has zero weight.
         float cats_eye; // strength of cats eye
@@ -220,18 +207,25 @@ blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__
     float2 dimensions = make_float2(p_Width, p_Height);
     float3 curr_color;
     for (int y = -params.blur_rad - 1; y <= params.blur_rad + 1; y++) {
+        float prev_weight = 0.0;
         for (int x = -params.blur_rad - 1; x <= params.blur_rad + 1; x++) {
             float w = blur_kernel(make_float2(x, y), center_pos_f, dimensions, params);
             if (w == 0.0) {
+                if (prev_weight > 0.0) {
+                    // Performance optimization: if the weight drops to zero for this line, all further entries in this row are zero weight
+                    // and can be skipped.
+                    break;
+                }
+                // Don't sample the pixel if the weight is known to be zero.
                 continue;
             }
-
             int2 runner_pos = center_pos + make_int2(x, y);
             curr_color = sample_color(runner_pos, p_TexR, p_TexG, p_TexB);
 
             total_color += curr_color * w;
             weight += w;
             num_pixels++;
+            prev_weight = w;
         }
     }
     return total_color / weight;
