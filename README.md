@@ -43,7 +43,8 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [MTF Curve DCTL](#mtf-curve-dctl)
         - [Parametric Blur DCTL](#parametric-blur-dctl)
         - [Photon Noise DCTL](#photon-noise-dctl)
-        - [Random Channel Mixer](#random-channel-mixer)
+        - [Radial Blur DCTL](#radial-blur-dctl)
+        - [Random Channel Mixer DCTL](#random-channel-mixer-dctl)
         - [Random Contrast Curve](#random-contrast-curve)
         - [Random LGGO DCTL](#random-lggo-dctl)
         - [Random Linear Contrast](#random-linear-contrast)
@@ -701,11 +702,37 @@ In order for the math to work out correctly, this DCTL expects that all inputs a
 **Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
 
 
+---
+### Radial Blur DCTL
+Radial blur whose strength increases with radius from the center of the frame. Apply this DCTL to a linear image.
 
+#### Quick note on radial blurs
+All blurs work by replacing each pixel with a weighted average of a certain region of pixels. With most blurs, that's commonly a circular region centered on the pixel in question. In the case of a radial blur, we are instead going to use an arc of a circle that is centered in the frame as a base. Imagine we trace that arc with a circular paintbrush with some radius.
+
+Thus, you can see that the region averaged for a given pixel is specified by the angle of the arc and the radius of the circular brush that goes along this arc, which represents the thickness of the blur.
+
+#### DCTL Parameters
+**Protected Radius X/Y**: Choose what portion of the center of the frame is not blurred at all.
+
+**Max Blur Rotation Deg**: Choose the maximum arc angle of the blur, which will occur in the corners of the frame. If you set this to 2.0, then in the corners of the frame, we will be blurring 2 degrees in each direction, for a total smear of 4 degrees.
+
+**Max Blur Thickness**: Choose the maximum thickness of the blur, which will occur in the corners of the frame. This controls the radius of the circular region centered on the arc, described in the previous section.
+
+**Couple XY**: If checked, we substitute **Protected Radius Y** with your value entered for **Protected Radius X**
+
+**Radius vs Strength Curve**: Shows you the blur radius and rotation angle used for different distances from the center of the frame, The x-axis represents location from the bottom left corner to the top right corner. The white curve represents the angle and the grey curve represents the thickness.
+
+**Draw Blur Rotation Map**: Returns the rotation angle for each pixel in the frame, in radians.
+
+**Draw Blur Thickness Map**: Returns the blur thickness for each pixel in the frame, with units of pixels.
+
+**Blur Rotation Falloff**: Controls how the blur rotation maps from zero to **Max Blur Rotation Deg** as distance from the center of the frame increases.
+
+**Blur Thickness Falloff**: controls how the blur thickness maps from zero to **Max Blur Thickness** as a distance from the center of the frame increases.
 
 ---
 
-### Random Channel Mixer
+### Random Channel Mixer DCTL
 Constructs a random RGB matrix that is some distance away from the Identity matrix. Useful when trying out lots of different looks, expects image to be converted to Linear before using.
 
 #### DCTL Parameters
@@ -1532,6 +1559,8 @@ Draws a grid or a grid of dots so you can see how the [Field Curvature DCTL](#fi
 **Number of Grids**: Amount of boxes to put on the X-axis.
 
 **Grid Thickness Px**: Thickness of the lines in the grid or dots, in pixels
+
+**White Level**: Indicate the code value of the drawn whites in the frame.
 
 **Invert**: Invert the color of the chart so it's black lines on a white backdrop.
 
