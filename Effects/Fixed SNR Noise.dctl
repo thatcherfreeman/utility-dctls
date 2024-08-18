@@ -47,8 +47,8 @@ __DEVICE__ float norm_inv_cdf(float z, float mean, float var) {
 }
 
 __DEVICE__ float norm_pdf(float z, float mean, float var) {
-    float out = _expf(-0.5 * _exp2f((z - mean)) / var);
-    out *= 1.0 / (_sqrtf(2.0 * 3.1415926535 * var));
+    float out = _expf(-0.5f * (z - mean) * (z - mean) / var);
+    out *= 1.0 / (_sqrtf(2.0f * 3.1415926535f * var));
     return out;
 }
 
