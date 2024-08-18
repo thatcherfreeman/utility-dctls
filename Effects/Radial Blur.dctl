@@ -4,16 +4,17 @@
 
 DEFINE_UI_PARAMS(protected_radius_x, Protected Radius X, DCTLUI_SLIDER_FLOAT, 0.5, 0.001, 1.5, 0.01)
 DEFINE_UI_PARAMS(protected_radius_y, Protected Radius Y, DCTLUI_SLIDER_FLOAT, 0.5, 0.001, 1.5, 0.01)
-DEFINE_UI_PARAMS(max_blur_theta_deg, Max Blur Rotation Deg, DCTLUI_SLIDER_FLOAT, 5.0, 0.0, 30.0, 0.01)
-DEFINE_UI_PARAMS(max_blur_radius, Max Blur Thickness, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 100.0, 0.01)
+DEFINE_UI_PARAMS(max_blur_theta_deg, Max Blur Rotation Deg, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 10.0, 0.01)
+DEFINE_UI_PARAMS(max_blur_radius, Max Blur Thickness, DCTLUI_SLIDER_FLOAT, 3.0, 0.0, 30.0, 0.01)
+DEFINE_UI_PARAMS(curve_falloff, Curve Falloff, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(couple_xy, Couple XY, DCTLUI_CHECK_BOX, 1)
 
 DEFINE_UI_PARAMS(draw_curve, Radius vs Strength Curve, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(draw_rotation_heat_map, Draw Blur Rotation Map, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(draw_radius_heat_map, Draw Blur Thickness Map, DCTLUI_CHECK_BOX, 0)
 
-DEFINE_UI_PARAMS(angle_curve_type, Blur Rotation Falloff, DCTLUI_COMBO_BOX, 0, {CURVE_SIGMOID, CURVE_ELLIPSE}, {Sigmoid, Ellipse})
-DEFINE_UI_PARAMS(radius_curve_type, Blur Thickness Falloff, DCTLUI_COMBO_BOX, 0, {RADIUS_CURVE_SIGMOID, RADIUS_CURVE_ELLIPSE}, {Sigmoid, Ellipse})
+DEFINE_UI_PARAMS(angle_curve_type, Blur Rotation Falloff, DCTLUI_COMBO_BOX, 0, {CURVE_SIGMOID, CURVE_LINEAR, CURVE_ELLIPSE}, {Sigmoid, Linear, Ellipse})
+DEFINE_UI_PARAMS(radius_curve_type, Blur Thickness Falloff, DCTLUI_COMBO_BOX, 0, {RADIUS_CURVE_SIGMOID,RADIUS_CURVE_LINEAR}, {Sigmoid, Linear})
 
 // clang-format on
 
@@ -29,6 +30,23 @@ __DEVICE__ inline float maxf(float x, float y) {
 
 __DEVICE__ inline float minf(float x, float y) {
     return _fminf((float)x, (float)y);
+}
+
+__DEVICE__ float convert_gamma_to_reals(float g) {
+    // Converts -1 to +1 range to an exponent
+    // Essentially what Resolve does with its gamma
+    // correction.
+    float out;
+    if (g <= 0) {
+        out = 1.0f + (-4.0f * g);
+    } else {
+        out = 1.0f / (4.0f * g + 1);
+    }
+    return out;
+}
+
+__DEVICE__ float pivot_contrast(float x, float pivot, float contrast) {
+    return (x - pivot) * contrast + pivot;
 }
 
 __DEVICE__ float powi(float x, int exp) {
@@ -80,6 +98,30 @@ __DEVICE__ float smoothstep2(float start, float end, float alpha) {
         factor = 0.5 * (2.0 - powi(2.0 - (alpha * 2.0), 3));
     }
     return mixf(start, end, factor);
+}
+
+__DEVICE__ float unnormalized_norm_pdf(float z, float mean, float std) {
+    if ((z - mean) < 1e-8) {
+        return 1.0;
+    }
+    if (_fabs(z - mean) > 3.0 * std) {
+        return 0.0;
+    }
+    float var = std * std;
+    if (var < 1e-8) {
+        return 1.0;
+    }
+    return _expf(-0.5f * (z - mean) * (z - mean) / var);
+}
+
+__DEVICE__ float smoothed_circle_weight(float2 pos_trans, float radius) {
+    // pos_trans is in pixels.
+    float distance = _hypotf(pos_trans.x, pos_trans.y);
+    if (distance < 1e-3) {
+        return 1.0;
+    }
+    float std = radius / 5.0;
+    return unnormalized_norm_pdf(distance, 0.0, std);
 }
 
 __DEVICE__ float approx_circle_weight(float2 pos_trans, float radius) {
@@ -153,12 +195,14 @@ __DEVICE__ float clamp_angle(float theta, float theta_low, float theta_high) {
 typedef struct {
         float disk_radius; // radius of each disk along the arc, in pixels.
         float blur_angle;  // half of arc length theta1 - theta0.
+        float curr_factor;
 } kernel_params_t;
 
-__DEVICE__ kernel_params_t make_kernel_params(float disk_radius, float blur_angle) {
+__DEVICE__ kernel_params_t make_kernel_params(float disk_radius, float blur_angle, float curr_factor) {
     kernel_params_t params;
     params.disk_radius = disk_radius;
     params.blur_angle = blur_angle;
+    params.curr_factor = curr_factor;
     return params;
 }
 
@@ -202,13 +246,29 @@ __DEVICE__ bounding_box_t get_bounding_box(float2 xy, float2 dimensions, kernel_
                              make_int2((int)_ceilf(maximum_values.x), (int)_ceilf(maximum_values.y)));
 }
 
+__DEVICE__ float compute_curve_factor(float curr_factor, float curve_falloff, int curve_type) {
+    float kernel_blur_factor = curr_factor;
+    if (curve_type == CURVE_SIGMOID) {
+        curr_factor = _clampf(pivot_contrast(curr_factor, 0.5f, 1.0f + curve_falloff), 0.0f, 1.0f);
+        kernel_blur_factor = smoothstep2(0.0, 1.0, curr_factor);
+    } else if (curve_type == CURVE_ELLIPSE) {
+        curr_factor = powf(curr_factor, convert_gamma_to_reals(-1 * curve_falloff));
+        kernel_blur_factor = ellipse_step(0.0, 1.0, curr_factor);
+    } else if (curve_type == CURVE_LINEAR) {
+        curr_factor = _clampf(pivot_contrast(curr_factor, 0.5f, 1.0f + curve_falloff), 0.0f, 1.0f);
+        kernel_blur_factor = curr_factor;
+    }
+    return kernel_blur_factor;
+}
+
 __DEVICE__ kernel_params_t compute_kernel_params(float2 xy,
                                                  float2 dimensions,
                                                  float2 protected_radius,
                                                  float max_blur_theta_rad,
                                                  float max_blur_radius,
                                                  int angle_curve_type,
-                                                 int radius_curve_type) {
+                                                 int radius_curve_type,
+                                                 float curve_falloff) {
     // xy is in units of pixels.
 
     // normalized_pos is normalized so that left edge is x=-1, right edge is x=1, and it's square coordinates.
@@ -217,11 +277,7 @@ __DEVICE__ kernel_params_t compute_kernel_params(float2 xy,
     );
 
     float normalized_max_disk_radius = max_blur_radius * dimensions.x / 2048.0; // max radius in pixels of blur.
-    float curr_angle = _atan2f(normalized_pos.y, normalized_pos.x);
     float curr_radius = _hypotf(normalized_pos.x, normalized_pos.y);
-
-    // float protected_radius_threshold = _hypotf(protected_radius.x * _cosf(curr_angle), protected_radius.y * _sinf(curr_angle));
-    // float protected_radius_threshold = powi(protected_radius.x * _cosf(curr_angle), 2) + powi(protected_radius.y * _sinf(curr_angle), 2);
 
     float protected_radius_curr_x =
         _sqrtf(1.0 / (1.0 / powi(protected_radius.x, 2) + powi(normalized_pos.y / (normalized_pos.x * protected_radius.y), 2)));
@@ -250,13 +306,10 @@ __DEVICE__ kernel_params_t compute_kernel_params(float2 xy,
     float curr_factor =
         _clampf((curr_radius - protected_radius_threshold) / (max_radius_threshold - protected_radius_threshold), 0.0f, 1.0f);
 
-    float smoothstep_blur_factor = smoothstep2(0.0f, 1.0f, curr_factor);
-    float ellipse_blur_factor = ellipse_step(0.0f, 1.0f, curr_factor);
-
-    float theta_blur_factor = angle_curve_type == CURVE_SIGMOID ? smoothstep_blur_factor : ellipse_blur_factor;
-    float disk_radius_blur_factor = radius_curve_type == CURVE_SIGMOID ? smoothstep_blur_factor : ellipse_blur_factor;
-
-    return make_kernel_params(disk_radius_blur_factor * normalized_max_disk_radius, theta_blur_factor * max_blur_theta_rad);
+    float theta_blur_factor = compute_curve_factor(curr_factor, curve_falloff, angle_curve_type);
+    float disk_radius_blur_factor = compute_curve_factor(curr_factor, curve_falloff, radius_curve_type);
+    // disk_radius_blur_factor = _clampf(disk_radius_blur_factor, 0.0, 0.5);
+    return make_kernel_params(disk_radius_blur_factor * normalized_max_disk_radius, theta_blur_factor * max_blur_theta_rad, curr_factor);
 }
 
 __DEVICE__ float blur_kernel_weight(float2 pos_trans, float2 window_center, float2 dimensions, kernel_params_t params) {
@@ -272,14 +325,25 @@ __DEVICE__ float blur_kernel_weight(float2 pos_trans, float2 window_center, floa
                     clamp_angle(sampled_pos_polar.y, window_center_polar.y - params.blur_angle, window_center_polar.y + params.blur_angle));
     // Assume disk of radius = `disk_radius` is centered at this position and assign that weight.
     float2 curr_disk_center_cart = polar_to_cart_pix(curr_disk_center_polar, dimensions);
-    return approx_circle_weight(sampled_pos - curr_disk_center_cart, params.disk_radius);
+    float angle_weight =
+        unnormalized_norm_pdf(_fabs(angle_distance(sampled_pos_polar.y, window_center_polar.y)), 0.0, params.blur_angle / 5.0);
+    // float thickness_weight = approx_circle_weight(sampled_pos - curr_disk_center_cart, params.disk_radius);
+    float thickness_weight = smoothed_circle_weight(sampled_pos - curr_disk_center_cart, params.disk_radius);
+
+    // return thickness_weight;
+
+    // angle_weight = 1.0;
+    // thickness_weight = unnormalized_norm_pdf(_fabs(sampled_pos_polar.x - window_center_polar.x), 0.0, params.disk_radius / 3.0);
+
+    return thickness_weight * angle_weight;
 }
 
 __DEVICE__ float3
 blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, kernel_params_t params) {
     float3 total_color = make_float3(0.0, 0.0, 0.0);
     float weight = 0.0;
-    if (params.disk_radius == 0.0) {
+    float3 output_color = make_float3(0.0, 0.0, 0.0);
+    if (params.disk_radius == 0.0 || params.blur_angle == 0.0) {
         return sample_color(center_pos, p_TexR, p_TexG, p_TexB);
     }
     int num_pixels = 0;
@@ -310,6 +374,7 @@ blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     int2 curr_pos = make_int2(p_X, p_Y);
+    float3 output_color;
     if (couple_xy) {
         protected_radius_y = protected_radius_x;
     }
@@ -320,9 +385,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                                                    max_blur_theta_deg * PI / 180.0f,
                                                    max_blur_radius,
                                                    angle_curve_type,
-                                                   radius_curve_type);
+                                                   radius_curve_type,
+                                                   curve_falloff);
 
-    float3 output_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
+    output_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
 
     if (draw_rotation_heat_map) {
         output_color = make_float3(params.blur_angle, params.blur_angle, params.blur_angle);
@@ -343,7 +409,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                                        max_blur_theta_deg * PI / 180.0f,
                                        max_blur_radius,
                                        angle_curve_type,
-                                       radius_curve_type);
+                                       radius_curve_type,
+                                       curve_falloff);
 
         if (_fabs(y * 10.0 * PI / 180.0 - params.blur_angle) < 0.0005) {
             output_color = make_float3(1.0, 1.0, 1.0);

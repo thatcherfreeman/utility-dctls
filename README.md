@@ -720,6 +720,8 @@ Thus, you can see that the region averaged for a given pixel is specified by the
 
 **Max Blur Thickness**: Choose the maximum thickness of the blur, which will occur in the corners of the frame. This controls the radius of the circular region centered on the arc, described in the previous section.
 
+**Curve Falloff**: Indicates the contrast of the curve used, particularly for Sigmoid mode.
+
 **Couple XY**: If checked, we substitute **Protected Radius Y** with your value entered for **Protected Radius X**
 
 **Radius vs Strength Curve**: Shows you the blur radius and rotation angle used for different distances from the center of the frame, The x-axis represents location from the bottom left corner to the top right corner. The white curve represents the angle and the grey curve represents the thickness.
