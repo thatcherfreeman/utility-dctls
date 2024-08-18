@@ -6,12 +6,14 @@ DEFINE_UI_PARAMS(protected_radius_x, Protected Radius X, DCTLUI_SLIDER_FLOAT, 0.
 DEFINE_UI_PARAMS(protected_radius_y, Protected Radius Y, DCTLUI_SLIDER_FLOAT, 0.5, 0.001, 1.5, 0.01)
 DEFINE_UI_PARAMS(edge_blur_strength, Max Blur Strength, DCTLUI_SLIDER_FLOAT, 10.0, 0.0, 100.0, 0.01)
 DEFINE_UI_PARAMS(cats_eye, Cats Eye, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(curve_falloff, Curve Falloff, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+
 DEFINE_UI_PARAMS(couple_xy, Couple XY, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(distort, Distort, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(draw_curve, Radius vs Strength Curve, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(draw_heat_map, Draw Blur Map, DCTLUI_CHECK_BOX, 0)
 
-DEFINE_UI_PARAMS(curve_type, Blur Falloff Function, DCTLUI_COMBO_BOX, 0, {CURVE_SIGMOID, CURVE_ELLIPSE}, {Sigmoid, Ellipse})
+DEFINE_UI_PARAMS(curve_type, Blur Falloff Function, DCTLUI_COMBO_BOX, 0, {CURVE_SIGMOID, CURVE_ELLIPSE, CURVE_LINEAR}, {Sigmoid, Ellipse, Linear})
 
 // clang-format on
 
@@ -55,6 +57,23 @@ __DEVICE__ float2 mixf2(float2 x, float2 y, float a) {
     return make_float2(mixf(x.x, y.x, a), mixf(x.y, y.y, a));
 }
 
+__DEVICE__ float convert_gamma_to_reals(float g) {
+    // Converts -1 to +1 range to an exponent
+    // Essentially what Resolve does with its gamma
+    // correction.
+    float out;
+    if (g <= 0) {
+        out = 1.0f + (-4.0f * g);
+    } else {
+        out = 1.0f / (4.0f * g + 1);
+    }
+    return out;
+}
+
+__DEVICE__ float pivot_contrast(float x, float pivot, float contrast) {
+    return (x - pivot) * contrast + pivot;
+}
+
 __DEVICE__ float smoothstep2(float start, float end, float alpha) {
     // alpha expected to be from 0 to 1.
     // https://www.desmos.com/calculator/pernscu1gx
@@ -90,8 +109,14 @@ __DEVICE__ kernel_params_t make_kernel_params(float blur_rad, float cats_eye, bo
     return params;
 }
 
-__DEVICE__ kernel_params_t compute_kernel(
-    float2 xy, float2 dimensions, float2 protected_radius, float edge_blur_strength, float cats_eye, bool distort, int curve_type) {
+__DEVICE__ kernel_params_t compute_kernel(float2 xy,
+                                          float2 dimensions,
+                                          float2 protected_radius,
+                                          float edge_blur_strength,
+                                          float cats_eye,
+                                          bool distort,
+                                          int curve_type,
+                                          float curve_falloff) {
     // normalized_pos is normalized so that left edge is x=-1, right edge is x=1, and it's square coordinates.
     float2 normalized_pos = make_float2(((xy.x / (dimensions.x - 1.0)) - 0.5) * 2.0,
                                         ((xy.y / (dimensions.y - 1.0)) - 0.5) * 2.0 // dimensions.y / dimensions.x
@@ -100,9 +125,6 @@ __DEVICE__ kernel_params_t compute_kernel(
     float blur_rad = edge_blur_strength * dimensions.x / 2048.0; // max radius in pixels of blur.
     float curr_angle = _atan2f(normalized_pos.y, normalized_pos.x);
     float curr_radius = _hypotf(normalized_pos.x, normalized_pos.y);
-
-    // float protected_radius_threshold = _hypotf(protected_radius.x * _cosf(curr_angle), protected_radius.y * _sinf(curr_angle));
-    // float protected_radius_threshold = powi(protected_radius.x * _cosf(curr_angle), 2) + powi(protected_radius.y * _sinf(curr_angle), 2);
 
     float protected_radius_curr_x =
         _sqrtf(1.0 / (1.0 / powi(protected_radius.x, 2) + powi(normalized_pos.y / (normalized_pos.x * protected_radius.y), 2)));
@@ -131,11 +153,16 @@ __DEVICE__ kernel_params_t compute_kernel(
     float curr_factor =
         _clampf((curr_radius - protected_radius_threshold) / (max_radius_threshold - protected_radius_threshold), 0.0f, 1.0f);
 
-    float kernel_blur_factor;
+    float kernel_blur_factor = curr_factor;
     if (curve_type == CURVE_SIGMOID) {
+        curr_factor = _clampf(pivot_contrast(curr_factor, 0.5f, 1.0f + curve_falloff), 0.0f, 1.0f);
         kernel_blur_factor = smoothstep2(0.0, 1.0, curr_factor);
-    } else {
+    } else if (curve_type == CURVE_ELLIPSE) {
+        curr_factor = powf(curr_factor, convert_gamma_to_reals(-1 * curve_falloff));
         kernel_blur_factor = ellipse_step(0.0, 1.0, curr_factor);
+    } else if (curve_type == CURVE_LINEAR) {
+        curr_factor = _clampf(pivot_contrast(curr_factor, 0.5f, 1.0f + curve_falloff), 0.0f, 1.0f);
+        kernel_blur_factor = curr_factor;
     }
 
     return make_kernel_params(kernel_blur_factor * blur_rad, mixf(0.0, cats_eye, curr_factor), distort, kernel_blur_factor);
@@ -244,13 +271,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                                             edge_blur_strength,
                                             cats_eye,
                                             distort,
-                                            curve_type);
-    // return make_float3(params.blur_rad, params.blur_rad, params.blur_rad);
+                                            curve_type,
+                                            curve_falloff);
 
     float3 output_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
 
     if (draw_heat_map) {
-        // output_color = make_float3(params.factor, params.factor, params.factor);
         output_color = make_float3(params.blur_rad, params.blur_rad, params.blur_rad);
     }
 
@@ -267,7 +293,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                                 edge_blur_strength / 20.0,
                                 cats_eye,
                                 distort,
-                                curve_type);
+                                curve_type,
+                                curve_falloff);
 
         if (_fabs(y - params.blur_rad) < 0.002) {
             output_color = make_float3(1.0, 1.0, 1.0);

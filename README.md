@@ -454,6 +454,8 @@ Applies an effect as if the lens has a strong field curvature, so the edges of t
 
 **Cats Eye**: Choose how much cats eye there will be in the blur at the edges. Higher is more cats eye and slightly faster playback performance
 
+**Curve Falloff**: Affects the contrast of the selected curve, IE how quickly we go from zero blur to the max blur.
+
 **Couple XY**: If checked, we substitute **Protected Radius Y** with your value entered for **Protected Radius X**
 
 **Distort**: If checked, the cats eye will be computed in a way that more accurately reflects how cats eye perceptually distorts the blurred parts of the image. This happens because the center of the bokeh ball is not actually located on part of the frame that is responsible for it; the bokeh ball is cut from one side.
