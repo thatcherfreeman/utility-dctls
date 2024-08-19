@@ -104,7 +104,7 @@ __DEVICE__ float unnormalized_norm_pdf(float z, float mean, float std) {
     if ((z - mean) < 1e-8) {
         return 1.0;
     }
-    if (_fabs(z - mean) > 3.0 * std) {
+    if (_fabs(z - mean) > 5.0 * std) {
         return 0.0;
     }
     float var = std * std;
