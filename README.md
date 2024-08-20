@@ -1637,19 +1637,21 @@ Generates a test chart with a series of linear gradients. Each gradient is a ful
 
 **Saturation**: Saturation of left and right edges of the gradient. Computed in HSV.
 
-**Number of Bands**: Number of gradients to draw on the screen.
+**Number of Exposures**: Number of gradients to draw on the screen, if the continuous mode is Continuous Mixtures or Discrete.
+
+**Number of Colors**: Number of unique colors to draw on the screen, if the continuous mode is set to Discrete or Continuous Exp
 
 **Mid Gray**: If Band Interval is set to Exponential, this represents the target value for the middle band.
 
 **Min/Max Clamp**: If Clamp Output is checked, then colors will be replaced with white if any channel goes outside the range of [Min Clamp, Max Clamp]
 
-**Continuous**: If checked, fills in the plane in the rgb cube between the bands.
-
 **Clamp Output**: If checked, replaces values > 1 with pure white so that your image doesn't have any values that go outside the unit cube.
+
+**Vertical**: If checked, rotates the plot 90 degrees.
 
 **Band Interval**: If set to Equal, then each band will be a constant code value apart from the previous band. If set to Exponential, each band will be 2x the previous band. For pipelines expecting a log or gamma encoded image, use Equal, and for pipelines expecting a linear image, use Exponential (and probably turn off output clamping).
 
-
+**Continuous Mode**: Indicates whether either the color/mixture dimension and the exposure dimension should be continuous or discrete, or both.
 
 
 ---

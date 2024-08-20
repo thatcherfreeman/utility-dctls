@@ -3,13 +3,15 @@ DEFINE_UI_PARAMS(hue, Base Hue, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 360.0, 0.01)
 DEFINE_UI_PARAMS(hue_angle, Angle Between Patches, DCTLUI_SLIDER_FLOAT, 180.0, 0.0, 360.0, 0.01)
 DEFINE_UI_PARAMS(base_value, Base Value, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
-DEFINE_UI_PARAMS(num_bands, Number of Bands, DCTLUI_SLIDER_INT, 10, 1, 50, 1)
-DEFINE_UI_PARAMS(band_interval, Band Interval, DCTLUI_COMBO_BOX, 1, {EQUAL, EXPONENTIAL}, {Equal (Log), Exponential (Linear)})
+DEFINE_UI_PARAMS(num_bands, Number of Exposures, DCTLUI_SLIDER_INT, 10, 1, 50, 1)
+DEFINE_UI_PARAMS(num_slices, Number of Colors, DCTLUI_SLIDER_INT, 10, 2, 50, 1)
 DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(clamp_output_min, Min Clamp, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(clamp_output_max, Max Clamp, DCTLUI_VALUE_BOX, 1.0)
-DEFINE_UI_PARAMS(continuous, Continuous, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(clamp_output, Clamp Output, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(vertical, Vertical, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(band_interval, Band Interval, DCTLUI_COMBO_BOX, 1, {EQUAL, EXPONENTIAL}, {Equal (Log), Exponential (Linear)})
+DEFINE_UI_PARAMS(continuous, Continuous Mode, DCTLUI_COMBO_BOX, 1, {DISCRETE, CONTINUOUS_MIXTURES, CONTINUOUS_EXP, CONTINUOUS_BOTH}, {Discrete, Continuous Colors, Continuous Exp, Fully Continuous})
 
 // clang-format on
 
@@ -40,9 +42,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float x = (float)p_X / (p_Width - 1);
     float y = (float)p_Y / (p_Height - 1);
 
+    if (vertical) {
+        float temp = x;
+        x = y;
+        y = temp;
+    }
+
     float band_height = 1.0 / num_bands;
     float curr_band = y / band_height;
-    if (!continuous) {
+    if (continuous == CONTINUOUS_MIXTURES || continuous == DISCRETE) {
         curr_band = _ceilf(curr_band);
     }
 
@@ -55,10 +63,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         curr_band_value = max_val * mid_gray * _exp2f(curr_band - _round(num_bands / 2.0));
     }
 
+    float mixture_amount = x;
+    if (continuous == CONTINUOUS_EXP || continuous == DISCRETE) {
+        mixture_amount = _round(x * (num_slices - 1)) / (num_slices - 1);
+    }
+
     // Draw Gradient
     float3 left_patch = hsv_to_rgb(hue, saturation, curr_band_value * base_value);
     float3 right_patch = hsv_to_rgb(hue + hue_angle, saturation, curr_band_value);
-    float3 output = _mix(left_patch, right_patch, x);
+    float3 output = _mix(left_patch, right_patch, mixture_amount);
 
     // Output Clamping
     if (clamp_output) {
