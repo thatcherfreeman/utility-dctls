@@ -4,7 +4,7 @@ DEFINE_UI_PARAMS(hue_angle, Angle Between Patches, DCTLUI_SLIDER_FLOAT, 180.0, 0
 DEFINE_UI_PARAMS(base_value, Base Value, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
 DEFINE_UI_PARAMS(num_bands, Number of Exposures, DCTLUI_SLIDER_INT, 10, 1, 50, 1)
-DEFINE_UI_PARAMS(num_slices, Number of Colors, DCTLUI_SLIDER_INT, 9, 2, 50, 1)
+DEFINE_UI_PARAMS(num_slices, Number of Colors, DCTLUI_SLIDER_INT, 9, 1, 50, 1)
 DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(clamp_output_min, Min Clamp, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(clamp_output_max, Max Clamp, DCTLUI_VALUE_BOX, 1.0)
@@ -66,6 +66,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float mixture_amount = x;
     if (continuous == CONTINUOUS_EXP || continuous == DISCRETE) {
         mixture_amount = _floor(x * num_slices) / (num_slices - 1);
+        if (num_slices == 1) {
+            mixture_amount = 0.5;
+        }
     }
 
     // Draw Gradient
