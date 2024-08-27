@@ -21,7 +21,7 @@ function Create()
 
     LUTCubeImage = self:AddInput("LUT Cube Image", "LUTCubeImage", {
         LINKID_DataType = "Image",
-        LINK_Main = 1
+        LINK_Main = 2
     })
 
     OutImage = self:AddOutput("Output", "Output", {
