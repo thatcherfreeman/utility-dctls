@@ -43,6 +43,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [MTF Curve DCTL](#mtf-curve-dctl)
         - [Parametric Blur DCTL](#parametric-blur-dctl)
         - [Photon Noise DCTL](#photon-noise-dctl)
+        - [Protected Tone Mapping DCTL](#protected-tone-mapping-dctl)
         - [Radial Blur DCTL](#radial-blur-dctl)
         - [Random Channel Mixer DCTL](#random-channel-mixer-dctl)
         - [Random Contrast Curve](#random-contrast-curve)
@@ -703,6 +704,15 @@ In order for the math to work out correctly, this DCTL expects that all inputs a
 
 **Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
 
+---
+### Protected Tone Mapping DCTL
+
+Simple tone mapping that is guaranteed to preserve input code values up to **Protected Threshold** and roll off infinity to **Maximum Output Limit**
+
+#### DCTL Parameters
+**Protected Threshold**: Input range to leave untouched. All values below this point will be unaltered.
+
+**Maximum Output Limit**: Input of positive infinity will be mapped to this value.
 
 ---
 ### Radial Blur DCTL

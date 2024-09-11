@@ -1,0 +1,24 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(threshold, Protected Threshold, DCTLUI_VALUE_BOX, 0.5)
+DEFINE_UI_PARAMS(limit, Maximum Output Limit, DCTLUI_VALUE_BOX, 1.0)
+
+// clang-format on
+
+__DEVICE__ float protected_compression(float x, float threshold, float limit) {
+    float s = limit - threshold;
+
+    if (x <= threshold) {
+        return x;
+    } else {
+        return threshold + s * ((x - threshold) / s) / (1.0f + (x - threshold) / s);
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 output = make_float3(protected_compression(p_R, threshold, limit),
+                                protected_compression(p_G, threshold, limit),
+                                protected_compression(p_B, threshold, limit));
+    return output;
+}

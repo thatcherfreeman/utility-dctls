@@ -225,7 +225,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     if (clamp_output) {
         if (rgb.x > clamp_output_max || rgb.y > clamp_output_max || rgb.z > clamp_output_max || rgb.x < clamp_output_min ||
             rgb.y < clamp_output_min || rgb.z < clamp_output_min) {
-            rgb = make_float3(clamp_output_max, clamp_output_max, clamp_output_max);
+            rgb = make_float3(clamp_output_min, clamp_output_min, clamp_output_min);
         }
     }
 
