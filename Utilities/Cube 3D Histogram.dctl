@@ -1,0 +1,406 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(histogram_pos_x, Histogram Position X, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(histogram_pos_y, Histogram Position Y, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(histogram_size, Histogram Size, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(histogram_opacity, Histogram Opacity, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(axis_dot_size, Axis Dot Size, DCTLUI_SLIDER_FLOAT, 0.02, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(dot_size, Histogram Dot Size, DCTLUI_SLIDER_FLOAT, 0.04, 0.0, 1.0, 0.01)
+
+DEFINE_UI_PARAMS(focal_length, Zoom, DCTLUI_SLIDER_FLOAT, 2.0, 0.5, 5.0, 0.01)
+DEFINE_UI_PARAMS(rotation_angle, Rotation Angle White, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
+DEFINE_UI_PARAMS(rotation_angle_2, Rotation Angle Vertical, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
+DEFINE_UI_PARAMS(rotation_angle_3, Rotation Angle Horizontal, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
+DEFINE_UI_PARAMS(num_x_samples, Num X Samples, DCTLUI_SLIDER_INT, 32, 1, 200, 1)
+DEFINE_UI_PARAMS(num_y_samples, Num Y Samples, DCTLUI_SLIDER_INT, 18, 1, 200, 1)
+DEFINE_UI_PARAMS(draw_samples, Draw Samples, DCTLUI_CHECK_BOX, 0)
+// clang-format on
+
+#define PI (3.14159265358979323)
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ inline float pow2f(float base) {
+    return base * base;
+}
+
+__DEVICE__ inline float rad_to_deg(float deg) {
+    return deg * 360.0 / (2.0 * PI);
+}
+
+__DEVICE__ inline float deg_to_rad(float rad) {
+    return rad * (2.0 * PI) / 360.0;
+}
+
+// Linalg
+
+__DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float angle) {
+    // Axis assumed to be unit vector, angle assuemd to be in radians
+    float c = _cosf(angle);
+    float s = _sinf(angle);
+
+    mat[0][0] = c + pow2f(axis.x) * (1.0 - c);
+    mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
+    mat[1][1] = c + pow2f(axis.y) * (1.0 - c);
+    mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
+    mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
+}
+
+
+__DEVICE__ float3 cross_product(float3 a, float3 b) {
+    float3 out = make_float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+    return out;
+}
+
+__DEVICE__ float dot_product(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__DEVICE__ float norm_f3(float3 a) {
+    return _sqrtf(pow2f(a.x) + pow2f(a.y) + pow2f(a.z));
+}
+
+__DEVICE__ float3 unit_vec(float3 a) {
+    float norm = _sqrtf(pow2f(a.x) + pow2f(a.y) + pow2f(a.z));
+    float3 out = make_float3(a.x / norm, a.y / norm, a.z / norm);
+    return out;
+}
+
+// Matrix math
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    // matrix * vector multiplication
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ void copy_mat_33(float to[3][3], float from[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            to[i][j] = from[i][j];
+        }
+    }
+}
+
+__DEVICE__ void mm_33_33(float dest[3][3], float a[3][3], float b[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            dest[i][j] = dot_product(make_float3(a[i][0], a[i][1], a[i][2]), make_float3(b[0][j], b[1][j], b[2][j]));
+        }
+    }
+}
+
+__DEVICE__ void mat_inverse_33(float m[3][3]) {
+    // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
+    float inv_buf[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+    inv_buf[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
+    inv_buf[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det;
+    inv_buf[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
+    inv_buf[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det;
+    inv_buf[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
+    inv_buf[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det;
+    inv_buf[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
+    inv_buf[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det;
+    inv_buf[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
+    copy_mat_33(m, inv_buf);
+}
+
+__DEVICE__ void mat_transpose_33(float m[3][3]) {
+    float temp;
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            temp = m[i][j];
+            m[i][j] = m[j][i];
+            m[j][i] = temp;
+        }
+    }
+}
+
+__DEVICE__ void mm_44_44(float dest[4][4], float a[4][4], float b[4][4]) {
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            float runner = 0.0f;
+            for (int k = 0; k < 4; ++k) {
+                runner += a[i][k] * b[k][j];
+            }
+            dest[i][j] = runner;
+        }
+    }
+}
+
+__DEVICE__ float4 mv_44_4(float mat[4][4], float4 v) {
+    float4 out = make_float4(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z + mat[0][3] * v.w,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z + mat[1][3] * v.w,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z + mat[2][3] * v.w,
+                             mat[3][0] * v.x + mat[3][1] * v.y + mat[3][2] * v.z + mat[3][3] * v.w);
+    return out;
+}
+
+__DEVICE__ void mm_34_44(float dest[3][4], float a[3][4], float b[4][4]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            float runner = 0.0f;
+            for (int k = 0; k < 4; ++k) {
+                runner += a[i][k] * b[k][j];
+            }
+            dest[i][j] = runner;
+        }
+    }
+}
+
+
+__DEVICE__ void mm_33_34(float dest[3][4], float a[3][3], float b[3][4]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            float runner = 0.0f;
+            for (int k = 0; k < 3; ++k) {
+                runner += a[i][k] * b[k][j];
+            }
+            dest[i][j] = runner;
+        }
+    }
+}
+
+__DEVICE__ float3 mv_34_4(float mat[3][4], float4 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z + mat[0][3] * v.w,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z + mat[1][3] * v.w,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z + mat[2][3] * v.w);
+    return out;
+}
+
+__DEVICE__ float3 normalize_homogeneous_coordinate_3d(float4 vec) {
+    float norm = vec.w;
+    if (vec.w == 0.0f) {
+        norm = 1.0f;
+    }
+    return make_float3(vec.x / norm, vec.y / norm, vec.z / norm);
+}
+
+__DEVICE__ float4 to_homogeneous_coordinate_3d(float3 vec) {
+    return make_float4(vec.x, vec.y, vec.z, 1.0f);
+}
+
+__DEVICE__ float2 normalize_homogeneous_coordinate_2d(float3 vec) {
+    float norm = vec.z;
+    if (vec.z == 0.0f) {
+        norm = 1.0f;
+    }
+    return make_float2(vec.x / norm, vec.y / norm);
+}
+
+__DEVICE__ float3 to_homogeneous_coordinate_2d(float2 vec) {
+    return make_float3(vec.x, vec.y, 1.0f);
+}
+
+__DEVICE__ void mat_fill(float dest[3][3], float fill) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            dest[i][j] = fill;
+        }
+    }
+}
+
+__DEVICE__ void diagonal_matrix(float dest[3][3], float3 diagonal) {
+    mat_fill(dest, 0.0);
+    dest[0][0] = diagonal.x;
+    dest[1][1] = diagonal.y;
+    dest[2][2] = diagonal.z;
+}
+
+__DEVICE__ void identity_matrix(float dest[3][3]) {
+    diagonal_matrix(dest, make_float3(1.0, 1.0, 1.0));
+}
+
+// Inclusive on bounds. Assume left_bottom <= right_top
+typedef struct {
+        int2 left_bottom; // to be specified in terms of cartesian pixel coordinates
+        int2 right_top;
+} bounding_box_t;
+
+__DEVICE__ bounding_box_t make_bounding_box(int2 left_bottom, int2 right_top) {
+    bounding_box_t box = {};
+    box.left_bottom = left_bottom;
+    box.right_top = right_top;
+    return box;
+}
+
+__DEVICE__ inline bool inside_bounding_box(float2 curr_pos, bounding_box_t box) {
+    return (box.left_bottom.x <= curr_pos.x && curr_pos.x <= box.right_top.x && box.left_bottom.y <= curr_pos.y &&
+            curr_pos.y <= box.right_top.y);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    float3 input_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+    float3 output_color = input_color;
+
+    // Compute histogram bounds
+    int box_size = (int)(_fminf((float)p_Height, (float)p_Width) * histogram_size);
+
+    bounding_box_t histogram_bounding_box =
+        make_bounding_box(make_int2((int)(histogram_pos_x * p_Width), (int)(histogram_pos_y * p_Height)),
+                          make_int2((int)(histogram_pos_x * p_Width + box_size), (int)(histogram_pos_y * p_Height + box_size)));
+
+    bounding_box_t histogram_margin =
+        make_bounding_box(make_int2((int)(p_Width - box_size), (int)(p_Height - box_size)),
+                          make_int2((int)(p_Width), (int)(p_Height)));
+    histogram_bounding_box.left_bottom.x = min(histogram_bounding_box.left_bottom.x, histogram_margin.left_bottom.x);
+    histogram_bounding_box.left_bottom.y = min(histogram_bounding_box.left_bottom.y, histogram_margin.left_bottom.y);
+    histogram_bounding_box.right_top.x = min(histogram_bounding_box.right_top.x, histogram_margin.right_top.x);
+    histogram_bounding_box.right_top.y = min(histogram_bounding_box.right_top.y, histogram_margin.right_top.y);
+    float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0 - p_Y);
+
+    if (inside_bounding_box(curr_pos, histogram_bounding_box)) {
+
+        const float camera_x = 0.5;
+        const float camera_y = 0.5;
+        const float camera_z = -3.5;
+
+        float camera_matrix[3][4] = {
+            {focal_length, 0.0f, 0.0f, 0.0f},
+            {0.0f, focal_length, 0.0f, 0.0f},
+            {0.0f, 0.0, 1.0, 0.0f},
+        };
+
+        float origin_offset[4][4] = {
+            {1.0, 0.0, 0.0, 0.5},
+            {0.0, 1.0, 0.0, 0.5},
+            {0.0, 0.0, 1.0, 0.5},
+            {0.0, 0.0, 0.0, 1.0},
+        };
+        float origin_offset_inv[4][4] = {
+            {1.0, 0.0, 0.0, -0.5},
+            {0.0, 1.0, 0.0, -0.5},
+            {0.0, 0.0, 1.0, -0.5},
+            {0.0, 0.0, 0.0, 1.0},
+        };
+
+        float rot_matrix_33_1[3][3] = {};
+        make_rotation_mat_axis_angle(rot_matrix_33_1, unit_vec(make_float3(1.0, 1.0, 1.0)), rotation_angle);
+        float rotation_matrix_44[4][4] = {
+            {rot_matrix_33_1[0][0], rot_matrix_33_1[0][1], rot_matrix_33_1[0][2], 0.0},
+            {rot_matrix_33_1[1][0], rot_matrix_33_1[1][1], rot_matrix_33_1[1][2], 0.0},
+            {rot_matrix_33_1[2][0], rot_matrix_33_1[2][1], rot_matrix_33_1[2][2], 0.0},
+            {0.0, 0.0, 0.0, 1.0},
+        };
+
+        float rot_matrix_33_2[3][3] = {};
+        make_rotation_mat_axis_angle(rot_matrix_33_2, unit_vec(make_float3(1.0, 0.0, 0.0)), rotation_angle_2);
+        float rotation_matrix_44_2[4][4] = {
+            {rot_matrix_33_2[0][0], rot_matrix_33_2[0][1], rot_matrix_33_2[0][2], 0.0},
+            {rot_matrix_33_2[1][0], rot_matrix_33_2[1][1], rot_matrix_33_2[1][2], 0.0},
+            {rot_matrix_33_2[2][0], rot_matrix_33_2[2][1], rot_matrix_33_2[2][2], 0.0},
+            {0.0, 0.0, 0.0, 1.0},
+        };
+
+        float rot_matrix_33_3[3][3] = {};
+        make_rotation_mat_axis_angle(rot_matrix_33_3, unit_vec(make_float3(0.0, 1.0, 0.0)), rotation_angle_3);
+        float rotation_matrix_44_3[4][4] = {
+            {rot_matrix_33_3[0][0], rot_matrix_33_3[0][1], rot_matrix_33_3[0][2], 0.0},
+            {rot_matrix_33_3[1][0], rot_matrix_33_3[1][1], rot_matrix_33_3[1][2], 0.0},
+            {rot_matrix_33_3[2][0], rot_matrix_33_3[2][1], rot_matrix_33_3[2][2], 0.0},
+            {0.0, 0.0, 0.0, 1.0},
+        };
+
+
+        float temp44_1[4][4] = {};
+        float temp44_2[4][4] = {};
+        mm_44_44(temp44_1, rotation_matrix_44, origin_offset_inv);
+        mm_44_44(temp44_2, rotation_matrix_44_2, temp44_1);
+        mm_44_44(temp44_1, rotation_matrix_44_3, temp44_2);
+        mm_44_44(temp44_2, origin_offset, temp44_1);
+
+        float translation_matrix[4][4] = {
+            {1.0, 0.0, 0.0, -camera_x},
+            {0.0, 1.0, 0.0, -camera_y},
+            {0.0, 0.0, 1.0, -camera_z},
+            {0.0, 0.0, 0.0, 1.0},
+        };
+        mm_44_44(temp44_1, translation_matrix, temp44_2);
+        float net_matrix[3][4] = {};
+        float temp[3][4] = {};
+        mm_34_44(net_matrix, camera_matrix, temp44_1);
+
+
+
+        float curr_depth = 1e10;
+        float3 histogram_color = make_float3(0.4f, 0.4f, 0.4f);
+        float3 axes[12][2] = {
+            {make_float3(0.0, 0.0, 0.0), make_float3(1.0, 0.0, 0.0)},
+            {make_float3(0.0, 0.0, 0.0), make_float3(0.0, 1.0, 0.0)},
+            {make_float3(0.0, 0.0, 0.0), make_float3(0.0, 0.0, 1.0)},
+            {make_float3(1.0, 1.0, 0.0), make_float3(1.0, 1.0, 1.0)},
+            {make_float3(0.0, 1.0, 1.0), make_float3(1.0, 1.0, 1.0)},
+            {make_float3(1.0, 0.0, 1.0), make_float3(1.0, 1.0, 1.0)},
+            {make_float3(1.0, 0.0, 0.0), make_float3(1.0, 1.0, 0.0)},
+            {make_float3(1.0, 0.0, 0.0), make_float3(1.0, 0.0, 1.0)},
+            {make_float3(0.0, 1.0, 0.0), make_float3(1.0, 1.0, 0.0)},
+            {make_float3(0.0, 1.0, 0.0), make_float3(0.0, 1.0, 1.0)},
+            {make_float3(0.0, 0.0, 1.0), make_float3(1.0, 0.0, 1.0)},
+            {make_float3(0.0, 0.0, 1.0), make_float3(0.0, 1.0, 1.0)},
+        };
+
+
+        float2 position_within_histogram = make_float2(_mix(-0.5f, 0.5f, (curr_pos.x - histogram_bounding_box.left_bottom.x) / box_size), _mix(-0.5f, 0.5f, (curr_pos.y - histogram_bounding_box.left_bottom.y) / box_size));
+
+        if (axis_dot_size > 0.0f) {
+            for (int axis_idx = 0; axis_idx < 12; ++axis_idx) {
+                for (float i = 0; i <= 1.0f; i += 1.0f / 32.0f) {
+                    float3 curr_dot_world_pos = _mix(axes[axis_idx][0], axes[axis_idx][1], i);
+                    float3 position = mv_34_4(net_matrix, to_homogeneous_coordinate_3d(curr_dot_world_pos));
+                    float2 dot_center = normalize_homogeneous_coordinate_2d(position);
+                    if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) < axis_dot_size / position.z) {
+                        if (position.z < curr_depth) {
+                            histogram_color = curr_dot_world_pos;
+                            curr_depth = position.z;
+                        }
+                    }
+                }
+            }
+        }
+
+        for (int sample_idx_x = 0; sample_idx_x < num_x_samples; ++sample_idx_x) {
+            for (int sample_idx_y = 0; sample_idx_y < num_y_samples; ++sample_idx_y) {
+                int2 curr_sample_pos = make_int2((int)((sample_idx_x + 0.5f) / (num_x_samples) * p_Width), (int)((sample_idx_y + 0.5f) / (num_y_samples) * p_Height));
+                float3 curr_color = make_float3(_tex2D(p_TexR, curr_sample_pos.x, curr_sample_pos.y), _tex2D(p_TexG, curr_sample_pos.x, curr_sample_pos.y), _tex2D(p_TexB, curr_sample_pos.x, curr_sample_pos.y));
+                float3 position = mv_34_4(net_matrix, to_homogeneous_coordinate_3d(curr_color));
+                float2 dot_center = normalize_homogeneous_coordinate_2d(position);
+                if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) < dot_size / position.z) {
+                    if (position.z < curr_depth) {
+                        histogram_color = curr_color;
+                        curr_depth = position.z;
+                    }
+                }
+            }
+        }
+        output_color = _mix(input_color, histogram_color, histogram_opacity);
+    }
+
+    if (draw_samples) {
+        bool is_sample = false;
+        for (int sample_idx_x = 0; sample_idx_x < num_x_samples; ++sample_idx_x) {
+            for (int sample_idx_y = 0; sample_idx_y < num_y_samples; ++sample_idx_y) {
+                int2 curr_sample_pos = make_int2((int)((sample_idx_x + 0.5f) / (num_x_samples) * p_Width), (int)((sample_idx_y + 0.5f) / (num_y_samples) * p_Height));
+                if (p_X == curr_sample_pos.x && p_Y == curr_sample_pos.y) {
+                    is_sample = true;
+                    output_color = make_float3(0.0, 0.0, 0.0);
+                    break;
+                }
+            }
+        }
+    }
+
+    return output_color;
+}

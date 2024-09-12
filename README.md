@@ -90,6 +90,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [ColorChecker DCTL](#colorchecker-dctl)
         - [Color Picker DCTL](#color-picker-dctl)
         - [Color Ramp DCTL](#color-ramp-dctl)
+        - [Cube 3D Histogram DCTL](#cube-3d-histogram-dctl)
         - [Cube Rotate DCTL](#cube-rotate-dctl)
         - [Cylindrical DCTL](#cylindrical-dctl)
         - [DaVinci LGGO DCTL](#davinci-lggo-dctl)
@@ -1437,7 +1438,28 @@ Creates a color ramp from 0 to 100% Hue, Saturation, or Luminance. This can be u
 
 **Hue Ramp Saturation**: If Hue ramp is selected, then this controls the saturation of the hue ramp.
 
+---
+### Cube 3D Histogram DCTL
+Brings the Fusion 3D Histogram to the color page.
 
+#### DCTL Parameters
+**Histogram Position X/Y**: Indicates the position of the drawn histogram in the frame.
+
+**Histogram Size**: Indicates how much of the frame the histogram will take up. The larger this is, the slower the DCTL will run.
+
+**Histogram Opacity**: Indicates how opaque the histogram will be
+
+**Axis Dot Size**: Indicates the size of the dots of the cube outline
+
+**Histogram Dot Size**: Indicates the size of the dots representing the contents of the frame
+
+**Zoom**: Indicates how zoomed in the picture of the histogram will be
+
+**Rotation Angle White/Vertical/Horizontal**: Rotate the histogram around the white axis, or in the vertical direction or in the horizontal direction
+
+**Num X/Y Samples**: Indicate the quantity of pixels to sample in each direction. The total samples will be the product of these two sliders. The larger this product is, the slower the DCTL will run.
+
+**Draw Samples**: Replaces each pixel sampled with black, making a fine grid.
 
 ---
 
