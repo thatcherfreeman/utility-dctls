@@ -1455,7 +1455,7 @@ Brings the Fusion 3D Histogram to the color page.
 
 **Zoom**: Indicates how zoomed in the picture of the histogram will be
 
-**Rotation Angle White/Vertical/Horizontal**: Rotate the histogram around the white axis, or in the vertical direction or in the horizontal direction
+**Rotation Angle Yaw/Pitch/Roll**: Rotate the cube around the specified axis, so you can see it better
 
 **Num X/Y Samples**: Indicate the quantity of pixels to sample in each direction. The total samples will be the product of these two sliders. The larger this product is, the slower the DCTL will run.
 

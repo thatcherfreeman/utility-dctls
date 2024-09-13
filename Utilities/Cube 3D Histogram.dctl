@@ -9,9 +9,9 @@ DEFINE_UI_PARAMS(axis_dot_size, Axis Dot Size, DCTLUI_SLIDER_FLOAT, 0.02, 0.0, 1
 DEFINE_UI_PARAMS(dot_size, Histogram Dot Size, DCTLUI_SLIDER_FLOAT, 0.04, 0.0, 1.0, 0.01)
 
 DEFINE_UI_PARAMS(focal_length, Zoom, DCTLUI_SLIDER_FLOAT, 2.0, 0.5, 5.0, 0.01)
-DEFINE_UI_PARAMS(rotation_angle, Rotation Angle White, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
-DEFINE_UI_PARAMS(rotation_angle_2, Rotation Angle Vertical, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
-DEFINE_UI_PARAMS(rotation_angle_3, Rotation Angle Horizontal, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
+DEFINE_UI_PARAMS(rotation_angle, Rotation Angle Yaw, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
+DEFINE_UI_PARAMS(rotation_angle_2, Rotation Angle Pitch, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
+DEFINE_UI_PARAMS(rotation_angle_3, Rotation Angle Roll, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
 DEFINE_UI_PARAMS(num_x_samples, Num X Samples, DCTLUI_SLIDER_INT, 32, 1, 200, 1)
 DEFINE_UI_PARAMS(num_y_samples, Num Y Samples, DCTLUI_SLIDER_INT, 18, 1, 200, 1)
 DEFINE_UI_PARAMS(draw_samples, Draw Samples, DCTLUI_CHECK_BOX, 0)
