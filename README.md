@@ -1461,6 +1461,8 @@ Brings the Fusion 3D Histogram to the color page.
 
 **Draw Samples**: Replaces each pixel sampled with black, making a fine grid.
 
+**Rotation Style**: Indicate whether you want the rotation controls to be aligned to the viewer's axes (default) or to the cube's axes (axis aligned)
+
 ---
 
 ### Cube Rotate DCTL

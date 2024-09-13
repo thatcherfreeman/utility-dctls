@@ -14,6 +14,7 @@ DEFINE_UI_PARAMS(rotation_angle_2, Rotation Angle Pitch, DCTLUI_SLIDER_FLOAT, 0.
 DEFINE_UI_PARAMS(rotation_angle_3, Rotation Angle Roll, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
 DEFINE_UI_PARAMS(num_x_samples, Num X Samples, DCTLUI_SLIDER_INT, 32, 1, 200, 1)
 DEFINE_UI_PARAMS(num_y_samples, Num Y Samples, DCTLUI_SLIDER_INT, 18, 1, 200, 1)
+DEFINE_UI_PARAMS(rotation_style, Rotation Style, DCTLUI_COMBO_BOX, 0, {ROTATION_DEFAULT, ROTATION_AXIS_ALIGNED}, {Default, Axis Aligned})
 DEFINE_UI_PARAMS(draw_samples, Draw Samples, DCTLUI_CHECK_BOX, 0)
 // clang-format on
 
@@ -336,10 +337,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
         float temp44_1[4][4] = {};
         float temp44_2[4][4] = {};
-        mm_44_44(temp44_1, rotation_matrix_initial_44, origin_offset_inv);
-        mm_44_44(temp44_2, rotation_matrix_44, temp44_1);
-        mm_44_44(temp44_1, rotation_matrix_44_2, temp44_2);
-        mm_44_44(temp44_2, rotation_matrix_44_3, temp44_1);
+        float net_rotation_matrix[4][4] = {};
+        float user_rotation_matrix[4][4] = {};
+        mm_44_44(temp44_1, rotation_matrix_44_2, rotation_matrix_44);
+        mm_44_44(user_rotation_matrix, rotation_matrix_44_3, temp44_1);
+        if (rotation_style == ROTATION_DEFAULT) {
+            mm_44_44(net_rotation_matrix, user_rotation_matrix, rotation_matrix_initial_44);
+        } else {
+            mm_44_44(net_rotation_matrix, rotation_matrix_initial_44, user_rotation_matrix);
+        }
+        mm_44_44(temp44_2, net_rotation_matrix, origin_offset_inv);
         mm_44_44(temp44_1, origin_offset, temp44_2);
 
         float translation_matrix[4][4] = {
