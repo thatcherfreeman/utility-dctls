@@ -9,12 +9,12 @@ DEFINE_UI_PARAMS(axis_dot_size, Axis Dot Size, DCTLUI_SLIDER_FLOAT, 0.02, 0.0, 1
 DEFINE_UI_PARAMS(dot_size, Histogram Dot Size, DCTLUI_SLIDER_FLOAT, 0.04, 0.0, 1.0, 0.01)
 
 DEFINE_UI_PARAMS(focal_length, Zoom, DCTLUI_SLIDER_FLOAT, 2.0, 0.5, 5.0, 0.01)
-DEFINE_UI_PARAMS(rotation_angle, Rotation Angle Yaw, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
-DEFINE_UI_PARAMS(rotation_angle_2, Rotation Angle Pitch, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
-DEFINE_UI_PARAMS(rotation_angle_3, Rotation Angle Roll, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
+DEFINE_UI_PARAMS(rotation_angle, Rotation Yaw, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
+DEFINE_UI_PARAMS(rotation_angle_2, Rotation Pitch, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
+DEFINE_UI_PARAMS(rotation_angle_3, Rotation Roll, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
 DEFINE_UI_PARAMS(num_x_samples, Num X Samples, DCTLUI_SLIDER_INT, 32, 1, 200, 1)
 DEFINE_UI_PARAMS(num_y_samples, Num Y Samples, DCTLUI_SLIDER_INT, 18, 1, 200, 1)
-DEFINE_UI_PARAMS(rotation_style, Rotation Style, DCTLUI_COMBO_BOX, 0, {ROTATION_DEFAULT, ROTATION_AXIS_ALIGNED}, {Default, Axis Aligned})
+DEFINE_UI_PARAMS(rotation_style, Rotation Style, DCTLUI_COMBO_BOX, 0, {ROTATION_DEFAULT, ROTATION_AXIS_ALIGNED, ROTATION_DIAGONAL_ALIGNED}, {Default, Cube Axis Aligned, Diagonal Aligned})
 DEFINE_UI_PARAMS(axis_layout, Axis Layout, DCTLUI_COMBO_BOX, 1, {LEFT_HAND_RULE, RIGHT_HAND_RULE}, {Left Hand Rule, Right Hand Rule})
 // clang-format on
 
@@ -85,6 +85,14 @@ __DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
 __DEVICE__ void copy_mat_33(float to[3][3], float from[3][3]) {
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
+            to[i][j] = from[i][j];
+        }
+    }
+}
+
+__DEVICE__ void copy_mat_44(float to[4][4], float from[4][4]) {
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
             to[i][j] = from[i][j];
         }
     }
@@ -266,6 +274,18 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         const float camera_y = 0.5;
         const float camera_z = -3.5;
 
+        float3 rotation_axes[3] = {};
+
+        if (rotation_style == ROTATION_DEFAULT || rotation_style == ROTATION_AXIS_ALIGNED) {
+            rotation_axes[0] = unit_vec(make_float3(0.0, 1.0, 0.0));
+            rotation_axes[1] = unit_vec(make_float3(1.0, 0.0, 0.0));
+            rotation_axes[2] = unit_vec(make_float3(0.0, 0.0, 1.0));
+        } else if (rotation_style == ROTATION_DIAGONAL_ALIGNED) {
+            rotation_axes[0] = unit_vec(make_float3(0.0, 1.0, 0.0));
+            rotation_axes[1] = unit_vec(make_float3(1.0, 0.0, -1.0));
+            rotation_axes[2] = unit_vec(make_float3(-1.0, 0.0, -1.0));
+        }
+
         float camera_matrix[3][4] = {
             {focal_length, 0.0f, 0.0f, 0.0f},
             {0.0f, focal_length, 0.0f, 0.0f},
@@ -309,7 +329,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
         // User rotation
         float rot_matrix_33_1[3][3] = {};
-        make_rotation_mat_axis_angle(rot_matrix_33_1, unit_vec(make_float3(0.0, 1.0, 0.0)), rotation_angle);
+        make_rotation_mat_axis_angle(rot_matrix_33_1, rotation_axes[0], rotation_angle);
         float rotation_matrix_44[4][4] = {
             {rot_matrix_33_1[0][0], rot_matrix_33_1[0][1], rot_matrix_33_1[0][2], 0.0},
             {rot_matrix_33_1[1][0], rot_matrix_33_1[1][1], rot_matrix_33_1[1][2], 0.0},
@@ -318,7 +338,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         };
 
         float rot_matrix_33_2[3][3] = {};
-        make_rotation_mat_axis_angle(rot_matrix_33_2, unit_vec(make_float3(1.0, 0.0, 0.0)), rotation_angle_2);
+        make_rotation_mat_axis_angle(rot_matrix_33_2, rotation_axes[1], rotation_angle_2);
         float rotation_matrix_44_2[4][4] = {
             {rot_matrix_33_2[0][0], rot_matrix_33_2[0][1], rot_matrix_33_2[0][2], 0.0},
             {rot_matrix_33_2[1][0], rot_matrix_33_2[1][1], rot_matrix_33_2[1][2], 0.0},
@@ -327,7 +347,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         };
 
         float rot_matrix_33_3[3][3] = {};
-        make_rotation_mat_axis_angle(rot_matrix_33_3, unit_vec(make_float3(0.0, 0.0, 1.0)), rotation_angle_3);
+        make_rotation_mat_axis_angle(rot_matrix_33_3, rotation_axes[2], rotation_angle_3);
         float rotation_matrix_44_3[4][4] = {
             {rot_matrix_33_3[0][0], rot_matrix_33_3[0][1], rot_matrix_33_3[0][2], 0.0},
             {rot_matrix_33_3[1][0], rot_matrix_33_3[1][1], rot_matrix_33_3[1][2], 0.0},
@@ -339,12 +359,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         float temp44_2[4][4] = {};
         float net_rotation_matrix[4][4] = {};
         float user_rotation_matrix[4][4] = {};
-        mm_44_44(temp44_1, rotation_matrix_44_2, rotation_matrix_44);
-        mm_44_44(user_rotation_matrix, rotation_matrix_44_3, temp44_1);
         if (rotation_style == ROTATION_DEFAULT) {
+            // Apply default rotation position before user rotation
+            mm_44_44(temp44_1, rotation_matrix_44_2, rotation_matrix_44);
+            mm_44_44(user_rotation_matrix, rotation_matrix_44_3, temp44_1);
             mm_44_44(net_rotation_matrix, user_rotation_matrix, rotation_matrix_initial_44);
-        } else {
-            mm_44_44(net_rotation_matrix, rotation_matrix_initial_44, user_rotation_matrix);
+        } else if (rotation_style == ROTATION_AXIS_ALIGNED || rotation_style == ROTATION_DIAGONAL_ALIGNED) {
+            // Apply user rotation before the default rotation position
+            mm_44_44(temp44_1, rotation_matrix_44_2, rotation_matrix_44_3);
+            mm_44_44(user_rotation_matrix, rotation_matrix_44, temp44_1);
+            copy_mat_44(net_rotation_matrix, user_rotation_matrix);
         }
         mm_44_44(temp44_2, net_rotation_matrix, origin_offset_inv);
         mm_44_44(temp44_1, origin_offset, temp44_2);
@@ -388,6 +412,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                     if (axis_layout == LEFT_HAND_RULE) {
                         curr_dot_world_pos = curr_dot_color;
                     } else {
+                        // Right hand rule
                         curr_dot_world_pos = make_float3(curr_dot_color.z, curr_dot_color.y, curr_dot_color.x);
                     }
                     float3 position = mv_34_4(net_matrix, to_homogeneous_coordinate_3d(curr_dot_world_pos));
@@ -414,6 +439,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 if (axis_layout == LEFT_HAND_RULE) {
                     curr_dot_world_pos = curr_color;
                 } else {
+                    // Right hand rule
                     curr_dot_world_pos = make_float3(curr_color.z, curr_color.y, curr_color.x);
                 }
                 float3 position = mv_34_4(net_matrix, to_homogeneous_coordinate_3d(curr_dot_world_pos));
