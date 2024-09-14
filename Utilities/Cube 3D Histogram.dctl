@@ -15,7 +15,7 @@ DEFINE_UI_PARAMS(rotation_angle_3, Rotation Angle Roll, DCTLUI_SLIDER_FLOAT, 0.0
 DEFINE_UI_PARAMS(num_x_samples, Num X Samples, DCTLUI_SLIDER_INT, 32, 1, 200, 1)
 DEFINE_UI_PARAMS(num_y_samples, Num Y Samples, DCTLUI_SLIDER_INT, 18, 1, 200, 1)
 DEFINE_UI_PARAMS(rotation_style, Rotation Style, DCTLUI_COMBO_BOX, 0, {ROTATION_DEFAULT, ROTATION_AXIS_ALIGNED}, {Default, Axis Aligned})
-DEFINE_UI_PARAMS(draw_samples, Draw Samples, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(axis_layout, Axis Layout, DCTLUI_COMBO_BOX, 1, {LEFT_HAND_RULE, RIGHT_HAND_RULE}, {Left Hand Rule, Right Hand Rule})
 // clang-format on
 
 #define PI (3.14159265358979323)
@@ -383,13 +383,19 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         if (axis_dot_size > 0.0f) {
             for (int axis_idx = 0; axis_idx < 12; ++axis_idx) {
                 for (float i = 0; i <= 1.0f; i += 1.0f / 32.0f) {
-                    float3 curr_dot_world_pos = _mix(axes[axis_idx][0], axes[axis_idx][1], i);
+                    float3 curr_dot_color = _mix(axes[axis_idx][0], axes[axis_idx][1], i);
+                    float3 curr_dot_world_pos;
+                    if (axis_layout == LEFT_HAND_RULE) {
+                        curr_dot_world_pos = curr_dot_color;
+                    } else {
+                        curr_dot_world_pos = make_float3(curr_dot_color.z, curr_dot_color.y, curr_dot_color.x);
+                    }
                     float3 position = mv_34_4(net_matrix, to_homogeneous_coordinate_3d(curr_dot_world_pos));
                     float2 dot_center = normalize_homogeneous_coordinate_2d(position);
                     if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) <
                         axis_dot_size / position.z) {
                         if (position.z < curr_depth) {
-                            histogram_color = curr_dot_world_pos;
+                            histogram_color = curr_dot_color;
                             curr_depth = position.z;
                         }
                     }
@@ -404,7 +410,13 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 float3 curr_color = make_float3(_tex2D(p_TexR, curr_sample_pos.x, curr_sample_pos.y),
                                                 _tex2D(p_TexG, curr_sample_pos.x, curr_sample_pos.y),
                                                 _tex2D(p_TexB, curr_sample_pos.x, curr_sample_pos.y));
-                float3 position = mv_34_4(net_matrix, to_homogeneous_coordinate_3d(curr_color));
+                float3 curr_dot_world_pos;
+                if (axis_layout == LEFT_HAND_RULE) {
+                    curr_dot_world_pos = curr_color;
+                } else {
+                    curr_dot_world_pos = make_float3(curr_color.z, curr_color.y, curr_color.x);
+                }
+                float3 position = mv_34_4(net_matrix, to_homogeneous_coordinate_3d(curr_dot_world_pos));
                 float2 dot_center = normalize_homogeneous_coordinate_2d(position);
                 if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) <
                     dot_size / position.z) {
@@ -416,21 +428,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             }
         }
         output_color = _mix(input_color, histogram_color, histogram_opacity);
-    }
-
-    if (draw_samples) {
-        bool is_sample = false;
-        for (int sample_idx_x = 0; sample_idx_x < num_x_samples; ++sample_idx_x) {
-            for (int sample_idx_y = 0; sample_idx_y < num_y_samples; ++sample_idx_y) {
-                int2 curr_sample_pos = make_int2((int)((sample_idx_x + 0.5f) / (num_x_samples)*p_Width),
-                                                 (int)((sample_idx_y + 0.5f) / (num_y_samples)*p_Height));
-                if (p_X == curr_sample_pos.x && p_Y == curr_sample_pos.y) {
-                    is_sample = true;
-                    output_color = make_float3(0.0, 0.0, 0.0);
-                    break;
-                }
-            }
-        }
     }
 
     return output_color;

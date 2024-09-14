@@ -1459,9 +1459,9 @@ Brings the Fusion 3D Histogram to the color page.
 
 **Num X/Y Samples**: Indicate the quantity of pixels to sample in each direction. The total samples will be the product of these two sliders. The larger this product is, the slower the DCTL will run.
 
-**Draw Samples**: Replaces each pixel sampled with black, making a fine grid.
-
 **Rotation Style**: Indicate whether you want the rotation controls to be aligned to the viewer's axes (default) or to the cube's axes (axis aligned)
+
+**Axis Layout**: Indicate whether you want the RGB axes of the cube to be ordered according to the right hand rule (like Nobe, Lattice) or left hand rule (like Fusion)
 
 ---
 
