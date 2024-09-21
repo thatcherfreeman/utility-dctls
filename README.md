@@ -97,6 +97,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [DaVinci Tone Mapping DCTL](#davinci-tone-mapping-dctl)
         - [Edge Extension DCTL](#edge-extension-dctl)
         - [Exposure Chart DCTL](#exposure-chart-dctl)
+        - [Exposure Strips DCTL](#exposure-strips-dctl)
         - [False Color Generator DCTL](#false-color-generator-dctl)
         - [Grid Chart DCTL](#grid-chart-dctl)
         - [Frequency Test Chart DCTL](#frequency-test-chart-dctl)
@@ -1536,6 +1537,21 @@ Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and se
 **Show Linear Ramp**: Toggle to turn off the 0-1 scale ramp at the bottom.
 
 **Show Exponential Ramp**: Toggle to turn off the smooth stop ramp at the bottom.
+
+---
+
+### Exposure Strips DCTL
+Creates a comparison of your shot at one-stop exposure increments. Expects a linear state input image because it applies powers of 2x gain for each strip.
+
+#### DCTL Parameters
+
+**X Position**: Position in the input image of the strip
+
+**Number of Strips**: Quantity of exposure strips to display
+
+**Exposure Setup**: Choose whether to show exposures below or above the base exposure that comes into the DCTL. If this is set to "Under and Over Exposures", then the middle chip is the base exposure sent to the DCTL. If this is set to "Overexposures Only" or "Underexposures Only", then the left or the rightmost strip will be the base exposure, respectively.
+
+**Strip Contents**: Choose whether the strips share the same portion of the image, or if we just apply increasing exposure over the overall base image. It'll make more sense when you play with it.
 
 ---
 

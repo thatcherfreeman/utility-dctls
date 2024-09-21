@@ -1,0 +1,53 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(x_position, X Position, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(num_steps, Number of Strips, DCTLUI_SLIDER_INT, 7, 1, 33, 1)
+DEFINE_UI_PARAMS(exposure_setup, Exposure Setup, DCTLUI_COMBO_BOX, 0, {CENTER_BASE, LEFT_BASE, RIGHT_BASE}, {Under and Over Exposures, Overexposures Only, Underexposures Only})
+DEFINE_UI_PARAMS(strip_contents, Strip Contents, DCTLUI_COMBO_BOX, 0, {EXPOSURE_STRIP, EXPOSURE_OVERLAY}, {Exposure Strip, Exposure Overlay})
+
+// clang-format on
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    float x = (float)p_X / (p_Width - 1);
+    float y = (float)p_Y / (p_Height - 1);
+    float step_width = 1.0f / num_steps;
+    int middle_step;
+
+    if (exposure_setup == CENTER_BASE) {
+        middle_step = num_steps / 2;
+    } else if (exposure_setup == LEFT_BASE) {
+        middle_step = 0;
+    } else if (exposure_setup == RIGHT_BASE) {
+        middle_step = num_steps - 1;
+    }
+
+    int curr_step = (int)(x / step_width);
+    float gain = _exp2f((float)curr_step - middle_step);
+
+    // Sample from window horizontally centered on x_position.
+    float window_width = (p_Width - 1) / num_steps;
+    float half_window_width = window_width * 0.5f;
+    int sample_x;
+    if (strip_contents == EXPOSURE_STRIP) {
+        int window_left = x_position * (p_Width - 1) - half_window_width;
+        int window_right = x_position * (p_Width + 1) + half_window_width;
+
+        if (window_left < 0) {
+            window_left = 0;
+            window_right = window_width;
+        } else if (window_right > p_Width - 1) {
+            window_left = p_Width - 1 - window_width;
+            window_right = p_Width - 1;
+        }
+        sample_x = (int)_mix(window_left, window_right, (p_X - ((float)curr_step / num_steps * (p_Width - 1))) / window_width);
+    } else if (strip_contents == EXPOSURE_OVERLAY) {
+        sample_x = p_X;
+    }
+    int sample_y = p_Y;
+
+    float3 output_color =
+        make_float3(_tex2D(p_TexR, sample_x, sample_y), _tex2D(p_TexG, sample_x, sample_y), _tex2D(p_TexB, sample_x, sample_y)) * gain;
+    return output_color;
+}
