@@ -6,6 +6,7 @@ DEFINE_UI_PARAMS(scope_pos_x, Scope Position X, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1
 DEFINE_UI_PARAMS(scope_pos_y, Scope Position Y, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(scope_size, Scope Size, DCTLUI_SLIDER_FLOAT, 0.3, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(scope_opacity, Scope Opacity, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(scope_saturation, Scope Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
 DEFINE_UI_PARAMS(dot_size, Scope Dot Size, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 10.0, 0.01)
 DEFINE_UI_PARAMS(dot_opacity, Scope Dot Opacity, DCTLUI_SLIDER_FLOAT, 0.3, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(zoom, Zoom, DCTLUI_SLIDER_FLOAT, 1.0, 0.25, 2.0, 0.01)
@@ -26,9 +27,9 @@ DEFINE_UI_PARAMS(source_white_y, Custom White y, DCTLUI_VALUE_BOX, 0.3290)
 DEFINE_UI_PARAMS(draw_spectral_locus, Draw Spectral Locus, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_white_point, Draw White Point, DCTLUI_CHECK_BOX, 0)
 
-DEFINE_UI_PARAMS(source_gamut, Working Primaries, DCTLUI_COMBO_BOX, 5, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_DWG, SRC_GAMUT_P3_D65, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, XYZ})
+DEFINE_UI_PARAMS(source_gamut, Working Primaries, DCTLUI_COMBO_BOX, 5, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_DWG, SRC_GAMUT_P3_D65, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_REDWIDEGAMUTRGB, SRC_GAMUT_SGAMUT3, SRC_GAMUT_SGAMUT3CINE, SRC_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
 
-DEFINE_UI_PARAMS(overlay_gamut, Overlay Primaries, DCTLUI_COMBO_BOX, 10, {OVERLAY_GAMUT_CUSTOM, OVERLAY_GAMUT_ACES_AP0, OVERLAY_GAMUT_ACES_AP1, OVERLAY_GAMUT_AWG3, OVERLAY_GAMUT_AWG4, OVERLAY_GAMUT_DWG, OVERLAY_GAMUT_P3_D65, OVERLAY_GAMUT_REC709, OVERLAY_GAMUT_REC2020, OVERLAY_GAMUT_XYZ, OVERLAY_NONE}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, XYZ, None})
+DEFINE_UI_PARAMS(overlay_gamut, Overlay Primaries, DCTLUI_COMBO_BOX, 13, {OVERLAY_GAMUT_CUSTOM, OVERLAY_GAMUT_ACES_AP0, OVERLAY_GAMUT_ACES_AP1, OVERLAY_GAMUT_AWG3, OVERLAY_GAMUT_AWG4, OVERLAY_GAMUT_DWG, OVERLAY_GAMUT_P3_D65, OVERLAY_GAMUT_REC709, OVERLAY_GAMUT_REC2020, OVERLAY_GAMUT_REDWIDEGAMUTRGB, OVERLAY_GAMUT_SGAMUT3, OVERLAY_GAMUT_SGAMUT3CINE, OVERLAY_GAMUT_XYZ, OVERLAY_NONE}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ, None})
 
 // clang-format on
 
@@ -217,24 +218,20 @@ __DEVICE__ float2 XYZ_to_xy(float3 xyz, float2 white_xy) {
     return make_float2(xyY.x, xyY.y);
 }
 
-__DEVICE__ void cat02_adaptation_matrix(float dest[3][3], gamut_primaries_t source, gamut_primaries_t target) {
-    float cat02[3][3] = {
-        {0.7328, 0.4296, -0.1624},
-        {-0.7036, 1.6975, 0.0061},
-        {0.0030, 0.0136, 0.9834},
-    };
-    float cat02_inv[3][3] = {};
-    mat_inverse_33(cat02_inv, cat02);
+__DEVICE__ void make_sat_matrix(float mat[3][3], float sat, float3 lum_coeffs) {
+    float sr = (1.0 - sat) * lum_coeffs.x;
+    float sg = (1.0 - sat) * lum_coeffs.y;
+    float sb = (1.0 - sat) * lum_coeffs.z;
 
-    float3 source_white = xy_to_XYZ(source.white_xy);
-    float3 target_white = xy_to_XYZ(target.white_xy);
-    float3 source_lms = mv_33_3(cat02, source_white);
-    float3 target_lms = mv_33_3(cat02, target_white);
-    float diag[3][3] = {};
-    diagonal_matrix(diag, target_lms / source_lms);
-    float temp[3][3] = {};
-    mm_33_33(temp, diag, cat02);
-    mm_33_33(dest, cat02_inv, temp);
+    mat[0][0] = sr + sat;
+    mat[0][1] = sr;
+    mat[0][2] = sr;
+    mat[1][0] = sg;
+    mat[1][1] = sg + sat;
+    mat[1][2] = sg;
+    mat[2][0] = sb;
+    mat[2][1] = sb;
+    mat[2][2] = sb + sat;
 }
 
 __DEVICE__ void rgb_to_XYZ_mat_from_gamut(float dest[3][3], gamut_primaries_t primaries) {
@@ -294,6 +291,17 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
         case SRC_GAMUT_REC2020:
             return make_gamut_primaries(
                 make_float2(0.708, 0.292), make_float2(0.170, 0.797), make_float2(0.131, 0.046), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_REDWIDEGAMUTRGB:
+            return make_gamut_primaries(make_float2(0.780308, 0.304253),
+                                        make_float2(0.121595, 1.493994),
+                                        make_float2(0.095612, -0.084589),
+                                        make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_SGAMUT3:
+            return make_gamut_primaries(
+                make_float2(0.730, 0.280), make_float2(0.140, 0.855), make_float2(0.100, -0.050), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_SGAMUT3CINE:
+            return make_gamut_primaries(
+                make_float2(0.766, 0.275), make_float2(0.225, 0.800), make_float2(0.089, -0.087), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_XYZ:
             return make_gamut_primaries(
                 make_float2(1.0, 0.0), make_float2(0.0, 1.0), make_float2(0.0, 0.0), make_float2(1.0 / 3.0, 1.0 / 3.0));
@@ -517,6 +525,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 }
             }
         }
+
+        float sat_matrix[3][3] = {};
+        make_sat_matrix(sat_matrix, scope_saturation, make_float3(1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f));
+        histogram_color = mv_33_3(sat_matrix, histogram_color);
+
         output_color = _mix(input_color, histogram_color, scope_opacity);
     }
 

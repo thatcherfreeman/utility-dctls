@@ -2061,6 +2061,8 @@ Plots an xy chromaticity plot of the input image, given its working primaries. T
 
 **Scope Size**: Size of the scope. Larger will perform slower.
 
+**Scope Saturation**: Saturation of the scope.
+
 **Scope Opacity**: Opacity of the scope
 
 **Scope Dot Size**: Thickness of dots and lines drawn in the scope
