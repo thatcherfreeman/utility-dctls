@@ -2081,6 +2081,8 @@ Plots an xy chromaticity plot of the input image, given its working primaries. T
 
 **Draw White Point**: Draws the white point of the working color space.
 
+**Swap XYZ and Camera Observer**: Instead of making it so the main triangle is the XYZ standard observer, instead plots your chosen working space as that triangle and lets the other primaries fall where they do.
+
 **Working Primaries**: Indicates the primaries of the input image, which is transformed to XYZ
 
 **Overlay Primaries**: Allows you to draw a second triangle on the scope, for reference.
