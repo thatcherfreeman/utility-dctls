@@ -2077,6 +2077,10 @@ Plots an xy chromaticity plot of the input image, given its working primaries. T
 
 **Custom Red/Green/Blue/White X/Y**: When selecting a custom gamut, these are the primaries used.
 
+**Draw Overlay Bounds**: Draws the triangle corresponding to the Overlay Primaries dropdown
+
+**Draw XYZ Bounds**: Draws the bounds of XYZ, for which the XYZ value is nonnegative
+
 **Draw Spectral Locus**: Draws the standard observer's spectral locus in the plot.
 
 **Draw White Point**: Draws the white point of the working color space.

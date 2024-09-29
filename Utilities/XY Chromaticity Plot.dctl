@@ -24,13 +24,15 @@ DEFINE_UI_PARAMS(source_blue_y, Custom Blue y, DCTLUI_VALUE_BOX, 0.06)
 DEFINE_UI_PARAMS(source_white_x, Custom White x, DCTLUI_VALUE_BOX, 0.3127)
 DEFINE_UI_PARAMS(source_white_y, Custom White y, DCTLUI_VALUE_BOX, 0.3290)
 
+DEFINE_UI_PARAMS(draw_overlay_triangle, Draw Overlay Bounds, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(draw_xyz_triangle, Draw XYZ Bounds, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_spectral_locus, Draw Spectral Locus, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_white_point, Draw White Point, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(invert, Swap XYZ and Camera Observer, DCTLUI_CHECK_BOX, 0)
 
 DEFINE_UI_PARAMS(source_gamut, Working Primaries, DCTLUI_COMBO_BOX, 5, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_DWG, SRC_GAMUT_P3_D65, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_REDWIDEGAMUTRGB, SRC_GAMUT_SGAMUT3, SRC_GAMUT_SGAMUT3CINE, SRC_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
 
-DEFINE_UI_PARAMS(overlay_gamut, Overlay Primaries, DCTLUI_COMBO_BOX, 13, {OVERLAY_GAMUT_CUSTOM, OVERLAY_GAMUT_ACES_AP0, OVERLAY_GAMUT_ACES_AP1, OVERLAY_GAMUT_AWG3, OVERLAY_GAMUT_AWG4, OVERLAY_GAMUT_DWG, OVERLAY_GAMUT_P3_D65, OVERLAY_GAMUT_REC709, OVERLAY_GAMUT_REC2020, OVERLAY_GAMUT_REDWIDEGAMUTRGB, OVERLAY_GAMUT_SGAMUT3, OVERLAY_GAMUT_SGAMUT3CINE, OVERLAY_GAMUT_XYZ, OVERLAY_NONE}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ, None})
+DEFINE_UI_PARAMS(overlay_gamut, Overlay Primaries, DCTLUI_COMBO_BOX, 7, {OVERLAY_GAMUT_CUSTOM, OVERLAY_GAMUT_ACES_AP0, OVERLAY_GAMUT_ACES_AP1, OVERLAY_GAMUT_AWG3, OVERLAY_GAMUT_AWG4, OVERLAY_GAMUT_DWG, OVERLAY_GAMUT_P3_D65, OVERLAY_GAMUT_REC709, OVERLAY_GAMUT_REC2020, OVERLAY_GAMUT_REDWIDEGAMUTRGB, OVERLAY_GAMUT_SGAMUT3, OVERLAY_GAMUT_SGAMUT3CINE, OVERLAY_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
 
 // clang-format on
 
@@ -503,19 +505,24 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
         float3 line_color[3] = {
             make_float3(1.0, 1.0, 1.0),
-            make_float3(0.3, 0.3, 0.3),
             make_float3(0.1, 0.1, 0.1),
+            make_float3(0.3, 0.3, 0.3),
         };
-        for (int i = 0; (i < 2 && overlay_gamut == OVERLAY_NONE) || (i < 3 && overlay_gamut != OVERLAY_NONE); ++i) {
-            for (int axis = 0; axis < 3; ++axis) {
-                float2 segment_start = triangle_axes[i][axis][0];
-                float2 segment_end = triangle_axes[i][axis][1];
-                if (invert) {
-                    segment_start = standard_observer_to_camera_observer(segment_start, xyz_to_working_33, source_gamut);
-                    segment_end = standard_observer_to_camera_observer(segment_end, xyz_to_working_33, source_gamut);
-                }
-                if (is_near_line_segment(segment_start, segment_end, position_within_histogram, dot_size)) {
-                    histogram_color = line_color[i];
+
+        bool draw_triangle_toggle[3] = {true, draw_xyz_triangle > 0, draw_overlay_triangle > 0};
+
+        for (int i = 0; i < 3; ++i) {
+            if (draw_triangle_toggle[i]) {
+                for (int axis = 0; axis < 3; ++axis) {
+                    float2 segment_start = triangle_axes[i][axis][0];
+                    float2 segment_end = triangle_axes[i][axis][1];
+                    if (invert) {
+                        segment_start = standard_observer_to_camera_observer(segment_start, xyz_to_working_33, source_gamut);
+                        segment_end = standard_observer_to_camera_observer(segment_end, xyz_to_working_33, source_gamut);
+                    }
+                    if (is_near_line_segment(segment_start, segment_end, position_within_histogram, dot_size)) {
+                        histogram_color = line_color[i];
+                    }
                 }
             }
         }
