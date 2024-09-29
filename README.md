@@ -86,6 +86,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Channel Viewer DCTL](#channel-viewer-dctl)
         - [Chroma Subsampling Chart DCTL](#chroma-subsampling-chart-dctl)
         - [Chroma Subsampling DCTL](#chroma-subsampling-dctl)
+        - [Chromaticity Plot](#chromaticity-plot)
         - [CIELUV DCTL](#cieluv-dctl)
         - [ColorChecker DCTL](#colorchecker-dctl)
         - [Color Picker DCTL](#color-picker-dctl)
@@ -1379,6 +1380,39 @@ Applies chroma subsampling to an image by converting to YCbCr, downsampling the 
 **Convert to YCbCr**: Check this box to return the YCbCr image instead of converting back to rec709.
 
 **Chroma Subsampling Type**: Allows you to choose which kind of chroma subsampling to use.
+
+---
+
+### Chromaticity Plot
+
+Plots an xy chromaticity plot of the input image, given its working primaries. This works by converting sampling the input image, converting the sampled colors to XYZ and then to xyY, and then plotting the xy coordinates in the plot. Importantly, this expects a linear image, either display or scene linear, depending on what you're tying to measure.
+
+#### DCTL Parameters
+**Scope Position X/Y**: Placement of the scope in the frame.
+
+**Scope Size**: Size of the scope. Larger will perform slower.
+
+**Scope Opacity**: Opacity of the scope
+
+**Scope Dot Size**: Thickness of dots and lines drawn in the scope
+
+**Scope Dot Opacity**: Opacity of dots drawn in the scope, which helps see how many samples there are in a certain place.
+
+**Zoom**: Zoom in or out of the chromaticity plot
+
+**Num X/Y Samples**: Number of samples in the horizontal or vertical directions.
+
+**Ignore Below**: Excludes samples whose magnitude $\sqrt(r^2 + g^2 + b^2)$ is less than this amount, therefore eliminating shadow noise from contaminating the scope.
+
+**Custom Red/Green/Blue/White X/Y**: When selecting a custom gamut, these are the primaries used.
+
+**Draw Spectral Locus**: Draws the standard observer's spectral locus in the plot.
+
+**Draw White Point**: Draws the white point of the working color space.
+
+**Working Primaries**: Indicates the primaries of the input image, which is transformed to XYZ
+
+**Overlay Primaries**: Allows you to draw a second triangle on the scope, for reference.
 
 
 ---

@@ -1,0 +1,524 @@
+#line 2
+
+// clang-format off
+
+DEFINE_UI_PARAMS(scope_pos_x, Scope Position X, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(scope_pos_y, Scope Position Y, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(scope_size, Scope Size, DCTLUI_SLIDER_FLOAT, 0.3, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(scope_opacity, Scope Opacity, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(dot_size, Scope Dot Size, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 10.0, 0.01)
+DEFINE_UI_PARAMS(dot_opacity, Scope Dot Opacity, DCTLUI_SLIDER_FLOAT, 0.3, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(zoom, Zoom, DCTLUI_SLIDER_FLOAT, 1.0, 0.25, 2.0, 0.01)
+
+DEFINE_UI_PARAMS(num_x_samples, Num X Samples, DCTLUI_SLIDER_INT, 80, 1, 200, 1)
+DEFINE_UI_PARAMS(num_y_samples, Num Y Samples, DCTLUI_SLIDER_INT, 40, 1, 200, 1)
+
+DEFINE_UI_PARAMS(ignore_magnitude_below, Ignore Below, DCTLUI_VALUE_BOX, 0.02)
+DEFINE_UI_PARAMS(source_red_x, Custom Red x, DCTLUI_VALUE_BOX, 0.64)
+DEFINE_UI_PARAMS(source_red_y, Custom Red y, DCTLUI_VALUE_BOX, 0.33)
+DEFINE_UI_PARAMS(source_green_x, Custom Green x, DCTLUI_VALUE_BOX, 0.3)
+DEFINE_UI_PARAMS(source_green_y, Custom Green y, DCTLUI_VALUE_BOX, 0.6)
+DEFINE_UI_PARAMS(source_blue_x, Custom Blue x, DCTLUI_VALUE_BOX, 0.15)
+DEFINE_UI_PARAMS(source_blue_y, Custom Blue y, DCTLUI_VALUE_BOX, 0.06)
+DEFINE_UI_PARAMS(source_white_x, Custom White x, DCTLUI_VALUE_BOX, 0.3127)
+DEFINE_UI_PARAMS(source_white_y, Custom White y, DCTLUI_VALUE_BOX, 0.3290)
+
+DEFINE_UI_PARAMS(draw_spectral_locus, Draw Spectral Locus, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(draw_white_point, Draw White Point, DCTLUI_CHECK_BOX, 0)
+
+DEFINE_UI_PARAMS(source_gamut, Working Primaries, DCTLUI_COMBO_BOX, 5, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_DWG, SRC_GAMUT_P3_D65, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, XYZ})
+
+DEFINE_UI_PARAMS(overlay_gamut, Overlay Primaries, DCTLUI_COMBO_BOX, 10, {OVERLAY_GAMUT_CUSTOM, OVERLAY_GAMUT_ACES_AP0, OVERLAY_GAMUT_ACES_AP1, OVERLAY_GAMUT_AWG3, OVERLAY_GAMUT_AWG4, OVERLAY_GAMUT_DWG, OVERLAY_GAMUT_P3_D65, OVERLAY_GAMUT_REC709, OVERLAY_GAMUT_REC2020, OVERLAY_GAMUT_XYZ, OVERLAY_NONE}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, XYZ, None})
+
+// clang-format on
+
+#define PI (3.14159265358979323)
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ inline float pow2f(float base) {
+    return base * base;
+}
+
+__DEVICE__ inline float rad_to_deg(float deg) {
+    return deg * 360.0 / (2.0 * PI);
+}
+
+__DEVICE__ inline float deg_to_rad(float rad) {
+    return rad * (2.0 * PI) / 360.0;
+}
+
+// Linalg
+
+__DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float angle) {
+    // Axis assumed to be unit vector, angle assuemd to be in radians
+    float c = _cosf(angle);
+    float s = _sinf(angle);
+
+    mat[0][0] = c + pow2f(axis.x) * (1.0 - c);
+    mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
+    mat[1][1] = c + pow2f(axis.y) * (1.0 - c);
+    mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
+    mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
+}
+
+__DEVICE__ float3 cross_product(float3 a, float3 b) {
+    float3 out = make_float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+    return out;
+}
+
+__DEVICE__ float dot_product(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__DEVICE__ float norm_f3(float3 a) {
+    return _sqrtf(pow2f(a.x) + pow2f(a.y) + pow2f(a.z));
+}
+
+__DEVICE__ float3 unit_vec(float3 a) {
+    float norm = _sqrtf(pow2f(a.x) + pow2f(a.y) + pow2f(a.z));
+    float3 out = make_float3(a.x / norm, a.y / norm, a.z / norm);
+    return out;
+}
+
+// Matrix math
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    // matrix * vector multiplication
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ void copy_mat_33(float to[3][3], float from[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            to[i][j] = from[i][j];
+        }
+    }
+}
+
+__DEVICE__ void mm_33_33(float dest[3][3], float a[3][3], float b[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            dest[i][j] = dot_product(make_float3(a[i][0], a[i][1], a[i][2]), make_float3(b[0][j], b[1][j], b[2][j]));
+        }
+    }
+}
+
+__DEVICE__ void mat_inverse_33(float dest[3][3], float m[3][3]) {
+    // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
+
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+    dest[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
+    dest[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det;
+    dest[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
+    dest[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det;
+    dest[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
+    dest[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det;
+    dest[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
+    dest[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det;
+    dest[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
+}
+
+__DEVICE__ void mat_transpose_33(float m[3][3]) {
+    float temp;
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            temp = m[i][j];
+            m[i][j] = m[j][i];
+            m[j][i] = temp;
+        }
+    }
+}
+
+__DEVICE__ void mat_fill(float dest[3][3], float fill) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            dest[i][j] = fill;
+        }
+    }
+}
+
+__DEVICE__ void diagonal_matrix(float dest[3][3], float3 diagonal) {
+    mat_fill(dest, 0.0);
+    dest[0][0] = diagonal.x;
+    dest[1][1] = diagonal.y;
+    dest[2][2] = diagonal.z;
+}
+
+__DEVICE__ void identity_matrix(float dest[3][3]) {
+    diagonal_matrix(dest, make_float3(1.0, 1.0, 1.0));
+}
+
+// Inclusive on bounds. Assume left_bottom <= right_top
+typedef struct {
+        int2 left_bottom; // to be specified in terms of cartesian pixel coordinates
+        int2 right_top;
+} bounding_box_t;
+
+__DEVICE__ bounding_box_t make_bounding_box(int2 left_bottom, int2 right_top) {
+    bounding_box_t box = {};
+    box.left_bottom = left_bottom;
+    box.right_top = right_top;
+    return box;
+}
+
+__DEVICE__ inline bool inside_bounding_box(float2 curr_pos, bounding_box_t box) {
+    return (box.left_bottom.x <= curr_pos.x && curr_pos.x <= box.right_top.x && box.left_bottom.y <= curr_pos.y &&
+            curr_pos.y <= box.right_top.y);
+}
+
+typedef struct {
+        float2 red_xy;
+        float2 green_xy;
+        float2 blue_xy;
+        float2 white_xy;
+} gamut_primaries_t;
+
+__DEVICE__ gamut_primaries_t make_gamut_primaries(float2 red_xy, float2 green_xy, float2 blue_xy, float2 white_xy) {
+    gamut_primaries_t gamut_primaries;
+    gamut_primaries.red_xy = red_xy;
+    gamut_primaries.green_xy = green_xy;
+    gamut_primaries.blue_xy = blue_xy;
+    gamut_primaries.white_xy = white_xy;
+    return gamut_primaries;
+}
+
+__DEVICE__ float3 xy_to_XYZ(float2 xy) {
+    float3 xyz = make_float3(xy.x / xy.y, 1.0, (1.0 - xy.x - xy.y) / xy.y);
+    if (xy.y == 0.0) {
+        xyz = make_float3(xy.x, 0.0, 1.0 - xy.x);
+    }
+    return xyz;
+}
+
+__DEVICE__ float3 XYZ_to_xyY(float3 xyz, float2 white_xy) {
+    if (xyz.y == 0.0) {
+        return make_float3(white_xy.x, white_xy.y, 0.0);
+    }
+    float sum = xyz.x + xyz.y + xyz.z;
+    float x = xyz.x / sum;
+    float y = xyz.y / sum;
+    float Y = xyz.y;
+    return make_float3(x, y, Y);
+}
+
+__DEVICE__ float2 XYZ_to_xy(float3 xyz, float2 white_xy) {
+    float3 xyY = XYZ_to_xyY(xyz, white_xy);
+    return make_float2(xyY.x, xyY.y);
+}
+
+__DEVICE__ void cat02_adaptation_matrix(float dest[3][3], gamut_primaries_t source, gamut_primaries_t target) {
+    float cat02[3][3] = {
+        {0.7328, 0.4296, -0.1624},
+        {-0.7036, 1.6975, 0.0061},
+        {0.0030, 0.0136, 0.9834},
+    };
+    float cat02_inv[3][3] = {};
+    mat_inverse_33(cat02_inv, cat02);
+
+    float3 source_white = xy_to_XYZ(source.white_xy);
+    float3 target_white = xy_to_XYZ(target.white_xy);
+    float3 source_lms = mv_33_3(cat02, source_white);
+    float3 target_lms = mv_33_3(cat02, target_white);
+    float diag[3][3] = {};
+    diagonal_matrix(diag, target_lms / source_lms);
+    float temp[3][3] = {};
+    mm_33_33(temp, diag, cat02);
+    mm_33_33(dest, cat02_inv, temp);
+}
+
+__DEVICE__ void rgb_to_XYZ_mat_from_gamut(float dest[3][3], gamut_primaries_t primaries) {
+    // From http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
+    float3 red_xyz = xy_to_XYZ(primaries.red_xy);
+    float3 green_xyz = xy_to_XYZ(primaries.green_xy);
+    float3 blue_xyz = xy_to_XYZ(primaries.blue_xy);
+    float3 white_xyz = xy_to_XYZ(primaries.white_xy);
+
+    float temp[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+    temp[0][0] = red_xyz.x;
+    temp[1][0] = red_xyz.y;
+    temp[2][0] = red_xyz.z;
+    temp[0][1] = green_xyz.x;
+    temp[1][1] = green_xyz.y;
+    temp[2][1] = green_xyz.z;
+    temp[0][2] = blue_xyz.x;
+    temp[1][2] = blue_xyz.y;
+    temp[2][2] = blue_xyz.z;
+    copy_mat_33(dest, temp); // dest is now cols of { red_xyz, green_xyz, blue_xyz }
+
+    float temp2[3][3] = {};
+    mat_inverse_33(temp2, temp);
+
+    float3 s = mv_33_3(temp2, white_xyz);
+    for (int r = 0; r < 3; ++r) {
+        dest[r][0] *= s.x;
+        dest[r][1] *= s.y;
+        dest[r][2] *= s.z;
+    }
+}
+
+__DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t default_gamut) {
+
+    switch (gamut) {
+        case SRC_GAMUT_ACES_AP0:
+            return make_gamut_primaries(
+                make_float2(0.7347, 0.2653), make_float2(0.0, 1.0), make_float2(0.0001, -0.0770), make_float2(0.32168, 0.33767));
+        case SRC_GAMUT_ACES_AP1:
+            return make_gamut_primaries(
+                make_float2(0.713, 0.293), make_float2(0.165, 0.830), make_float2(0.128, 0.0444), make_float2(0.32168, 0.33767));
+        case SRC_GAMUT_AWG3:
+            return make_gamut_primaries(
+                make_float2(0.6840, 0.3130), make_float2(0.2210, 0.8480), make_float2(0.0861, -0.1020), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_AWG4:
+            return make_gamut_primaries(
+                make_float2(0.7347, 0.2653), make_float2(0.1424, 0.8576), make_float2(0.0991, -0.0308), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_DWG:
+            return make_gamut_primaries(
+                make_float2(0.8000, 0.3130), make_float2(0.1682, 0.9877), make_float2(0.0790, -0.1155), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_P3_D65:
+            return make_gamut_primaries(
+                make_float2(0.680, 0.320), make_float2(0.265, 0.690), make_float2(0.150, 0.060), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_REC709:
+            return make_gamut_primaries(
+                make_float2(0.64, 0.33), make_float2(0.30, 0.60), make_float2(0.15, 0.06), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_REC2020:
+            return make_gamut_primaries(
+                make_float2(0.708, 0.292), make_float2(0.170, 0.797), make_float2(0.131, 0.046), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_XYZ:
+            return make_gamut_primaries(
+                make_float2(1.0, 0.0), make_float2(0.0, 1.0), make_float2(0.0, 0.0), make_float2(1.0 / 3.0, 1.0 / 3.0));
+        case SRC_GAMUT_CUSTOM:
+        default:
+            return default_gamut;
+    }
+}
+
+// Wavelength step size
+#define WAVELENGTH_STEP (5)
+// num entries in below table
+#define NUM_CMFS (82)
+
+__CONSTANT__ float xyz_cmfs[NUM_CMFS][3] = {
+    {0.001368, 0.000039, 0.006450}, // 380nm
+    {0.002236, 0.000064, 0.010550}, //
+    {0.004243, 0.000120, 0.020050}, //
+    {0.007650, 0.000217, 0.036210}, //
+    {0.014310, 0.000396, 0.067850}, //
+    {0.023190, 0.000640, 0.110200}, //
+    {0.043510, 0.001210, 0.207400}, //
+    {0.077630, 0.002180, 0.371300}, //
+    {0.134380, 0.004000, 0.645600}, //
+    {0.214770, 0.007300, 1.039050}, //
+    {0.283900, 0.011600, 1.385600}, //
+    {0.328500, 0.016840, 1.622960}, //
+    {0.348280, 0.023000, 1.747060}, //
+    {0.348060, 0.029800, 1.782600}, //
+    {0.336200, 0.038000, 1.772110}, //
+    {0.318700, 0.048000, 1.744100}, //
+    {0.290800, 0.060000, 1.669200}, //
+    {0.251100, 0.073900, 1.528100}, //
+    {0.195360, 0.090980, 1.287640}, //
+    {0.142100, 0.112600, 1.041900}, //
+    {0.095640, 0.139020, 0.812950}, //
+    {0.057950, 0.169300, 0.616200}, //
+    {0.032010, 0.208020, 0.465180}, //
+    {0.014700, 0.258600, 0.353300}, //
+    {0.004900, 0.323000, 0.272000}, //
+    {0.002400, 0.407300, 0.212300}, //
+    {0.009300, 0.503000, 0.158200}, //
+    {0.029100, 0.608200, 0.111700}, //
+    {0.063270, 0.710000, 0.078250}, //
+    {0.109600, 0.793200, 0.057250}, //
+    {0.165500, 0.862000, 0.042160}, //
+    {0.225750, 0.914850, 0.029840}, //
+    {0.290400, 0.954000, 0.020300}, //
+    {0.359700, 0.980300, 0.013400}, //
+    {0.433450, 0.994950, 0.008750}, //
+    {0.512050, 1.000000, 0.005750}, //
+    {0.594500, 0.995000, 0.003900}, //
+    {0.678400, 0.978600, 0.002750}, //
+    {0.762100, 0.952000, 0.002100}, //
+    {0.842500, 0.915400, 0.001800}, //
+    {0.916300, 0.870000, 0.001650}, //
+    {0.978600, 0.816300, 0.001400}, //
+    {1.026300, 0.757000, 0.001100}, //
+    {1.056700, 0.694900, 0.001000}, //
+    {1.062200, 0.631000, 0.000800}, //
+    {1.045600, 0.566800, 0.000600}, //
+    {1.002600, 0.503000, 0.000340}, //
+    {0.938400, 0.441200, 0.000240}, //
+    {0.854450, 0.381000, 0.000190}, //
+    {0.751400, 0.321000, 0.000100}, //
+    {0.642400, 0.265000, 0.000050}, //
+    {0.541900, 0.217000, 0.000030}, //
+    {0.447900, 0.175000, 0.000020}, //
+    {0.360800, 0.138200, 0.000010}, //
+    {0.283500, 0.107000, 0.000000}, //
+    {0.218700, 0.081600, 0.000000}, //
+    {0.164900, 0.061000, 0.000000}, //
+    {0.121200, 0.044580, 0.000000}, //
+    {0.087400, 0.032000, 0.000000}, //
+    {0.063600, 0.023200, 0.000000}, //
+    {0.046770, 0.017000, 0.000000}, //
+    {0.032900, 0.011920, 0.000000}, //
+    {0.022700, 0.008210, 0.000000}, //
+    {0.015840, 0.005723, 0.000000}, //
+    {0.011359, 0.004102, 0.000000}, //
+    {0.008111, 0.002929, 0.000000}, //
+    {0.005790, 0.002091, 0.000000}, //
+    {0.004109, 0.001484, 0.000000}, //
+    {0.002899, 0.001047, 0.000000}, //
+    {0.002049, 0.000740, 0.000000}, //
+    {0.001440, 0.000520, 0.000000}, //
+    {0.001000, 0.000361, 0.000000}, //
+    {0.000690, 0.000249, 0.000000}, //
+    {0.000476, 0.000172, 0.000000}, //
+    {0.000332, 0.000120, 0.000000}, //
+    {0.000235, 0.000085, 0.000000}, //
+    {0.000166, 0.000060, 0.000000}, //
+    {0.000117, 0.000042, 0.000000}, //
+    {0.000083, 0.000030, 0.000000}, //
+    {0.000059, 0.000021, 0.000000}, //
+    {0.000042, 0.000015, 0.000000}, // 780nm
+    {0.001368, 0.000039, 0.006450}, // repeat of first entry
+};
+
+__DEVICE__ bool is_near_line_segment(float2 segment_start, float2 segment_end, float2 curr_pos, float eps) {
+    float2 segment_vector = segment_end - segment_start;
+    float2 point_vector = curr_pos - segment_start;
+    float segment_length = _hypotf(segment_vector.x, segment_vector.y);
+    float projection_length =
+        dot_product(make_float3(segment_vector.x, segment_vector.y, 0.0), make_float3(point_vector.x, point_vector.y, 0.0)) /
+        segment_length;
+    float2 projection_point = segment_start + (segment_vector * (projection_length / segment_length));
+    float distance_to_segment = _hypotf(curr_pos.x - projection_point.x, curr_pos.y - projection_point.y);
+
+    return (distance_to_segment < eps && projection_length >= 0.0 && projection_length <= segment_length);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    float3 input_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+    float3 output_color = input_color;
+    dot_size /= 1000.0f;
+
+    gamut_primaries_t custom_source_primaries = make_gamut_primaries(make_float2(source_red_x, source_red_y),
+                                                                     make_float2(source_green_x, source_green_y),
+                                                                     make_float2(source_blue_x, source_blue_y),
+                                                                     make_float2(source_white_x, source_white_y));
+    gamut_primaries_t source_primaries = get_gamut_primaries(source_gamut, custom_source_primaries);
+
+    gamut_primaries_t overlay_primaries = get_gamut_primaries(overlay_gamut, custom_source_primaries);
+
+    // Compute histogram bounds
+    int box_size = (int)(_fminf((float)p_Height, (float)p_Width) * scope_size);
+
+    bounding_box_t histogram_bounding_box =
+        make_bounding_box(make_int2((int)(scope_pos_x * p_Width), (int)(scope_pos_y * p_Height)),
+                          make_int2((int)(scope_pos_x * p_Width + box_size), (int)(scope_pos_y * p_Height + box_size)));
+
+    bounding_box_t histogram_margin =
+        make_bounding_box(make_int2((int)(p_Width - box_size), (int)(p_Height - box_size)), make_int2((int)(p_Width), (int)(p_Height)));
+    histogram_bounding_box.left_bottom.x = min(histogram_bounding_box.left_bottom.x, histogram_margin.left_bottom.x);
+    histogram_bounding_box.left_bottom.y = min(histogram_bounding_box.left_bottom.y, histogram_margin.left_bottom.y);
+    histogram_bounding_box.right_top.x = min(histogram_bounding_box.right_top.x, histogram_margin.right_top.x);
+    histogram_bounding_box.right_top.y = min(histogram_bounding_box.right_top.y, histogram_margin.right_top.y);
+    float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0 - p_Y);
+
+    float to_xyz_33[3][3] = {};
+    rgb_to_XYZ_mat_from_gamut(to_xyz_33, source_primaries);
+
+    float xyz_to_working_33[3][3] = {};
+    mat_inverse_33(xyz_to_working_33, to_xyz_33);
+
+    if (inside_bounding_box(curr_pos, histogram_bounding_box)) {
+        float3 histogram_color = make_float3(0.0, 0.0, 0.0);
+        const float2 middle = make_float2(1.0 / 3.0, 1.0 / 3.0);
+        const float2 low_bound = middle - (1.0 / zoom) * middle;
+        const float2 upper_bound = middle + (1.0 / zoom) * (make_float2(1.0f, 1.0f) - middle);
+
+        float2 position_within_histogram =
+            make_float2(_mix(low_bound.x, upper_bound.x, (curr_pos.x - histogram_bounding_box.left_bottom.x) / box_size),
+                        _mix(low_bound.x, upper_bound.x, (curr_pos.y - histogram_bounding_box.left_bottom.y) / box_size));
+        // Draw some triangles for the current gamut and the overall bounds
+        float2 triangle_axes[9][2] = {
+            {source_primaries.red_xy, source_primaries.green_xy},
+            {source_primaries.green_xy, source_primaries.blue_xy},
+            {source_primaries.blue_xy, source_primaries.red_xy},
+            {make_float2(0.0, 0.0), make_float2(1.0, 0.0)},
+            {make_float2(1.0, 0.0), make_float2(0.0, 1.0)},
+            {make_float2(0.0, 0.0), make_float2(0.0, 1.0)},
+            {overlay_primaries.red_xy, overlay_primaries.green_xy},
+            {overlay_primaries.green_xy, overlay_primaries.blue_xy},
+            {overlay_primaries.blue_xy, overlay_primaries.red_xy},
+        };
+
+        for (int axis = 0; (axis < 6 && overlay_gamut == OVERLAY_NONE) || (axis < 9 && overlay_gamut != OVERLAY_NONE); ++axis) {
+            float2 segment_start = triangle_axes[axis][0];
+            float2 segment_end = triangle_axes[axis][1];
+
+            if (is_near_line_segment(segment_start, segment_end, position_within_histogram, dot_size)) {
+                histogram_color = make_float3(0.5, 0.5, 0.5);
+            }
+        }
+
+        if (draw_spectral_locus) {
+            for (int i = 0; i < (NUM_CMFS - 1); ++i) {
+                float2 segment_start = XYZ_to_xy(make_float3(xyz_cmfs[i][0], xyz_cmfs[i][1], xyz_cmfs[i][2]), source_primaries.white_xy);
+                float2 segment_end =
+                    XYZ_to_xy(make_float3(xyz_cmfs[i + 1][0], xyz_cmfs[i + 1][1], xyz_cmfs[i + 1][2]), source_primaries.white_xy);
+
+                if (is_near_line_segment(segment_start, segment_end, position_within_histogram, dot_size)) {
+                    histogram_color = mv_33_3(xyz_to_working_33, xy_to_XYZ(position_within_histogram));
+                }
+            }
+        }
+
+        if (draw_white_point) {
+            float2 white_point = source_primaries.white_xy;
+            if (_hypotf(position_within_histogram.x - white_point.x, position_within_histogram.y - white_point.y) < 3.0f * dot_size) {
+                histogram_color = make_float3(1.0, 1.0, 1.0);
+            }
+        }
+
+        // Draw interior dots
+        for (int sample_idx_x = 0; sample_idx_x < num_x_samples; ++sample_idx_x) {
+            for (int sample_idx_y = 0; sample_idx_y < num_y_samples; ++sample_idx_y) {
+                int2 curr_sample_pos = make_int2((int)((sample_idx_x + 0.5f) / (num_x_samples)*p_Width),
+                                                 (int)((sample_idx_y + 0.5f) / (num_y_samples)*p_Height));
+                float3 curr_color = make_float3(_tex2D(p_TexR, curr_sample_pos.x, curr_sample_pos.y),
+                                                _tex2D(p_TexG, curr_sample_pos.x, curr_sample_pos.y),
+                                                _tex2D(p_TexB, curr_sample_pos.x, curr_sample_pos.y));
+
+                if (_sqrtf(curr_color.x * curr_color.x + curr_color.y * curr_color.y + curr_color.z * curr_color.z) <
+                    ignore_magnitude_below) {
+                    // Skip samples whose magnitude is below the specified threshold, as they tend to have
+                    // high chromaticity just due to noise.
+                    continue;
+                }
+                float2 curr_dot_histogram_pos;
+                float3 curr_color_xyz = mv_33_3(to_xyz_33, curr_color);
+                float2 curr_color_xy = XYZ_to_xy(curr_color_xyz, source_primaries.white_xy);
+
+                float2 dot_center = curr_color_xy;
+                if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) < dot_size) {
+                    histogram_color =
+                        _mix(histogram_color, curr_color / ((curr_color.x + curr_color.y + curr_color.z) / 3.0f), dot_opacity);
+                }
+            }
+        }
+        output_color = _mix(input_color, histogram_color, scope_opacity);
+    }
+
+    return output_color;
+}
