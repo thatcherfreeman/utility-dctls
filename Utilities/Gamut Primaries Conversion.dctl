@@ -21,8 +21,8 @@ DEFINE_UI_PARAMS(target_white_y, Target White y, DCTLUI_VALUE_BOX, 0.3290)
 
 DEFINE_UI_PARAMS(chromatic_adaptation, Chromatic Adaptation, DCTLUI_CHECK_BOX, 1)
 
-DEFINE_UI_PARAMS(source_gamut, Source Primaries, DCTLUI_COMBO_BOX, 0, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_DWG, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_XYZ, SRC_GAMUT_XYZ_D65}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, Rec. 709, Rec. 2020, XYZ, XYZ D65})
-DEFINE_UI_PARAMS(target_gamut, Target Primaries, DCTLUI_COMBO_BOX, 0, {TARGET_GAMUT_CUSTOM, TARGET_GAMUT_ACES_AP0, TARGET_GAMUT_ACES_AP1, TARGET_GAMUT_AWG3, TARGET_GAMUT_AWG4, TARGET_GAMUT_DWG, TARGET_GAMUT_REC709, TARGET_GAMUT_REC2020, TARGET_GAMUT_XYZ, TARGET_GAMUT_XYZ_D65}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, Rec. 709, Rec. 2020, XYZ, XYZ D65})
+DEFINE_UI_PARAMS(source_gamut, Working Primaries, DCTLUI_COMBO_BOX, 0, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_DWG, SRC_GAMUT_P3_D65, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, XYZ})
+DEFINE_UI_PARAMS(target_gamut, Target Primaries, DCTLUI_COMBO_BOX, 0, {TARGET_GAMUT_CUSTOM, TARGET_GAMUT_ACES_AP0, TARGET_GAMUT_ACES_AP1, TARGET_GAMUT_AWG3, TARGET_GAMUT_AWG4, TARGET_GAMUT_DWG, TARGET_GAMUT_P3_D65, TARGET_GAMUT_REC709, TARGET_GAMUT_REC2020, TARGET_GAMUT_XYZ, TARGET_GAMUT_XYZ_D65}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, XYZ, XYZ D65})
 
 DEFINE_UI_PARAMS(swap, Direction, DCTLUI_COMBO_BOX, 0, {SWAP_OFF, SWAP_ON}, {Source to Target, Target to Source})
 
@@ -206,6 +206,9 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
         case SRC_GAMUT_DWG:
             return make_gamut_primaries(
                 make_float2(0.8000, 0.3130), make_float2(0.1682, 0.9877), make_float2(0.0790, -0.1155), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_P3_D65:
+            return make_gamut_primaries(
+                make_float2(0.680, 0.320), make_float2(0.265, 0.690), make_float2(0.150, 0.060), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_REC709:
             return make_gamut_primaries(
                 make_float2(0.64, 0.33), make_float2(0.30, 0.60), make_float2(0.15, 0.06), make_float2(0.3127, 0.3290));
@@ -215,8 +218,6 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
         case SRC_GAMUT_XYZ:
             return make_gamut_primaries(
                 make_float2(1.0, 0.0), make_float2(0.0, 1.0), make_float2(0.0, 0.0), make_float2(1.0 / 3.0, 1.0 / 3.0));
-        case SRC_GAMUT_XYZ_D65:
-            return make_gamut_primaries(make_float2(1.0, 0.0), make_float2(0.0, 1.0), make_float2(0.0, 0.0), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_CUSTOM:
         default:
             return default_gamut;
