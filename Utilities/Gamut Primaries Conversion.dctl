@@ -21,8 +21,8 @@ DEFINE_UI_PARAMS(target_white_y, Target White y, DCTLUI_VALUE_BOX, 0.3290)
 
 DEFINE_UI_PARAMS(chromatic_adaptation, Chromatic Adaptation, DCTLUI_CHECK_BOX, 1)
 
-DEFINE_UI_PARAMS(source_gamut, Working Primaries, DCTLUI_COMBO_BOX, 0, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_DWG, SRC_GAMUT_P3_D65, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, XYZ})
-DEFINE_UI_PARAMS(target_gamut, Target Primaries, DCTLUI_COMBO_BOX, 0, {TARGET_GAMUT_CUSTOM, TARGET_GAMUT_ACES_AP0, TARGET_GAMUT_ACES_AP1, TARGET_GAMUT_AWG3, TARGET_GAMUT_AWG4, TARGET_GAMUT_DWG, TARGET_GAMUT_P3_D65, TARGET_GAMUT_REC709, TARGET_GAMUT_REC2020, TARGET_GAMUT_XYZ, TARGET_GAMUT_XYZ_D65}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, XYZ, XYZ D65})
+DEFINE_UI_PARAMS(source_gamut, Working Primaries, DCTLUI_COMBO_BOX, 5, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_DWG, SRC_GAMUT_P3_D65, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_REDWIDEGAMUTRGB, SRC_GAMUT_SGAMUT3, SRC_GAMUT_SGAMUT3CINE, SRC_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
+DEFINE_UI_PARAMS(target_gamut, Target Primaries, DCTLUI_COMBO_BOX, 0, {TARGET_GAMUT_CUSTOM, TARGET_GAMUT_ACES_AP0, TARGET_GAMUT_ACES_AP1, TARGET_GAMUT_AWG3, TARGET_GAMUT_AWG4, TARGET_GAMUT_DWG, TARGET_GAMUT_P3_D65, TARGET_GAMUT_REC709, TARGET_GAMUT_REC2020, TARGET_GAMUT_REDWIDEGAMUTRGB, TARGET_GAMUT_SGAMUT3, TARGET_GAMUT_SGAMUT3CINE, TARGET_GAMUT_XYZ, TARGET_GAMUT_XYZ_D65}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
 
 DEFINE_UI_PARAMS(swap, Direction, DCTLUI_COMBO_BOX, 0, {SWAP_OFF, SWAP_ON}, {Source to Target, Target to Source})
 
@@ -215,6 +215,17 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
         case SRC_GAMUT_REC2020:
             return make_gamut_primaries(
                 make_float2(0.708, 0.292), make_float2(0.170, 0.797), make_float2(0.131, 0.046), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_REDWIDEGAMUTRGB:
+            return make_gamut_primaries(make_float2(0.780308, 0.304253),
+                                        make_float2(0.121595, 1.493994),
+                                        make_float2(0.095612, -0.084589),
+                                        make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_SGAMUT3:
+            return make_gamut_primaries(
+                make_float2(0.730, 0.280), make_float2(0.140, 0.855), make_float2(0.100, -0.050), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_SGAMUT3CINE:
+            return make_gamut_primaries(
+                make_float2(0.766, 0.275), make_float2(0.225, 0.800), make_float2(0.089, -0.087), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_XYZ:
             return make_gamut_primaries(
                 make_float2(1.0, 0.0), make_float2(0.0, 1.0), make_float2(0.0, 0.0), make_float2(1.0 / 3.0, 1.0 / 3.0));
