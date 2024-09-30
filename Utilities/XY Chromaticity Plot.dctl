@@ -24,15 +24,16 @@ DEFINE_UI_PARAMS(source_blue_y, Custom Blue y, DCTLUI_VALUE_BOX, 0.06)
 DEFINE_UI_PARAMS(source_white_x, Custom White x, DCTLUI_VALUE_BOX, 0.3127)
 DEFINE_UI_PARAMS(source_white_y, Custom White y, DCTLUI_VALUE_BOX, 0.3290)
 
+DEFINE_UI_PARAMS(draw_grid, Draw Grid, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_overlay_triangle, Draw Overlay Bounds, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_xyz_triangle, Draw XYZ Bounds, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_spectral_locus, Draw Spectral Locus, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_white_point, Draw White Point, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(invert, Swap XYZ and Camera Observer, DCTLUI_CHECK_BOX, 0)
 
-DEFINE_UI_PARAMS(source_gamut, Working Primaries, DCTLUI_COMBO_BOX, 5, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_DWG, SRC_GAMUT_P3_D65, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_REDWIDEGAMUTRGB, SRC_GAMUT_SGAMUT3, SRC_GAMUT_SGAMUT3CINE, SRC_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
+DEFINE_UI_PARAMS(source_gamut, Working Primaries, DCTLUI_COMBO_BOX, 5, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_DWG, SRC_GAMUT_EGAMUT, SRC_GAMUT_P3_D65, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_REDWIDEGAMUTRGB, SRC_GAMUT_SGAMUT3, SRC_GAMUT_SGAMUT3CINE, SRC_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, Filmlight E-Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
 
-DEFINE_UI_PARAMS(overlay_gamut, Overlay Primaries, DCTLUI_COMBO_BOX, 7, {OVERLAY_GAMUT_CUSTOM, OVERLAY_GAMUT_ACES_AP0, OVERLAY_GAMUT_ACES_AP1, OVERLAY_GAMUT_AWG3, OVERLAY_GAMUT_AWG4, OVERLAY_GAMUT_DWG, OVERLAY_GAMUT_P3_D65, OVERLAY_GAMUT_REC709, OVERLAY_GAMUT_REC2020, OVERLAY_GAMUT_REDWIDEGAMUTRGB, OVERLAY_GAMUT_SGAMUT3, OVERLAY_GAMUT_SGAMUT3CINE, OVERLAY_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
+DEFINE_UI_PARAMS(overlay_gamut, Overlay Primaries, DCTLUI_COMBO_BOX, 8, {OVERLAY_GAMUT_CUSTOM, OVERLAY_GAMUT_ACES_AP0, OVERLAY_GAMUT_ACES_AP1, OVERLAY_GAMUT_AWG3, OVERLAY_GAMUT_AWG4, OVERLAY_GAMUT_DWG, OVERLAY_GAMUT_EGAMUT, OVERLAY_GAMUT_P3_D65, OVERLAY_GAMUT_REC709, OVERLAY_GAMUT_REC2020, OVERLAY_GAMUT_REDWIDEGAMUTRGB, OVERLAY_GAMUT_SGAMUT3, OVERLAY_GAMUT_SGAMUT3CINE, OVERLAY_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, Filmlight E-Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
 
 // clang-format on
 
@@ -307,6 +308,9 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
         case SRC_GAMUT_DWG:
             return make_gamut_primaries(
                 make_float2(0.8000, 0.3130), make_float2(0.1682, 0.9877), make_float2(0.0790, -0.1155), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_EGAMUT:
+            return make_gamut_primaries(
+                make_float2(0.8000, 0.3177), make_float2(0.1800, 0.9000), make_float2(0.0650, -0.0805), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_P3_D65:
             return make_gamut_primaries(
                 make_float2(0.680, 0.320), make_float2(0.265, 0.690), make_float2(0.150, 0.060), make_float2(0.3127, 0.3290));
@@ -510,6 +514,14 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         };
 
         bool draw_triangle_toggle[3] = {true, draw_xyz_triangle > 0, draw_overlay_triangle > 0};
+
+        // Draw grid
+        if (draw_grid) {
+            if (_fabs(_fmod(position_within_histogram.x, 0.10f)) < dot_size ||
+                _fabs(_fmod(position_within_histogram.y, 0.10f)) < dot_size) {
+                histogram_color = make_float3(0.05, 0.05, 0.05);
+            }
+        }
 
         for (int i = 0; i < 3; ++i) {
             if (draw_triangle_toggle[i]) {
