@@ -21,8 +21,8 @@ DEFINE_UI_PARAMS(target_white_y, Target White y, DCTLUI_VALUE_BOX, 0.3290)
 
 DEFINE_UI_PARAMS(chromatic_adaptation, Chromatic Adaptation, DCTLUI_CHECK_BOX, 1)
 
-DEFINE_UI_PARAMS(source_gamut, Working Primaries, DCTLUI_COMBO_BOX, 5, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_DWG, SRC_GAMUT_EGAMUT, SRC_GAMUT_P3_D65, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_REDWIDEGAMUTRGB, SRC_GAMUT_SGAMUT3, SRC_GAMUT_SGAMUT3CINE, SRC_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, Filmlight E-Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
-DEFINE_UI_PARAMS(target_gamut, Target Primaries, DCTLUI_COMBO_BOX, 0, {TARGET_GAMUT_CUSTOM, TARGET_GAMUT_ACES_AP0, TARGET_GAMUT_ACES_AP1, TARGET_GAMUT_AWG3, TARGET_GAMUT_AWG4, TARGET_GAMUT_DWG, TARGET_GAMUT_EGAMUT, TARGET_GAMUT_P3_D65, TARGET_GAMUT_REC709, TARGET_GAMUT_REC2020, TARGET_GAMUT_REDWIDEGAMUTRGB, TARGET_GAMUT_SGAMUT3, TARGET_GAMUT_SGAMUT3CINE, TARGET_GAMUT_XYZ, TARGET_GAMUT_XYZ_D65}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, DaVinci Wide Gamut, Filmlight E-Gamut, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
+DEFINE_UI_PARAMS(source_gamut, Working Primaries, DCTLUI_COMBO_BOX, 6, {SRC_GAMUT_CUSTOM, SRC_GAMUT_ACES_AP0, SRC_GAMUT_ACES_AP1, SRC_GAMUT_AWG3, SRC_GAMUT_AWG4, SRC_GAMUT_CANON_CINEMA_GAMUT, SRC_GAMUT_DWG, SRC_GAMUT_EGAMUT, SRC_GAMUT_EGAMUT2, SRC_GAMUT_P3_D65, SRC_GAMUT_REC709, SRC_GAMUT_REC2020, SRC_GAMUT_REDWIDEGAMUTRGB, SRC_GAMUT_SGAMUT3, SRC_GAMUT_SGAMUT3CINE, SRC_GAMUT_XYZ}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, Canon Cinema Gamut, DaVinci Wide Gamut, Filmlight E-Gamut, Filmlight E-Gamut2, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
+DEFINE_UI_PARAMS(target_gamut, Target Primaries, DCTLUI_COMBO_BOX, 0, {TARGET_GAMUT_CUSTOM, TARGET_GAMUT_ACES_AP0, TARGET_GAMUT_ACES_AP1, TARGET_GAMUT_AWG3, TARGET_GAMUT_AWG4, TARGET_GAMUT_CANON_CINEMA_GAMUT, TARGET_GAMUT_DWG, TARGET_GAMUT_EGAMUT, TARGET_GAMUT_EGAMUT2 TARGET_GAMUT_P3_D65, TARGET_GAMUT_REC709, TARGET_GAMUT_REC2020, TARGET_GAMUT_REDWIDEGAMUTRGB, TARGET_GAMUT_SGAMUT3, TARGET_GAMUT_SGAMUT3CINE, TARGET_GAMUT_XYZ, TARGET_GAMUT_XYZ_D65}, {Custom, ACES AP0, ACES AP1, ARRI Wide Gamut 3, ARRI Wide Gamut 4, Canon Cinema Gamut, DaVinci Wide Gamut, Filmlight E-Gamut, Filmlight E-Gamut2, P3 D65, Rec. 709, Rec. 2020, RedWideGamutRGB, Sony S-Gamut3, Sony S-Gamut3.Cine, XYZ})
 
 DEFINE_UI_PARAMS(swap, Direction, DCTLUI_COMBO_BOX, 0, {SWAP_OFF, SWAP_ON}, {Source to Target, Target to Source})
 
@@ -203,12 +203,18 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
         case SRC_GAMUT_AWG4:
             return make_gamut_primaries(
                 make_float2(0.7347, 0.2653), make_float2(0.1424, 0.8576), make_float2(0.0991, -0.0308), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_CANON_CINEMA_GAMUT:
+            return make_gamut_primaries(
+                make_float2(0.74, 0.27), make_float2(0.17, 1.14), make_float2(0.08, -0.1), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_DWG:
             return make_gamut_primaries(
                 make_float2(0.8000, 0.3130), make_float2(0.1682, 0.9877), make_float2(0.0790, -0.1155), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_EGAMUT:
             return make_gamut_primaries(
                 make_float2(0.8000, 0.3177), make_float2(0.1800, 0.9000), make_float2(0.0650, -0.0805), make_float2(0.3127, 0.3290));
+        case SRC_GAMUT_EGAMUT2:
+            return make_gamut_primaries(
+                make_float2(0.83, 0.31), make_float2(0.15, 0.95), make_float2(0.065, -0.0805), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_P3_D65:
             return make_gamut_primaries(
                 make_float2(0.680, 0.320), make_float2(0.265, 0.690), make_float2(0.150, 0.060), make_float2(0.3127, 0.3290));
