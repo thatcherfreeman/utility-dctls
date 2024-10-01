@@ -3,16 +3,11 @@
 // clang-format off
 DEFINE_UI_PARAMS(x_position, X Position, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(num_steps, Number of Strips, DCTLUI_SLIDER_INT, 7, 1, 33, 1)
+DEFINE_UI_PARAMS(legend, Annotate, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(exposure_setup, Exposure Setup, DCTLUI_COMBO_BOX, 0, {CENTER_BASE, LEFT_BASE, RIGHT_BASE}, {Under and Over Exposures, Overexposures Only, Underexposures Only})
 DEFINE_UI_PARAMS(strip_contents, Strip Contents, DCTLUI_COMBO_BOX, 0, {EXPOSURE_STRIP, EXPOSURE_OVERLAY}, {Exposure Strip, Exposure Overlay})
-DEFINE_UI_PARAMS(legend, Annotate, DCTLUI_CHECK_BOX, 0)
-
-
 
 // clang-format on
-
-
-
 
 ////////////////
 // FONT STUFF //
@@ -157,12 +152,12 @@ __CONSTANT__ int font[FONT_LENGTH][FONT_HEIGHT] = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 // Define structures for text rendering
 typedef struct {
-    float x, y;  // Top-left position of a character or string
-    float scale; // Height of the character relative to the image height
+        float x, y;  // Top-left position of a character or string
+        float scale; // Height of the character relative to the image height
 } char_trans_t;
 
 typedef struct {
-    float x, y; // Current pixel position in normalized coordinates
+        float x, y; // Current pixel position in normalized coordinates
 } curr_pos_t;
 
 // Helper functions
@@ -319,42 +314,47 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float3 output_color =
         make_float3(_tex2D(p_TexR, sample_x, sample_y), _tex2D(p_TexG, sample_x, sample_y), _tex2D(p_TexB, sample_x, sample_y)) * gain;
 
-    // Start of label rendering code
-    float3 curr_color = output_color;
-
-    // Current pixel position in normalized coordinates
-    float curr_x = (float)p_X / (p_Width - 1);
-    float curr_y = (float)p_Y / (p_Height - 1);
-    curr_pos_t curr_pos = make_curr_pos(curr_x, curr_y);
-
-    // Compute exposure adjustment in stops
-    int exposure_in_stops = curr_step - middle_step;
-
-    // Generate exposure label string
-    char exposure_str[16];
-    int2str(exposure_in_stops, exposure_str, 3);
-
-    // Character scale (height as a fraction of image height)
-    float scale = 0.05f;
-
-    // Compute string width
-    float string_width = string_width_in_units(exposure_str, scale);
-
-    // Compute label position (centered within the strip)
-    float step_left = curr_step * step_width;
-    float step_center = step_left + step_width / 2.0f;
-    float label_x = step_center - (string_width / 2.0f);
-    float label_y = 0.9f; // Position near the bottom
-
-    // Create character transformation
-    char_trans_t char_trans = make_char_trans(label_x, label_y, scale);
-
-    // Set label color (white or black based on background luminance)
-    float lum = (curr_color.x + curr_color.y + curr_color.z) / 3.0f;
-    float3 label_color = lum > 0.5f ? make_float3(0.0f, 0.0f, 0.0f) : make_float3(1.0f, 1.0f, 1.0f);
-
     // Draw the exposure label
-    if(legend){draw_string(exposure_str, label_color, &char_trans, &curr_pos, &curr_color);}
+    if (legend) {
+        // Current pixel position in normalized coordinates
+        float curr_x = (float)p_X / (p_Width - 1);
+        float curr_y = (float)p_Y / (p_Height - 1);
+        curr_pos_t curr_pos = make_curr_pos(curr_x, curr_y);
 
-    return curr_color;
+        // Compute exposure adjustment in stops
+        int exposure_in_stops = curr_step - middle_step;
+
+        // Generate exposure label string
+        char exposure_str[16];
+        int2str(exposure_in_stops, exposure_str, 3);
+
+        // Character scale (height as a fraction of image height)
+        float scale = 0.05f;
+
+        // Compute string width
+        float string_width = string_width_in_units(exposure_str, scale);
+
+        // Compute label position (centered within the strip)
+        float step_left = curr_step * step_width;
+        float step_center = step_left + step_width / 2.0f;
+        float label_x = step_center - (string_width / 2.0f);
+        float label_y = 0.9f; // Position near the bottom
+
+        // Create character transformation
+        char_trans_t char_trans = make_char_trans(label_x, label_y, scale);
+
+        // Set label color (white or black based on background luminance)
+        float lum = (output_color.x + output_color.y + output_color.z) / 3.0f;
+        float label_color_mono;
+        if (lum > 0.18f) {
+            label_color_mono = 0.0f;
+        } else {
+            label_color_mono = 1.0f;
+        }
+        float3 label_color = make_float3(label_color_mono, label_color_mono, label_color_mono);
+
+        draw_string(exposure_str, label_color, &char_trans, &curr_pos, &output_color);
+    }
+
+    return output_color;
 }

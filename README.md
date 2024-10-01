@@ -1549,6 +1549,8 @@ Creates a comparison of your shot at one-stop exposure increments. Expects a lin
 
 **Number of Strips**: Quantity of exposure strips to display
 
+**Annotate**: Draws a legend at the bottom of the strips to indicate how many stops have been added.
+
 **Exposure Setup**: Choose whether to show exposures below or above the base exposure that comes into the DCTL. If this is set to "Under and Over Exposures", then the middle chip is the base exposure sent to the DCTL. If this is set to "Overexposures Only" or "Underexposures Only", then the left or the rightmost strip will be the base exposure, respectively.
 
 **Strip Contents**: Choose whether the strips share the same portion of the image, or if we just apply increasing exposure over the overall base image. It'll make more sense when you play with it.
