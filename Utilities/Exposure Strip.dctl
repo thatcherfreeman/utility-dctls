@@ -5,9 +5,278 @@ DEFINE_UI_PARAMS(x_position, X Position, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.0
 DEFINE_UI_PARAMS(num_steps, Number of Strips, DCTLUI_SLIDER_INT, 7, 1, 33, 1)
 DEFINE_UI_PARAMS(exposure_setup, Exposure Setup, DCTLUI_COMBO_BOX, 0, {CENTER_BASE, LEFT_BASE, RIGHT_BASE}, {Under and Over Exposures, Overexposures Only, Underexposures Only})
 DEFINE_UI_PARAMS(strip_contents, Strip Contents, DCTLUI_COMBO_BOX, 0, {EXPOSURE_STRIP, EXPOSURE_OVERLAY}, {Exposure Strip, Exposure Overlay})
+DEFINE_UI_PARAMS(legend, Annotate, DCTLUI_CHECK_BOX, 0)
+
+
 
 // clang-format on
 
+
+
+
+////////////////
+// FONT STUFF //
+////////////////
+
+#define FONT_WIDTH 10
+#define FONT_HEIGHT 16
+#define FONT_LENGTH 127
+
+__CONSTANT__ int font_widths[FONT_LENGTH] = {
+    10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+    10, 3,  4,  7,  6,  10, 8,  2,  4,  4,  6,  6,  3,  4,  3,  4,  6,  5,  6,  6,  7,  6,  6,  6,  6,  6,  3,  3,  7,  6,  7,  6,
+    10, 8,  7,  8,  8,  7,  7,  8,  8,  3,  5,  8,  7,  9,  7,  8,  7,  8,  8,  7,  6,  8,  8,  10, 7,  6,  7,  4,  4,  3,  6,  7,
+    3,  6,  7,  6,  6,  6,  4,  6,  7,  3,  3,  6,  3,  9,  7,  6,  7,  6,  6,  5,  4,  7,  6,  8,  6,  6,  6,  4,  3,  4,  6};
+__CONSTANT__ int font[FONT_LENGTH][FONT_HEIGHT] = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 0, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 20, 20, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 80, 80, 252, 40, 40, 252, 40, 40, 0, 0, 0, 0},
+                                                   {0, 0, 0, 16, 56, 84, 20, 56, 80, 84, 56, 16, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 272, 296, 168, 144, 576, 1344, 1312, 544, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 48, 72, 72, 48, 296, 196, 196, 312, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 16, 8, 8, 4, 4, 4, 4, 8, 8, 16, 0, 0},
+                                                   {0, 0, 0, 0, 4, 8, 8, 16, 16, 16, 16, 8, 8, 4, 0, 0},
+                                                   {0, 0, 0, 0, 0, 84, 56, 84, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 16, 16, 124, 16, 16, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 4, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 16, 16, 16, 8, 8, 8, 4, 4, 4, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 68, 68, 68, 68, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 32, 48, 40, 32, 32, 32, 32, 32, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 64, 32, 16, 8, 4, 124, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 64, 48, 64, 64, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 64, 96, 80, 72, 68, 252, 64, 64, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 124, 4, 4, 60, 64, 64, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 4, 60, 68, 68, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 124, 64, 32, 32, 16, 16, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 68, 56, 68, 68, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 68, 68, 120, 64, 64, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 8, 8, 4, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 192, 48, 12, 48, 192, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 124, 0, 124, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 12, 48, 192, 48, 12, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 56, 68, 68, 32, 16, 16, 0, 16, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 480, 528, 1480, 1320, 1320, 968, 1040, 992, 0, 0, 0},
+                                                   {0, 0, 0, 0, 32, 32, 80, 80, 136, 248, 260, 260, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 120, 136, 136, 120, 136, 136, 136, 120, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 240, 264, 4, 4, 4, 4, 264, 240, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 120, 136, 264, 264, 264, 264, 136, 120, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 248, 8, 8, 120, 8, 8, 8, 248, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 248, 8, 8, 120, 8, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 240, 264, 4, 4, 452, 260, 264, 240, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 264, 264, 264, 504, 264, 264, 264, 264, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 32, 32, 32, 32, 32, 32, 36, 24, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 136, 72, 40, 24, 40, 72, 136, 264, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 8, 248, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 520, 792, 792, 680, 680, 584, 584, 520, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 136, 152, 152, 168, 168, 200, 200, 136, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 112, 136, 260, 260, 260, 260, 136, 112, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 120, 136, 136, 136, 120, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 112, 136, 260, 260, 260, 260, 200, 496, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 248, 264, 264, 264, 248, 72, 136, 264, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 112, 136, 8, 48, 64, 128, 136, 112, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 124, 16, 16, 16, 16, 16, 16, 16, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 264, 264, 264, 264, 264, 264, 264, 240, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 260, 260, 136, 136, 80, 80, 32, 32, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 1092, 1092, 1092, 680, 680, 680, 272, 272, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 136, 80, 80, 32, 32, 80, 80, 136, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 68, 68, 40, 40, 16, 16, 16, 16, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 252, 128, 64, 32, 16, 8, 4, 252, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 24, 8, 8, 8, 8, 8, 8, 8, 8, 24, 0, 0},
+                                                   {0, 0, 0, 0, 4, 4, 4, 8, 8, 8, 16, 16, 16, 0, 0, 0},
+                                                   {0, 0, 0, 0, 12, 8, 8, 8, 8, 8, 8, 8, 8, 12, 0, 0},
+                                                   {0, 0, 0, 0, 16, 40, 40, 68, 68, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 252, 0, 0},
+                                                   {0, 0, 0, 0, 4, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 56, 68, 120, 68, 120, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 120, 136, 136, 136, 120, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 56, 68, 4, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 64, 64, 64, 120, 68, 68, 68, 120, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 56, 68, 124, 4, 120, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 16, 8, 8, 28, 8, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 120, 68, 68, 68, 120, 64, 56, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 120, 136, 136, 136, 136, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 8, 0, 8, 8, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 8, 0, 8, 8, 8, 8, 8, 8, 4, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 72, 40, 24, 40, 72, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 440, 584, 584, 584, 584, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 120, 136, 136, 136, 136, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 56, 68, 68, 68, 56, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 120, 136, 136, 136, 120, 8, 8, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 120, 68, 68, 68, 120, 64, 64, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 104, 24, 8, 8, 8, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 56, 4, 24, 32, 28, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 8, 8, 28, 8, 8, 8, 16, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 136, 136, 136, 136, 240, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 68, 68, 40, 40, 16, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 292, 292, 340, 136, 136, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 68, 40, 16, 40, 68, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 68, 68, 40, 40, 16, 16, 12, 0, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 124, 32, 16, 8, 124, 0, 0, 0, 0},
+                                                   {0, 0, 0, 0, 16, 8, 8, 8, 8, 4, 8, 8, 8, 8, 16, 0},
+                                                   {0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 0, 0},
+                                                   {0, 0, 0, 0, 4, 8, 8, 8, 8, 16, 8, 8, 8, 8, 4, 0},
+                                                   {0, 0, 0, 0, 0, 0, 0, 80, 40, 0, 0, 0, 0, 0, 0, 0}};
+
+// Define structures for text rendering
+typedef struct {
+    float x, y;  // Top-left position of a character or string
+    float scale; // Height of the character relative to the image height
+} char_trans_t;
+
+typedef struct {
+    float x, y; // Current pixel position in normalized coordinates
+} curr_pos_t;
+
+// Helper functions
+__DEVICE__ char_trans_t make_char_trans(float x, float y, float scale) {
+    char_trans_t result = {};
+    result.x = x;
+    result.y = y;
+    result.scale = scale;
+    return result;
+}
+
+__DEVICE__ curr_pos_t make_curr_pos(float x, float y) {
+    curr_pos_t result = {};
+    result.x = x;
+    result.y = y;
+    return result;
+}
+
+__DEVICE__ void draw_char(
+    char c, float3 char_color, __PRIVATE__ char_trans_t* char_trans, __PRIVATE__ curr_pos_t* curr_pos, __PRIVATE__ float3* curr_color) {
+    float char_height = char_trans->scale;
+    float char_width = char_trans->scale * FONT_WIDTH / FONT_HEIGHT;
+
+    // Check if current position is within the character bounds
+    if (char_trans->x <= curr_pos->x && curr_pos->x <= char_trans->x + char_width && char_trans->y <= curr_pos->y &&
+        curr_pos->y <= char_trans->y + char_height) {
+
+        // Get the character symbol from the font data
+        __CONSTANTREF__ int* char_symbol = &font[c][0];
+
+        // Compute the row and column in the character grid
+        int row = (int)_round((curr_pos->y - char_trans->y) / char_height * FONT_HEIGHT);
+        int col = (int)_round((curr_pos->x - char_trans->x) / char_width * FONT_WIDTH);
+
+        if (char_symbol[row] & (1 << col)) {
+            *curr_color = char_color;
+        }
+    }
+}
+
+__DEVICE__ void draw_string(
+    char str[], float3 str_color, __PRIVATE__ char_trans_t* char_trans, __PRIVATE__ curr_pos_t* curr_pos, __PRIVATE__ float3* curr_color) {
+    int i = 0;
+    char c = str[0];
+    float c_width;
+    char_trans_t c_trans = *char_trans;
+    while (c != '\0' && c != 0) {
+        draw_char(c, str_color, &c_trans, curr_pos, curr_color);
+
+        c_width = font_widths[c];
+        i += 1;
+        c = str[i];
+        // Move to the next character position
+        c_trans.x += c_trans.scale * c_width / FONT_HEIGHT;
+    }
+}
+
+__DEVICE__ int strlen(char a[]) {
+    int i = 0;
+    while (a[i] != '\0' && a[i] != 0) {
+        ++i;
+    }
+    return i;
+}
+
+__DEVICE__ void int2str(int f, char output[], int num_chars) {
+    int runner = 0;
+
+    // Handle negative numbers
+    if (f < 0) {
+        output[runner] = '-';
+        runner++;
+        f = -f;
+    } else if (f > 0) {
+        output[runner] = '+';
+        runner++;
+    } else {
+        // For zero
+        output[runner] = '0';
+        runner++;
+        output[runner] = '\0';
+        return;
+    }
+
+    // Convert integer to string
+    int temp = f;
+    int digits = 0;
+    while (temp > 0) {
+        temp /= 10;
+        digits++;
+    }
+    for (int i = digits - 1; i >= 0; i--) {
+        int digit = f % 10;
+        output[runner + i] = '0' + digit;
+        f /= 10;
+    }
+    runner += digits;
+    output[runner] = '\0';
+}
+
+__DEVICE__ float string_width_in_units(char str[], float scale) {
+    float width = 0.0f;
+    int i = 0;
+    char c = str[i];
+    while (c != '\0' && c != 0) {
+        int c_width = font_widths[c];
+        width += scale * c_width / FONT_HEIGHT;
+        i++;
+        c = str[i];
+    }
+    return width;
+}
+
+// Main transform function
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
 
     float x = (float)p_X / (p_Width - 1);
@@ -32,7 +301,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     int sample_x;
     if (strip_contents == EXPOSURE_STRIP) {
         int window_left = x_position * (p_Width - 1) - half_window_width;
-        int window_right = x_position * (p_Width + 1) + half_window_width;
+        int window_right = x_position * (p_Width - 1) + half_window_width;
 
         if (window_left < 0) {
             window_left = 0;
@@ -49,5 +318,43 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     float3 output_color =
         make_float3(_tex2D(p_TexR, sample_x, sample_y), _tex2D(p_TexG, sample_x, sample_y), _tex2D(p_TexB, sample_x, sample_y)) * gain;
-    return output_color;
+
+    // Start of label rendering code
+    float3 curr_color = output_color;
+
+    // Current pixel position in normalized coordinates
+    float curr_x = (float)p_X / (p_Width - 1);
+    float curr_y = (float)p_Y / (p_Height - 1);
+    curr_pos_t curr_pos = make_curr_pos(curr_x, curr_y);
+
+    // Compute exposure adjustment in stops
+    int exposure_in_stops = curr_step - middle_step;
+
+    // Generate exposure label string
+    char exposure_str[16];
+    int2str(exposure_in_stops, exposure_str, 3);
+
+    // Character scale (height as a fraction of image height)
+    float scale = 0.05f;
+
+    // Compute string width
+    float string_width = string_width_in_units(exposure_str, scale);
+
+    // Compute label position (centered within the strip)
+    float step_left = curr_step * step_width;
+    float step_center = step_left + step_width / 2.0f;
+    float label_x = step_center - (string_width / 2.0f);
+    float label_y = 0.9f; // Position near the bottom
+
+    // Create character transformation
+    char_trans_t char_trans = make_char_trans(label_x, label_y, scale);
+
+    // Set label color (white or black based on background luminance)
+    float lum = (curr_color.x + curr_color.y + curr_color.z) / 3.0f;
+    float3 label_color = lum > 0.5f ? make_float3(0.0f, 0.0f, 0.0f) : make_float3(1.0f, 1.0f, 1.0f);
+
+    // Draw the exposure label
+    if(legend){draw_string(exposure_str, label_color, &char_trans, &curr_pos, &curr_color);}
+
+    return curr_color;
 }
