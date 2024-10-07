@@ -2075,7 +2075,7 @@ Plots an xy chromaticity plot of the input image, given its working primaries. T
 
 **Num X/Y Samples**: Number of samples in the horizontal or vertical directions.
 
-**Ignore Below**: Excludes samples whose magnitude $\sqrt(r^2 + g^2 + b^2)$ is less than this amount, therefore eliminating shadow noise from contaminating the scope.
+**Ignore Below**: Excludes samples whose magnitude $\sqrt{r^2 + g^2 + b^2}$ is less than this amount, therefore eliminating shadow noise from contaminating the scope.
 
 **Custom Red/Green/Blue/White X/Y**: When selecting a custom gamut, these are the primaries used.
 
