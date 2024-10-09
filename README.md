@@ -2075,13 +2075,17 @@ Plots an xy chromaticity plot of the input image, given its working primaries. T
 
 **Num X/Y Samples**: Number of samples in the horizontal or vertical directions.
 
-**Ignore Below**: Excludes samples whose magnitude $\sqrt{r^2 + g^2 + b^2}$ is less than this amount, therefore eliminating shadow noise from contaminating the scope.
+**Ignore Magnitude Below**: Excludes samples whose magnitude $\sqrt{r^2 + g^2 + b^2}$ is less than this amount, therefore eliminating shadow noise from contaminating the scope.
+
+**Ignore XYZ Sum Below**: Excludes samples whose XYZ Sum $X + Y + Z$ is less than this amount, therefore eliminating extreme values from contaminating the scope.
 
 **Custom Red/Green/Blue/White X/Y**: When selecting a custom gamut, these are the primaries used.
 
 **Draw Grid**: Draws a grid in 0.10 increments in x,y.
 
 **Draw Overlay Bounds**: Draws the triangle corresponding to the Overlay Primaries dropdown
+
+**Draw Working Bounds**: Draws the triangle corresponding to the Working Primaries dropdown
 
 **Draw XYZ Bounds**: Draws the bounds of XYZ, for which the XYZ value is nonnegative
 

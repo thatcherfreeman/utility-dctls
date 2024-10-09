@@ -14,7 +14,8 @@ DEFINE_UI_PARAMS(zoom, Zoom, DCTLUI_SLIDER_FLOAT, 1.0, 0.10, 2.0, 0.01)
 DEFINE_UI_PARAMS(num_x_samples, Num X Samples, DCTLUI_SLIDER_INT, 80, 1, 200, 1)
 DEFINE_UI_PARAMS(num_y_samples, Num Y Samples, DCTLUI_SLIDER_INT, 40, 1, 200, 1)
 
-DEFINE_UI_PARAMS(ignore_magnitude_below, Ignore Below, DCTLUI_VALUE_BOX, 0.02)
+DEFINE_UI_PARAMS(ignore_magnitude_below, Ignore Mag Below, DCTLUI_VALUE_BOX, 0.02)
+DEFINE_UI_PARAMS(ignore_xyz_sum_below, Ignore XYZ Sum Below, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(source_red_x, Custom Red x, DCTLUI_VALUE_BOX, 0.64)
 DEFINE_UI_PARAMS(source_red_y, Custom Red y, DCTLUI_VALUE_BOX, 0.33)
 DEFINE_UI_PARAMS(source_green_x, Custom Green x, DCTLUI_VALUE_BOX, 0.3)
@@ -26,6 +27,7 @@ DEFINE_UI_PARAMS(source_white_y, Custom White y, DCTLUI_VALUE_BOX, 0.3290)
 
 DEFINE_UI_PARAMS(draw_grid, Draw Grid, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_overlay_triangle, Draw Overlay Bounds, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(draw_target_triangle, Draw Working Bounds, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_xyz_triangle, Draw XYZ Bounds, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_spectral_locus, Draw Spectral Locus, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_white_point, Draw White Point, DCTLUI_CHECK_BOX, 0)
@@ -519,7 +521,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             make_float3(0.3, 0.3, 0.3), // overlay
         };
 
-        bool draw_triangle_toggle[3] = {true, draw_xyz_triangle > 0, draw_overlay_triangle > 0};
+        bool draw_triangle_toggle[3] = {draw_target_triangle > 0, draw_xyz_triangle > 0, draw_overlay_triangle > 0};
 
         // Draw grid
         if (draw_grid) {
@@ -594,6 +596,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 }
                 float2 curr_dot_histogram_pos;
                 float3 curr_color_xyz = mv_33_3(to_xyz_33, curr_color);
+                if (curr_color_xyz.x + curr_color_xyz.y + curr_color_xyz.z <= ignore_xyz_sum_below) {
+                    continue;
+                }
                 float2 curr_color_xy = XYZ_to_xy(curr_color_xyz, source_primaries.white_xy);
                 if (invert) {
                     curr_color_xy = standard_observer_to_camera_observer(curr_color_xy, xyz_to_working_33, source_gamut);
