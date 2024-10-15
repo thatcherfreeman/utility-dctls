@@ -580,8 +580,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         }
 
         // Draw interior dots
-        for (int sample_idx_x = 0; sample_idx_x < num_x_samples; ++sample_idx_x) {
-            for (int sample_idx_y = 0; sample_idx_y < num_y_samples; ++sample_idx_y) {
+        bool skip_additional_samples = false;
+        for (int sample_idx_x = 0; sample_idx_x < num_x_samples && !skip_additional_samples; ++sample_idx_x) {
+            for (int sample_idx_y = 0; sample_idx_y < num_y_samples && !skip_additional_samples; ++sample_idx_y) {
                 int2 curr_sample_pos = make_int2((int)((sample_idx_x + 0.5f) / (num_x_samples)*p_Width),
                                                  (int)((sample_idx_y + 0.5f) / (num_y_samples)*p_Height));
                 float3 curr_color = make_float3(_tex2D(p_TexR, curr_sample_pos.x, curr_sample_pos.y),
@@ -607,6 +608,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) < dot_size) {
                     histogram_color =
                         _mix(histogram_color, curr_color / ((curr_color.x + curr_color.y + curr_color.z) / 3.0f), dot_opacity);
+                    skip_additional_samples = dot_opacity > 0.998f;
                 }
             }
         }
