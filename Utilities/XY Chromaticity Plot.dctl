@@ -11,8 +11,8 @@ DEFINE_UI_PARAMS(dot_size, Scope Dot Size, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 10.0, 
 DEFINE_UI_PARAMS(dot_opacity, Scope Dot Opacity, DCTLUI_SLIDER_FLOAT, 0.3, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(zoom, Zoom, DCTLUI_SLIDER_FLOAT, 1.0, 0.10, 2.0, 0.01)
 
-DEFINE_UI_PARAMS(num_x_samples, Num X Samples, DCTLUI_SLIDER_INT, 80, 1, 200, 1)
-DEFINE_UI_PARAMS(num_y_samples, Num Y Samples, DCTLUI_SLIDER_INT, 40, 1, 200, 1)
+DEFINE_UI_PARAMS(num_x_samples, Num X Samples, DCTLUI_SLIDER_INT, 100, 1, 300, 1)
+DEFINE_UI_PARAMS(num_y_samples, Num Y Samples, DCTLUI_SLIDER_INT, 50, 1, 300, 1)
 
 DEFINE_UI_PARAMS(ignore_magnitude_below, Ignore Mag Below, DCTLUI_VALUE_BOX, 0.02)
 DEFINE_UI_PARAMS(ignore_xyz_sum_below, Ignore XYZ Sum Below, DCTLUI_VALUE_BOX, 0.0)
