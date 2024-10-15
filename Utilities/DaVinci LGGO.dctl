@@ -26,10 +26,6 @@ __DEVICE__ inline bool int2_eq(int2 a, int2 b) {
     return a.x == b.x && a.y == b.y;
 }
 
-__DEVICE__ float3 sample_color(int2 pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
-    return make_float3(_tex2D(p_TexR, pos.x, pos.y), _tex2D(p_TexG, pos.x, pos.y), _tex2D(p_TexB, pos.x, pos.y));
-}
-
 __DEVICE__ float convert_gamma_to_reals(float g) {
     // Converts -1 to +1 range to an exponent
     // Essentially what Resolve does with its gamma
