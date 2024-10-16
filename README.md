@@ -1794,8 +1794,9 @@ Given a color gamut, compute the luminance channel associated with those primari
 Draws black bars on the top/bottom or left/right sides of the frame to mask out all but a specified aspect ratio
 
 #### DCTL Parameters
-**Aspect Ratio** The aspect ratio you want to keep after pillar/letter boxing.
+**Aspect Ratio**: The aspect ratio you want to keep after pillar/letter boxing.
 
+**Value**: The code value of the black bars
 
 ---
 ### Polarity Checker

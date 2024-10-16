@@ -1,5 +1,8 @@
-// Parameter for aspect ratio
+// clang-format off
 DEFINE_UI_PARAMS(aspect_ratio, Aspect Ratio, DCTLUI_SLIDER_FLOAT, 1.7777, 0.0, 4.0, 0.01)
+DEFINE_UI_PARAMS(value, Value, DCTLUI_VALUE_BOX, 0.0)
+
+// clang-format on
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     // Compute the timeline aspect ratio p_Width / p_Height
@@ -28,7 +31,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     if (p_X < _round(side_bar_width) || p_X > _round(p_Width - side_bar_width - 1) || p_Y < _round(top_bar_width) ||
         p_Y > _round(p_Height - top_bar_width - 1)) {
         // If within a bar, make the output pixel black.
-        out = make_float3(0.0, 0.0, 0.0);
+        out = make_float3(value, value, value);
     }
 
     // Return out
