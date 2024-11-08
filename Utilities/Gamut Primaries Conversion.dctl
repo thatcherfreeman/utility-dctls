@@ -166,7 +166,7 @@ __DEVICE__ void cat02_adaptation_matrix(float dest[3][3], gamut_primaries_t sour
 }
 
 __DEVICE__ void
-get_gamut_transform_matrix(float dest[3][3], gamut_primaries_t source, gamut_primaries_t target, bool chromatic_adaptation) {
+get_gamut_conversion_matrix(float dest[3][3], gamut_primaries_t source, gamut_primaries_t target, bool chromatic_adaptation) {
     float source_to_XYZ[3][3] = {};
     rgb_to_XYZ_mat_from_gamut(source_to_XYZ, source);
 
@@ -266,10 +266,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         target_primaries = temp;
     }
 
-    float transform_matrix[3][3] = {{0.0}};
-    get_gamut_transform_matrix(transform_matrix, source_primaries, target_primaries, chromatic_adaptation);
+    float conversion_matrix[3][3] = {{0.0}};
+    get_gamut_conversion_matrix(conversion_matrix, source_primaries, target_primaries, chromatic_adaptation);
 
     float3 input = make_float3(p_R, p_G, p_B);
-    float3 output = mv_33_3(transform_matrix, input);
+    float3 output = mv_33_3(conversion_matrix, input);
     return output;
 }
