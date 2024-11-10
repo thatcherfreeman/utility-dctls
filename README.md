@@ -659,16 +659,20 @@ Provides an HSV-like user interface for 3x3 Matrix operations, analogous to adju
 ---
 
 ### MTF Curve DCTL
-Gives you control over a MTF-like curve. Internally makes passes of different frequencies which can be increased or reduced in gain before combining them back together. Highly recommend using the Quotient method and feeding this DCTL a log image.
+Gives you control over a MTF-like curve. Internally makes passes of different frequencies which can be increased or reduced in gain before combining them back together. Highly recommend using the default method and feeding this DCTL a log image.
 
 #### DCTL Parameters
-**Band 16-1:1 Contrast**: Applies a gain to the information captured only by this band. Set to 0 to soften the image and raise up to 2 to increase sharpness. The bands are relative to the timeline resolution, with a 16:1 blur, 8:1 blur, 4:1 blur, and 2:1 blur.
+**Band 16-2:1 Contrast**: Applies a gain to the information captured only by this band. Set to 0 to soften the image and raise up to 2 to increase sharpness. The bands are relative to the timeline resolution, with a 16:1 blur, 8:1 blur, 4:1 blur, and 2:1 blur.
+
+**Threshold**: When using Gaussian Threshold as the blur style, this is a blur kernel that averages neighboring pixels whose values are within a range of +/- threshold from the center of the kernel. It's also smoothed off a bit and this helps avoid halos.
+
+**Blur Scale**: Controls the baseline blur radius of the bands.
 
 **Debug Band**: Specifies which band is viewed when the Debug Mode isn't None.
 
 **Debug Mode**: This pull-down allows you to figure out what each band targets. You can choose from None (runs the plugin normally), Low Pass Mode (shows you the information that's too low frequency to be captured in this band), High Pass Mode (shows the information that's in this band), and High Pass Gray Mode (Same as High Pass mode, but normalized to 0.5 so that the frequency data in this band is more visible).
 
-**Performance Mode**: Choose between Quality and Performance. Performance mode takes fewer samples when computing the blur which can cause very subtle artifacts, whereas Quality densely samples the region of the blur kernel.
+**Blur Style**: Choose between Gaussian Threshold, Gaussian, Quality, and Performance. Gaussian blur simply applies a gaussian blur to each channel. Gaussian Threshold is the same as Gaussian blur but ignores pixels whose value differs substantially from the center of the kernel. Performance mode takes fewer samples when computing the blur which can cause subtle artifacts.
 
 **Method**: Allows you to choose between Quotient and Difference, which correspond to different ways to compute the frequency bands. In most real-world scenarios, the Quotient method provides better looking results, but the Difference method performs more accurately on zebra striped test charts. Here's the math:
 ```
