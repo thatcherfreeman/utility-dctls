@@ -165,7 +165,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float exposure_lost_lin = _exp2f(exposure_lost);
     float green_exposure_lost_lin = _exp2f(green_exposure_lost);
     float blue_exposure_lost_lin = _exp2f(blue_exposure_lost);
-    int blur_radius = (blur_amt / 1000.0f) * p_Width;
+    float blur_radius = (blur_amt / 1000.0f) * p_Width;
 
     float3 scale_color;
     if (blur_type == GAUSSIAN) {
