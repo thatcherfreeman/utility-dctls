@@ -20,6 +20,27 @@ function table_len(t)
     return counter
 end
 
+
+function print_table(t, indentation)
+    if indentation == nil then
+        indentation = 0
+    end
+    local outer_prefix = string.rep("    ", indentation)
+    local inner_prefix = string.rep("    ", indentation + 1)
+    print(outer_prefix, "{")
+    for k, v in pairs(t) do
+        if type(v) == "table" then
+            print(inner_prefix, k, ": ")
+            print_table(v, indentation + 1)
+        elseif type(v) == "string" then
+            print(inner_prefix, k, string.format([[: "%s"]], v))
+        else
+            print(inner_prefix, k, ": ", v)
+        end
+    end
+    print(outer_prefix, "}")
+end
+
 function dump(o)
     if type(o) == 'table' then
         local s = '{ '
@@ -53,7 +74,8 @@ function Create()
         LINKID_DataType = "Number",
         INPID_InputControl = "ButtonControl",
         INP_DoNotifyChanged = true,
-        INP_External = false
+        INP_External = false,
+        INPS_StatusText = "Reset the arguments of the chosen DCTL to their defaults.",
     })
 
     DCTLFile = self:AddInput("DCTL File", "DCTLFile", {
@@ -65,7 +87,8 @@ function Create()
         FCS_FilterString = "DCTL Files (*.dctl)|*.dctl|",
         INP_DoNotifyChanged = true,
         INP_ForceNotify = false,
-        INP_InitialNotify = true
+        INP_InitialNotify = true,
+        INPS_StatusText = "Select your DCTL here.",
     })
 
     -- DCTL PARAMETERS
@@ -431,8 +454,18 @@ function ExtractParameters(dctl_source)
     params.color_pickers = color_pickers
     dctl_source = string.gsub(dctl_source, color_picker_pattern, "")
 
-    -- Tooltip removal
-    local tooltip_pattern = "DEFINE_UI_TOOLTIP%b()"
+    -- Tooltips
+    local tooltip_pattern = 'DEFINE_UI_TOOLTIP%(%s*(%S[^,]*),%s*(%b"")%)'
+    local tooltips = {}
+    local ret1 = 0
+    repeat
+        ret1, rhs, var_name, tooltip_text = string.find(dctl_source, tooltip_pattern, rhs)
+        if ret1 ~= nil then
+            tooltip_text = tooltip_text:match('^"(.*)"$')
+            tooltips[var_name] = tooltip_text
+        end
+    until (ret1 == nil)
+    params.tooltips = tooltips
     dctl_source = string.gsub(dctl_source, tooltip_pattern, "")
 
     -- Check to make sure we got all the DEFINE_UI_PARAMS.
@@ -564,7 +597,8 @@ function NotifyChanged(inp, param, time)
                     LINKS_Name = float_slider_table.label,
                     INP_MinScale = float_slider_table.min_val,
                     INP_MaxScale = float_slider_table.max_val,
-                    IC_Visible = true
+                    IC_Visible = true,
+                    INPS_StatusText = params.tooltips[float_slider_table.label],
                 })
             end
             for i, int_slider_table in pairs(params.int_sliders) do
@@ -572,38 +606,45 @@ function NotifyChanged(inp, param, time)
                     LINKS_Name = int_slider_table.label,
                     INP_MinScale = int_slider_table.min_val,
                     INP_MaxScale = int_slider_table.max_val,
-                    IC_Visible = true
+                    IC_Visible = true,
+                    INPS_StatusText = params.tooltips[int_slider_table.label],
                 })
             end
             for i, value_box_table in pairs(params.value_boxes) do
                 InpValueBoxes[i]:SetAttrs({
                     LINKS_Name = value_box_table.label,
-                    IC_Visible = true
+                    IC_Visible = true,
+                    INPS_StatusText = params.tooltips[value_box_table.label],
                 })
             end
             for i, check_box_table in pairs(params.check_boxes) do
                 InpCheckBoxes[i]:SetAttrs({
                     LINKS_Name = check_box_table.label,
-                    IC_Visible = true
+                    IC_Visible = true,
+                    INPS_StatusText = params.tooltips[check_box_table.label],
                 })
             end
             for i, combo_box_table in pairs(params.combo_boxes) do
                 InpComboBoxes[i]:SetAttrs({
                     LINKS_Name = combo_box_table.label,
                     IC_Visible = true,
-                    combo_box_table.dropdown_options
+                    combo_box_table.dropdown_options,
+                    INPS_StatusText = params.tooltips[combo_box_table.label],
                 })
             end
             for i, color_picker_table in pairs(params.color_pickers) do
                 InpColorControlReds[i]:SetAttrs({
                     ICS_Name = color_picker_table.label,
-                    IC_Visible = true
+                    IC_Visible = true,
+                    INPS_StatusText = params.tooltips[color_picker_table.label],
                 })
                 InpColorControlGreens[i]:SetAttrs({
-                    IC_Visible = true
+                    IC_Visible = true,
+                    INPS_StatusText = params.tooltips[color_picker_table.label],
                 })
                 InpColorControlBlues[i]:SetAttrs({
-                    IC_Visible = true
+                    IC_Visible = true,
+                    INPS_StatusText = params.tooltips[color_picker_table.label],
                 })
             end
         end
