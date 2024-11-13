@@ -977,13 +977,20 @@ __DEVICE__ DCTLColorPickerParam __make_DCTLColorPickerParam(float r, float g, fl
     end
 
     if string.find(preprocessed_content, "RAND") ~= nil then
-        -- TODO: Find a better random number generator
         local rand_declaration = [[
 __DEVICE__ float RAND(uint seed) {
-    uint x = seed ^ 1234569420;
+    uint x = seed;
+    x *= 694206942069;
+    x ^= (x << 16 | x >> 16);
+    x += 694206942069;
     x ^= (x << 13 | x >> 19);
+    x ^= (x >> 17 | x << 15);
+    x ^= (x << 5 | x >> 27);
+    x -= 694206942069;
+    x ^= (x << 11 | x >> 21);
     x ^= (x >> 7 | x << 25);
-    x ^= (x << 15 | x >> 15);
+    x ^= (x << 6 | x >> 26);
+    x ^= 694206942069;
     return (((float)x) / (float)(~((uint)0)));
 }
         ]]
@@ -1063,6 +1070,7 @@ function Process(req)
                 paramsRef.color_picker_params[i][1] = InpColorControlGreens[i]:GetValue(req).Value
                 paramsRef.color_picker_params[i][2] = InpColorControlBlues[i]:GetValue(req).Value
             end
+            -- TODO: Figure out how to make this update with each change of time. Probably need to have a hidden time variable or something that gets updated by NotifyChanged
             paramsRef.timeline_frame_index = req.Time
             node:SetParamBlock(paramsRef)
 
