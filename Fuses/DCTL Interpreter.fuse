@@ -270,7 +270,7 @@ function ExtractParameters(dctl_source)
     -- FLOAT SLIDERS
     local float_sliders = {}
     local slider_float_pattern =
-        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_SLIDER_FLOAT%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*%)"
+        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_SLIDER_FLOAT%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*%)"
     local ret1 = 0
     local rhs = 0
     local slider_float_counter = 0
@@ -321,7 +321,7 @@ function ExtractParameters(dctl_source)
 
     -- VALUE BOXES
     local value_boxes = {}
-    local value_box_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_VALUE_BOX%s*,%s*([%-%d%.eE]+)%s*%)"
+    local value_box_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_VALUE_BOX%s*,%s*([%-%d%.eE]+)f?%s*%)"
     local ret1 = 0
     local rhs = 0
     local value_box_counter = 0
@@ -409,7 +409,7 @@ function ExtractParameters(dctl_source)
     -- COLOR PICKERS
     local color_pickers = {}
     local color_picker_pattern =
-        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_COLOR_PICKER%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*%)"
+        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_COLOR_PICKER%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*%)"
     local ret1 = 0
     local rhs = 0
     local color_picker_counter = 0
@@ -746,6 +746,7 @@ function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
         int check_box_params[%d];
         int combo_box_params[%d];
         float color_picker_params[%d][3];
+        int timeline_frame_index;
         ]], math.max(1, num_float_sliders), math.max(1, num_int_sliders), math.max(1, num_value_boxes),
         math.max(1, num_check_boxes), math.max(1, num_combo_boxes), math.max(1, num_color_pickers))
 
@@ -789,6 +790,8 @@ function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
         transform_parameter_declarations = transform_parameter_declarations ..
                                                string.format(", DCTLColorPickerParam %s", color_picker.var_name)
     end
+    transform_extra_params = transform_extra_params .. ", params->timeline_frame_index"
+    transform_parameter_declarations = transform_parameter_declarations .. ", const int TIMELINE_FRAME_INDEX"
 
     -- Replace transform function with augmented one with new parameters.
     local local_transform_function_pattern =
@@ -918,6 +921,7 @@ function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
 
     preprocessed_content = string.gsub(preprocessed_content, transform_function_pattern, transform_function_signature)
 
+    -- Stuff that goes at the top of the file.
     if texture_declarations_required then
         -- inject __TEXTURE__ type declaration at the top of the code.
         -- This will be done by making a wrapper struct that stores a __TEXTURE2D__ and an integer that indicates the channel.
@@ -952,10 +956,9 @@ __DEVICE__ float __tex2D_override(__TEXTURESTRUCT__ ptex, int x, int y) {
 
         -- Then we will replace all _tex2d calls in the original source code with _tex2DVecN with the appropriate value passed in.
         preprocessed_content = string.gsub(preprocessed_content, "_tex2D%s*%(", "__tex2D_override(")
-
     end
 
-    if table_len(params.color_pickers) then
+    if param_counts.num_color_pickers > 0 then
         local color_picker_type_declarations = [[
 typedef struct {
     float r;
@@ -971,6 +974,20 @@ __DEVICE__ DCTLColorPickerParam __make_DCTLColorPickerParam(float r, float g, fl
     return out;
 }]]
         preprocessed_content = string.insert(preprocessed_content, color_picker_type_declarations, 0)
+    end
+
+    if string.find(preprocessed_content, "RAND") ~= nil then
+        -- TODO: Find a better random number generator
+        local rand_declaration = [[
+__DEVICE__ float RAND(uint seed) {
+    uint x = seed ^ 1234569420;
+    x ^= (x << 13 | x >> 19);
+    x ^= (x >> 7 | x << 25);
+    x ^= (x << 15 | x >> 15);
+    return (((float)x) / (float)(~((uint)0)));
+}
+        ]]
+        preprocessed_content = string.insert(preprocessed_content, rand_declaration, 0)
     end
 
     -- Rename kernel so that each dctl has a unique kernel. This fixes a bug with Fusion caching where
@@ -1046,6 +1063,7 @@ function Process(req)
                 paramsRef.color_picker_params[i][1] = InpColorControlGreens[i]:GetValue(req).Value
                 paramsRef.color_picker_params[i][2] = InpColorControlBlues[i]:GetValue(req).Value
             end
+            paramsRef.timeline_frame_index = req.Time
             node:SetParamBlock(paramsRef)
 
             success = node:RunSession(req)
