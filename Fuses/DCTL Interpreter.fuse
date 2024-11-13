@@ -431,6 +431,10 @@ function ExtractParameters(dctl_source)
     params.color_pickers = color_pickers
     dctl_source = string.gsub(dctl_source, color_picker_pattern, "")
 
+    -- Tooltip removal
+    local tooltip_pattern = "DEFINE_UI_TOOLTIP%b()"
+    dctl_source = string.gsub(dctl_source, tooltip_pattern, "")
+
     -- Check to make sure we got all the DEFINE_UI_PARAMS.
     rhs = 0
     repeat
@@ -698,6 +702,7 @@ function typecast_builtin_funcs(dctl_source)
 end
 
 function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
+    -- TODO: make it so this function isn't called every frame, but only when a new dctl is pulled.
     if debug then
         local original_content = OpenDCTL(dctl_fn)
         print("Original DCTL:")
@@ -1070,7 +1075,6 @@ function Process(req)
                 paramsRef.color_picker_params[i][1] = InpColorControlGreens[i]:GetValue(req).Value
                 paramsRef.color_picker_params[i][2] = InpColorControlBlues[i]:GetValue(req).Value
             end
-            -- TODO: Figure out how to make this update with each change of time. Probably need to have a hidden time variable or something that gets updated by NotifyChanged
             paramsRef.timeline_frame_index = req.Time
             node:SetParamBlock(paramsRef)
 
