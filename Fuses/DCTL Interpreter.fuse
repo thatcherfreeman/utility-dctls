@@ -182,10 +182,20 @@ function StripACESParams(text)
     return text
 end
 
+function IsAlphaStraight(text)
+    local is_straight = string.find(text, "DEFINE_DCTL_ALPHA_MODE_STRAIGHT") ~= nil
+    -- Remove occurrences of this flag because they're not real code.
+    local text = string.gsub(text, "DEFINE_DCTL_ALPHA_MODE_STRAIGHT", "")
+    text = string.gsub(text, "DEFINE_DCTL_ALPHA_MODE_PREMULTIPLY", "")
+    return text, is_straight
+end
+
 function OpenAndStripDCTL(filename)
     local dctl_contents = OpenDCTL(filename)
     local out_content = StripComments(dctl_contents)
     out_content = StripACESParams(out_content)
+    local is_straight_alpha
+    out_content, is_straight_alpha = IsAlphaStraight(out_content)
 
     -- Handle .h files.
     -- * Basically just need to identify the file name, open the file and paste it in.
@@ -201,10 +211,11 @@ function OpenAndStripDCTL(filename)
                 print("ERROR: Found #include statement but cannot parse the working directory for path ", filename)
                 break
             end
-            local header_contents = OpenAndStripDCTL(starting_directory .. h_fn)
+            local header_contents, header_is_straight_alpha = OpenAndStripDCTL(starting_directory .. h_fn)
             -- Insert the contents of the .h file immediately after the include
             -- statement so that it can be read as well.
             out_content = string.insert(out_content, header_contents, rhs)
+            is_straight_alpha = is_straight_alpha or header_is_straight_alpha
         end
     until (ret1 == nil)
     out_content = string.gsub(out_content, include_pattern, "")
@@ -212,7 +223,7 @@ function OpenAndStripDCTL(filename)
         print("ERROR: Could not parse all #include statements.")
     end
 
-    return out_content
+    return out_content, is_straight_alpha
 end
 
 function ExtractParameters(dctl_source)
@@ -424,7 +435,7 @@ function NotifyChanged(inp, param, time)
             elseif (inp == ResetParamsButton) then
                 dctl_fn = DCTLFile:GetSource(time).Value
             end
-            local content = OpenAndStripDCTL(dctl_fn)
+            local content, is_straight_alpha = OpenAndStripDCTL(dctl_fn)
 
             -- Call ExtractParameters
             -- Rename parameters and update the Visibility attribute on all DCTL parameters.
@@ -605,7 +616,7 @@ function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
         print(original_content)
     end
 
-    local preprocessed_content = OpenAndStripDCTL(dctl_fn)
+    local preprocessed_content, is_straight_alpha = OpenAndStripDCTL(dctl_fn)
 
     if auto_typecast then
         preprocessed_content = typecast_builtin_funcs(preprocessed_content)
@@ -699,12 +710,31 @@ function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
         "transform(p_Width, p_Height, p_X, p_Y, p_TexR, p_TexG, p_TexB%s)", transform_extra_params)
     local res2 = string.find(preprocessed_content, texture_transform_function_pattern)
 
+    local local_transform_alpha_function_pattern =
+        "__DEVICE__%s*float4%s*transform%(int%s+p_Width,%s*int%s+p_Height,%s*int%s+p_X,%s*int%s+p_Y,%s*float%s+p_R,%s*float%s+p_G,%s*float%s+p_B,%s*float%s+p_A%)"
+    local new_local_transform_alpha_function_signature = string.format(
+        "__DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B, float p_A%s)",
+        transform_parameter_declarations)
+    local local_transform_alpha_function_call = string.format(
+        "transform(p_Width, p_Height, p_X, p_Y, p_R, p_G, p_B, p_A%s)", transform_extra_params)
+    local res3 = string.find(preprocessed_content, local_transform_alpha_function_pattern)
+
+    local texture_transform_alpha_function_pattern =
+        "__DEVICE__%s*float4%s*transform%(int%s+p_Width,%s*int%s+p_Height,%s*int%s+p_X,%s*int%s+p_Y,%s*__TEXTURE__%s+p_TexR%s*,%s*__TEXTURE__%s+p_TexG%s*,%s*__TEXTURE__%s+p_TexB%s*,%s*__TEXTURE__%s+p_TexA%s*%)"
+    local new_texture_transform_alpha_function_signature = string.format(
+        "__DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, __TEXTURE__ p_TexA%s)",
+        transform_parameter_declarations)
+    local texture_transform_alpha_function_call = string.format(
+        "transform(p_Width, p_Height, p_X, p_Y, p_TexR, p_TexG, p_TexB, p_TexA%s)", transform_extra_params)
+    local res4 = string.find(preprocessed_content, texture_transform_alpha_function_pattern)
+
     local transform_function_pattern
     local transform_function_signature
     local transform_function_call
     local channel_declarations
+    local has_alpha = false
     local texture_declarations_required = false
-    if res1 ~= nil and res2 == nil then
+    if res1 ~= nil and res2 == nil and res3 == nil and res4 == nil then
         transform_function_pattern = local_transform_function_pattern
         transform_function_signature = new_local_transform_function_signature
         transform_function_call = local_transform_function_call
@@ -713,9 +743,8 @@ function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
     float4 __RGBA = _tex2DVec4(inputTexture, X, Y);
     float p_R = __RGBA.x;
     float p_G = __RGBA.y;
-    float p_B = __RGBA.z;
-        ]]
-    elseif res1 == nil and res2 ~= nil then
+    float p_B = __RGBA.z;]]
+    elseif res1 == nil and res2 ~= nil and res3 == nil and res4 == nil then
         texture_declarations_required = true
         transform_function_pattern = texture_transform_function_pattern
         transform_function_signature = new_texture_transform_function_signature
@@ -725,15 +754,67 @@ function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
 
     __TEXTURESTRUCT__ p_TexR = {inputTexture, 8, p_Width, p_Height};
     __TEXTURESTRUCT__ p_TexG = {inputTexture, 4, p_Width, p_Height};
-    __TEXTURESTRUCT__ p_TexB = {inputTexture, 2, p_Width, p_Height};
-        ]]
+    __TEXTURESTRUCT__ p_TexB = {inputTexture, 2, p_Width, p_Height};]]
+    elseif res1 == nil and res2 == nil and res3 ~= nil and res4 == nil then
+        transform_function_pattern = local_transform_alpha_function_pattern
+        transform_function_signature = new_local_transform_alpha_function_signature
+        transform_function_call = local_transform_alpha_function_call
+        has_alpha = true
+        channel_declarations = [[
 
-    elseif res1 == nil and res2 == nil then
+    float4 __RGBA = _tex2DVec4(inputTexture, X, Y);
+    float p_R = __RGBA.x;
+    float p_G = __RGBA.y;
+    float p_B = __RGBA.z;
+    float p_A = __RGBA.w;]]
+    elseif res1 == nil and res2 == nil and res3 == nil and res4 ~= nil then
+        texture_declarations_required = true
+        transform_function_pattern = texture_transform_alpha_function_pattern
+        transform_function_signature = new_texture_transform_alpha_function_signature
+        transform_function_call = texture_transform_alpha_function_call
+        has_alpha = true
+        -- Declare p_TexR/g/b in the kernel.
+        channel_declarations = [[
+
+    __TEXTURESTRUCT__ p_TexR = {inputTexture, 8, p_Width, p_Height};
+    __TEXTURESTRUCT__ p_TexG = {inputTexture, 4, p_Width, p_Height};
+    __TEXTURESTRUCT__ p_TexB = {inputTexture, 2, p_Width, p_Height};
+    __TEXTURESTRUCT__ p_TexA = {inputTexture, 1, p_Width, p_Height};]]
+    elseif res1 == nil and res2 == nil and res3 == nil and res4 == nil then
         print("ERROR: Could not find transform function.")
         return
     else
         print("ERROR: Found multiple transform functions.")
         return
+    end
+
+    -- String that runs the function call and converts it to a float4 __RGBA_OUT
+    local transform_function_call_return
+    if has_alpha then
+        if is_straight_alpha then
+            -- Straight alpha
+            transform_function_call_return = string.format([[
+
+    float4 __RGBA_OUT = %s;]], transform_function_call)
+        else
+            -- TODO: This behavior may change as Resolve unifies Fusion and Resolve DCTL tools.
+            -- Premultiply
+            transform_function_call_return = string.format([[
+
+    p_R = p_R * p_A;
+    p_G = p_G * p_A;
+    p_B = p_B * p_A;
+    float4 __RGBA_OUT = %s;
+    __RGBA_OUT.x = __RGBA_OUT.x / __RGBA_OUT.w;
+    __RGBA_OUT.y = __RGBA_OUT.y / __RGBA_OUT.w;
+    __RGBA_OUT.z = __RGBA_OUT.z / __RGBA_OUT.w;]], transform_function_call)
+        end
+    else
+        -- No alpha
+        transform_function_call_return = string.format([[
+
+    float3 __RGB = %s;
+    float4 __RGBA_OUT = make_float4(__RGB.x, __RGB.y, __RGB.z, 1.0);]], transform_function_call)
     end
 
     preprocessed_content = string.gsub(preprocessed_content, transform_function_pattern, transform_function_signature)
@@ -742,7 +823,6 @@ function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
         -- inject __TEXTURE__ type declaration at the top of the code.
         -- This will be done by making a wrapper struct that stores a __TEXTURE2D__ and an integer that indicates the channel.
         local texture_declaration = [[
-
 typedef struct {
     __TEXTURE2D__ tex;
     int index;
@@ -789,10 +869,9 @@ __KERNEL__ void %s(__CONSTANTREF__ %s *params, __TEXTURE2D__ inputTexture, __TEX
     int p_X = X;
     int p_Y = (p_Height - 1) - Y;
     %s
-    float3 __RGB = %s;
-    float4 __RGBA_OUT = make_float4(__RGB.x, __RGB.y, __RGB.z, 1.0);
+    %s
     _tex2DVec4Write(outputTexture, X, Y, __RGBA_OUT);
-}]], kernel_name, parameters_name, img_width, img_height, channel_declarations, transform_function_call)
+}]], kernel_name, parameters_name, img_width, img_height, channel_declarations, transform_function_call_return)
     preprocessed_content = preprocessed_content .. "\n" .. kernel_function_str
 
     -- Improve formatting for console.
