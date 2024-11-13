@@ -122,6 +122,40 @@ function Create()
             IC_Visible = false
         })
     end
+    InpColorControlReds = {}
+    InpColorControlGreens = {}
+    InpColorControlBlues = {}
+    for i = 0, num_sliders - 1 do
+        InpColorControlReds[i] = self:AddInput(string.format("Color Picker Red %d", i),
+            string.format("ColorPickerRed%d", i), {
+                ICS_Name = string.format("Color %d", i),
+                LINKID_DataType = "Number",
+                INPID_InputControl = "ColorControl",
+                CLRC_ShowWheel = false,
+                INP_Default = MAGIC_DEFAULT,
+                IC_ControlGroup = i+1,
+                IC_ControlID = 0,
+                IC_Visible = false
+            })
+        InpColorControlGreens[i] = self:AddInput(string.format("Color Picker Green %d", i),
+            string.format("ColorPickerGreen%d", i), {
+                LINKID_DataType = "Number",
+                INPID_InputControl = "ColorControl",
+                INP_Default = MAGIC_DEFAULT,
+                IC_ControlGroup = i+1,
+                IC_ControlID = 1,
+                IC_Visible = false
+            })
+        InpColorControlBlues[i] = self:AddInput(string.format("Color Picker Blue %d", i),
+            string.format("ColorPickerBlue%d", i), {
+                LINKID_DataType = "Number",
+                INPID_InputControl = "ColorControl",
+                INP_Default = MAGIC_DEFAULT,
+                IC_ControlGroup = i+1,
+                IC_ControlID = 2,
+                IC_Visible = false
+            })
+    end
 
     -- DEBUG PARAMETERS
     self:BeginControlNest("Debug", "Debug", false, {})
@@ -372,6 +406,31 @@ function ExtractParameters(dctl_source)
     params.combo_boxes = combo_boxes
     dctl_source = string.gsub(dctl_source, combo_box_pattern, "")
 
+    -- COLOR PICKERS
+    local color_pickers = {}
+    local color_picker_pattern =
+        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_COLOR_PICKER%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*,%s*([%-%d%.eE]+)%s*%)"
+    local ret1 = 0
+    local rhs = 0
+    local color_picker_counter = 0
+    repeat
+        ret1, rhs, var_name, label, red_default, green_default, blue_default = string.find(dctl_source,
+            color_picker_pattern, rhs)
+        if ret1 ~= nil then
+            color_pickers[color_picker_counter] = {
+                param_type = "COLOR_PICKER",
+                var_name = var_name,
+                label = label,
+                red_default = tonumber(red_default),
+                green_default = tonumber(green_default),
+                blue_default = tonumber(blue_default)
+            }
+            color_picker_counter = color_picker_counter + 1
+        end
+    until (ret1 == nil)
+    params.color_pickers = color_pickers
+    dctl_source = string.gsub(dctl_source, color_picker_pattern, "")
+
     -- Check to make sure we got all the DEFINE_UI_PARAMS.
     rhs = 0
     repeat
@@ -423,6 +482,9 @@ function NotifyChanged(inp, param, time)
         HideUIElements(InpValueBoxes)
         HideUIElements(InpCheckBoxes)
         HideUIElements(InpComboBoxes)
+        HideUIElements(InpColorControlReds)
+        HideUIElements(InpColorControlGreens)
+        HideUIElements(InpColorControlBlues)
 
         local reload_params = (reset_params and (DCTLFile:GetSource(time) ~= "")) or
                                   ((inp == DCTLFile) and (param.Value ~= nil) and (param.Value ~= ""))
@@ -456,6 +518,11 @@ function NotifyChanged(inp, param, time)
             for i, combo_box_table in pairs(params.combo_boxes) do
                 UpdateDefault(InpComboBoxes[i], combo_box_table.default_val, time)
             end
+            for i, color_picker_table in pairs(params.color_pickers) do
+                UpdateDefault(InpColorControlReds[i], color_picker_table.red_default, time)
+                UpdateDefault(InpColorControlGreens[i], color_picker_table.green_default, time)
+                UpdateDefault(InpColorControlBlues[i], color_picker_table.blue_default, time)
+            end
 
             -- If the Rest button is pressed, we only have access to the default parameters in the form
             -- of the INP_Default attribute (not the source code).
@@ -475,6 +542,15 @@ function NotifyChanged(inp, param, time)
                 end
                 for i = 0, table_len(InpComboBoxes) - 1 do
                     InpComboBoxes[i]:SetSource(Number(InpComboBoxes[i]:GetAttr("INP_Default")), time)
+                end
+                for i = 0, table_len(InpColorControlReds) - 1 do
+                    InpColorControlReds[i]:SetSource(Number(InpColorControlReds[i]:GetAttr("INP_Default")), time)
+                end
+                for i = 0, table_len(InpColorControlGreens) - 1 do
+                    InpColorControlGreens[i]:SetSource(Number(InpColorControlGreens[i]:GetAttr("INP_Default")), time)
+                end
+                for i = 0, table_len(InpColorControlBlues) - 1 do
+                    InpColorControlBlues[i]:SetSource(Number(InpColorControlBlues[i]:GetAttr("INP_Default")), time)
                 end
             end
 
@@ -512,6 +588,18 @@ function NotifyChanged(inp, param, time)
                     LINKS_Name = combo_box_table.label,
                     IC_Visible = true,
                     combo_box_table.dropdown_options
+                })
+            end
+            for i, color_picker_table in pairs(params.color_pickers) do
+                InpColorControlReds[i]:SetAttrs({
+                    ICS_Name = color_picker_table.label,
+                    IC_Visible = true
+                })
+                InpColorControlGreens[i]:SetAttrs({
+                    IC_Visible = true
+                })
+                InpColorControlBlues[i]:SetAttrs({
+                    IC_Visible = true
                 })
             end
         end
@@ -633,19 +721,22 @@ function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
     local num_value_boxes = table_len(params.value_boxes)
     local num_check_boxes = table_len(params.check_boxes)
     local num_combo_boxes = table_len(params.combo_boxes)
+    local num_color_pickers = table_len(params.color_pickers)
     if debug then
         print(string.format("Found %d float sliders", num_float_sliders))
         print(string.format("Found %d int sliders", num_int_sliders))
         print(string.format("Found %d value boxes", num_value_boxes))
         print(string.format("Found %d check boxes", num_check_boxes))
         print(string.format("Found %d combo boxes", num_combo_boxes))
+        print(string.format("Found %d color pickers", num_color_pickers))
     end
     local param_counts = {
         num_float_sliders = num_float_sliders,
         num_int_sliders = num_int_sliders,
         num_value_boxes = num_value_boxes,
         num_check_boxes = num_check_boxes,
-        num_combo_boxes = num_combo_boxes
+        num_combo_boxes = num_combo_boxes,
+        num_color_pickers = num_color_pickers
     }
 
     local dctl_parameters = string.format([[
@@ -654,8 +745,9 @@ function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
         float value_box_params[%d];
         int check_box_params[%d];
         int combo_box_params[%d];
+        float color_picker_params[%d][3];
         ]], math.max(1, num_float_sliders), math.max(1, num_int_sliders), math.max(1, num_value_boxes),
-        math.max(1, num_check_boxes), math.max(1, num_combo_boxes))
+        math.max(1, num_check_boxes), math.max(1, num_combo_boxes), math.max(1, num_color_pickers))
 
     if debug then
         print("Parameter Struct: ")
@@ -689,6 +781,13 @@ function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
         transform_extra_params = transform_extra_params .. string.format(", params->combo_box_params[%d]", i)
         transform_parameter_declarations = transform_parameter_declarations ..
                                                string.format(", int %s", combo_box.var_name)
+    end
+    for i, color_picker in pairs(params.color_pickers) do
+        transform_extra_params = transform_extra_params .. string.format(
+            ", __make_DCTLColorPickerParam(params->color_picker_params[%d][0], params->color_picker_params[%d][1], params->color_picker_params[%d][2])",
+            i, i, i)
+        transform_parameter_declarations = transform_parameter_declarations ..
+                                               string.format(", DCTLColorPickerParam %s", color_picker.var_name)
     end
 
     -- Replace transform function with augmented one with new parameters.
@@ -856,6 +955,24 @@ __DEVICE__ float __tex2D_override(__TEXTURESTRUCT__ ptex, int x, int y) {
 
     end
 
+    if table_len(params.color_pickers) then
+        local color_picker_type_declarations = [[
+typedef struct {
+    float r;
+    float g;
+    float b;
+} DCTLColorPickerParam;
+
+__DEVICE__ DCTLColorPickerParam __make_DCTLColorPickerParam(float r, float g, float b) {
+    DCTLColorPickerParam out = {};
+    out.r = r;
+    out.g = g;
+    out.b = b;
+    return out;
+}]]
+        preprocessed_content = string.insert(preprocessed_content, color_picker_type_declarations, 0)
+    end
+
     -- Rename kernel so that each dctl has a unique kernel. This fixes a bug with Fusion caching where
     -- multiple DCTL Interpreters in a row would be broken.
     local kernel_name = self.Name .. string.gsub(string.gsub(dctl_fn, "%.dctl", ""), "[^%w]", "__")
@@ -923,6 +1040,11 @@ function Process(req)
             end
             for i = 0, param_counts.num_combo_boxes - 1 do
                 paramsRef.combo_box_params[i] = InpComboBoxes[i]:GetValue(req).Value
+            end
+            for i = 0, param_counts.num_color_pickers - 1 do
+                paramsRef.color_picker_params[i][0] = InpColorControlReds[i]:GetValue(req).Value
+                paramsRef.color_picker_params[i][1] = InpColorControlGreens[i]:GetValue(req).Value
+                paramsRef.color_picker_params[i][2] = InpColorControlBlues[i]:GetValue(req).Value
             end
             node:SetParamBlock(paramsRef)
 
