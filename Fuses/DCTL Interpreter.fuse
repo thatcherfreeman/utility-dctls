@@ -20,7 +20,6 @@ function table_len(t)
     return counter
 end
 
-
 function print_table(t, indentation)
     if indentation == nil then
         indentation = 0
@@ -75,7 +74,7 @@ function Create()
         INPID_InputControl = "ButtonControl",
         INP_DoNotifyChanged = true,
         INP_External = false,
-        INPS_StatusText = "Reset the arguments of the chosen DCTL to their defaults.",
+        INPS_StatusText = "Reset the arguments of the chosen DCTL to their defaults."
     })
 
     DCTLFile = self:AddInput("DCTL File", "DCTLFile", {
@@ -88,7 +87,7 @@ function Create()
         INP_DoNotifyChanged = true,
         INP_ForceNotify = false,
         INP_InitialNotify = true,
-        INPS_StatusText = "Select your DCTL here.",
+        INPS_StatusText = "Select your DCTL here."
     })
 
     -- DCTL PARAMETERS
@@ -156,7 +155,7 @@ function Create()
                 INPID_InputControl = "ColorControl",
                 CLRC_ShowWheel = false,
                 INP_Default = MAGIC_DEFAULT,
-                IC_ControlGroup = i+1,
+                IC_ControlGroup = i + 1,
                 IC_ControlID = 0,
                 IC_Visible = false
             })
@@ -165,7 +164,7 @@ function Create()
                 LINKID_DataType = "Number",
                 INPID_InputControl = "ColorControl",
                 INP_Default = MAGIC_DEFAULT,
-                IC_ControlGroup = i+1,
+                IC_ControlGroup = i + 1,
                 IC_ControlID = 1,
                 IC_Visible = false
             })
@@ -174,7 +173,7 @@ function Create()
                 LINKID_DataType = "Number",
                 INPID_InputControl = "ColorControl",
                 INP_Default = MAGIC_DEFAULT,
-                IC_ControlGroup = i+1,
+                IC_ControlGroup = i + 1,
                 IC_ControlID = 2,
                 IC_Visible = false
             })
@@ -344,7 +343,8 @@ function ExtractParameters(dctl_source)
 
     -- VALUE BOXES
     local value_boxes = {}
-    local value_box_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_VALUE_BOX%s*,%s*([%-%d%.eE]+)f?%s*%)"
+    local value_box_pattern =
+        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_VALUE_BOX%s*,%s*([%-%d%.eE]+)f?%s*%)"
     local ret1 = 0
     local rhs = 0
     local value_box_counter = 0
@@ -598,7 +598,7 @@ function NotifyChanged(inp, param, time)
                     INP_MinScale = float_slider_table.min_val,
                     INP_MaxScale = float_slider_table.max_val,
                     IC_Visible = true,
-                    INPS_StatusText = params.tooltips[float_slider_table.label],
+                    INPS_StatusText = params.tooltips[float_slider_table.label]
                 })
             end
             for i, int_slider_table in pairs(params.int_sliders) do
@@ -607,21 +607,21 @@ function NotifyChanged(inp, param, time)
                     INP_MinScale = int_slider_table.min_val,
                     INP_MaxScale = int_slider_table.max_val,
                     IC_Visible = true,
-                    INPS_StatusText = params.tooltips[int_slider_table.label],
+                    INPS_StatusText = params.tooltips[int_slider_table.label]
                 })
             end
             for i, value_box_table in pairs(params.value_boxes) do
                 InpValueBoxes[i]:SetAttrs({
                     LINKS_Name = value_box_table.label,
                     IC_Visible = true,
-                    INPS_StatusText = params.tooltips[value_box_table.label],
+                    INPS_StatusText = params.tooltips[value_box_table.label]
                 })
             end
             for i, check_box_table in pairs(params.check_boxes) do
                 InpCheckBoxes[i]:SetAttrs({
                     LINKS_Name = check_box_table.label,
                     IC_Visible = true,
-                    INPS_StatusText = params.tooltips[check_box_table.label],
+                    INPS_StatusText = params.tooltips[check_box_table.label]
                 })
             end
             for i, combo_box_table in pairs(params.combo_boxes) do
@@ -629,22 +629,22 @@ function NotifyChanged(inp, param, time)
                     LINKS_Name = combo_box_table.label,
                     IC_Visible = true,
                     combo_box_table.dropdown_options,
-                    INPS_StatusText = params.tooltips[combo_box_table.label],
+                    INPS_StatusText = params.tooltips[combo_box_table.label]
                 })
             end
             for i, color_picker_table in pairs(params.color_pickers) do
                 InpColorControlReds[i]:SetAttrs({
                     ICS_Name = color_picker_table.label,
                     IC_Visible = true,
-                    INPS_StatusText = params.tooltips[color_picker_table.label],
+                    INPS_StatusText = params.tooltips[color_picker_table.label]
                 })
                 InpColorControlGreens[i]:SetAttrs({
                     IC_Visible = true,
-                    INPS_StatusText = params.tooltips[color_picker_table.label],
+                    INPS_StatusText = params.tooltips[color_picker_table.label]
                 })
                 InpColorControlBlues[i]:SetAttrs({
                     IC_Visible = true,
-                    INPS_StatusText = params.tooltips[color_picker_table.label],
+                    INPS_StatusText = params.tooltips[color_picker_table.label]
                 })
             end
         end
