@@ -10,7 +10,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
 - [The Fuses](#the-fuses)
     - [Fuses](#fuses)
         - [Corner Repositioner](#corner-repositioner)
-        - [DCTL Interpreter](#dctl-interpreter)
+        - [DCTL Interpreter Fuse](#dctl-interpreter-fuse)
         - [FrameAvg Fuse](#frameavg-fuse)
         - [HDR Blending Fuse](#hdr-blending-fuse)
         - [Linear Exposure Fuse](#linear-exposure-fuse)
@@ -171,7 +171,7 @@ Corner positioning tool that actually works. You place four control points on th
 
 ---
 
-### DCTL Interpreter
+### DCTL Interpreter Fuse
 Adds support for DCTLs within Fusion Studio rather than just Resolve. This is done by reading in a DCTL file and any headers, then rewriting several parts of the source code so it can be run natively within the Fuse DCTL framework (which is somewhat different than the Resolve DCTL framework).
 
 #### Parameters
@@ -180,6 +180,8 @@ Adds support for DCTLs within Fusion Studio rather than just Resolve. This is do
 **Debug to Console**: Prints out the changes made to the source code and the quantity of captured params.
 
 **Explicitly Typecast Builtin Funcs**: The Fuse DCTL framework has a bug where builtin functions like `_exp2f()`, when provided with an integer argument, will cause the DCTL to fail to build. As a workaround, if you check this box I parse all the code and inject the appropriate type cast to each parameter. This can have some performance impact if your DCTL is large enough as it's a lot of string manipulations that would take place every frame.
+
+**Skip Duplicate Imports**: If checked, then when we read in code we will skip #include statements that already have been imported. This helps shorten the amount of code printed to the console when debugging and the amount of code compiled, but does not really seem to affect runtime at all.
 
 **Don't run the DCTL Code**: Self explanatory, If your DCTL is causing Fusion to crash, checking this box might help you help me debug it. Doesn't always stop Fusion from crashing though.
 

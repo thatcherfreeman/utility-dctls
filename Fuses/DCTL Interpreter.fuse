@@ -197,6 +197,14 @@ function Create()
         IC_Visible = true,
         INPS_StatusText = "If your DCTL build fails, try checking this box. There is a playback performance penalty though."
     })
+    SkipDuplicateImports = self:AddInput("Skip Duplicate Imports", "SkipDuplicateImports", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "CheckboxControl",
+        INP_Default = 0.0,
+        INP_Integer = true,
+        IC_Visible = true,
+        INPS_StatusText = "If the code imports the same file twice, don't bother the second time."
+    })
     DontRun = self:AddInput("Don't Run the DCTL Code", "DontRun", {
         LINKID_DataType = "Number",
         INPID_InputControl = "CheckboxControl",
@@ -214,6 +222,23 @@ function Create()
         LINKID_DataType = "Image",
         LINK_Main = 1
     })
+
+    code_cache = {
+        -- Cached return values
+        kernel_name = nil,
+        preprocessed_content = nil,
+        parameters_name = nil,
+        dctl_parameters = nil,
+        param_count = nil,
+
+        -- Arguments
+        dctl_fn = nil,
+        debug = nil,
+        auto_typecast = nil,
+        skip_duplicate_imports = nil,
+        img_width = nil,
+        img_height = nil
+    }
 end
 
 function OpenDCTL(filename)
@@ -246,7 +271,10 @@ function IsAlphaStraight(text)
     return text, is_straight
 end
 
-function OpenAndStripDCTL(filename)
+function OpenAndStripDCTL(filename, skip_duplicate_imports, imported_headers)
+    if imported_headers == nil then
+        imported_headers = {}
+    end
     local dctl_contents = OpenDCTL(filename)
     local out_content = StripComments(dctl_contents)
     out_content = StripACESParams(out_content)
@@ -267,11 +295,17 @@ function OpenAndStripDCTL(filename)
                 print("ERROR: Found #include statement but cannot parse the working directory for path ", filename)
                 break
             end
-            local header_contents, header_is_straight_alpha = OpenAndStripDCTL(starting_directory .. h_fn)
-            -- Insert the contents of the .h file immediately after the include
-            -- statement so that it can be read as well.
-            out_content = string.insert(out_content, header_contents, rhs)
-            is_straight_alpha = is_straight_alpha or header_is_straight_alpha
+            local next_header_fn = starting_directory .. h_fn
+            local header_contents, header_is_straight_alpha
+            if imported_headers[next_header_fn] == nil or not skip_duplicate_imports then
+                header_contents, header_is_straight_alpha = OpenAndStripDCTL(next_header_fn, skip_duplicate_imports,
+                    imported_headers)
+                imported_headers[next_header_fn] = true
+                -- Insert the contents of the .h file immediately after the include
+                -- statement so that it can be read as well.
+                out_content = string.insert(out_content, header_contents, rhs)
+                is_straight_alpha = is_straight_alpha or header_is_straight_alpha
+            end
         end
     until (ret1 == nil)
     out_content = string.gsub(out_content, include_pattern, "")
@@ -534,7 +568,7 @@ function NotifyChanged(inp, param, time)
             elseif (inp == ResetParamsButton) then
                 dctl_fn = DCTLFile:GetSource(time).Value
             end
-            local content, is_straight_alpha = OpenAndStripDCTL(dctl_fn)
+            local content, is_straight_alpha = OpenAndStripDCTL(dctl_fn, true)
 
             -- Call ExtractParameters
             -- Rename parameters and update the Visibility attribute on all DCTL parameters.
@@ -742,15 +776,36 @@ function typecast_builtin_funcs(dctl_source)
     return dctl_source_new
 end
 
-function rewrite_code(dctl_fn, debug, auto_typecast, img_width, img_height)
-    -- TODO: make it so this function isn't called every frame, but only when a new dctl is pulled.
+function rewrite_code(dctl_fn, debug, auto_typecast, skip_duplicate_imports, img_width, img_height)
+    if dctl_fn == code_cache.dctl_fn and debug == code_cache.debug and auto_typecast == code_cache.auto_typecast and
+        skip_duplicate_imports == code_cache.skip_duplicate_imports and img_width == code_cache.img_width and img_height ==
+        code_cache.img_height then
+        -- All arguments are the same as last time, simply rerun code.
+        if debug then
+            print("Using cached code!")
+        end
+        return code_cache.kernel_name, code_cache.preprocessed_content, code_cache.parameters_name,
+            code_cache.dctl_parameters, code_cache.param_counts
+    else
+        -- Store arguments for cache next run.
+        if debug then
+            print("Updating cache...")
+        end
+        code_cache.dctl_fn = dctl_fn
+        code_cache.debug = debug
+        code_cache.auto_typecast = auto_typecast
+        code_cache.skip_duplicate_imports = skip_duplicate_imports
+        code_cache.img_width = img_width
+        code_cache.img_height = img_height
+    end
+
     if debug then
         local original_content = OpenDCTL(dctl_fn)
         print("Original DCTL:")
         print(original_content)
     end
 
-    local preprocessed_content, is_straight_alpha = OpenAndStripDCTL(dctl_fn)
+    local preprocessed_content, is_straight_alpha = OpenAndStripDCTL(dctl_fn, skip_duplicate_imports)
 
     if auto_typecast then
         preprocessed_content = typecast_builtin_funcs(preprocessed_content)
@@ -1068,6 +1123,13 @@ __KERNEL__ void %s(__CONSTANTREF__ %s *params, __TEXTURE2D__ inputTexture, __TEX
         print(preprocessed_content)
     end
 
+    -- Update the cache for next time.
+    code_cache.kernel_name = kernel_name
+    code_cache.preprocessed_content = preprocessed_content
+    code_cache.parameters_name = parameters_name
+    code_cache.dctl_parameters = dctl_parameters
+    code_cache.param_counts = param_counts
+
     return kernel_name, preprocessed_content, parameters_name, dctl_parameters, param_counts
 end
 
@@ -1077,12 +1139,13 @@ function Process(req)
     local debug = DebugBox:GetValue(req).Value > 0.5
     local auto_typecast = AutoTypecast:GetValue(req).Value > 0.5
     local dont_run = DontRun:GetValue(req).Value > 0.5
+    local skip_duplicate_imports = SkipDuplicateImports:GetValue(req).Value > 0.5
 
     if dctl_fn == nil or dctl_fn == "" then
         OutImage:Set(req, img)
     elseif not req:IsPreCalc() then
         local kernel_name, preprocessed_content, parameters_name, dctl_parameters, param_counts = rewrite_code(dctl_fn,
-            debug, auto_typecast, img.Width, img.Height)
+            debug, auto_typecast, skip_duplicate_imports, img.Width, img.Height)
 
         if dont_run then
             OutImage:Set(req, img)
@@ -1118,7 +1181,6 @@ function Process(req)
             end
             paramsRef.timeline_frame_index = req.Time
             node:SetParamBlock(paramsRef)
-
             success = node:RunSession(req)
             OutImage:Set(req, out)
         end
