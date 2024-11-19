@@ -1098,6 +1098,16 @@ __DEVICE__ float RAND(uint seed) {
         preprocessed_content = string.insert(preprocessed_content, rand_declaration, 0)
     end
 
+    -- Resolve minor and major version numbers
+    if string.find(preprocessed_content, "__RESOLVE_VER_MAJOR__") ~= nil or
+        string.find(preprocessed_content, "__RESOLVE_VER_MINOR__") ~= nil then
+        local version_indicators = [[
+#define __RESOLVE_VER_MAJOR__ 19
+#define __RESOLVE_VER_MINOR__ 1
+        ]]
+        preprocessed_content = string.insert(preprocessed_content, version_indicators, 0)
+    end
+
     -- Rename kernel so that each dctl has a unique kernel. This fixes a bug with Fusion caching where
     -- multiple DCTL Interpreters in a row would be broken.
     local kernel_name = self.Name .. string.gsub(string.gsub(dctl_fn, "%.dctl", ""), "[^%w]", "__")
