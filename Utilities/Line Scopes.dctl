@@ -1,0 +1,226 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(endpoint_1_x, Endpoint 1 X, DCTLUI_SLIDER_FLOAT, 0.25, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(endpoint_1_y, Endpoint 1 Y, DCTLUI_SLIDER_FLOAT, 0.25, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(endpoint_2_x, Endpoint 2 X, DCTLUI_SLIDER_FLOAT, 0.75, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(endpoint_2_y, Endpoint 2 Y, DCTLUI_SLIDER_FLOAT, 0.75, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(scope_pos_x, Scope Position X, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(scope_pos_y, Scope Position Y, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(scope_size, Scope Size, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(scope_opacity, Scope Opacity, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(dot_size, Scope Dot Size, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 10.0, 0.01)
+DEFINE_UI_PARAMS(zoom, Zoom, DCTLUI_SLIDER_FLOAT, 1.0, 0.10, 2.0, 0.01)
+DEFINE_UI_PARAMS(alt_zoom, Alt Zoom, DCTLUI_SLIDER_FLOAT, 1.0, 0.10, 10.0, 0.01)
+DEFINE_UI_PARAMS(num_samples, Num Samples, DCTLUI_SLIDER_INT, 100, 1, 300, 1)
+DEFINE_UI_PARAMS(draw_grid, Draw Grid, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(draw_line, Draw Line, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(draw_crosshairs, Draw Crosshairs, DCTLUI_CHECK_BOX, 1)
+
+DEFINE_UI_PARAMS(scope_type, Scope Type, DCTLUI_COMBO_BOX, 0, {SCOPE_WAVEFORM_LUM, SCOPE_WAVEFORM_RGB, SCOPE_HISTOGRAM_LUM, SCOPE_HISTOGRAM_RGB}, {Lum Waveform, RGB Waveform, Lum Histogram, RGB Histogram})
+
+// clang-format on
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float dot_product(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+// Inclusive on bounds. Assume left_bottom <= right_top
+typedef struct {
+        int2 left_bottom; // to be specified in terms of cartesian pixel coordinates
+        int2 right_top;
+} bounding_box_t;
+
+__DEVICE__ bounding_box_t make_bounding_box(int2 left_bottom, int2 right_top) {
+    bounding_box_t box = {};
+    box.left_bottom = left_bottom;
+    box.right_top = right_top;
+    return box;
+}
+
+__DEVICE__ inline bool inside_bounding_box(float2 curr_pos, bounding_box_t box) {
+    return (box.left_bottom.x <= curr_pos.x && curr_pos.x <= box.right_top.x && box.left_bottom.y <= curr_pos.y && curr_pos.y <= box.right_top.y);
+}
+
+__DEVICE__ bool is_near_line_segment(float2 segment_start, float2 segment_end, float2 curr_pos, float eps) {
+    float2 segment_vector = segment_end - segment_start;
+    float2 point_vector = curr_pos - segment_start;
+    float segment_length = _hypotf(segment_vector.x, segment_vector.y);
+    float projection_length =
+        dot_product(make_float3(segment_vector.x, segment_vector.y, 0.0), make_float3(point_vector.x, point_vector.y, 0.0)) / segment_length;
+    float2 projection_point = segment_start + (segment_vector * (projection_length / segment_length));
+    float distance_to_segment = _hypotf(curr_pos.x - projection_point.x, curr_pos.y - projection_point.y);
+
+    return (distance_to_segment < eps && projection_length >= 0.0 && projection_length <= segment_length);
+}
+
+__DEVICE__ bool draw_crosshair(float2 curr_pos, float2 crosshair_pos, float crosshair_size) {
+    float crosshair_thickness = 0.2 * crosshair_size;
+    bool vertical = (_fabs(curr_pos.x - crosshair_pos.x) < crosshair_thickness / 2.0f) && (_fabs(curr_pos.y - crosshair_pos.y) < crosshair_size / 2.0f);
+    bool horizontal = (_fabs(curr_pos.y - crosshair_pos.y) < crosshair_thickness / 2.0f) && (_fabs(curr_pos.x - crosshair_pos.x) < crosshair_size / 2.0f);
+    return (vertical || horizontal);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    float3 input_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+    float3 output_color = input_color;
+    dot_size /= 1000.0f;
+
+    // Compute scope bounds
+    int box_size = (int)(_fminf((float)p_Height, (float)p_Width) * scope_size);
+
+    bounding_box_t scope_bounding_box = make_bounding_box(make_int2((int)(scope_pos_x * p_Width), (int)(scope_pos_y * p_Height)),
+                                                          make_int2((int)(scope_pos_x * p_Width + box_size), (int)(scope_pos_y * p_Height + box_size)));
+
+    bounding_box_t scope_margin =
+        make_bounding_box(make_int2((int)(p_Width - box_size), (int)(p_Height - box_size)), make_int2((int)(p_Width), (int)(p_Height)));
+    scope_bounding_box.left_bottom.x = min(scope_bounding_box.left_bottom.x, scope_margin.left_bottom.x);
+    scope_bounding_box.left_bottom.y = min(scope_bounding_box.left_bottom.y, scope_margin.left_bottom.y);
+    scope_bounding_box.right_top.x = min(scope_bounding_box.right_top.x, scope_margin.right_top.x);
+    scope_bounding_box.right_top.y = min(scope_bounding_box.right_top.y, scope_margin.right_top.y);
+    float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0 - p_Y);
+
+    float crosshair_size = p_Height / 100.0f;
+    // All below are Image coordinates, y=0 in top left. However, the UI control endpoint_1_y is 0 in bottom left.
+    float2 endpoint1 = make_float2(endpoint_1_x * (p_Width - 1), (1.0 - endpoint_1_y) * (p_Height - 1));
+    float2 endpoint2 = make_float2(endpoint_2_x * (p_Width - 1), (1.0 - endpoint_2_y) * (p_Height - 1));
+    float2 curr_pos_img = make_float2((float)p_X, (float)p_Y);
+    float3 scope_color = output_color;
+    if (draw_crosshairs && draw_crosshair(make_float2((float)p_X, (float)p_Y), endpoint1, crosshair_size)) {
+        scope_color = 1.0 - input_color;
+    }
+    if (draw_crosshairs && draw_crosshair(make_float2((float)p_X, (float)p_Y), endpoint2, crosshair_size)) {
+        scope_color = 1.0 - input_color;
+    }
+    if (draw_line && is_near_line_segment(endpoint1, endpoint2, curr_pos_img, crosshair_size / 10.0)) {
+        scope_color = 1.0 - input_color;
+    }
+
+    if (inside_bounding_box(curr_pos, scope_bounding_box)) {
+        scope_color = make_float3(0.0, 0.0, 0.0);
+
+        if (scope_type == SCOPE_WAVEFORM_LUM || scope_type == SCOPE_WAVEFORM_RGB) {
+            // Only vertical zoom.
+            float middle = 0.5f;
+            const float2 low_bound = make_float2(0.0f, middle - (1.0 / zoom) * middle);
+            const float2 upper_bound = make_float2(1.0f, middle + (1.0 / zoom) * (1.0f - middle));
+
+            float2 position_within_scope = make_float2(_mix(low_bound.x, upper_bound.x, (curr_pos.x - scope_bounding_box.left_bottom.x) / box_size),
+                                                       _mix(low_bound.y, upper_bound.y, (curr_pos.y - scope_bounding_box.left_bottom.y) / box_size));
+
+            // Draw grid
+            if (draw_grid) {
+                if (_fabs(mod(position_within_scope.x, 0.10f)) < dot_size || _fabs(mod(position_within_scope.y, 0.10f)) < dot_size) {
+                    scope_color = make_float3(0.05, 0.05, 0.05);
+                }
+                if (_fabs(mod(position_within_scope.y, 1.0f)) < dot_size * 2) {
+                    scope_color = make_float3(0.1, 0.1, 0.1);
+                }
+            }
+
+            float time_on_line = position_within_scope.x;
+            float2 line_color_pos = _mix(endpoint1, endpoint2, time_on_line);
+            float3 line_color = make_float3(_tex2D(p_TexR, (int)line_color_pos.x, (int)line_color_pos.y),
+                                            _tex2D(p_TexG, (int)line_color_pos.x, (int)line_color_pos.y),
+                                            _tex2D(p_TexB, (int)line_color_pos.x, (int)line_color_pos.y));
+            // Just using mean as luminance weights
+            if (scope_type == SCOPE_WAVEFORM_LUM) {
+                float line_lum = (line_color.x + line_color.y + line_color.z) / 3.0;
+                if (_fabs(line_lum - position_within_scope.y) < dot_size) {
+                    scope_color = make_float3(0.0, 1.0, 0.0);
+                }
+            } else if (scope_type == SCOPE_WAVEFORM_RGB) {
+                if (_fabs(line_color.x - position_within_scope.y) < dot_size) {
+                    scope_color += make_float3(1.0, 0.0, 0.0);
+                }
+                if (_fabs(line_color.y - position_within_scope.y) < dot_size) {
+                    scope_color += make_float3(0.0, 1.0, 0.0);
+                }
+                if (_fabs(line_color.z - position_within_scope.y) < dot_size) {
+                    scope_color += make_float3(0.0, 0.0, 1.0);
+                }
+            }
+        } else if (scope_type == SCOPE_HISTOGRAM_LUM || scope_type == SCOPE_HISTOGRAM_RGB) {
+            // Only horizontal_zoom
+            float middle = 0.5f;
+            float y_middle = 0.0f;
+            const float2 low_bound = make_float2(middle - (1.0 / zoom) * middle, y_middle - (1.0 / alt_zoom) * y_middle);
+            const float2 upper_bound = make_float2(middle + (1.0 / zoom) * (1.0f - middle), y_middle + (1.0 / alt_zoom) * (1.0f - y_middle));
+            int scope_third;
+            float2 position_within_scope;
+            if (scope_type == SCOPE_HISTOGRAM_LUM) {
+                scope_third = 0;
+                position_within_scope = make_float2(_mix(low_bound.x, upper_bound.x, (curr_pos.x - scope_bounding_box.left_bottom.x) / box_size),
+                                                    _mix(low_bound.y, upper_bound.y, (curr_pos.y - scope_bounding_box.left_bottom.y) / box_size));
+            } else if (scope_type == SCOPE_HISTOGRAM_RGB) {
+                scope_third = (int)((curr_pos.y - scope_bounding_box.left_bottom.y) / box_size * 3.0);
+                position_within_scope =
+                    make_float2(_mix(low_bound.x, upper_bound.x, (curr_pos.x - scope_bounding_box.left_bottom.x) / box_size),
+                                _mix(low_bound.y, upper_bound.y, mod((curr_pos.y - scope_bounding_box.left_bottom.y) / (box_size), 1.0 / 3.0)));
+            }
+
+            // Draw grid
+            if (draw_grid) {
+                if (_fabs(mod(position_within_scope.x, 0.10f)) < dot_size) {
+                    scope_color = make_float3(0.05, 0.05, 0.05);
+                }
+                if (_fabs(mod(position_within_scope.x, 1.0f)) < dot_size * 2) {
+                    scope_color = make_float3(0.1, 0.1, 0.1);
+                }
+            }
+            float curr_bucket = position_within_scope.x;
+            float next_bucket = curr_bucket + (1.0 / box_size) * (upper_bound.x - low_bound.x);
+            float4 quantity_in_curr_bucket_rgbw = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+            for (float time_on_line = 0; time_on_line < 1.0; time_on_line += 1.0 / num_samples) {
+                float2 line_color_pos = _mix(endpoint1, endpoint2, time_on_line);
+                float3 line_color = make_float3(_tex2D(p_TexR, (int)line_color_pos.x, (int)line_color_pos.y),
+                                                _tex2D(p_TexG, (int)line_color_pos.x, (int)line_color_pos.y),
+                                                _tex2D(p_TexB, (int)line_color_pos.x, (int)line_color_pos.y));
+                float line_lum = (line_color.x + line_color.y + line_color.z) / 3.0;
+                if (line_lum >= curr_bucket && line_lum < next_bucket) {
+                    quantity_in_curr_bucket_rgbw.w += 1.0;
+                }
+                if (line_color.x >= curr_bucket && line_color.x < next_bucket) {
+                    quantity_in_curr_bucket_rgbw.x += 1.0;
+                }
+                if (line_color.y >= curr_bucket && line_color.y < next_bucket) {
+                    quantity_in_curr_bucket_rgbw.y += 1.0;
+                }
+                if (line_color.z >= curr_bucket && line_color.z < next_bucket) {
+                    quantity_in_curr_bucket_rgbw.z += 1.0;
+                }
+            }
+            quantity_in_curr_bucket_rgbw *= 10.0 / num_samples;
+            if (scope_type == SCOPE_HISTOGRAM_LUM) {
+                if (position_within_scope.y > 0.0f && position_within_scope.y < quantity_in_curr_bucket_rgbw.w) {
+                    scope_color += make_float3(1.0, 1.0, 1.0);
+                }
+            }
+            if (scope_type == SCOPE_HISTOGRAM_RGB) {
+                // Make it shorter so we can have three rows.
+                quantity_in_curr_bucket_rgbw *= 1.0 / 3.0;
+                if (scope_third == 2 && position_within_scope.y > 0.0f && position_within_scope.y < quantity_in_curr_bucket_rgbw.x) {
+                    scope_color += make_float3(1.0, 0.0, 0.0);
+                }
+                if (scope_third == 1 && position_within_scope.y > 0.0f && position_within_scope.y < quantity_in_curr_bucket_rgbw.y) {
+                    scope_color += make_float3(0.0, 1.0, 0.0);
+                }
+                if (scope_third == 0 && position_within_scope.y > 0.0f && position_within_scope.y < quantity_in_curr_bucket_rgbw.z) {
+                    scope_color += make_float3(0.0, 0.0, 1.0);
+                }
+            }
+        }
+    }
+    output_color = _mix(input_color, scope_color, scope_opacity);
+
+    return output_color;
+}

@@ -3,7 +3,7 @@ AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortFunctionsOnASingleLine: false
 BinPackParameters: false
 BinPackArguments: false
-ColumnLimit: 140
+ColumnLimit: 155
 DerivePointerAlignment: false
 PointerAlignment: Left
 IndentAccessModifiers: true

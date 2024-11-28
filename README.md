@@ -106,6 +106,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Gradient Smoothness Chart DCTL](#gradient-smoothness-chart-dctl)
         - [Legacy Log Curve DCTL](#legacy-log-curve-dctl)
         - [Levels Converter](#levels-converter)
+        - [Line Scopes](#line-scopes)
         - [Log Curve DCTL](#log-curve-dctl)
         - [Luminance](#luminance)
         - [Output Blanking DCTL](#output-blanking-dctl)
@@ -1752,6 +1753,35 @@ Converts between full and (0-1023) legal levels (64-940)
 
 **Clip**: Indicates whether to clip extreme values. If Mode is set to `Full to Legal`, then Clip will clip values outside of the range 64-940. Otherwise, clip will clip values outside of the range 0-1023.
 
+---
+
+### Line Scopes
+You draw a line on the image, the pixels along that line are sampled and we use them to generate a scope. IE for the waveform mode, the x-axis represents the position along the line and the Y-axis is the code value sampled.
+
+#### DCTL Parameters
+**Endpoint 1/2 X/Y**: coordinates of the end of the line
+
+**Scope Position X/Y**: Placement of the scope in the frame
+
+**Scope Size**: Size of the scope, IE how much space it takes up in the frame. Smaller is faster.
+
+**Scope Opacity**: Opacity of the scope, if you want to make it transparent.
+
+**Scope Dot Size**: Thickness of dots, when using a scope type that draws dots.
+
+**Zoom**: How zoomed in the scope is, changing the data range that is visible in the scope.
+
+**Alt Zoom**: Controls the other axis of zooming, if applicable to the current scope type.
+
+**Num Samples**: Controls the number of samples along the line, when applicable.
+
+**Draw Grid**: Draws grid lines every 10% code value.
+
+**Draw Line**: Toggles whether the sampled line is draw on the frame. Hide if you have multiple instances of this tool in a row that cover the same region.
+
+**Draw Crosshairs**: Toggles whether the crosshair is drawn in the frame for the endpoints of the line.
+
+**Scope Type**: Indicate what kind of scope to draw for the sampled pixels.
 
 
 ---
