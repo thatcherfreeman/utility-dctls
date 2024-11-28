@@ -55,8 +55,7 @@ __DEVICE__ float3 get_color(int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_
     return make_float3(r, g, b);
 }
 
-__DEVICE__ float3
-sample_point_bilinear(float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+__DEVICE__ float3 sample_point_bilinear(float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     float f_x = get_coord_float(x, p_Width);
     float f_y = get_coord_float(y, p_Height);
 
@@ -92,8 +91,7 @@ __DEVICE__ float convert_gamma(float g) {
     return out;
 }
 
-__DEVICE__ float3
-gaussian_blur(float radius, float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+__DEVICE__ float3 gaussian_blur(float radius, float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     float std = (float)radius / 2.0;
     int window_size = (int)_ceilf(2 * std * 3);
 
@@ -124,8 +122,7 @@ __DEVICE__ inline float exp_k(float x, float y, float r0) {
     return _expf(-_hypotf(x, y) / r0);
 }
 
-__DEVICE__ float3
-exp_blur(float radius, float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+__DEVICE__ float3 exp_blur(float radius, float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     // Adapted from https://github.com/hotgluebanjo/halation-dctl/blob/master/halation.dctl
     int center_x = get_coord(x, p_Width);
     int center_y = get_coord(y, p_Height);

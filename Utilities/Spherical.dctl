@@ -66,8 +66,7 @@ __DEVICE__ float3 rgb_to_spherical(float3 x) {
     float rot_mat2[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
 
     // Moves the achromatic axis to the red axis.
-    make_rotation_mat_axis_angle(
-        rot_mat, unit_vec(cross_product(red_axis, achromatic)), -1.0 * _acosf(dot_product(red_axis, unit_vec(achromatic))));
+    make_rotation_mat_axis_angle(rot_mat, unit_vec(cross_product(red_axis, achromatic)), -1.0 * _acosf(dot_product(red_axis, unit_vec(achromatic))));
     // Rotates around (1, 0, 0) so that the old red vector points to (0, 1, 0).
     make_rotation_mat_axis_angle(rot_mat2, red_axis, 3.0 * PI / 4.0);
 
@@ -93,8 +92,7 @@ __DEVICE__ float3 spherical_to_rgb(float3 in) {
 
     float rot_mat_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
     float rot_mat2_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
-    make_rotation_mat_axis_angle(
-        rot_mat_inv, unit_vec(cross_product(red_axis, achromatic)), _acosf(dot_product(red_axis, unit_vec(achromatic))));
+    make_rotation_mat_axis_angle(rot_mat_inv, unit_vec(cross_product(red_axis, achromatic)), _acosf(dot_product(red_axis, unit_vec(achromatic))));
     make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0 * PI / 4.0);
 
     float hue = mod(in.x * 2.0 * PI, 2.0 * PI);

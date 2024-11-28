@@ -68,8 +68,7 @@ typedef struct {
         float min_value;
 } gaussian_piecewise_params_t;
 
-__DEVICE__ gaussian_piecewise_params_t
-make_gaussian_piecewise_params(float mean, float left_std, float right_std, float max_value, float min_value) {
+__DEVICE__ gaussian_piecewise_params_t make_gaussian_piecewise_params(float mean, float left_std, float right_std, float max_value, float min_value) {
     gaussian_piecewise_params_t out;
     out.mean = mean;
     out.left_std = left_std;
@@ -415,8 +414,7 @@ __DEVICE__ float3 get_observer_value(gaussian_piecewise_params_t dyes[3], int ob
         curr_density = get_density(i, dyes);
         curr_transmittance = _exp10f(-1 * curr_density);
 
-        observed_color +=
-            make_float3(curr_weights.x * curr_transmittance, curr_weights.y * curr_transmittance, curr_weights.z * curr_transmittance);
+        observed_color += make_float3(curr_weights.x * curr_transmittance, curr_weights.y * curr_transmittance, curr_weights.z * curr_transmittance);
     }
 
     // Integrate.
@@ -440,8 +438,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         gel_concentration = input * input_gain;
     }
 
-    gaussian_piecewise_params_t cyan_density =
-        make_gaussian_piecewise_params(cyan_mean, cyan_left_std, cyan_right_std, cyan_max_value, cyan_min_value);
+    gaussian_piecewise_params_t cyan_density = make_gaussian_piecewise_params(cyan_mean, cyan_left_std, cyan_right_std, cyan_max_value, cyan_min_value);
     gaussian_piecewise_params_t magenta_density =
         make_gaussian_piecewise_params(magenta_mean, magenta_left_std, magenta_right_std, magenta_max_value, magenta_min_value);
     gaussian_piecewise_params_t yellow_density =

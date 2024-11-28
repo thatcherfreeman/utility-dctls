@@ -10,8 +10,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     } else {
         coeff = coefficient;
     }
-    float3 output = make_float3(
-        _tanhf(coeff * (p_R - horizontal_offset)), _tanhf(coeff * (p_G - horizontal_offset)), _tanhf(coeff * (p_B - horizontal_offset)));
+    float3 output =
+        make_float3(_tanhf(coeff * (p_R - horizontal_offset)), _tanhf(coeff * (p_G - horizontal_offset)), _tanhf(coeff * (p_B - horizontal_offset)));
     output *= gain;
     return output;
 }

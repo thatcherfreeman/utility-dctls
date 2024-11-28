@@ -78,14 +78,11 @@ __DEVICE__ float blur_kernel(float2 pos_trans, kernel_params_t params) {
         return 0.0;
     }
 
-    return smoothstep2(1.0,
-                       0.0,
-                       powf((distance / params.blur_rad - params.falloff_start) / (1.0 - params.falloff_start),
-                            convert_gamma_to_reals(-1 * params.gamma)));
+    return smoothstep2(
+        1.0, 0.0, powf((distance / params.blur_rad - params.falloff_start) / (1.0 - params.falloff_start), convert_gamma_to_reals(-1 * params.gamma)));
 }
 
-__DEVICE__ float3
-blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, kernel_params_t params) {
+__DEVICE__ float3 blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, kernel_params_t params) {
     float3 total_color = make_float3(0.0, 0.0, 0.0);
     float weight = 0.0;
     if (params.blur_rad < 1) {

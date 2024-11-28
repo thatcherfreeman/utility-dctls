@@ -53,13 +53,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         major_radius = minor_radius * aspect;
     }
 
-    if (draw_rectangle(
-            p_X, p_Y, center_x - major_radius, center_x + major_radius, center_y - minor_radius, center_y + minor_radius, radius)) {
+    if (draw_rectangle(p_X, p_Y, center_x - major_radius, center_x + major_radius, center_y - minor_radius, center_y + minor_radius, radius)) {
         return new_color;
     }
 
-    if (shade_outside(
-            p_X, p_Y, center_x - major_radius, center_x + major_radius, center_y - minor_radius, center_y + minor_radius, radius)) {
+    if (shade_outside(p_X, p_Y, center_x - major_radius, center_x + major_radius, center_y - minor_radius, center_y + minor_radius, radius)) {
         return shade_color;
     }
 

@@ -245,9 +245,8 @@ __DEVICE__ void randomize_contrast(__PRIVATE__ contrast_params_t* params, __PRIV
     params->shoulder = _saturatef(params->shoulder);
 }
 
-__DEVICE__ void unify_rgb_contrasts(__PRIVATE__ contrast_params_t* params_r,
-                                    __PRIVATE__ contrast_params_t* params_g,
-                                    __PRIVATE__ contrast_params_t* params_b) {
+__DEVICE__ void
+unify_rgb_contrasts(__PRIVATE__ contrast_params_t* params_r, __PRIVATE__ contrast_params_t* params_g, __PRIVATE__ contrast_params_t* params_b) {
     // Unify black point and white point
     params_g->black_y = params_r->black_y;
     params_b->black_y = params_r->black_y;

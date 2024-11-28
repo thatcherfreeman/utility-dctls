@@ -59,8 +59,7 @@ __DEVICE__ float single_hue_curve(float x, control_params_t params) {
 }
 
 __DEVICE__ float complementary_hue_curve(float x, control_params_t params) {
-    control_params_t complementary_params = {
-        mod(params.selected_hue + 0.5, 1.0), params.adjustment_amt, params.left_feather, params.right_feather};
+    control_params_t complementary_params = {mod(params.selected_hue + 0.5, 1.0), params.adjustment_amt, params.left_feather, params.right_feather};
     float out = x;
     out = single_hue_curve(out, params);
     out = single_hue_curve(out, complementary_params);
@@ -87,8 +86,7 @@ __DEVICE__ float single_hue_variation_curve(float x, control_params_t params) {
 }
 
 __DEVICE__ float complementary_hue_variation_curve(float x, control_params_t params) {
-    control_params_t complementary_params = {
-        mod(params.selected_hue + 0.5, 1.0), params.adjustment_amt, params.left_feather, params.right_feather};
+    control_params_t complementary_params = {mod(params.selected_hue + 0.5, 1.0), params.adjustment_amt, params.left_feather, params.right_feather};
     float out = x;
     out = single_hue_variation_curve(out, params);
     out = single_hue_variation_curve(out, complementary_params);
@@ -108,13 +106,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     // Calculate the curve
     if (curve_type == SINGLE_HUE && control_type == HUE_ROTATION) {
-        shifted_color = make_float3(
-            single_hue_curve(curr_color.x, params), single_hue_curve(curr_color.y, params), single_hue_curve(curr_color.z, params));
+        shifted_color =
+            make_float3(single_hue_curve(curr_color.x, params), single_hue_curve(curr_color.y, params), single_hue_curve(curr_color.z, params));
         curve_pos_y = single_hue_curve(curr_pos_x, params);
     } else if (curve_type == COMPLEMENTARY_HUES && control_type == HUE_ROTATION) {
-        shifted_color = make_float3(complementary_hue_curve(curr_color.x, params),
-                                    complementary_hue_curve(curr_color.y, params),
-                                    complementary_hue_curve(curr_color.z, params));
+        shifted_color = make_float3(
+            complementary_hue_curve(curr_color.x, params), complementary_hue_curve(curr_color.y, params), complementary_hue_curve(curr_color.z, params));
         curve_pos_y = complementary_hue_curve(curr_pos_x, params);
     } else if (curve_type == SINGLE_HUE && control_type == VARIATION_CONTROL) {
         shifted_color = make_float3(single_hue_variation_curve(curr_color.x, params),

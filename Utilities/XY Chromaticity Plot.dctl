@@ -180,8 +180,7 @@ __DEVICE__ bounding_box_t make_bounding_box(int2 left_bottom, int2 right_top) {
 }
 
 __DEVICE__ inline bool inside_bounding_box(float2 curr_pos, bounding_box_t box) {
-    return (box.left_bottom.x <= curr_pos.x && curr_pos.x <= box.right_top.x && box.left_bottom.y <= curr_pos.y &&
-            curr_pos.y <= box.right_top.y);
+    return (box.left_bottom.x <= curr_pos.x && curr_pos.x <= box.right_top.x && box.left_bottom.y <= curr_pos.y && curr_pos.y <= box.right_top.y);
 }
 
 typedef struct {
@@ -296,11 +295,9 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
 
     switch (gamut) {
         case SRC_GAMUT_ACES_AP0:
-            return make_gamut_primaries(
-                make_float2(0.7347, 0.2653), make_float2(0.0, 1.0), make_float2(0.0001, -0.0770), make_float2(0.32168, 0.33767));
+            return make_gamut_primaries(make_float2(0.7347, 0.2653), make_float2(0.0, 1.0), make_float2(0.0001, -0.0770), make_float2(0.32168, 0.33767));
         case SRC_GAMUT_ACES_AP1:
-            return make_gamut_primaries(
-                make_float2(0.713, 0.293), make_float2(0.165, 0.830), make_float2(0.128, 0.0444), make_float2(0.32168, 0.33767));
+            return make_gamut_primaries(make_float2(0.713, 0.293), make_float2(0.165, 0.830), make_float2(0.128, 0.0444), make_float2(0.32168, 0.33767));
         case SRC_GAMUT_AWG3:
             return make_gamut_primaries(
                 make_float2(0.6840, 0.3130), make_float2(0.2210, 0.8480), make_float2(0.0861, -0.1020), make_float2(0.3127, 0.3290));
@@ -308,8 +305,7 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
             return make_gamut_primaries(
                 make_float2(0.7347, 0.2653), make_float2(0.1424, 0.8576), make_float2(0.0991, -0.0308), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_CANON_CINEMA_GAMUT:
-            return make_gamut_primaries(
-                make_float2(0.74, 0.27), make_float2(0.17, 1.14), make_float2(0.08, -0.1), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.74, 0.27), make_float2(0.17, 1.14), make_float2(0.08, -0.1), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_DWG:
             return make_gamut_primaries(
                 make_float2(0.8000, 0.3130), make_float2(0.1682, 0.9877), make_float2(0.0790, -0.1155), make_float2(0.3127, 0.3290));
@@ -317,31 +313,22 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
             return make_gamut_primaries(
                 make_float2(0.8000, 0.3177), make_float2(0.1800, 0.9000), make_float2(0.0650, -0.0805), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_EGAMUT2:
-            return make_gamut_primaries(
-                make_float2(0.83, 0.31), make_float2(0.15, 0.95), make_float2(0.065, -0.0805), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.83, 0.31), make_float2(0.15, 0.95), make_float2(0.065, -0.0805), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_P3_D65:
-            return make_gamut_primaries(
-                make_float2(0.680, 0.320), make_float2(0.265, 0.690), make_float2(0.150, 0.060), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.680, 0.320), make_float2(0.265, 0.690), make_float2(0.150, 0.060), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_REC709:
-            return make_gamut_primaries(
-                make_float2(0.64, 0.33), make_float2(0.30, 0.60), make_float2(0.15, 0.06), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.64, 0.33), make_float2(0.30, 0.60), make_float2(0.15, 0.06), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_REC2020:
-            return make_gamut_primaries(
-                make_float2(0.708, 0.292), make_float2(0.170, 0.797), make_float2(0.131, 0.046), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.708, 0.292), make_float2(0.170, 0.797), make_float2(0.131, 0.046), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_REDWIDEGAMUTRGB:
-            return make_gamut_primaries(make_float2(0.780308, 0.304253),
-                                        make_float2(0.121595, 1.493994),
-                                        make_float2(0.095612, -0.084589),
-                                        make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(
+                make_float2(0.780308, 0.304253), make_float2(0.121595, 1.493994), make_float2(0.095612, -0.084589), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_SGAMUT3:
-            return make_gamut_primaries(
-                make_float2(0.730, 0.280), make_float2(0.140, 0.855), make_float2(0.100, -0.050), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.730, 0.280), make_float2(0.140, 0.855), make_float2(0.100, -0.050), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_SGAMUT3CINE:
-            return make_gamut_primaries(
-                make_float2(0.766, 0.275), make_float2(0.225, 0.800), make_float2(0.089, -0.087), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.766, 0.275), make_float2(0.225, 0.800), make_float2(0.089, -0.087), make_float2(0.3127, 0.3290));
         case SRC_GAMUT_XYZ:
-            return make_gamut_primaries(
-                make_float2(1.0, 0.0), make_float2(0.0, 1.0), make_float2(0.0, 0.0), make_float2(1.0 / 3.0, 1.0 / 3.0));
+            return make_gamut_primaries(make_float2(1.0, 0.0), make_float2(0.0, 1.0), make_float2(0.0, 0.0), make_float2(1.0 / 3.0, 1.0 / 3.0));
         case SRC_GAMUT_CUSTOM:
         default:
             return default_gamut;
@@ -443,8 +430,7 @@ __DEVICE__ bool is_near_line_segment(float2 segment_start, float2 segment_end, f
     float2 point_vector = curr_pos - segment_start;
     float segment_length = _hypotf(segment_vector.x, segment_vector.y);
     float projection_length =
-        dot_product(make_float3(segment_vector.x, segment_vector.y, 0.0), make_float3(point_vector.x, point_vector.y, 0.0)) /
-        segment_length;
+        dot_product(make_float3(segment_vector.x, segment_vector.y, 0.0), make_float3(point_vector.x, point_vector.y, 0.0)) / segment_length;
     float2 projection_point = segment_start + (segment_vector * (projection_length / segment_length));
     float distance_to_segment = _hypotf(curr_pos.x - projection_point.x, curr_pos.y - projection_point.y);
 
@@ -492,9 +478,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         const float2 low_bound = middle - (1.0 / zoom) * middle;
         const float2 upper_bound = middle + (1.0 / zoom) * (make_float2(1.0f, 1.0f) - middle);
 
-        float2 position_within_histogram =
-            make_float2(_mix(low_bound.x, upper_bound.x, (curr_pos.x - histogram_bounding_box.left_bottom.x) / box_size),
-                        _mix(low_bound.x, upper_bound.x, (curr_pos.y - histogram_bounding_box.left_bottom.y) / box_size));
+        float2 position_within_histogram = make_float2(_mix(low_bound.x, upper_bound.x, (curr_pos.x - histogram_bounding_box.left_bottom.x) / box_size),
+                                                       _mix(low_bound.x, upper_bound.x, (curr_pos.y - histogram_bounding_box.left_bottom.y) / box_size));
         // Draw some triangles for the current gamut and the overall bounds
         float2 triangle_axes[3][3][2] = {
             // xyY CIE standard observer coordinates
@@ -525,8 +510,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
         // Draw grid
         if (draw_grid) {
-            if (_fabs(_fmod(position_within_histogram.x, 0.10f)) < dot_size ||
-                _fabs(_fmod(position_within_histogram.y, 0.10f)) < dot_size) {
+            if (_fabs(_fmod(position_within_histogram.x, 0.10f)) < dot_size || _fabs(_fmod(position_within_histogram.y, 0.10f)) < dot_size) {
                 histogram_color = make_float3(0.05, 0.05, 0.05);
             }
         }
@@ -550,8 +534,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         if (draw_spectral_locus) {
             for (int i = 0; i < (NUM_CMFS - 1); ++i) {
                 float2 segment_start = XYZ_to_xy(make_float3(xyz_cmfs[i][0], xyz_cmfs[i][1], xyz_cmfs[i][2]), source_primaries.white_xy);
-                float2 segment_end =
-                    XYZ_to_xy(make_float3(xyz_cmfs[i + 1][0], xyz_cmfs[i + 1][1], xyz_cmfs[i + 1][2]), source_primaries.white_xy);
+                float2 segment_end = XYZ_to_xy(make_float3(xyz_cmfs[i + 1][0], xyz_cmfs[i + 1][1], xyz_cmfs[i + 1][2]), source_primaries.white_xy);
                 if (invert) {
                     segment_start = standard_observer_to_camera_observer(segment_start, xyz_to_working_33, source_gamut);
                     segment_end = standard_observer_to_camera_observer(segment_end, xyz_to_working_33, source_gamut);
@@ -559,8 +542,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 if (is_near_line_segment(segment_start, segment_end, position_within_histogram, dot_size)) {
                     if (invert) {
                         // histogram_color = mv_33_3(to_xyz_33, xy_to_XYZ(position_within_histogram));
-                        histogram_color =
-                            xy_to_XYZ(camera_observer_to_standard_observer(position_within_histogram, to_xyz_33, source_gamut));
+                        histogram_color = xy_to_XYZ(camera_observer_to_standard_observer(position_within_histogram, to_xyz_33, source_gamut));
                     } else {
                         histogram_color = mv_33_3(xyz_to_working_33, xy_to_XYZ(position_within_histogram));
                     }
@@ -583,14 +565,13 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         bool skip_additional_samples = false;
         for (int sample_idx_x = 0; sample_idx_x < num_x_samples && !skip_additional_samples; ++sample_idx_x) {
             for (int sample_idx_y = 0; sample_idx_y < num_y_samples && !skip_additional_samples; ++sample_idx_y) {
-                int2 curr_sample_pos = make_int2((int)((sample_idx_x + 0.5f) / (num_x_samples)*p_Width),
-                                                 (int)((sample_idx_y + 0.5f) / (num_y_samples)*p_Height));
+                int2 curr_sample_pos =
+                    make_int2((int)((sample_idx_x + 0.5f) / (num_x_samples)*p_Width), (int)((sample_idx_y + 0.5f) / (num_y_samples)*p_Height));
                 float3 curr_color = make_float3(_tex2D(p_TexR, curr_sample_pos.x, curr_sample_pos.y),
                                                 _tex2D(p_TexG, curr_sample_pos.x, curr_sample_pos.y),
                                                 _tex2D(p_TexB, curr_sample_pos.x, curr_sample_pos.y));
 
-                if (_sqrtf(curr_color.x * curr_color.x + curr_color.y * curr_color.y + curr_color.z * curr_color.z) <
-                    ignore_magnitude_below) {
+                if (_sqrtf(curr_color.x * curr_color.x + curr_color.y * curr_color.y + curr_color.z * curr_color.z) < ignore_magnitude_below) {
                     // Skip samples whose magnitude is below the specified threshold, as they tend to have
                     // high chromaticity just due to noise.
                     continue;
@@ -606,8 +587,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 }
                 float2 dot_center = curr_color_xy;
                 if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) < dot_size) {
-                    histogram_color =
-                        _mix(histogram_color, curr_color / ((curr_color.x + curr_color.y + curr_color.z) / 3.0f), dot_opacity);
+                    histogram_color = _mix(histogram_color, curr_color / ((curr_color.x + curr_color.y + curr_color.z) / 3.0f), dot_opacity);
                     skip_additional_samples = dot_opacity > 0.998f;
                 }
             }

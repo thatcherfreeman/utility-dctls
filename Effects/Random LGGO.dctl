@@ -68,8 +68,7 @@ __DEVICE__ float convert_gamma_to_reals(float g) {
 
 __DEVICE__ lggo_params_reals_t convert_lggo_to_reals(lggo_params_t params) {
     // Convert each of the parameters from the Resolve wheels values to the underlying real values.
-    return make_lggo_params(
-        params.lift * 2.0, convert_gamma_to_reals(params.gamma), params.gain, convert_offset_wheel_to_real(params.offset));
+    return make_lggo_params(params.lift * 2.0, convert_gamma_to_reals(params.gamma), params.gain, convert_offset_wheel_to_real(params.offset));
 }
 
 __DEVICE__ float apply_lggo(float x, lggo_params_reals_t params, bool invert) {
@@ -91,8 +90,7 @@ __DEVICE__ float apply_lggo(float x, lggo_params_reals_t params, bool invert) {
     return out;
 }
 
-__DEVICE__ float3
-apply_lggo_f3(float3 x, lggo_params_reals_t r_params, lggo_params_reals_t g_params, lggo_params_reals_t b_params, bool invert) {
+__DEVICE__ float3 apply_lggo_f3(float3 x, lggo_params_reals_t r_params, lggo_params_reals_t g_params, lggo_params_reals_t b_params, bool invert) {
     return make_float3(apply_lggo(x.x, r_params, invert), apply_lggo(x.y, g_params, invert), apply_lggo(x.z, b_params, invert));
 }
 
@@ -116,8 +114,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 input_color = make_float3(p_R, p_G, p_B);
     float x = (float)p_X / (p_Width - 1);
     float y = (float)p_Y / (p_Height - 1);
-    bool skip_chart = ((p_X == 0 && p_Y == p_Height - 1) || (p_X == p_Width - 1 && p_Y == 0) || (p_X == 0 && p_Y == 0) ||
-                       (p_X == p_Width - 1 && p_Y == p_Height - 1));
+    bool skip_chart =
+        ((p_X == 0 && p_Y == p_Height - 1) || (p_X == p_Width - 1 && p_Y == 0) || (p_X == 0 && p_Y == 0) || (p_X == p_Width - 1 && p_Y == p_Height - 1));
 
     if (!skip_chart && gray_ramp && y > 0.9) {
         input_color = make_float3(x, x, x);

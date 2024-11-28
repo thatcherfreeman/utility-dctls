@@ -244,8 +244,7 @@ __DEVICE__ bounding_box_t make_bounding_box(int2 left_bottom, int2 right_top) {
 }
 
 __DEVICE__ inline bool inside_bounding_box(float2 curr_pos, bounding_box_t box) {
-    return (box.left_bottom.x <= curr_pos.x && curr_pos.x <= box.right_top.x && box.left_bottom.y <= curr_pos.y &&
-            curr_pos.y <= box.right_top.y);
+    return (box.left_bottom.x <= curr_pos.x && curr_pos.x <= box.right_top.x && box.left_bottom.y <= curr_pos.y && curr_pos.y <= box.right_top.y);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
@@ -417,8 +416,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                     }
                     float3 position = mv_34_4(net_matrix, to_homogeneous_coordinate_3d(curr_dot_world_pos));
                     float2 dot_center = normalize_homogeneous_coordinate_2d(position);
-                    if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) <
-                        axis_dot_size / position.z) {
+                    if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) < axis_dot_size / position.z) {
                         if (position.z < curr_depth) {
                             histogram_color = curr_dot_color;
                             curr_depth = position.z;
@@ -430,8 +428,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
         for (int sample_idx_x = 0; sample_idx_x < num_x_samples; ++sample_idx_x) {
             for (int sample_idx_y = 0; sample_idx_y < num_y_samples; ++sample_idx_y) {
-                int2 curr_sample_pos = make_int2((int)((sample_idx_x + 0.5f) / (num_x_samples)*p_Width),
-                                                 (int)((sample_idx_y + 0.5f) / (num_y_samples)*p_Height));
+                int2 curr_sample_pos =
+                    make_int2((int)((sample_idx_x + 0.5f) / (num_x_samples)*p_Width), (int)((sample_idx_y + 0.5f) / (num_y_samples)*p_Height));
                 float3 curr_color = make_float3(_tex2D(p_TexR, curr_sample_pos.x, curr_sample_pos.y),
                                                 _tex2D(p_TexG, curr_sample_pos.x, curr_sample_pos.y),
                                                 _tex2D(p_TexB, curr_sample_pos.x, curr_sample_pos.y));
@@ -444,8 +442,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 }
                 float3 position = mv_34_4(net_matrix, to_homogeneous_coordinate_3d(curr_dot_world_pos));
                 float2 dot_center = normalize_homogeneous_coordinate_2d(position);
-                if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) <
-                    dot_size / position.z) {
+                if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) < dot_size / position.z) {
                     if (position.z < curr_depth) {
                         histogram_color = curr_color;
                         curr_depth = position.z;

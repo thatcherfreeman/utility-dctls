@@ -56,8 +56,8 @@ __DEVICE__ float compute_norm(float3 input_rgb, int switcher) {
         lum = _sqrtf(input_rgb.x * input_rgb.x + input_rgb.y * input_rgb.y + input_rgb.z * input_rgb.z);
     } else if (switcher == BOLTZMAN) {
         const float boltzman_parameter = 3.0;
-        float3 weights = make_float3(
-            _expf(boltzman_parameter * input_rgb.x), _expf(boltzman_parameter * input_rgb.y), _expf(boltzman_parameter * input_rgb.z));
+        float3 weights =
+            make_float3(_expf(boltzman_parameter * input_rgb.x), _expf(boltzman_parameter * input_rgb.y), _expf(boltzman_parameter * input_rgb.z));
         lum = (input_rgb.x * weights.x + input_rgb.y * weights.y + input_rgb.z * weights.z) / (weights.x + weights.y + weights.z);
     }
     return lum;

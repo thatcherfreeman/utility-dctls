@@ -100,8 +100,8 @@ __DEVICE__ float gamma_error_function(float gamma, float a, float b, float c) {
     return powf(term1 - term2 + term3, gamma) - b;
 }
 
-__DEVICE__ float continuous_binary_search(
-    float initial_guess, float a, float b, float c, float tolerance, int max_iterations, float lower_bound, float upper_bound) {
+__DEVICE__ float
+continuous_binary_search(float initial_guess, float a, float b, float c, float tolerance, int max_iterations, float lower_bound, float upper_bound) {
     float gamma = initial_guess;
     bool pos_slope = gamma_error_function(lower_bound + 0.01, a, b, c) < gamma_error_function(upper_bound, a, b, c);
     const float boundary_expansion = 1.01;
@@ -448,12 +448,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 float min_offset = _fminf(offsets.x, _fminf(offsets.y, offsets.z));
                 float luminance = rec709_luminance(offsets); // initially 0.0.
 
-                new_lggo_params_r_wheels.offset +=
-                    convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
-                new_lggo_params_g_wheels.offset +=
-                    convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
-                new_lggo_params_b_wheels.offset +=
-                    convert_offset_real_to_printer_lights(offsets.z - min_offset + luminance) - PRINTER_LIGHT_BASE;
+                new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
+                new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
+                new_lggo_params_b_wheels.offset += convert_offset_real_to_printer_lights(offsets.z - min_offset + luminance) - PRINTER_LIGHT_BASE;
             }
         }
 
@@ -492,12 +489,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             float min_offset = _fminf(offsets.x, _fminf(offsets.y, offsets.z));
             float luminance = rec709_luminance(offsets); // initially 0.0.
 
-            new_lggo_params_r_wheels.offset +=
-                convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
-            new_lggo_params_g_wheels.offset +=
-                convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
-            new_lggo_params_b_wheels.offset +=
-                convert_offset_real_to_printer_lights(offsets.z - min_offset + luminance) - PRINTER_LIGHT_BASE;
+            new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
+            new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
+            new_lggo_params_b_wheels.offset += convert_offset_real_to_printer_lights(offsets.z - min_offset + luminance) - PRINTER_LIGHT_BASE;
         }
 
         if (gain_wheel_rebind == GAIN_REBIND_TO_GAIN) {
@@ -533,12 +527,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             float min_offset = _fminf(offsets.x, _fminf(offsets.y, offsets.z));
             float luminance = rec709_luminance(offsets); // initially 0.0.
 
-            new_lggo_params_r_wheels.offset +=
-                convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
-            new_lggo_params_g_wheels.offset +=
-                convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
-            new_lggo_params_b_wheels.offset +=
-                convert_offset_real_to_printer_lights(offsets.z - min_offset + luminance) - PRINTER_LIGHT_BASE;
+            new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
+            new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
+            new_lggo_params_b_wheels.offset += convert_offset_real_to_printer_lights(offsets.z - min_offset + luminance) - PRINTER_LIGHT_BASE;
         }
 
         if (wheels == WHEELS_OGG) {
@@ -563,8 +554,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 new_lggo_params_g_wheels.gain *= _fmaxf(offset_real_g + 1.0, 0.0);
                 new_lggo_params_b_wheels.gain *= _fmaxf(offset_real_b + 1.0, 0.0);
             } else if (offset_wheel_rebind == OFFSET_REBIND_TO_NORMALIZED_GAIN) {
-                float3 gains =
-                    make_float3(_fmaxf(offset_real_r + 1.0, 0.0), _fmaxf(offset_real_g + 1.0, 0.0), _fmaxf(offset_real_b + 1.0, 0.0));
+                float3 gains = make_float3(_fmaxf(offset_real_r + 1.0, 0.0), _fmaxf(offset_real_g + 1.0, 0.0), _fmaxf(offset_real_b + 1.0, 0.0));
                 float max_gain = _fmaxf(gains.x, _fmaxf(gains.y, gains.z));
                 float luminance = rec709_luminance(gains); // initially 1.0
                 float exposure_adjustment = luminance;
@@ -580,12 +570,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 float min_offset = _fminf(offsets.x, _fminf(offsets.y, offsets.z));
                 float luminance = rec709_luminance(offsets); // initially 0.0.
 
-                new_lggo_params_r_wheels.offset +=
-                    convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
-                new_lggo_params_g_wheels.offset +=
-                    convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
-                new_lggo_params_b_wheels.offset +=
-                    convert_offset_real_to_printer_lights(offsets.z - min_offset + luminance) - PRINTER_LIGHT_BASE;
+                new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
+                new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
+                new_lggo_params_b_wheels.offset += convert_offset_real_to_printer_lights(offsets.z - min_offset + luminance) - PRINTER_LIGHT_BASE;
             }
         }
 

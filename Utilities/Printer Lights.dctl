@@ -25,8 +25,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float blue_lights = (exposure - neutral_point) + (blue - neutral_point) + (cyan - neutral_point) + (magenta - neutral_point);
 
     float3 input_color = make_float3(p_R, p_G, p_B);
-    float3 output_color = make_float3(apply_lights(input_color.x, red_lights, gamma),
-                                      apply_lights(input_color.y, green_lights, gamma),
-                                      apply_lights(input_color.z, blue_lights, gamma));
+    float3 output_color = make_float3(
+        apply_lights(input_color.x, red_lights, gamma), apply_lights(input_color.y, green_lights, gamma), apply_lights(input_color.z, blue_lights, gamma));
     return output_color;
 }

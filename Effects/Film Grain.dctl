@@ -223,19 +223,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         rand_state initial_state_value_green = *state;
         rand_state initial_state_value_blue = *state;
 
-        output_color.x = convert_photons_to_transmittance(
-            curr_color.x, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, &initial_state_value_red);
-        output_color.y = convert_photons_to_transmittance(
-            curr_color.y, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, &initial_state_value_green);
-        output_color.z = convert_photons_to_transmittance(
-            curr_color.z, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, &initial_state_value_blue);
-    } else {
         output_color.x =
-            convert_photons_to_transmittance(curr_color.x, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, state);
+            convert_photons_to_transmittance(curr_color.x, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, &initial_state_value_red);
         output_color.y =
-            convert_photons_to_transmittance(curr_color.y, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, state);
+            convert_photons_to_transmittance(curr_color.y, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, &initial_state_value_green);
         output_color.z =
-            convert_photons_to_transmittance(curr_color.z, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, state);
+            convert_photons_to_transmittance(curr_color.z, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, &initial_state_value_blue);
+    } else {
+        output_color.x = convert_photons_to_transmittance(curr_color.x, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, state);
+        output_color.y = convert_photons_to_transmittance(curr_color.y, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, state);
+        output_color.z = convert_photons_to_transmittance(curr_color.z, activation_threshold, num_grains_per_pixel, num_layers, dmax, dmin, state);
     }
     return output_color;
 }

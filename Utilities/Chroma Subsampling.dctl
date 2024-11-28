@@ -99,9 +99,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     for (int r = 0; r < 2; ++r) {
         for (int c = 0; c < 4; ++c) {
-            float3 color = make_float3(_tex2D(p_TexR, r_orig_x + c, r_orig_y + r),
-                                       _tex2D(p_TexG, r_orig_x + c, r_orig_y + r),
-                                       _tex2D(p_TexB, r_orig_x + c, r_orig_y + r));
+            float3 color = make_float3(
+                _tex2D(p_TexR, r_orig_x + c, r_orig_y + r), _tex2D(p_TexG, r_orig_x + c, r_orig_y + r), _tex2D(p_TexB, r_orig_x + c, r_orig_y + r));
             color = rgb_d_to_ycbcr(rgb_to_rgb_d(color));
             region[r][c] = color;
         }

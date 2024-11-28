@@ -31,11 +31,11 @@ __DEVICE__ float powf(float base, float exp) {
 #define FONT_HEIGHT 16
 #define FONT_LENGTH 127
 
-__CONSTANT__ int font_widths[FONT_LENGTH] = {
-    12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
-    12, 4,  7,  9,  8,  10, 9,  4,  5,  5,  8,  8,  4,  7,  4,  8,  8,  5,  8,  8,  9,  8,  8,  8,  8,  8,  4,  4,  8,  8,  8,  8,
-    12, 8,  8,  8,  8,  8,  8,  8,  8,  4,  8,  8,  8,  10, 8,  8,  8,  8,  8,  8,  8,  8,  8,  10, 8,  8,  8,  5,  8,  5,  8,  8,
-    5,  8,  8,  8,  8,  8,  6,  8,  8,  4,  4,  8,  4,  10, 8,  8,  8,  8,  8,  8,  6,  8,  8,  10, 8,  8,  8,  6,  4,  6,  9};
+__CONSTANT__ int font_widths[FONT_LENGTH] = {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
+                                             12, 12, 12, 12, 12, 12, 12, 4,  7,  9,  8,  10, 9,  4,  5,  5,  8,  8,  4,  7,  4,  8,  8,  5,  8,  8,
+                                             9,  8,  8,  8,  8,  8,  4,  4,  8,  8,  8,  8,  12, 8,  8,  8,  8,  8,  8,  8,  8,  4,  8,  8,  8,  10,
+                                             8,  8,  8,  8,  8,  8,  8,  8,  8,  10, 8,  8,  8,  5,  8,  5,  8,  8,  5,  8,  8,  8,  8,  8,  6,  8,
+                                             8,  4,  4,  8,  4,  10, 8,  8,  8,  8,  8,  8,  6,  8,  8,  10, 8,  8,  8,  6,  4,  6,  9};
 __CONSTANT__ int font[FONT_LENGTH][FONT_HEIGHT] = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                                                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                                                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -205,8 +205,7 @@ __DEVICE__ void draw_char(char c, __PRIVATE__ char_trans_t* char_trans, __PRIVAT
     }
 }
 
-__DEVICE__ void
-draw_string(char str[], __PRIVATE__ char_trans_t* char_trans, __PRIVATE__ curr_pos_t* curr_pos, __PRIVATE__ float3* curr_color) {
+__DEVICE__ void draw_string(char str[], __PRIVATE__ char_trans_t* char_trans, __PRIVATE__ curr_pos_t* curr_pos, __PRIVATE__ float3* curr_color) {
     int i = 0;
     char c = str[0];
     float c_width;
@@ -350,15 +349,15 @@ __DEVICE__ float st2084_nits_to_cv(float n) {
     return powf((c1 + c2 * powf(Y, m1)) / (1.0 + c3 * powf(Y, m1)), m2);
 }
 
-#define copy_array(source, dest, num_entries)                                                                                              \
-    for (int i = 0; i < num_entries; ++i) {                                                                                                \
-        dest[i] = source[i];                                                                                                               \
+#define copy_array(source, dest, num_entries)                                                                                                             \
+    for (int i = 0; i < num_entries; ++i) {                                                                                                               \
+        dest[i] = source[i];                                                                                                                              \
     }
-#define copy_2d_array(source, dest, num_rows, num_cols)                                                                                    \
-    for (int i = 0; i < num_rows; ++i) {                                                                                                   \
-        for (int j = 0; j < num_cols; ++j) {                                                                                               \
-            dest[i][j] = source[i][j];                                                                                                     \
-        }                                                                                                                                  \
+#define copy_2d_array(source, dest, num_rows, num_cols)                                                                                                   \
+    for (int i = 0; i < num_rows; ++i) {                                                                                                                  \
+        for (int j = 0; j < num_cols; ++j) {                                                                                                              \
+            dest[i][j] = source[i][j];                                                                                                                    \
+        }                                                                                                                                                 \
     }
 
 /////////////////////////////
@@ -515,8 +514,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         }
     }
 
-    draw_waveform(
-        major_nits, nits_names, num_major_axes, minor_nits, num_minor_axes, &margin_params, &curr_pos, &curr_color, &working_area);
+    draw_waveform(major_nits, nits_names, num_major_axes, minor_nits, num_minor_axes, &margin_params, &curr_pos, &curr_color, &working_area);
 
     if (margin_params.rescale_image != NONE) {
         if (working_area.low_x <= curr_pos.x && curr_pos.x <= working_area.high_x && working_area.low_y <= curr_pos.y &&
@@ -533,24 +531,20 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 float working_area_center_y = (working_area.high_y + working_area.low_y) / 2.0;
                 if (new_aspect > 1.0) {
                     // wide, low_y->high_y should be filled.
-                    scaled_x = _round(
-                        _mix(0, p_Width, ((curr_pos.x - working_area_center_x) * new_aspect + working_area_center_x) - working_area.low_x) /
-                        (working_area.high_x - working_area.low_x));
+                    scaled_x = _round(_mix(0, p_Width, ((curr_pos.x - working_area_center_x) * new_aspect + working_area_center_x) - working_area.low_x) /
+                                      (working_area.high_x - working_area.low_x));
                     scaled_y = _round(_mix(0, p_Height, (curr_pos.y - working_area.low_y) / (working_area.high_y - working_area.low_y)));
                 } else {
                     // tall, need low_x->high_x should be filled.
                     scaled_x = _round(_mix(0, p_Width, (curr_pos.x - working_area.low_x) / (working_area.high_x - working_area.low_x)));
-                    scaled_y = _round(
-                        _mix(
-                            0, p_Height, ((curr_pos.y - working_area_center_y) / new_aspect + working_area_center_y) - working_area.low_y) /
-                        (working_area.high_y - working_area.low_y));
+                    scaled_y = _round(_mix(0, p_Height, ((curr_pos.y - working_area_center_y) / new_aspect + working_area_center_y) - working_area.low_y) /
+                                      (working_area.high_y - working_area.low_y));
                 }
             }
             if (scaled_x < 0 || scaled_x > p_Width || scaled_y < 0 || scaled_y > p_Height) {
                 curr_color = make_float3(0.0, 0.0, 0.0);
             } else {
-                curr_color =
-                    make_float3(_tex2D(p_TexR, scaled_x, scaled_y), _tex2D(p_TexG, scaled_x, scaled_y), _tex2D(p_TexB, scaled_x, scaled_y));
+                curr_color = make_float3(_tex2D(p_TexR, scaled_x, scaled_y), _tex2D(p_TexG, scaled_x, scaled_y), _tex2D(p_TexB, scaled_x, scaled_y));
             }
         }
     }

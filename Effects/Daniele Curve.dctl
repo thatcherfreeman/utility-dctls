@@ -29,8 +29,7 @@ __DEVICE__ float daniele_curve(float x, float peak_luminance, float normalized_w
     return y;
 }
 
-__DEVICE__ float
-daniele_curve_inverse(float y, float peak_luminance, float normalized_white, float contrast_gamma, float exposure, float toe) {
+__DEVICE__ float daniele_curve_inverse(float y, float peak_luminance, float normalized_white, float contrast_gamma, float exposure, float toe) {
     const float m = peak_luminance / normalized_white;
     const float s = exposure * powf(m, 1.0 / contrast_gamma);
 

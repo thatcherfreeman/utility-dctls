@@ -17,8 +17,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float lowest_diff = 100.0;
     for (int i = -1; i < 2; ++i) {
         for (int j = -1; j < 2; ++j) {
-            float3 candidate_pixel =
-                make_float3(_tex2D(p_TexR, p_X + i, p_Y + j), _tex2D(p_TexG, p_X + i, p_Y + j), _tex2D(p_TexB, p_X + i, p_Y + j));
+            float3 candidate_pixel = make_float3(_tex2D(p_TexR, p_X + i, p_Y + j), _tex2D(p_TexG, p_X + i, p_Y + j), _tex2D(p_TexB, p_X + i, p_Y + j));
 
             float3 differences = candidate_pixel - current_pixel;
             differences.x = _fabs(differences.x);
