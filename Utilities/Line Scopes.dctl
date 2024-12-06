@@ -194,12 +194,13 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             float middle = 0.5f;
             float top = 1.0f;
             float bottom = 0.0f;
-            float grid_size = 0.10f;
+            float grid_size_x = 0.10f;
+            float grid_size_y = 0.10f;
             if (log_luminance) {
                 middle = 0.0f;
                 top = default_stops_above_mid_gray;
                 bottom = -default_stops_above_mid_gray;
-                grid_size = 1.0f;
+                grid_size_y = 1.0f;
             }
             const float2 low_bound = make_float2(0.0f, middle - (1.0 / zoom) * (middle - bottom));
             const float2 upper_bound = make_float2(1.0f, middle + (1.0 / zoom) * (top - middle));
@@ -212,8 +213,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
             // Draw grid
             if (draw_grid) {
-                if (_fabs(mod(position_within_scope.x, 0.10)) < dot_size * hor_scale ||
-                    _fabs(mod(position_within_scope.y, grid_size)) < dot_size * vert_scale) {
+                if (_fabs(mod(position_within_scope.x, grid_size_x)) < dot_size * hor_scale ||
+                    _fabs(mod(position_within_scope.y, grid_size_y)) < dot_size * vert_scale) {
                     scope_color = make_float3(0.05, 0.05, 0.05);
                 }
                 if (_fabs(position_within_scope.y - top) < dot_size * 2 * vert_scale ||
@@ -221,7 +222,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                     scope_color = make_float3(0.1, 0.1, 0.1);
                 }
                 if (log_luminance && _fabs(position_within_scope.y - middle) < dot_size * 2 * vert_scale &&
-                    _fabs(mod(position_within_scope.x, 0.03)) < 0.015) {
+                    _fabs(mod(position_within_scope.x, grid_size_x / 3.0)) < grid_size_x / 6.0) {
                     scope_color = make_float3(0.0, 0.0, 0.0);
                 }
             }
@@ -386,11 +387,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 if (_fabs(mod(position_within_scope.x, grid_size_x)) < dot_size * hor_scale) {
                     scope_color = make_float3(0.05, 0.05, 0.05);
                 }
-                if (_fabs(position_within_scope.x - x_high) < dot_size * 2 || _fabs(position_within_scope.x - x_low) < dot_size * 2) {
+                if (_fabs(position_within_scope.x - x_high) < dot_size * 2 * hor_scale ||
+                    _fabs(position_within_scope.x - x_low) < dot_size * 2 * hor_scale) {
                     scope_color = make_float3(0.1, 0.1, 0.1);
                 }
                 if (log_luminance && _fabs(position_within_scope.x - x_middle) < dot_size * hor_scale &&
-                    _fabs(mod(position_within_scope.y, grid_size_y / 3)) < grid_size_y / 6) {
+                    _fabs(mod(position_within_scope.y, grid_size_y / 3.0)) < grid_size_y / 6.0) {
                     scope_color = make_float3(0.0, 0.0, 0.0);
                 }
                 if (scope_half == 0) {
