@@ -12,11 +12,12 @@ DEFINE_UI_PARAMS(scope_opacity, Scope Opacity, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.
 DEFINE_UI_PARAMS(dot_size, Scope Dot Size, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 10.0, 0.01)
 DEFINE_UI_PARAMS(zoom, Zoom, DCTLUI_SLIDER_FLOAT, 1.0, 0.10, 2.0, 0.01)
 DEFINE_UI_PARAMS(alt_zoom, Alt Zoom 1, DCTLUI_SLIDER_FLOAT, 1.0, 0.10, 10.0, 0.01)
-DEFINE_UI_PARAMS(alt_zoom2, Alt Zoom 2, DCTLUI_SLIDER_FLOAT, 1.0, 0.10, 10.0, 0.01)
+DEFINE_UI_PARAMS(alt_zoom2, Alt Zoom 2, DCTLUI_SLIDER_FLOAT, 1.0, 0.00, 10.0, 0.01)
 DEFINE_UI_PARAMS(num_samples, Num Samples, DCTLUI_SLIDER_INT, 100, 1, 300, 1)
 DEFINE_UI_PARAMS(draw_grid, Draw Grid, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_line, Draw Line, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_crosshairs, Draw Crosshairs, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(log_luminance, Log Luminance, DCTLUI_CHECK_BOX, 0)
 
 DEFINE_UI_PARAMS(scope_type, Scope Type, DCTLUI_COMBO_BOX, 0, {SCOPE_WAVEFORM_LUM, SCOPE_WAVEFORM_RGB, SCOPE_HISTOGRAM_LUM, SCOPE_HISTOGRAM_RGB, SCOPE_LUM_CURVE}, {Lum Waveform, RGB Waveform, Lum Histogram, RGB Histogram, Lum v Hue/Sat Curve})
 
@@ -33,7 +34,6 @@ __DEVICE__ float mod(float x, float y) {
 __DEVICE__ float dot_product(float3 a, float3 b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
-
 
 #define PI 3.1415926535897932384626
 
@@ -90,7 +90,6 @@ __DEVICE__ float3 rgb_to_cylindrical(float3 x) {
     }
     return hsl;
 }
-
 
 // Inclusive on bounds. Assume left_bottom <= right_top
 typedef struct {
@@ -164,25 +163,46 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         scope_color = 1.0 - input_color;
     }
 
+    const float default_stops_above_mid_gray = 6.0f;
+
     if (inside_bounding_box(curr_pos, scope_bounding_box)) {
         scope_color = make_float3(0.0, 0.0, 0.0);
 
+        // WAVEFORM MODE
         if (scope_type == SCOPE_WAVEFORM_LUM || scope_type == SCOPE_WAVEFORM_RGB) {
             // Only vertical zoom.
             float middle = 0.5f;
-            const float2 low_bound = make_float2(0.0f, middle - (1.0 / zoom) * middle);
-            const float2 upper_bound = make_float2(1.0f, middle + (1.0 / zoom) * (1.0f - middle));
+            float top = 1.0f;
+            float bottom = 0.0f;
+            float grid_size = 0.10f;
+            if (log_luminance) {
+                middle = 0.0f;
+                top = default_stops_above_mid_gray;
+                bottom = -default_stops_above_mid_gray;
+                grid_size = 1.0f;
+            }
+            const float2 low_bound = make_float2(0.0f, middle - (1.0 / zoom) * (middle - bottom));
+            const float2 upper_bound = make_float2(1.0f, middle + (1.0 / zoom) * (top - middle));
+
+            float hor_scale = upper_bound.x - low_bound.x;
+            float vert_scale = upper_bound.y - low_bound.y;
 
             float2 position_within_scope = make_float2(_mix(low_bound.x, upper_bound.x, (curr_pos.x - scope_bounding_box.left_bottom.x) / box_size),
                                                        _mix(low_bound.y, upper_bound.y, (curr_pos.y - scope_bounding_box.left_bottom.y) / box_size));
 
             // Draw grid
             if (draw_grid) {
-                if (_fabs(mod(position_within_scope.x, 0.10f)) < dot_size || _fabs(mod(position_within_scope.y, 0.10f)) < dot_size) {
+                if (_fabs(mod(position_within_scope.x, 0.10)) < dot_size * hor_scale ||
+                    _fabs(mod(position_within_scope.y, grid_size)) < dot_size * vert_scale) {
                     scope_color = make_float3(0.05, 0.05, 0.05);
                 }
-                if (_fabs(mod(position_within_scope.y, 1.0f)) < dot_size * 2) {
+                if (_fabs(position_within_scope.y - top) < dot_size * 2 * vert_scale ||
+                    _fabs(position_within_scope.y - bottom) < dot_size * 2 * vert_scale) {
                     scope_color = make_float3(0.1, 0.1, 0.1);
+                }
+                if (log_luminance && _fabs(position_within_scope.y - middle) < dot_size * 2 * vert_scale &&
+                    _fabs(mod(position_within_scope.x, 0.03)) < 0.015) {
+                    scope_color = make_float3(0.0, 0.0, 0.0);
                 }
             }
 
@@ -194,17 +214,24 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             // Just using mean as luminance weights
             if (scope_type == SCOPE_WAVEFORM_LUM) {
                 float line_lum = (line_color.x + line_color.y + line_color.z) / 3.0;
-                if (_fabs(line_lum - position_within_scope.y) < dot_size) {
+                if (log_luminance) {
+                    line_lum = _log2f(_fmaxf(0.0, line_lum / 0.18f));
+                }
+                if (_fabs(line_lum - position_within_scope.y) < dot_size * vert_scale) {
                     scope_color = make_float3(0.0, 1.0, 0.0);
                 }
             } else if (scope_type == SCOPE_WAVEFORM_RGB) {
-                if (_fabs(line_color.x - position_within_scope.y) < dot_size) {
+                if (log_luminance) {
+                    line_color = make_float3(
+                        _log2f(_fmaxf(0.0, line_color.x / 0.18f)), _log2f(_fmaxf(0.0, line_color.y / 0.18f)), _log2f(_fmaxf(0.0, line_color.z / 0.18f)));
+                }
+                if (_fabs(line_color.x - position_within_scope.y) < dot_size * vert_scale) {
                     scope_color += make_float3(1.0, 0.0, 0.0);
                 }
-                if (_fabs(line_color.y - position_within_scope.y) < dot_size) {
+                if (_fabs(line_color.y - position_within_scope.y) < dot_size * vert_scale) {
                     scope_color += make_float3(0.0, 1.0, 0.0);
                 }
-                if (_fabs(line_color.z - position_within_scope.y) < dot_size) {
+                if (_fabs(line_color.z - position_within_scope.y) < dot_size * vert_scale) {
                     scope_color += make_float3(0.0, 0.0, 1.0);
                 }
             }
@@ -334,7 +361,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 if (scope_half == 0 && _hypotf(_fabs(target_pixel_cylindrical.x - line_hue), _fabs(target_pixel_cylindrical.z - line_lum)) < dot_size) {
                     scope_color = line_color;
                     break;
-                } else if (scope_half == 1 && _hypotf(_fabs(target_pixel_cylindrical.y - line_sat), _fabs(target_pixel_cylindrical.z - line_lum)) < dot_size) {
+                } else if (scope_half == 1 &&
+                           _hypotf(_fabs(target_pixel_cylindrical.y - line_sat), _fabs(target_pixel_cylindrical.z - line_lum)) < dot_size) {
                     scope_color = line_color;
                     break;
                 }

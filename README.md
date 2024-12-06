@@ -1781,6 +1781,8 @@ You draw a line on the image, the pixels along that line are sampled and we use 
 
 **Draw Crosshairs**: Toggles whether the crosshair is drawn in the frame for the endpoints of the line.
 
+**Log Luminance**: Toggles whether the luminance dimension is log2 scaled, so the grid ends up being in 1-stop increments with mid gray being represented by a dashed line.
+
 **Scope Type**: Indicate what kind of scope to draw for the sampled pixels.
 
 
