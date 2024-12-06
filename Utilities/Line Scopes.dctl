@@ -127,9 +127,28 @@ __DEVICE__ bool draw_crosshair(float2 curr_pos, float2 crosshair_pos, float cros
     return (vertical || horizontal);
 }
 
+__DEVICE__ float linear_to_log(float x) {
+    const float mid_gray = 0.18f;
+    return _log2f(_fmaxf(0.0, x / mid_gray));
+}
+
+__DEVICE__ float4 linear_to_log_f4(float4 x) {
+    // Assume input is X,Y,Z,W = R,G,B,Lum. No alpha here!
+    return make_float4(linear_to_log(x.x), linear_to_log(x.y), linear_to_log(x.z), linear_to_log(x.w));
+}
+
+__DEVICE__ float4 sample_color(float2 pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    float3 rgb = make_float3(_tex2D(p_TexR, (int)pos.x, (int)pos.y), _tex2D(p_TexG, (int)pos.x, (int)pos.y), _tex2D(p_TexB, (int)pos.x, (int)pos.y));
+    float lum = (rgb.x + rgb.y + rgb.z) / 3.0;
+    return make_float4(rgb.x, rgb.y, rgb.z, lum);
+}
+
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
 
-    float3 input_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+    float2 curr_pos_img = make_float2((float)p_X, (float)p_Y);
+    float4 input_color_f4 = sample_color(curr_pos_img, p_TexR, p_TexG, p_TexB);
+    ;
+    float3 input_color = make_float3(input_color_f4.x, input_color_f4.y, input_color_f4.z);
     float3 output_color = input_color;
     dot_size /= 1000.0f;
 
@@ -151,7 +170,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     // All below are Image coordinates, y=0 in top left. However, the UI control endpoint_1_y is 0 in bottom left.
     float2 endpoint1 = make_float2(endpoint_1_x * (p_Width - 1), (1.0 - endpoint_1_y) * (p_Height - 1));
     float2 endpoint2 = make_float2(endpoint_2_x * (p_Width - 1), (1.0 - endpoint_2_y) * (p_Height - 1));
-    float2 curr_pos_img = make_float2((float)p_X, (float)p_Y);
+
     float3 scope_color = output_color;
     if (draw_crosshairs && draw_crosshair(make_float2((float)p_X, (float)p_Y), endpoint1, crosshair_size)) {
         scope_color = 1.0 - input_color;
@@ -164,6 +183,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     }
 
     const float default_stops_above_mid_gray = 6.0f;
+    const float mid_gray = 0.18f;
 
     if (inside_bounding_box(curr_pos, scope_bounding_box)) {
         scope_color = make_float3(0.0, 0.0, 0.0);
@@ -208,23 +228,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
             float time_on_line = position_within_scope.x;
             float2 line_color_pos = _mix(endpoint1, endpoint2, time_on_line);
-            float3 line_color = make_float3(_tex2D(p_TexR, (int)line_color_pos.x, (int)line_color_pos.y),
-                                            _tex2D(p_TexG, (int)line_color_pos.x, (int)line_color_pos.y),
-                                            _tex2D(p_TexB, (int)line_color_pos.x, (int)line_color_pos.y));
+            float4 line_color = sample_color(line_color_pos, p_TexR, p_TexG, p_TexB);
+            if (log_luminance) {
+                line_color = linear_to_log_f4(line_color);
+            }
             // Just using mean as luminance weights
             if (scope_type == SCOPE_WAVEFORM_LUM) {
-                float line_lum = (line_color.x + line_color.y + line_color.z) / 3.0;
-                if (log_luminance) {
-                    line_lum = _log2f(_fmaxf(0.0, line_lum / 0.18f));
-                }
+                float line_lum = line_color.w;
                 if (_fabs(line_lum - position_within_scope.y) < dot_size * vert_scale) {
                     scope_color = make_float3(0.0, 1.0, 0.0);
                 }
             } else if (scope_type == SCOPE_WAVEFORM_RGB) {
-                if (log_luminance) {
-                    line_color = make_float3(
-                        _log2f(_fmaxf(0.0, line_color.x / 0.18f)), _log2f(_fmaxf(0.0, line_color.y / 0.18f)), _log2f(_fmaxf(0.0, line_color.z / 0.18f)));
-                }
                 if (_fabs(line_color.x - position_within_scope.y) < dot_size * vert_scale) {
                     scope_color += make_float3(1.0, 0.0, 0.0);
                 }
@@ -239,8 +253,22 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             // Only horizontal_zoom
             float middle = 0.5f;
             float y_middle = 0.0f;
-            const float2 low_bound = make_float2(middle - (1.0 / zoom) * middle, y_middle - (1.0 / alt_zoom) * y_middle);
-            const float2 upper_bound = make_float2(middle + (1.0 / zoom) * (1.0f - middle), y_middle + (1.0 / alt_zoom) * (1.0f - y_middle));
+            float left = 0.0f;
+            float right = 1.0f;
+            float grid_size = 0.10f;
+            if (log_luminance) {
+                middle = 0.0f;
+                left = -default_stops_above_mid_gray;
+                right = default_stops_above_mid_gray;
+                grid_size = 1.0f;
+            }
+
+            const float2 low_bound = make_float2(middle - (1.0 / zoom) * (middle - left), y_middle - (1.0 / alt_zoom) * y_middle);
+            const float2 upper_bound = make_float2(middle + (1.0 / zoom) * (right - middle), y_middle + (1.0 / alt_zoom) * (1.0f - y_middle));
+
+            float hor_scale = upper_bound.x - low_bound.x;
+            float vert_scale = upper_bound.y - low_bound.y;
+
             int scope_third;
             float2 position_within_scope;
             if (scope_type == SCOPE_HISTOGRAM_LUM) {
@@ -256,11 +284,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
             // Draw grid
             if (draw_grid) {
-                if (_fabs(mod(position_within_scope.x, 0.10f)) < dot_size) {
+                if (_fabs(mod(position_within_scope.x, grid_size)) < dot_size * hor_scale) {
                     scope_color = make_float3(0.05, 0.05, 0.05);
                 }
-                if (_fabs(mod(position_within_scope.x, 1.0f)) < dot_size * 2) {
+                if (_fabs(position_within_scope.x - left) < dot_size * 2 * hor_scale ||
+                    _fabs(position_within_scope.x - right) < dot_size * 2 * hor_scale) {
                     scope_color = make_float3(0.1, 0.1, 0.1);
+                }
+                if (log_luminance && _fabs(position_within_scope.x - middle) < dot_size * 2 * hor_scale &&
+                    _fabs(mod(position_within_scope.y, 0.1)) < 0.05) {
+                    scope_color = make_float3(0.0, 0.0, 0.0);
                 }
             }
             float curr_bucket = position_within_scope.x;
@@ -268,10 +301,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             float4 quantity_in_curr_bucket_rgbw = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
             for (float time_on_line = 0; time_on_line < 1.0; time_on_line += 1.0 / num_samples) {
                 float2 line_color_pos = _mix(endpoint1, endpoint2, time_on_line);
-                float3 line_color = make_float3(_tex2D(p_TexR, (int)line_color_pos.x, (int)line_color_pos.y),
-                                                _tex2D(p_TexG, (int)line_color_pos.x, (int)line_color_pos.y),
-                                                _tex2D(p_TexB, (int)line_color_pos.x, (int)line_color_pos.y));
-                float line_lum = (line_color.x + line_color.y + line_color.z) / 3.0;
+                float4 line_color = sample_color(line_color_pos, p_TexR, p_TexG, p_TexB);
+                if (log_luminance) {
+                    line_color = linear_to_log_f4(line_color);
+                }
+                float line_lum = line_color.w;
                 if (line_lum >= curr_bucket && line_lum < next_bucket) {
                     quantity_in_curr_bucket_rgbw.w += 1.0;
                 }
@@ -288,7 +322,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             quantity_in_curr_bucket_rgbw *= 10.0 / num_samples;
             if (scope_type == SCOPE_HISTOGRAM_LUM) {
                 if (position_within_scope.y > 0.0f && position_within_scope.y < quantity_in_curr_bucket_rgbw.w) {
-                    scope_color += make_float3(1.0, 1.0, 1.0);
+                    scope_color += make_float3(0.0, 1.0, 0.0);
                 }
             }
             if (scope_type == SCOPE_HISTOGRAM_RGB) {
