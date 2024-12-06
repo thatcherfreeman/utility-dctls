@@ -213,14 +213,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
             // Draw grid
             if (draw_grid) {
+                // Grid minor guidelines
                 if (_fabs(mod(position_within_scope.x, grid_size_x)) < dot_size * hor_scale ||
                     _fabs(mod(position_within_scope.y, grid_size_y)) < dot_size * vert_scale) {
                     scope_color = make_float3(0.05, 0.05, 0.05);
                 }
+                // Luminance low and high guidelines
                 if (_fabs(position_within_scope.y - top) < dot_size * 2 * vert_scale ||
                     _fabs(position_within_scope.y - bottom) < dot_size * 2 * vert_scale) {
                     scope_color = make_float3(0.1, 0.1, 0.1);
                 }
+                // Dashed mid gray line in the middle if log luminance mode
                 if (log_luminance && _fabs(position_within_scope.y - middle) < dot_size * 2 * vert_scale &&
                     _fabs(mod(position_within_scope.x, grid_size_x / 3.0)) < grid_size_x / 6.0) {
                     scope_color = make_float3(0.0, 0.0, 0.0);
@@ -285,13 +288,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
             // Draw grid
             if (draw_grid) {
+                // luminance minor guidelines
                 if (_fabs(mod(position_within_scope.x, grid_size)) < dot_size * hor_scale) {
                     scope_color = make_float3(0.05, 0.05, 0.05);
                 }
+                // Luminance low and high guidelines
                 if (_fabs(position_within_scope.x - left) < dot_size * 2 * hor_scale ||
                     _fabs(position_within_scope.x - right) < dot_size * 2 * hor_scale) {
                     scope_color = make_float3(0.1, 0.1, 0.1);
                 }
+                // Dashed mid gray line
                 if (log_luminance && _fabs(position_within_scope.x - middle) < dot_size * 2 * hor_scale &&
                     _fabs(mod(position_within_scope.y, 0.1)) < 0.05) {
                     scope_color = make_float3(0.0, 0.0, 0.0);
@@ -384,26 +390,33 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
             // Draw grid
             if (draw_grid) {
+                // luminance minor guidelines
                 if (_fabs(mod(position_within_scope.x, grid_size_x)) < dot_size * hor_scale) {
                     scope_color = make_float3(0.05, 0.05, 0.05);
                 }
+                // Luminance bottom and top guidelines
                 if (_fabs(position_within_scope.x - x_high) < dot_size * 2 * hor_scale ||
                     _fabs(position_within_scope.x - x_low) < dot_size * 2 * hor_scale) {
                     scope_color = make_float3(0.1, 0.1, 0.1);
                 }
+                // Dashed mid gray line in the middle if log luminance mode
                 if (log_luminance && _fabs(position_within_scope.x - x_middle) < dot_size * hor_scale &&
                     _fabs(mod(position_within_scope.y, grid_size_y / 3.0)) < grid_size_y / 6.0) {
                     scope_color = make_float3(0.0, 0.0, 0.0);
                 }
                 if (scope_half == 0) {
+                    // Lum v hue curve
+                    // Horizontal Hue guidelines
                     if (_fabs(mod(position_within_scope.y, grid_size_y)) < dot_size * vert_scale) {
-                        scope_color = cylindrical_to_rgb(make_float3(position_within_scope.y, 0.3, 0.05));
+                        scope_color = cylindrical_to_rgb(make_float3(position_within_scope.y, 0.3, mid_gray));
                     }
+                    // Indicator of the current hue
                     if (_fabs(position_within_scope.y - y_middle) < dot_size * vert_scale &&
                         _fabs(mod(position_within_scope.x, grid_size_x / 3.0)) < grid_size_x / 6.0) {
                         scope_color = make_float3(0.1, 0.1, 0.1);
                     }
                 } else if (scope_half == 1 && _fabs(mod(position_within_scope.y, grid_size_y)) < dot_size * vert_scale) {
+                    // Lum v Sat horizontal guidelines to indicate saturation levels.
                     scope_color = cylindrical_to_rgb(make_float3(center_hue_rads, position_within_scope.y * 0.5, mid_gray));
                 }
             }
