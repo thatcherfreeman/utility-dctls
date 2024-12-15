@@ -55,8 +55,8 @@ __DEVICE__ float get_weight_gaussian(float x, float y, float std) {
     return 1.0 / (2.0 * PI * std * std) * _expf(rs / (-2.0 * std * std));
 }
 
-__DEVICE__ int
-get_blur_bands_gaussian(int px, int py, __TEXTURE__ pr, __TEXTURE__ pg, __TEXTURE__ pb, float scale, bool clamp, float3 ret[NUM_BANDS], int min_necessary_band) {
+__DEVICE__ int get_blur_bands_gaussian(
+    int px, int py, __TEXTURE__ pr, __TEXTURE__ pg, __TEXTURE__ pb, float scale, bool clamp, float3 ret[NUM_BANDS], int min_necessary_band) {
 
     // Scale controls the smallest of the four blur radii.
     float scales[NUM_BANDS] = {scale * 8.0, scale * 4.0, scale * 2.0, scale};
@@ -132,8 +132,16 @@ __DEVICE__ float3 get_mask(float3 kernel_center, float3 runner, float threshold)
     return out;
 }
 
-__DEVICE__ int get_blur_bands_gaussian_threshold(
-    int px, int py, __TEXTURE__ pr, __TEXTURE__ pg, __TEXTURE__ pb, float scale, float threshold, bool clamp, float3 ret[NUM_BANDS], int min_necessary_band) {
+__DEVICE__ int get_blur_bands_gaussian_threshold(int px,
+                                                 int py,
+                                                 __TEXTURE__ pr,
+                                                 __TEXTURE__ pg,
+                                                 __TEXTURE__ pb,
+                                                 float scale,
+                                                 float threshold,
+                                                 bool clamp,
+                                                 float3 ret[NUM_BANDS],
+                                                 int min_necessary_band) {
 
     // Scale controls the smallest of the four blur radii.
     float scales[NUM_BANDS] = {scale * 8.0, scale * 4.0, scale * 2.0, scale};

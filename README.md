@@ -683,6 +683,8 @@ Like all textural DCTLs, this DCTL's performance impact scales with the maximum 
 
 **Blur Style**: Choose between Gaussian Threshold, Gaussian, Quality, and Performance. Gaussian blur simply applies a gaussian blur to each channel. Gaussian Threshold is the same as Gaussian blur but ignores pixels whose value differs substantially from the center of the kernel. Performance mode takes fewer samples when computing the blur which can cause subtle artifacts.
 
+Recommendation: If you're making the image sharper, I'd probably use Gaussian Threshold as it sharpens with reduced risk of halos around edges. If you're making the image softer, then Gaussian gives more natural looking results.
+
 **Method**: Allows you to choose between Quotient and Difference, which correspond to different ways to compute the frequency bands. In most real-world scenarios, the Quotient method provides better looking results, but the Difference method performs more accurately on zebra striped test charts. Here's the math:
 ```
 quotient_out := (input_value / low_pass5)^band5_contrast * (low_pass5 / low_pass4)^band4_contrast * ... * low_pass1
