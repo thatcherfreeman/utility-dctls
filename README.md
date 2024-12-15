@@ -664,6 +664,12 @@ Provides an HSV-like user interface for 3x3 Matrix operations, analogous to adju
 ### MTF Curve DCTL
 Gives you control over a MTF-like curve. Internally makes passes of different frequencies which can be increased or reduced in gain before combining them back together. Highly recommend using the default method and feeding this DCTL a log image.
 
+#### Performance Considerations
+Like all textural DCTLs, this DCTL's performance impact scales with the maximum blur strength required. If it's running slowly, your options are then to do any of the following:
+1. Reduce the Blur Scale
+2. Set the lower frequency bands to 1.0, which will inform the DCTL not to sample the excess pixels for those bands.
+3. Node cache the output of this DCTL.
+
 #### DCTL Parameters
 **Band 16-2:1 Contrast**: Applies a gain to the information captured only by this band. Set to 0 to soften the image and raise up to 2 to increase sharpness. The bands are relative to the timeline resolution, with a 16:1 blur, 8:1 blur, 4:1 blur, and 2:1 blur.
 
@@ -673,7 +679,7 @@ Gives you control over a MTF-like curve. Internally makes passes of different fr
 
 **Debug Band**: Specifies which band is viewed when the Debug Mode isn't None.
 
-**Debug Mode**: This pull-down allows you to figure out what each band targets. You can choose from None (runs the plugin normally), Low Pass Mode (shows you the information that's too low frequency to be captured in this band), High Pass Mode (shows the information that's in this band), and High Pass Gray Mode (Same as High Pass mode, but normalized to 0.5 so that the frequency data in this band is more visible).
+**Debug Mode**: This pull-down allows you to figure out what each band targets. You can choose from None (runs the plugin normally), Low Pass Mode (shows you the information that's too low frequency to be captured in this band), High Pass Mode (shows the information that's in this band), and High Pass Gray Mode (Same as High Pass mode, but normalized to 0.5 so that the frequency data in this band is more visible), Num Samples (Indicates the number of sampled pixels per pixel required to generate this frame).
 
 **Blur Style**: Choose between Gaussian Threshold, Gaussian, Quality, and Performance. Gaussian blur simply applies a gaussian blur to each channel. Gaussian Threshold is the same as Gaussian blur but ignores pixels whose value differs substantially from the center of the kernel. Performance mode takes fewer samples when computing the blur which can cause subtle artifacts.
 
