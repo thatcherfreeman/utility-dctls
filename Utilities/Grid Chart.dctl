@@ -11,7 +11,11 @@ DEFINE_UI_PARAMS(chart_type, Chart Type, DCTLUI_COMBO_BOX, 0, {CHART_GRID, CHART
 
 __DEVICE__ float mod(float x, float y) {
     if (x < 0) {
-        return y + _fmod(x, y);
+        float res = _fmod(x, y);
+        if (res == 0.0f) {
+            return 0.0f;
+        }
+        return y + res;
     } else {
         return _fmod(x, y);
     }
@@ -24,11 +28,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     const int grid_offset_y = p_Height / 2.0;
 
     if (chart_type == CHART_GRID) {
-        if (mod((p_X + grid_offset_x), grid_spacing) < grid_thickness || mod((p_Y - grid_offset_y), grid_spacing) < grid_thickness) {
+        if (mod((p_X - grid_offset_x), grid_spacing) < grid_thickness || mod((p_Y - grid_offset_y), grid_spacing) < grid_thickness) {
             output = make_float3(white_level, white_level, white_level);
         }
     } else if (chart_type == CHART_DOTS) {
-        if (mod((p_X + grid_offset_x), grid_spacing) < grid_thickness && mod((p_Y - grid_offset_y), grid_spacing) < grid_thickness) {
+        if (mod((p_X - grid_offset_x), grid_spacing) < grid_thickness && mod((p_Y - grid_offset_y), grid_spacing) < grid_thickness) {
             output = make_float3(white_level, white_level, white_level);
         }
     }
