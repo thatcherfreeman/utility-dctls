@@ -120,7 +120,7 @@ __DEVICE__ float smoothed_circle_weight(float2 pos_trans, float radius) {
     if (distance < 1e-3) {
         return 1.0;
     }
-    float std = radius / 5.0;
+    float std = radius / 3.5;
     return unnormalized_norm_pdf(distance, 0.0, std);
 }
 
@@ -320,14 +320,14 @@ __DEVICE__ float blur_kernel_weight(float2 pos_trans, float2 window_center, floa
         window_center_polar.x, clamp_angle(sampled_pos_polar.y, window_center_polar.y - params.blur_angle, window_center_polar.y + params.blur_angle));
     // Assume disk of radius = `disk_radius` is centered at this position and assign that weight.
     float2 curr_disk_center_cart = polar_to_cart_pix(curr_disk_center_polar, dimensions);
-    float angle_weight = unnormalized_norm_pdf(_fabs(angle_distance(sampled_pos_polar.y, window_center_polar.y)), 0.0, params.blur_angle / 5.0);
+    float angle_weight = unnormalized_norm_pdf(_fabs(angle_distance(sampled_pos_polar.y, window_center_polar.y)), 0.0, params.blur_angle / 3.5);
     // float thickness_weight = approx_circle_weight(sampled_pos - curr_disk_center_cart, params.disk_radius);
     float thickness_weight = smoothed_circle_weight(sampled_pos - curr_disk_center_cart, params.disk_radius);
 
     // return thickness_weight;
 
     // angle_weight = 1.0;
-    // thickness_weight = unnormalized_norm_pdf(_fabs(sampled_pos_polar.x - window_center_polar.x), 0.0, params.disk_radius / 3.0);
+    // thickness_weight = unnormalized_norm_pdf(_fabs(sampled_pos_polar.x - window_center_polar.x), 0.0, params.disk_radius / 3.5);
 
     return thickness_weight * angle_weight;
 }
