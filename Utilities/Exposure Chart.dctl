@@ -1,30 +1,41 @@
 DEFINE_UI_PARAMS(num_steps, Number of Steps, DCTLUI_SLIDER_INT, 16, 1, 32, 1)
 DEFINE_UI_PARAMS(mid_gray, Middle Gray Value, DCTLUI_SLIDER_FLOAT, 0.18, 0.0, 1.0, 0.001)
-DEFINE_UI_PARAMS(opt_card, Show Mid Gray Card, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(opt_ramp, Show Linear Ramp, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(opt_steps, Show Exponential Steps, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(opt_exp_ramp, Show Exponential Ramp, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(opt_ramp, Show Linear Ramp, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(opt_card, Show Mid Gray Card, DCTLUI_CHECK_BOX, 1)
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float x = (float)p_X / (p_Width - 1);
     float y = (float)p_Y / (p_Height - 1);
     float step_width = 1.0f / num_steps;
     int middle_step = num_steps / 2;
-    float3 output_color;
+    float3 output_color = make_float3(mid_gray, mid_gray, mid_gray);
 
-    if (y >= 0.66f && opt_exp_ramp) {
-        // make exp ramp
-        float val = mid_gray * _exp2f((float)(x / step_width) - 0.5 - middle_step);
-        output_color = make_float3(val, val, val);
-    } else {
-        // Top half of chart, make steps
+    int num_ramps = opt_steps * 3 + opt_exp_ramp + opt_ramp;
+    float curr_ramp = 0;
+
+    if (opt_steps && y > (curr_ramp) / num_ramps) {
+        // make steps as top ramp
         int curr_step = (int)(x / step_width);
         float val = mid_gray * _exp2f((float)curr_step - middle_step);
         output_color = make_float3(val, val, val);
+        curr_ramp += 3;
     }
-    if (opt_ramp && y > 0.84f) {
+
+    if (opt_exp_ramp && y > (curr_ramp) / num_ramps) {
+        // make exp ramp
+        float val = mid_gray * _exp2f((float)(x / step_width) - 0.5 - middle_step);
+        output_color = make_float3(val, val, val);
+        curr_ramp += 1;
+    }
+
+    if (opt_ramp && y > (curr_ramp) / num_ramps) {
         // make linear ramp
         output_color = make_float3(x, x, x);
+        curr_ramp += 1;
     }
+
     if (opt_card && 0.25f <= x && x <= 0.75f && 0.33f <= y && y <= 0.66f) {
         // Middle box
         output_color = make_float3(mid_gray, mid_gray, mid_gray);

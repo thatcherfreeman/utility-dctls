@@ -1547,11 +1547,13 @@ Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and se
 
 **Middle Gray Value**: Specifies the desired value of middle gray, which is 18% by default. This controls the brightness of the large chip in the middle too.
 
-**Show Mid Gray Card**: Toggle to turn off the grey card in the middle.
+**Show Exponential Steps**: Toggle to turn off the stops steps at the top.
+
+**Show Exponential Ramp**: Toggle to turn off the smooth stop ramp at the bottom.
 
 **Show Linear Ramp**: Toggle to turn off the 0-1 scale ramp at the bottom.
 
-**Show Exponential Ramp**: Toggle to turn off the smooth stop ramp at the bottom.
+**Show Mid Gray Card**: Toggle to turn off the grey card in the middle.
 
 ---
 
