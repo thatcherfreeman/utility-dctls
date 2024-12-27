@@ -122,6 +122,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [SNR Checker DCTL](#snr-checker-dctl)
         - [Spherical DCTL](#spherical-dctl)
         - [T-Log Curve](#t-log-curve)
+        - [Timecode Display DCTL](#timecode-display-dctl)
         - [Waveform Guides](#waveform-guides)
         - [White Mask DCTL](#white-mask-dctl)
         - [XY Chromaticity Plot](#xy-chromaticity-plot)
@@ -2064,7 +2065,21 @@ Converts between linear and my super cool, fully-logarithmic curve. Spec for thi
 **Direction**: Indicates whether to convert linear to tlog, or from tlog to linear.
 
 
+---
+### Timecode Display DCTL
 
+Writes the current timecode to the screen. Under the hood, this tool only has access to the quantity of frames from the start of the timeline (when used as a timeline level node), so you need to specify the framerate and timecode of the first frame.
+
+Note: Only supported on Resolve 19.1 and later.
+
+#### DCTL Parameters
+**Position X/Y**: Position to place the timecode.
+
+**Text Size**: Size of the timecode text
+
+**Initial Hour/Minute/Second/Frame**: If your timeline does not begin at a timecode of 00:00:00:00, you can dial in the timecode of the first frame.
+
+**Frames Per Second**: Indicate the quantity of frames per second your timeline runs at. Behavior is not well defined for fractional or non-positive numbers.
 
 
 ---
