@@ -92,6 +92,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Color Ramp DCTL](#color-ramp-dctl)
         - [Cube 3D Histogram DCTL](#cube-3d-histogram-dctl)
         - [Cube Rotate DCTL](#cube-rotate-dctl)
+        - [Current Resolution Display DCTL](#current-resolution-display-dctl)
         - [Cylindrical DCTL](#cylindrical-dctl)
         - [DaVinci LGGO DCTL](#davinci-lggo-dctl)
         - [DaVinci Tone Mapping DCTL](#davinci-tone-mapping-dctl)
@@ -1488,6 +1489,15 @@ Takes the specified vector and rotates the RGB cube (around 0,0,0) so that the g
 **Color R, Color G, Color B**: The RGB components of the vector that will be rotated gray.
 
 **Inverse**: Rotates the cube the opposite angle, so that the currently white vector rotates to the direction of the specified vector, therefore doing the opposite of the normal version.
+
+---
+### Current Resolution Display DCTL
+Prints the resolution at the time of processing the DCTL onto the screen, for use in debugging your pipeline or figuring out what resolution Resolve is using for stuff like stills or thumbnails.
+
+#### DCTL Parameters
+**Text Size**: Indicate how large you want the text to be
+
+**Text Color**: Indicates what value to choose for the text.
 
 ---
 
