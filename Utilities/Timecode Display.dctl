@@ -3,10 +3,10 @@
 DEFINE_UI_PARAMS(position_x, Position X, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(position_y, Position Y, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(scale, Text Size, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 0.01)
-DEFINE_UI_PARAMS(initial_hr, Initial Hour, DCTLUI_VALUE_BOX, 0)
-DEFINE_UI_PARAMS(initial_min, Initial Minute, DCTLUI_VALUE_BOX, 0)
-DEFINE_UI_PARAMS(initial_sec, Initial Second, DCTLUI_VALUE_BOX, 0)
-DEFINE_UI_PARAMS(initial_frame, Initial Frame, DCTLUI_VALUE_BOX, 0)
+DEFINE_UI_PARAMS(initial_hr, Initial Hour, DCTLUI_SLIDER_INT, 0, 0, 100, 1)
+DEFINE_UI_PARAMS(initial_min, Initial Minute, DCTLUI_SLIDER_INT, 0, 0, 59, 1)
+DEFINE_UI_PARAMS(initial_sec, Initial Second, DCTLUI_SLIDER_INT, 0, 0, 59, 1)
+DEFINE_UI_PARAMS(initial_frame, Initial Frame, DCTLUI_SLIDER_INT, 0, 0, 1000, 1)
 DEFINE_UI_PARAMS(framerate, Frames Per Second, DCTLUI_VALUE_BOX, 24)
 DEFINE_UI_PARAMS(text_color_selection, Text Color, DCTLUI_COMBO_BOX, 0, {TEXT_WHITE, TEXT_BLACK, TEXT_GRAY, TEXT_INV}, {White, Black, Gray, Inverse})
 // clang-format on
@@ -335,10 +335,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     // Current frame in timeline plus the user specified offset.
     int curr_frame = TIMELINE_FRAME_INDEX;
-    int initial_frame_i = _round(initial_frame);
-    int initial_sec_i = _round(initial_sec);
-    int initial_min_i = _round(initial_min);
-    int initial_hr_i = _round(initial_hr);
+    int initial_frame_i = initial_frame;
+    int initial_sec_i = initial_sec;
+    int initial_min_i = initial_min;
+    int initial_hr_i = initial_hr;
     int frame_offset = initial_frame_i + initial_sec_i * framerate + initial_min_i * framerate * 60 + initial_hr_i * framerate * 60 * 60;
     int curr_time = curr_frame + frame_offset;
 
