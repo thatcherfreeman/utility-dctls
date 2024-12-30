@@ -2081,6 +2081,9 @@ Note: Only supported on Resolve 19.1 and later.
 
 **Frames Per Second**: Indicate the quantity of frames per second your timeline runs at. Behavior is not well defined for fractional or non-positive numbers.
 
+**Text color**: Indicate the color you want the drawn text to be.
+
+**Display Mode**: Indicate whether you want the normal `HH:MM:SS:FFF` format or just a quantity of frames, which is useful as a calculator if you need it.
 
 ---
 

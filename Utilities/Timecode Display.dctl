@@ -6,9 +6,10 @@ DEFINE_UI_PARAMS(scale, Text Size, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(initial_hr, Initial Hour, DCTLUI_SLIDER_INT, 0, 0, 100, 1)
 DEFINE_UI_PARAMS(initial_min, Initial Minute, DCTLUI_SLIDER_INT, 0, 0, 59, 1)
 DEFINE_UI_PARAMS(initial_sec, Initial Second, DCTLUI_SLIDER_INT, 0, 0, 59, 1)
-DEFINE_UI_PARAMS(initial_frame, Initial Frame, DCTLUI_SLIDER_INT, 0, 0, 1000, 1)
+DEFINE_UI_PARAMS(initial_frame, Initial Frame, DCTLUI_VALUE_BOX, 0)
 DEFINE_UI_PARAMS(framerate, Frames Per Second, DCTLUI_VALUE_BOX, 24)
 DEFINE_UI_PARAMS(text_color_selection, Text Color, DCTLUI_COMBO_BOX, 0, {TEXT_WHITE, TEXT_BLACK, TEXT_GRAY, TEXT_INV}, {White, Black, Gray, Inverse})
+DEFINE_UI_PARAMS(display_mode, Display Mode, DCTLUI_COMBO_BOX, 0, {DISPLAY_TIMECODE, DISPLAY_FRAMES}, {Timecode, Frames})
 // clang-format on
 
 ////////////////
@@ -335,44 +336,49 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     // Current frame in timeline plus the user specified offset.
     int curr_frame = TIMELINE_FRAME_INDEX;
-    int initial_frame_i = initial_frame;
+    int initial_frame_i = (int)_round(initial_frame);
     int initial_sec_i = initial_sec;
     int initial_min_i = initial_min;
     int initial_hr_i = initial_hr;
     int frame_offset = initial_frame_i + initial_sec_i * framerate + initial_min_i * framerate * 60 + initial_hr_i * framerate * 60 * 60;
     int curr_time = curr_frame + frame_offset;
 
-    // Compute parts of timecode string
-    int current_hr = curr_time / (framerate * 60 * 60);
-    int current_min = (curr_time - current_hr * framerate * 60 * 60) / (framerate * 60);
-    int current_sec = (curr_time - current_hr * framerate * 60 * 60 - current_min * framerate * 60) / framerate;
-    int current_frame = curr_time - current_hr * framerate * 60 * 60 - current_min * framerate * 60 - current_sec * framerate;
+    if (display_mode == DISPLAY_TIMECODE) {
+        // Compute parts of timecode string
+        int current_hr = curr_time / (framerate * 60 * 60);
+        int current_min = (curr_time - current_hr * framerate * 60 * 60) / (framerate * 60);
+        int current_sec = (curr_time - current_hr * framerate * 60 * 60 - current_min * framerate * 60) / framerate;
+        int current_frame = curr_time - current_hr * framerate * 60 * 60 - current_min * framerate * 60 - current_sec * framerate;
 
-    char timecode_buff1[30];
-    char timecode_buff2[30];
-    char hour_buffer[10];
-    int2str(current_hr, hour_buffer, 10, 2);
+        char timecode_buff1[30];
+        char timecode_buff2[30];
+        char hour_buffer[10];
+        int2str(current_hr, hour_buffer, 10, 2);
 
-    char min_buffer[4];
-    int2str(current_min, min_buffer, 10, 2);
+        char min_buffer[4];
+        int2str(current_min, min_buffer, 10, 2);
 
-    char sec_buffer[4];
-    int2str(current_sec, sec_buffer, 10, 2);
+        char sec_buffer[4];
+        int2str(current_sec, sec_buffer, 10, 2);
 
-    char frame_buffer[10];
-    int2str(current_frame, frame_buffer, 10, (int)(_log10f((float)_round(_fabs(framerate - 1))) + 1));
+        char frame_buffer[10];
+        int2str(current_frame, frame_buffer, 10, (int)(_log10f((float)_round(_fabs(framerate - 1))) + 1));
 
-    // Combine the string bits together
-    char colon[] = ":";
-    strcat(hour_buffer, colon, timecode_buff1);
-    strcat(timecode_buff1, min_buffer, timecode_buff2);
-    strcat(timecode_buff2, colon, timecode_buff1);
-    strcat(timecode_buff1, sec_buffer, timecode_buff2);
-    strcat(timecode_buff2, colon, timecode_buff1);
-    strcat(timecode_buff1, frame_buffer, timecode_buff2);
+        // Combine the string bits together
+        char colon[] = ":";
+        strcat(hour_buffer, colon, timecode_buff1);
+        strcat(timecode_buff1, min_buffer, timecode_buff2);
+        strcat(timecode_buff2, colon, timecode_buff1);
+        strcat(timecode_buff1, sec_buffer, timecode_buff2);
+        strcat(timecode_buff2, colon, timecode_buff1);
+        strcat(timecode_buff1, frame_buffer, timecode_buff2);
 
-    // Draw to display
-    draw_string(timecode_buff2, text_color, &str_trans, &curr_pos, &curr_color);
-
+        // Draw to display
+        draw_string(timecode_buff2, text_color, &str_trans, &curr_pos, &curr_color);
+    } else if (display_mode == DISPLAY_FRAMES) {
+        char frame_buffer[20];
+        int2str(curr_time, frame_buffer, 18, 0);
+        draw_string(frame_buffer, text_color, &str_trans, &curr_pos, &curr_color);
+    }
     return curr_color;
 }
