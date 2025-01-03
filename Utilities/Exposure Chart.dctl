@@ -15,7 +15,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     int num_ramps = opt_steps * 3 + opt_exp_ramp + opt_ramp;
     float curr_ramp = 0;
 
-    if (opt_steps && y > (curr_ramp) / num_ramps) {
+    if (opt_steps && y >= (curr_ramp) / num_ramps) {
         // make steps as top ramp
         int curr_step = (int)(x / step_width);
         float val = mid_gray * _exp2f((float)curr_step - middle_step);
@@ -23,14 +23,14 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         curr_ramp += 3;
     }
 
-    if (opt_exp_ramp && y > (curr_ramp) / num_ramps) {
+    if (opt_exp_ramp && y >= (curr_ramp) / num_ramps) {
         // make exp ramp
         float val = mid_gray * _exp2f((float)(x / step_width) - 0.5 - middle_step);
         output_color = make_float3(val, val, val);
         curr_ramp += 1;
     }
 
-    if (opt_ramp && y > (curr_ramp) / num_ramps) {
+    if (opt_ramp && y >= (curr_ramp) / num_ramps) {
         // make linear ramp
         output_color = make_float3(x, x, x);
         curr_ramp += 1;
