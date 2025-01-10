@@ -1394,9 +1394,9 @@ Applies chroma subsampling to an image by converting to YCbCr, downsampling the 
 #### DCTL Parameters
 **X/Y Offset**: Allows you to offset the 2x4 filter box.
 
-**Convert to YCbCr**: Check this box to return the YCbCr image instead of converting back to rec709.
-
 **Chroma Subsampling Type**: Allows you to choose which kind of chroma subsampling to use.
+
+**Input/Output Format**: Indicate whether the input is expected to be RGB (scaled 0-1) or YCbCr (scaled 0-1).
 
 ---
 ### CIELUV DCTL

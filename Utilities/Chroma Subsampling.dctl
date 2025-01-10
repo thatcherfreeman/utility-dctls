@@ -1,8 +1,9 @@
 // clang-format off
 DEFINE_UI_PARAMS(xoffset, X Offset, DCTLUI_SLIDER_INT, 0, 0, 3, 1)
 DEFINE_UI_PARAMS(yoffset, Y Offset, DCTLUI_SLIDER_INT, 0, 0, 1, 1)
-DEFINE_UI_PARAMS(convert_to_ycbcr, Convert to YCbCr, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(subsampling_type, Chroma Subsampling Type, DCTLUI_COMBO_BOX, 0, {CS444, CS440, CS422, CS420, CS411, CS410}, {4:4:4, 4:4:0, 4:2:2, 4:2:0, 4:1:1, 4:1:0})
+DEFINE_UI_PARAMS(input_format, Input Format, DCTLUI_COMBO_BOX, 0, {INPUT_RGB, INPUT_YCBCR}, {RGB, YCbCr})
+DEFINE_UI_PARAMS(output_format, Output Format, DCTLUI_COMBO_BOX, 0, {OUTPUT_RGB, OUTPUT_YCBCR}, {RGB, YCbCr})
 
 // clang-format on
 
@@ -101,7 +102,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         for (int c = 0; c < 4; ++c) {
             float3 color = make_float3(
                 _tex2D(p_TexR, r_orig_x + c, r_orig_y + r), _tex2D(p_TexG, r_orig_x + c, r_orig_y + r), _tex2D(p_TexB, r_orig_x + c, r_orig_y + r));
-            color = rgb_d_to_ycbcr(rgb_to_rgb_d(color));
+            if (input_format == INPUT_RGB) {
+                color = rgb_d_to_ycbcr(rgb_to_rgb_d(color));
+            } else if (input_format == INPUT_YCBCR) {
+                color = color * 255.0;
+            }
             region[r][c] = color;
         }
     }
@@ -135,8 +140,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             break;
     }
     float3 output_color_ycrcb = chroma_subsample(params, region, rx, ry);
-    float3 output_color = rgb_d_to_rgb(ycbcr_to_rgb_d(output_color_ycrcb));
-    if (convert_to_ycbcr) {
+    float3 output_color;
+
+    if (output_format == OUTPUT_RGB) {
+        output_color = rgb_d_to_rgb(ycbcr_to_rgb_d(output_color_ycrcb));
+    } else if (output_format == OUTPUT_YCBCR) {
         output_color = output_color_ycrcb / 255.0f;
     }
     return output_color;
