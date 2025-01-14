@@ -1,5 +1,6 @@
 #line 2
 // clang-format off
+DEFINE_DCTL_ALPHA_MODE_STRAIGHT
 DEFINE_UI_PARAMS(sample_x, Color Picker X, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(sample_y, Color Picker Y, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
 
@@ -20,11 +21,11 @@ DEFINE_UI_PARAMS(legend_value, Legend Color, DCTLUI_COMBO_BOX, 3, {LEGCOL_WHITE,
 #define FONT_HEIGHT 16
 #define FONT_LENGTH 127
 
-__CONSTANT__ int font_widths[FONT_LENGTH] = {
-    10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
-    10, 3,  4,  7,  6,  10, 8,  2,  4,  4,  6,  6,  3,  4,  3,  4,  6,  5,  6,  6,  7,  6,  6,  6,  6,  6,  3,  3,  7,  6,  7,  6,
-    10, 8,  7,  8,  8,  7,  7,  8,  8,  3,  5,  8,  7,  9,  7,  8,  7,  8,  8,  7,  6,  8,  8,  10, 7,  6,  7,  4,  4,  3,  6,  7,
-    3,  6,  7,  6,  6,  6,  4,  6,  7,  3,  3,  6,  3,  9,  7,  6,  7,  6,  6,  5,  4,  7,  6,  8,  6,  6,  6,  4,  3,  4,  6};
+__CONSTANT__ int font_widths[FONT_LENGTH] = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+                                             10, 10, 10, 10, 10, 10, 10, 3,  4,  7,  6,  10, 8,  2,  4,  4,  6,  6,  3,  4,  3,  4,  6,  5,  6,  6,
+                                             7,  6,  6,  6,  6,  6,  3,  3,  7,  6,  7,  6,  10, 8,  7,  8,  8,  7,  7,  8,  8,  3,  5,  8,  7,  9,
+                                             7,  8,  7,  8,  8,  7,  6,  8,  8,  10, 7,  6,  7,  4,  4,  3,  6,  7,  3,  6,  7,  6,  6,  6,  4,  6,
+                                             7,  3,  3,  6,  3,  9,  7,  6,  7,  6,  6,  5,  4,  7,  6,  8,  6,  6,  6,  4,  3,  4,  6};
 __CONSTANT__ int font[FONT_LENGTH][FONT_HEIGHT] = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                                                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                                                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -181,8 +182,8 @@ __DEVICE__ curr_pos_t make_curr_pos(float x, float y) {
     return result;
 }
 
-__DEVICE__ void draw_char(
-    char c, float3 char_color, __PRIVATE__ char_trans_t* char_trans, __PRIVATE__ curr_pos_t* curr_pos, __PRIVATE__ float3* curr_color) {
+__DEVICE__ void
+draw_char(char c, float3 char_color, __PRIVATE__ char_trans_t* char_trans, __PRIVATE__ curr_pos_t* curr_pos, __PRIVATE__ float3* curr_color) {
     float char_height = char_trans->scale;
     float char_width = char_trans->scale * FONT_WIDTH / FONT_HEIGHT;
 
@@ -203,8 +204,8 @@ __DEVICE__ void draw_char(
     }
 }
 
-__DEVICE__ void draw_string(
-    char str[], float3 str_color, __PRIVATE__ char_trans_t* char_trans, __PRIVATE__ curr_pos_t* curr_pos, __PRIVATE__ float3* curr_color) {
+__DEVICE__ void
+draw_string(char str[], float3 str_color, __PRIVATE__ char_trans_t* char_trans, __PRIVATE__ curr_pos_t* curr_pos, __PRIVATE__ float3* curr_color) {
     int i = 0;
     char c = str[0];
     float c_width;
@@ -341,10 +342,10 @@ __DEVICE__ void int2str(int f, char output[], int num_chars) {
     output[runner] = '\0';
 }
 
-__DEVICE__ float3
-sample_color(int window_size, int width, int height, int px, int py, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
+__DEVICE__ float4
+sample_color(int window_size, int width, int height, int px, int py, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b, __TEXTURE__ tex_a) {
     float weight = 0.0;
-    float3 total = make_float3(0.0, 0.0, 0.0);
+    float4 total = make_float4(0.0, 0.0, 0.0, 0.0);
 
     int left_margin = window_size / 2;
     int right_margin = window_size / 2;
@@ -358,7 +359,7 @@ sample_color(int window_size, int width, int height, int px, int py, __TEXTURE__
             // Check in bounds
             if (0 <= i && i < width && 0 <= j && j < height) {
                 weight += 1.0;
-                total += make_float3(_tex2D(tex_r, i, j), _tex2D(tex_g, i, j), _tex2D(tex_b, i, j));
+                total += make_float4(_tex2D(tex_r, i, j), _tex2D(tex_g, i, j), _tex2D(tex_b, i, j), _tex2D(tex_a, i, j));
             }
         }
     }
@@ -373,8 +374,8 @@ __DEVICE__ int imax(int a, int b) {
     }
 }
 
-__DEVICE__ float3 convert_float3_to_format(float3 x, int format, __PRIVATE__ int* num_digits) {
-    float3 out;
+__DEVICE__ float4 convert_float4_to_format(float4 x, int format, __PRIVATE__ int* num_digits) {
+    float4 out;
     int needed_digits = 0;
     switch (format) {
         case FORMAT_FLOAT:
@@ -404,27 +405,31 @@ __DEVICE__ float3 convert_float3_to_format(float3 x, int format, __PRIVATE__ int
     return out;
 }
 
-__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
-    float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+__DEVICE__ float3 drop_alpha(float4 rgba) {
+    return make_float3(rgba.x, rgba.y, rgba.z);
+}
 
-    float3 legend_color;
+__DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, __TEXTURE__ p_TexA) {
+    float4 curr_color = make_float4(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y), _tex2D(p_TexA, p_X, p_Y));
+
+    float4 legend_color;
     float lum = 0.0;
     switch (legend_value) {
         case LEGCOL_BLACK:
-            legend_color = make_float3(0.0, 0.0, 0.0);
+            legend_color = make_float4(0.0, 0.0, 0.0, 1.0);
             break;
         case LEGCOL_WHITE:
-            legend_color = make_float3(1.0, 1.0, 1.0);
+            legend_color = make_float4(1.0, 1.0, 1.0, 1.0);
             break;
         case LEGCOL_GRAY:
-            legend_color = make_float3(0.18, 0.18, 0.18);
+            legend_color = make_float4(0.18, 0.18, 0.18, 1.0);
             break;
         case LEGCOL_INV:
             lum = (curr_color.x + curr_color.y + curr_color.z) / 3.0f;
             if (isnan(lum)) {
                 lum = 0.5;
             }
-            legend_color = make_float3(1.0, 1.0, 1.0) - lum;
+            legend_color = make_float4(1.0, 1.0, 1.0, 1.0) - lum;
             break;
     }
 
@@ -455,21 +460,21 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         }
     }
 
-    curr_pos_t curr_pos =
-        make_curr_pos((float)p_X / ((float)p_Height - 1), // dividing by height instead of width to correct aspect ratio of characters.
-                      (float)p_Y / ((float)p_Height - 1));
+    curr_pos_t curr_pos = make_curr_pos((float)p_X / ((float)p_Height - 1), // dividing by height instead of width to correct aspect ratio of characters.
+                                        (float)p_Y / ((float)p_Height - 1));
     char_trans_t str_trans;
     const float scale = 0.05;
 
     char red_str[] = "R: ";
     char green_str[] = "  G: ";
     char blue_str[] = "  B: ";
+    char alpha_str[] = "  A: ";
 
     // Guess max width from `format` and user's `num_digits`
     int num_digits_temp = num_digits;
-    convert_float3_to_format(make_float3(0.0, 0.0, 0.0), format, &num_digits_temp);
-    float max_width = 0.45 * (strlen(red_str) + strlen(green_str) + strlen(blue_str)) * scale +
-                      (0.42) * scale * num_digits_temp * 3.0; // not a rigerous solution, hardcoded for this specific font and text.
+    convert_float4_to_format(make_float4(0.0, 0.0, 0.0, 0.0), format, &num_digits_temp);
+    float max_width = 0.45 * (strlen(red_str) + strlen(green_str) + strlen(blue_str) + strlen(alpha_str)) * scale +
+                      (0.42) * scale * num_digits_temp * 4.0; // not a rigerous solution, hardcoded for this specific font and text.
 
     // letterbox/pillarbox calculation
     const float target_aspect = 2.40;
@@ -525,10 +530,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float bounding_box_top = str_trans.y + scale;
     float bounding_box_left = str_trans.x;
     float bounding_box_right = str_trans.x + max_width;
-    if (bounding_box_bottom <= curr_pos.y && curr_pos.y <= bounding_box_top && bounding_box_left <= curr_pos.x &&
-        curr_pos.x <= bounding_box_right) {
-        float3 color_picker_sample = sample_color(window_size, p_Width, p_Height, sample_pos_x_px, sample_pos_y_px, p_TexR, p_TexG, p_TexB);
-        color_picker_sample = convert_float3_to_format(color_picker_sample, format, &num_digits);
+    if (bounding_box_bottom <= curr_pos.y && curr_pos.y <= bounding_box_top && bounding_box_left <= curr_pos.x && curr_pos.x <= bounding_box_right) {
+        float4 color_picker_sample = sample_color(window_size, p_Width, p_Height, sample_pos_x_px, sample_pos_y_px, p_TexR, p_TexG, p_TexB, p_TexA);
+        color_picker_sample = convert_float4_to_format(color_picker_sample, format, &num_digits);
 
         char string_buffer[100];
         char number_buffer[16];
@@ -548,8 +552,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         float2str(color_picker_sample.z, number_buffer, num_digits);
         strcat(string_buffer, number_buffer, string_buffer);
 
+        // Alpha
+        strcat(string_buffer, alpha_str, string_buffer);
+        float2str(color_picker_sample.w, number_buffer, num_digits);
+        strcat(string_buffer, number_buffer, string_buffer);
+
         // Draw the string
-        draw_string(string_buffer, legend_color, &str_trans, &curr_pos, &curr_color);
+        float3 curr_color_f3 = drop_alpha(curr_color);
+        draw_string(string_buffer, drop_alpha(legend_color), &str_trans, &curr_pos, &curr_color_f3);
+        curr_color = make_float4(curr_color_f3.x, curr_color_f3.y, curr_color_f3.z, 1.0);
     }
+    curr_color.w = 1.0;
     return curr_color;
 }

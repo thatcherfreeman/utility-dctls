@@ -971,12 +971,12 @@ Clamps the code values of the current frame to the specified Min and Max values,
 ---
 
 ### Color Generator DCTL
-Generates the specified RGB value across the whole frame. Also allows you to bypass certain channels via the "Pass-through" checkboxes.
+Generates the specified RGB value across the whole frame. Also allows you to bypass certain channels via the "Pass-through" checkboxes. Updated 2025-01-13 for Resolve 19.1
 
 #### DCTL Parameters
-**Red/Green/Blue**: the Red/Green/Blue value that will be returned.
+**Red/Green/Blue/Alpha**: the Red/Green/Blue value that will be returned.
 
-**Red/Green/Blue Pass-Through**: If checked, just return the red/green/blue value of the input image.
+**Red/Green/Blue/Alpha Pass-Through**: If checked, just return the red/green/blue value of the input image.
 
 
 ---
@@ -1427,7 +1427,7 @@ Generates a synthetic image of the Macbeth ColorChecker based on one of two data
 ---
 ### Color Picker DCTL
 
-Improves upon the color picker in the Color page by allowing you to see floating point code values that aren't clamped 0 to 1.
+Improves upon the color picker in the Color page by allowing you to see floating point code values that aren't clamped 0 to 1. Updated 2025-01-13 for Resolve 19.1 alpha support.
 
 #### DCTL Parameters
 **Color Picker X/Y**: Coordinates of the pixel you want to sample.
