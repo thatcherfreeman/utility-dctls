@@ -1,10 +1,12 @@
 AccessModifierOffset: 0
+AlignEscapedNewlines: Left
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortFunctionsOnASingleLine: false
 BinPackParameters: false
 BinPackArguments: false
 ColumnLimit: 155
 DerivePointerAlignment: false
+SkipMacroDefinitionBody: true
 PointerAlignment: Left
 IndentAccessModifiers: true
 IndentWidth: 4

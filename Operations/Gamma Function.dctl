@@ -4,6 +4,7 @@ DEFINE_UI_PARAMS(invert, Use Reciprocal: 1 / Gamma, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(version, Negative Values:, DCTLUI_COMBO_BOX, 0, {CLIP, Y_EQ_X_LINEAR, SLOPE_MATCH_LINEAR, REFLECT, SIGN_MATCH}, {Clip 0, y=x, y=x/gamma, Positive Reflection, Sign Match Reflection})
 
 // clang-format on
+
 __DEVICE__ float powf(float base, float exp, int version) {
     if (base > 0.0) {
         return _powf(base, exp);
