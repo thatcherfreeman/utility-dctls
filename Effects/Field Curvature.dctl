@@ -1,5 +1,5 @@
 #line 2
-
+DEFINE_DCTL_ALPHA_MODE_STRAIGHT
 // clang-format off
 
 DEFINE_UI_PARAMS(protected_radius_x, Protected Radius X, DCTLUI_SLIDER_FLOAT, 0.5, 0.001, 1.5, 0.01)
@@ -12,6 +12,7 @@ DEFINE_UI_PARAMS(couple_xy, Couple XY, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(distort, Distort, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(draw_curve, Radius vs Strength Curve, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(draw_heat_map, Draw Blur Map, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(use_alpha_for_strength, Use Alpha In as Strength, DCTLUI_CHECK_BOX, 0)
 
 DEFINE_UI_PARAMS(curve_type, Blur Falloff Function, DCTLUI_COMBO_BOX, 0, {CURVE_SIGMOID, CURVE_ELLIPSE, CURVE_LINEAR}, {Sigmoid, Ellipse, Linear})
 
@@ -107,6 +108,11 @@ __DEVICE__ kernel_params_t make_kernel_params(float blur_rad, float cats_eye, bo
     params.distort = distort;
     params.factor = factor;
     return params;
+}
+
+__DEVICE__ kernel_params_t compute_kernel_params_with_alpha(float alpha, float2 dimensions, float edge_blur_strength, float cats_eye, bool distort) {
+    float blur_rad = edge_blur_strength * dimensions.x / 2048.0; // max radius in pixels of blur.
+    return make_kernel_params(blur_rad * alpha, cats_eye * alpha, distort, alpha);
 }
 
 __DEVICE__ kernel_params_t compute_kernel(
@@ -249,21 +255,26 @@ __DEVICE__ float3 blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p
     return total_color / weight;
 }
 
-__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+__DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, __TEXTURE__ p_TexA) {
     int2 curr_pos = make_int2(p_X, p_Y);
 
     if (couple_xy) {
         protected_radius_y = protected_radius_x;
     }
-
-    kernel_params_t params = compute_kernel(make_float2((float)p_X, (float)p_Y),
-                                            make_float2(p_Width, p_Height),
-                                            make_float2(protected_radius_x, protected_radius_y),
-                                            edge_blur_strength,
-                                            cats_eye,
-                                            distort,
-                                            curve_type,
-                                            curve_falloff);
+    kernel_params_t params;
+    if (use_alpha_for_strength) {
+        float curr_alpha = _tex2D(p_TexA, p_X, p_Y);
+        params = compute_kernel_params_with_alpha(curr_alpha, make_float2(p_Width, p_Height), edge_blur_strength, cats_eye, distort);
+    } else {
+        params = compute_kernel(make_float2((float)p_X, (float)p_Y),
+                                make_float2(p_Width, p_Height),
+                                make_float2(protected_radius_x, protected_radius_y),
+                                edge_blur_strength,
+                                cats_eye,
+                                distort,
+                                curve_type,
+                                curve_falloff);
+    }
 
     float3 output_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
 
@@ -278,14 +289,21 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         y = 1 - y;
         y *= 3.0;
 
-        params = compute_kernel(mixf2(make_float2(0.0, 0.0), make_float2(p_Width, p_Height) - 1.0f, p_X / (p_Width - 1.0)),
-                                make_float2(p_Width, p_Height),
-                                make_float2(protected_radius_x, protected_radius_x),
-                                edge_blur_strength / 20.0,
-                                cats_eye,
-                                distort,
-                                curve_type,
-                                curve_falloff);
+        float2 chart_pos = mixf2(make_float2(0.0, 0.0), make_float2(p_Width, p_Height) - 1.0f, p_X / (p_Width - 1.0));
+
+        if (use_alpha_for_strength) {
+            float chart_alpha = _tex2D(p_TexA, (int)_round(chart_pos.x), (int)_round(chart_pos.y));
+            params = compute_kernel_params_with_alpha(chart_alpha, make_float2(p_Width, p_Height), edge_blur_strength, cats_eye, distort);
+        } else {
+            params = compute_kernel(chart_pos,
+                                    make_float2(p_Width, p_Height),
+                                    make_float2(protected_radius_x, protected_radius_x),
+                                    edge_blur_strength / 20.0,
+                                    cats_eye,
+                                    distort,
+                                    curve_type,
+                                    curve_falloff);
+        }
 
         if (_fabs(y - params.blur_rad) < 0.002) {
             output_color = make_float3(1.0, 1.0, 1.0);
@@ -295,5 +313,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         }
     }
 
-    return output_color;
+    float4 output_rgba = make_float4(output_color.x, output_color.y, output_color.z, 1.0f);
+    return output_rgba;
 }

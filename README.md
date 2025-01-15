@@ -454,7 +454,7 @@ You specify the bell curve spectral densities of three dyes (at 1.0 units of con
 
 ---
 ### Field Curvature DCTL
-Applies an effect as if the lens has a strong field curvature, so the edges of the frame are out of focus, using a circular blur kernel with the ability to emulate cats eye in on the edges. Use this on a linear image. We strategically avoid sampling pixels that are not blurred, so the less blurry the image is, the faster this DCTL will run.
+Applies an effect as if the lens has a strong field curvature, so the edges of the frame are out of focus, using a circular blur kernel with the ability to emulate cats eye in on the edges. Use this on a linear image. We strategically avoid sampling pixels that are not blurred, so the less blurry the image is, the faster this DCTL will run. **This DCTL requires Resolve 19.1 or later as of the 2025-01-15 update.**
 
 #### DCTL Parameters
 **Protected Radius X/Y**: Choose what portion of the center of the frame is not blurred at all.
@@ -472,6 +472,8 @@ Applies an effect as if the lens has a strong field curvature, so the edges of t
 **Radius vs Strength Curve**: Shows you the blur radius used for different distances from the center of the frame, The x-axis represents location from the bottom left corner to the top right corner.
 
 **Draw Blur Map**: Shows the blur radius for each pixel in the frame, scaled 0-1.
+
+**Use Alpha In as Strength**: New to Resolve 19.1, if you pipe in a power window as the alpha input, when this checkbox is checked, we will just power the blur strength from the provided alpha.
 
 **Blur Falloff Function**: Controls how the blur strength maps from zero to **Max Blur Strength** as radius increases.
 
@@ -736,7 +738,7 @@ Simple tone mapping that is guaranteed to preserve input code values up to **Pro
 
 ---
 ### Radial Blur DCTL
-Radial blur whose strength increases with radius from the center of the frame. Apply this DCTL to a linear image.
+Radial blur whose strength increases with radius from the center of the frame. Apply this DCTL to a linear image. **This DCTL requires Resolve 19.1 or later as of the 2025-01-15 update.**
 
 #### Quick note on radial blurs
 All blurs work by replacing each pixel with a weighted average of a certain region of pixels. With most blurs, that's commonly a circular region centered on the pixel in question. In the case of a radial blur, we are instead going to use an arc of a circle that is centered in the frame as a base. Imagine we trace that arc with a circular paintbrush with some radius.
@@ -759,6 +761,8 @@ Thus, you can see that the region averaged for a given pixel is specified by the
 **Draw Blur Rotation Map**: Returns the rotation angle for each pixel in the frame, in radians.
 
 **Draw Blur Thickness Map**: Returns the blur thickness for each pixel in the frame, with units of pixels.
+
+**Use Alpha In as Strength**: New to Resolve 19.1, if you pipe in a power window as the alpha input, when this checkbox is checked, we will just power the blur strength from the provided alpha.
 
 **Blur Rotation Falloff**: Controls how the blur rotation maps from zero to **Max Blur Rotation Deg** as distance from the center of the frame increases.
 
@@ -971,7 +975,7 @@ Clamps the code values of the current frame to the specified Min and Max values,
 ---
 
 ### Color Generator DCTL
-Generates the specified RGB value across the whole frame. Also allows you to bypass certain channels via the "Pass-through" checkboxes. Updated 2025-01-13 for Resolve 19.1
+Generates the specified RGB value across the whole frame. Also allows you to bypass certain channels via the "Pass-through" checkboxes. **Updated 2025-01-13, it now requires Resolve 19.1 or later.**
 
 #### DCTL Parameters
 **Red/Green/Blue/Alpha**: the Red/Green/Blue value that will be returned.
@@ -1427,7 +1431,7 @@ Generates a synthetic image of the Macbeth ColorChecker based on one of two data
 ---
 ### Color Picker DCTL
 
-Improves upon the color picker in the Color page by allowing you to see floating point code values that aren't clamped 0 to 1. Updated 2025-01-13 for Resolve 19.1 alpha support.
+Improves upon the color picker in the Color page by allowing you to see floating point code values that aren't clamped 0 to 1. **Updated 2025-01-13 for alpha support and now requires Resolve 19.1 or later.**
 
 #### DCTL Parameters
 **Color Picker X/Y**: Coordinates of the pixel you want to sample.
