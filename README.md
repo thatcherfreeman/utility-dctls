@@ -425,9 +425,10 @@ You specify the bell curve spectral densities of three dyes (at 1.0 units of con
 3. Convert to Log, in my case I used T-Log 16.
 4. Invert the image via 1-X (invert DCTL in log mode)
 5. use offset so that the maximum value from (2) is mapped to zero, being 0 concentration of dye.
-6. Gain so that mid gray is placed at 1.0.
-7. Dye Sim DCTL set to one of the Transmittance or Projection modes. I found that the "Mean" sliders were often the best ones to move first, to adjust the image.
-8. Display encoding
+6. 3x3 Matrix to adjust saturation (represents DIR color correction and some compensation for your spectral sensitivities)
+7. Gain so that mid gray is placed at 1.0.
+8. Dye Sim DCTL set to one of the Transmittance or Projection modes. I found that the "Mean" sliders were often the best ones to move first, to adjust the image.
+9. Display encoding
 
 #### DCTL Parameters
 **Cyan/Magenta/Yellow/Silver Mean**: Indicates the wavelength center of the bell curves, units are nm.
