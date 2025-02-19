@@ -1,0 +1,111 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(num_rectangles, Num Rectangles, DCTLUI_SLIDER_INT, 5, 1, 10, 1)
+DEFINE_UI_PARAMS(center_cv, Center CV, DCTLUI_SLIDER_FLOAT, 0.50, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(target_gamma, Target Gamma, DCTLUI_SLIDER_FLOAT, 2.4, 1.0, 3.0, 0.001)
+// clang-format on
+
+typedef struct {
+        float x, y;          // some specified position on the screen, refers to the center of the rectangle.
+        float width, height; // proportion of the height of the frame.
+} rect_pos_t;
+
+__DEVICE__ rect_pos_t make_rect_pos(float x, float y, float width, float height) {
+    rect_pos_t rect;
+    rect.x = x;
+    rect.y = y;
+    rect.width = width;
+    rect.height = height;
+    return rect;
+}
+
+__DEVICE__ bool draw_rect(float2 curr_pos, rect_pos_t rect_pos) {
+    return (rect_pos.x - (rect_pos.width / 2.0) < curr_pos.x && curr_pos.x < rect_pos.x + (rect_pos.width / 2.0) &&
+            rect_pos.y - (rect_pos.height / 2.0) < curr_pos.y && curr_pos.y < rect_pos.y + (rect_pos.height / 2.0));
+}
+
+/////////////////////////////////////////////
+// Random Number Generator
+/////////////////////////////////////////////
+
+typedef uint rand_state;
+
+__DEVICE__ float _randu_lcg(__PRIVATE__ rand_state* seed) {
+    // Returns random number in interval [0, 1)
+    rand_state old_seed = *seed;
+    const rand_state m = (~((rand_state)0));
+    const rand_state a = 48271;
+    rand_state new_seed = (a * old_seed) % m;
+    *seed = new_seed;
+    return (((float)new_seed) / (float)m);
+}
+
+__DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
+    rand_state x = *seed;
+    x ^= (x << 13 | x >> 19);
+    x ^= (x >> 7 | x << 25);
+    x ^= (x << 15 | x >> 15);
+    *seed = x;
+    return (((float)x) / (float)(~((rand_state)0)));
+}
+
+__DEVICE__ inline float randu(__PRIVATE__ rand_state* seed) {
+    return _randu_xorshift(seed);
+}
+
+/////////////////////////////////////////////
+// Distribution Sampling functions
+/////////////////////////////////////////////
+
+__DEVICE__ float sample_uniform(float a, float b, __PRIVATE__ rand_state* seed) {
+    float range = b - a;
+    float x = randu(seed);
+    return a + range * x;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    // Obtain random seed.
+    float seed_position_x = 0.50;
+    float seed_position_y = 0.50;
+
+    float seed = _tex2D(p_TexR, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height));
+    seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0;
+    seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0;
+    rand_state state_value = *((__PRIVATE__ rand_state*)&seed);
+    __PRIVATE__ rand_state* state = &state_value;
+
+    float val;
+    *state ^= p_Width * p_Height;
+    *state ^= (p_Width * p_Y + p_X) << 10;
+    val = randu(state);
+    val = randu(state);
+    val = randu(state);
+    val = randu(state);
+    *state = *((__PRIVATE__ rand_state*)&val);
+    float output_cv = 0.0;
+
+    float target_lum = _powf(center_cv, target_gamma);
+
+    // if (RAND((uint)(_fmod((float)p_X, 101.0) + 101.0 * _fmod((float)p_Y, 101.0))) < target_lum) {
+    // if (RAND((uint)(_fmod((float)p_X, 101.0) + 101.0 * _fmod((float)p_Y, 101.0))) < target_lum) {
+
+    // if (RAND(p_X + p_Width * p_Y) < target_lum) {
+    if (sample_uniform(0, 1.0, state) < target_lum) {
+        output_cv = 1.0;
+    }
+
+    float x = (float)p_X / (float)(p_Width - 1);
+    float y = (float)p_Y / (float)(p_Height - 1);
+
+    float2 curr_pos = make_float2(x, y);
+
+    rect_pos_t rect_pos = make_rect_pos(0.5, 0.5, 0.25, 0.25);
+
+    if (draw_rect(curr_pos, rect_pos)) {
+        output_cv = center_cv;
+    }
+    float3 output = make_float3(output_cv, output_cv, output_cv);
+    return output;
+}

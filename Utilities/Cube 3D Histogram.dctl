@@ -4,7 +4,7 @@
 DEFINE_UI_PARAMS(histogram_pos_x, Histogram Position X, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(histogram_pos_y, Histogram Position Y, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(histogram_size, Histogram Size, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
-DEFINE_UI_PARAMS(histogram_opacity, Histogram Opacity, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(histogram_opacity, Histogram Opacity, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(axis_dot_size, Axis Dot Size, DCTLUI_SLIDER_FLOAT, 0.02, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(dot_size, Histogram Dot Size, DCTLUI_SLIDER_FLOAT, 0.04, 0.0, 1.0, 0.01)
 

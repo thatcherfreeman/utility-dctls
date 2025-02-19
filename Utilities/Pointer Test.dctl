@@ -1,0 +1,87 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(sample_x, Sample X, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(sample_y, Sample Y, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(window_size, Window Size px, DCTLUI_SLIDER_INT, 1, 1, 8, 1)
+DEFINE_UI_PARAMS(draw_crosshair, Draw Crosshair, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(draw_spd, Draw SPD, DCTLUI_CHECK_BOX, 1)
+
+DEFINE_UI_PARAMS(input_color_space, Input Color Space, DCTLUI_COMBO_BOX, 0, {INPUT_XYZ}, {XYZ Linear})
+// clang-format on
+
+// Matrix multiplies two matrices A and B, stores the result in C.
+__DEVICE__ void matrix_multiply(__PRIVATE__ float** C, __PRIVATE__ float** A, int A_rows, int A_cols, __PRIVATE__ float** B, int B_cols) {
+    for (int i = 0; i < A_rows; i++) {
+        for (int j = 0; j < B_cols; j++) {
+            C[i][j] = 0.0;
+            for (int k = 0; k < A_cols; k++) {
+                C[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+}
+
+__DEVICE__ void transpose(__PRIVATE__ float** A, int M, int N) {
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < i; ++j) {
+            float temp = A[i][j];
+            A[i][j] = A[j][i];
+            A[j][i] = temp;
+        }
+    }
+}
+
+#define CONVERT_MULTI_ARRAY_TO_POINTER(array, rows) ({ \
+    __PRIVATE__ float* _##array##_ptr[rows] = {}; \
+    for (int i = 0; i < rows; ++i) { \
+        _##array##_ptr[i] = array[i]; \
+    } \
+    (__PRIVATE__ float**)_##array##_ptr; \
+})
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    float A[10][3] = {
+        {1.0, 2.0, 3.0},
+        {4.0, 5.0, 6.0},
+        {7.0, 8.0, 9.0},
+        {1.0, 2.0, 3.0},
+        {4.0, 5.0, 6.0},
+        {7.0, 8.0, 9.0},
+        {1.0, 2.0, 3.0},
+        {4.0, 5.0, 6.0},
+        {7.0, 8.0, 9.0},
+    };
+
+    __PRIVATE__ float** A_ptr = CONVERT_MULTI_ARRAY_TO_POINTER(A, 10);
+
+    float B[3][10] = {
+        {7.0, 8.0, 9.0, 7.0, 8.0, 9.0, 7.0, 8.0, 9.0},
+        {4.0, 5.0, 6.0, 4.0, 5.0, 6.0, 4.0, 5.0, 6.0},
+        {1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0},
+    };
+    __PRIVATE__ float** B_ptr = CONVERT_MULTI_ARRAY_TO_POINTER(B, 3);
+
+    float A_T[3][10] = {};
+    __PRIVATE__ float** A_T_ptr = CONVERT_MULTI_ARRAY_TO_POINTER(A_T, 3);
+
+    float C[3][3] = {};
+    __PRIVATE__ float** C_ptr = CONVERT_MULTI_ARRAY_TO_POINTER(C, 3);
+    matrix_multiply(C_ptr, A_ptr, 3, 3, B_ptr, 3);
+    // transpose(A_ptr, 3, 3);
+
+    float y = (float)p_Y / (float)(p_Height - 1);
+    float x = (float)p_X / (float)(p_Width - 1);
+    float3 output;
+
+    if (y < 1.0 / 3.0) {
+        output = make_float3(C_ptr[0][0], C_ptr[0][1], C_ptr[0][2]);
+    } else if (1.0 / 3.0 <= y && y < 2.0 / 3.0) {
+        output = make_float3(C_ptr[1][0], C_ptr[1][1], C_ptr[1][2]);
+    } else {
+        output = make_float3(C_ptr[2][0], C_ptr[2][1], C_ptr[2][2]);
+    }
+
+    return output / 100.0;
+}
