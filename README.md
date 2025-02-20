@@ -124,7 +124,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [T-Log Curve](#t-log-curve)
         - [Timecode Display DCTL](#timecode-display-dctl)
         - [Waveform Guides](#waveform-guides)
-        - [White Mask DCTL](#white-mask-dctl)
+        - [White Matte DCTL](#white-matte-dctl)
         - [XY Chromaticity Plot](#xy-chromaticity-plot)
 
 
@@ -2122,17 +2122,19 @@ Adds a border to the image and draws on the border so that the luma waveform has
 
 
 ---
-### White Mask DCTL
-Draws a white matte around the border of the frame, in case you need to spice up your standard viewing environment.
+### White Matte DCTL
+Draws a matte around the border of the frame, in case you need to spice up your standard viewing environment.
 
 #### DCTL Parameters
 **Scaling**: The original image is resized down to this scale.
 
-**White Point**: Code value to draw for the matte.
+**Matte Value**: Controls how bright the matte is.
 
 **Aspect Ratio**: When using a letterboxed or pillar boxed timeline, this allows you to specify what the active portion of the frame is.
 
 **Use Timeline Aspect Ratio**: If unchecked, uses the aspect ratio specified by **Aspect Ratio** instead of the timeline res.
+
+**Matte Value Units**: Indicates the units for the specified matte value. You can choose from code value (percentage), in which case we compute `Matte Value / 100.0` and write that code value to the matte. If you choose one along the lines of `Gamma 2.X Nits`, then we assume you have a `Gamma 2.X` display whose white point is 100 nits and we generate the code value that would generate `Matte Value` Nits. Likewise with ST2084 Nits, which instead should be used for displays that expect PQ as input.
 
 ---
 

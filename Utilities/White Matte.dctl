@@ -1,10 +1,10 @@
 #line 2
 // clang-format off
 DEFINE_UI_PARAMS(scaling, Scaling, DCTLUI_SLIDER_FLOAT, 0.8, 0.0, 1.0, 0.01)
-DEFINE_UI_PARAMS(white_point, White Point, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(white_point_input, Matte Value, DCTLUI_VALUE_BOX, 100.0)
 DEFINE_UI_PARAMS(aspect_ratio, Aspect Ratio, DCTLUI_VALUE_BOX, 2.40)
 DEFINE_UI_PARAMS(use_timeline_aspect_ratio, Use Timeline Aspect Ratio, DCTLUI_CHECK_BOX, 1)
-
+DEFINE_UI_PARAMS(white_point_units, Matte Value Units, DCTLUI_COMBO_BOX, 2, {UNITS_CODE_VALUE, UNITS_GAMMA_22_NITS, UNITS_GAMMA_24_NITS, UNITS_GAMMA_26_NITS, UNITS_PQ_NITS}, {Code Value (Percent), Gamma 2.2 Nits, Gamma 2.4 Nits, Gamma 2.6 Nits, ST2084 Nits})
 // clang-format on
 
 __DEVICE__ float powf(float base, float exp) {
@@ -40,6 +40,17 @@ __DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR
     return out;
 }
 
+__DEVICE__ float st2084_nits_to_cv(float n) {
+    // n is scaled so 1.0 is 1 nit.
+    float Y = n / 10000.0; // scale 10k nits to 1.0
+    const float m1 = 2610.0 / 16384.0;
+    const float m2 = 128.0 * 2523.0 / 4096.0;
+    const float c2 = 32.0 * 2413.0 / 4096.0;
+    const float c3 = 32.0 * 2392.0 / 4096.0;
+    const float c1 = c3 - c2 + 1.0;
+    return powf((c1 + c2 * powf(Y, m1)) / (1.0 + c3 * powf(Y, m1)), m2);
+}
+
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
 
     float x = (float)p_X / ((float)p_Width - 1) - 0.5;
@@ -70,7 +81,28 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float3 out;
     if (x_sample < side_bar_width || x_sample >= desired_width + side_bar_width || y_sample < top_bar_width ||
         y_sample >= desired_height + top_bar_width) {
-        out = make_float3(white_point, white_point, white_point);
+        float white_point_cv;
+        switch (white_point_units) {
+            case UNITS_CODE_VALUE:
+                white_point_cv = white_point_input / 100.0;
+                break;
+            case UNITS_GAMMA_22_NITS:
+                white_point_cv = powf(white_point_input / 100.0, 1.0 / 2.2);
+                break;
+            case UNITS_GAMMA_24_NITS:
+                white_point_cv = powf(white_point_input / 100.0, 1.0 / 2.4);
+                break;
+            case UNITS_GAMMA_26_NITS:
+                white_point_cv = powf(white_point_input / 100.0, 1.0 / 2.6);
+                break;
+            case UNITS_PQ_NITS:
+                white_point_cv = st2084_nits_to_cv(white_point_input);
+                break;
+            default:
+                white_point_cv = -1.0;
+                break;
+        }
+        out = make_float3(white_point_cv, white_point_cv, white_point_cv);
     } else {
         out = sample_point_bilinear_3ch(x_sample, y_sample, p_TexR, p_TexG, p_TexB, 1.0);
     }
