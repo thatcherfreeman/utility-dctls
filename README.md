@@ -1478,13 +1478,15 @@ Brings the Fusion 3D Histogram to the color page.
 
 **Zoom**: Indicates how zoomed in the picture of the histogram will be
 
-**Rotation Yaw/Pitch/Roll**: Rotate the cube around the specified axis, so you can see it better
+**Rotation Yaw/Pitch/Roll**: Rotate the cube around the specified axis, so you can see it better. Units are degrees
 
 **Num X/Y Samples**: Indicate the quantity of pixels to sample in each direction. The total samples will be the product of these two sliders. The larger this product is, the slower the DCTL will run.
 
 **Rotation Style**: Indicate whether you want the rotation controls to be aligned to the viewer's axes (default) or to the cube's axes (axis aligned), or to the diagonals of the cube.
 
 **Axis Layout**: Indicate whether you want the RGB axes of the cube to be ordered according to the right hand rule (like Nobe, Lattice) or left hand rule (like Fusion)
+
+**Projection Mode**: Choose between projective or affine camera.
 
 ---
 

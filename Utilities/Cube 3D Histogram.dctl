@@ -9,13 +9,14 @@ DEFINE_UI_PARAMS(axis_dot_size, Axis Dot Size, DCTLUI_SLIDER_FLOAT, 0.02, 0.0, 1
 DEFINE_UI_PARAMS(dot_size, Histogram Dot Size, DCTLUI_SLIDER_FLOAT, 0.04, 0.0, 1.0, 0.01)
 
 DEFINE_UI_PARAMS(focal_length, Zoom, DCTLUI_SLIDER_FLOAT, 2.0, 0.5, 5.0, 0.01)
-DEFINE_UI_PARAMS(rotation_angle, Rotation Yaw, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
-DEFINE_UI_PARAMS(rotation_angle_2, Rotation Pitch, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
-DEFINE_UI_PARAMS(rotation_angle_3, Rotation Roll, DCTLUI_SLIDER_FLOAT, 0.0, -6.38, 6.28, 0.01)
+DEFINE_UI_PARAMS(rotation_angle_1_deg, Rotation Yaw, DCTLUI_SLIDER_FLOAT, 0.0, -360, 360, 0.01)
+DEFINE_UI_PARAMS(rotation_angle_2_deg, Rotation Pitch, DCTLUI_SLIDER_FLOAT, 0.0, -360, 360, 0.01)
+DEFINE_UI_PARAMS(rotation_angle_3_deg, Rotation Roll, DCTLUI_SLIDER_FLOAT, 0.0, -360, 360, 0.01)
 DEFINE_UI_PARAMS(num_x_samples, Num X Samples, DCTLUI_SLIDER_INT, 32, 1, 200, 1)
 DEFINE_UI_PARAMS(num_y_samples, Num Y Samples, DCTLUI_SLIDER_INT, 18, 1, 200, 1)
 DEFINE_UI_PARAMS(rotation_style, Rotation Style, DCTLUI_COMBO_BOX, 0, {ROTATION_DEFAULT, ROTATION_AXIS_ALIGNED, ROTATION_DIAGONAL_ALIGNED}, {Default, Cube Axis Aligned, Diagonal Aligned})
 DEFINE_UI_PARAMS(axis_layout, Axis Layout, DCTLUI_COMBO_BOX, 1, {LEFT_HAND_RULE, RIGHT_HAND_RULE}, {Left Hand Rule, Right Hand Rule})
+DEFINE_UI_PARAMS(projection_mode, Perspective Mode, DCTLUI_COMBO_BOX, 0, {PERSPECTIVE, AFFINE}, {Perspective On, Perspective Off})
 // clang-format on
 
 #define PI (3.14159265358979323)
@@ -199,12 +200,16 @@ __DEVICE__ float4 to_homogeneous_coordinate_3d(float3 vec) {
     return make_float4(vec.x, vec.y, vec.z, 1.0f);
 }
 
-__DEVICE__ float2 normalize_homogeneous_coordinate_2d(float3 vec) {
-    float norm = vec.z;
-    if (vec.z == 0.0f) {
-        norm = 1.0f;
+__DEVICE__ float2 normalize_homogeneous_coordinate_2d(float3 vec, int projection_mode) {
+    if (projection_mode == PERSPECTIVE) {
+        float norm = vec.z;
+        if (vec.z == 0.0f) {
+            norm = 1.0f;
+        }
+        return make_float2(vec.x / norm, vec.y / norm);
+    } else {
+        return make_float2(vec.x, vec.y);
     }
-    return make_float2(vec.x / norm, vec.y / norm);
 }
 
 __DEVICE__ float3 to_homogeneous_coordinate_2d(float2 vec) {
@@ -290,6 +295,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             {0.0f, focal_length, 0.0f, 0.0f},
             {0.0f, 0.0, 1.0, 0.0f},
         };
+        float affine_matrix[3][4] = {
+            {focal_length / 3.5, 0.0f, 0.0f, 0.0f},
+            {0.0f, focal_length / 3.5, 0.0f, 0.0f},
+            {0.0f, 0.0, 1.0, 1.0f},
+        };
 
         // Offset middle of cube to origin so we can rotate about it
         float origin_offset[4][4] = {
@@ -306,6 +316,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             {0.0, 0.0, 0.0, 1.0},
         };
         // Put achromatic vertical
+        float rotation_angle = rotation_angle_1_deg * PI / 180.0;
+        float rotation_angle_2 = rotation_angle_2_deg * PI / 180.0;
+        float rotation_angle_3 = rotation_angle_3_deg * PI / 180.0;
+
         float rot_matrix_initial1[3][3] = {};
         make_rotation_mat_axis_angle(rot_matrix_initial1, unit_vec(make_float3(1.0, 0.0, 0.0)), -1.0 * _atan2f(_sqrtf(0.5f), 1.0f));
         float rotation_matrix_initial1_44[4][4] = {
@@ -381,7 +395,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         mm_44_44(temp44_2, translation_matrix, temp44_1);
         float net_matrix[3][4] = {};
         float temp[3][4] = {};
-        mm_34_44(net_matrix, camera_matrix, temp44_2);
+        if (projection_mode == PERSPECTIVE) {
+            mm_34_44(net_matrix, camera_matrix, temp44_2);
+        } else if (projection_mode == AFFINE) {
+            mm_34_44(net_matrix, affine_matrix, temp44_2);
+        }
 
         float curr_depth = 1e10;
         float3 histogram_color = make_float3(0.4f, 0.4f, 0.4f);
@@ -415,7 +433,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                         curr_dot_world_pos = make_float3(curr_dot_color.z, curr_dot_color.y, curr_dot_color.x);
                     }
                     float3 position = mv_34_4(net_matrix, to_homogeneous_coordinate_3d(curr_dot_world_pos));
-                    float2 dot_center = normalize_homogeneous_coordinate_2d(position);
+                    float2 dot_center = normalize_homogeneous_coordinate_2d(position, projection_mode);
                     if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) < axis_dot_size / position.z) {
                         if (position.z < curr_depth) {
                             histogram_color = curr_dot_color;
@@ -441,7 +459,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                     curr_dot_world_pos = make_float3(curr_color.z, curr_color.y, curr_color.x);
                 }
                 float3 position = mv_34_4(net_matrix, to_homogeneous_coordinate_3d(curr_dot_world_pos));
-                float2 dot_center = normalize_homogeneous_coordinate_2d(position);
+                float2 dot_center = normalize_homogeneous_coordinate_2d(position, projection_mode);
                 if (_hypotf(position_within_histogram.x - dot_center.x, position_within_histogram.y - dot_center.y) < dot_size / position.z) {
                     if (position.z < curr_depth) {
                         histogram_color = curr_color;
