@@ -1,22 +1,24 @@
 #line 2
 
 // clang-format off
-DEFINE_UI_PARAMS(histogram_pos_x, Histogram Position X, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
-DEFINE_UI_PARAMS(histogram_pos_y, Histogram Position Y, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
-DEFINE_UI_PARAMS(histogram_size, Histogram Size, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
-DEFINE_UI_PARAMS(histogram_opacity, Histogram Opacity, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
-DEFINE_UI_PARAMS(axis_dot_size, Axis Dot Size, DCTLUI_SLIDER_FLOAT, 0.02, 0.0, 1.0, 0.01)
-DEFINE_UI_PARAMS(dot_size, Histogram Dot Size, DCTLUI_SLIDER_FLOAT, 0.04, 0.0, 1.0, 0.01)
-
-DEFINE_UI_PARAMS(focal_length, Zoom, DCTLUI_SLIDER_FLOAT, 2.0, 0.5, 5.0, 0.01)
 DEFINE_UI_PARAMS(rotation_angle_1_deg, Rotation Yaw, DCTLUI_SLIDER_FLOAT, 0.0, -360, 360, 0.01)
 DEFINE_UI_PARAMS(rotation_angle_2_deg, Rotation Pitch, DCTLUI_SLIDER_FLOAT, 0.0, -360, 360, 0.01)
 DEFINE_UI_PARAMS(rotation_angle_3_deg, Rotation Roll, DCTLUI_SLIDER_FLOAT, 0.0, -360, 360, 0.01)
-DEFINE_UI_PARAMS(num_x_samples, Num X Samples, DCTLUI_SLIDER_INT, 32, 1, 200, 1)
-DEFINE_UI_PARAMS(num_y_samples, Num Y Samples, DCTLUI_SLIDER_INT, 18, 1, 200, 1)
+
+DEFINE_UI_PARAMS(histogram_pos_x, Histogram Position X, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(histogram_pos_y, Histogram Position Y, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(histogram_size, Histogram Size, DCTLUI_SLIDER_FLOAT, 0.2, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(histogram_opacity, Histogram Opacity, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(focal_length, Zoom, DCTLUI_SLIDER_FLOAT, 1.0, 0.25, 3.0, 0.01)
+DEFINE_UI_PARAMS(axis_dot_size_scale, Axis Dot Size, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 3.0, 0.01)
+DEFINE_UI_PARAMS(dot_size_scale, Histogram Dot Size, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 3.0, 0.01)
+
+DEFINE_UI_PARAMS(num_x_samples, Num X Samples, DCTLUI_SLIDER_INT, 64, 1, 200, 1)
+DEFINE_UI_PARAMS(num_y_samples, Num Y Samples, DCTLUI_SLIDER_INT, 64, 1, 200, 1)
 DEFINE_UI_PARAMS(rotation_style, Rotation Style, DCTLUI_COMBO_BOX, 0, {ROTATION_DEFAULT, ROTATION_AXIS_ALIGNED, ROTATION_DIAGONAL_ALIGNED}, {Default, Cube Axis Aligned, Diagonal Aligned})
 DEFINE_UI_PARAMS(axis_layout, Axis Layout, DCTLUI_COMBO_BOX, 1, {LEFT_HAND_RULE, RIGHT_HAND_RULE}, {Left Hand Rule, Right Hand Rule})
 DEFINE_UI_PARAMS(projection_mode, Perspective Mode, DCTLUI_COMBO_BOX, 0, {PERSPECTIVE, AFFINE}, {Perspective On, Perspective Off})
+DEFINE_UI_PARAMS(gang_num_samples, Gang Num X/Y Samples, DCTLUI_COMBO_BOX, 0, {GANG_UNIFORM_SPACING, GANG_EQUAL, GANG_UNGANGED}, {Uniform Spacing, Equal, Unganged})
 // clang-format on
 
 #define PI (3.14159265358979323)
@@ -272,6 +274,23 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     histogram_bounding_box.right_top.y = min(histogram_bounding_box.right_top.y, histogram_margin.right_top.y);
     float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0 - p_Y);
 
+    if (gang_num_samples == GANG_UNIFORM_SPACING) {
+        num_y_samples = (int) _round((float)num_x_samples * p_Height / p_Width);
+    } else if (gang_num_samples == GANG_EQUAL) {
+        num_y_samples = num_x_samples;
+    } else if (gang_num_samples == GANG_UNGANGED) {
+        // Do nothing
+    }
+
+    float dot_size = dot_size_scale * 4.0 / _sqrtf((float)(num_x_samples * num_y_samples)) * focal_length;
+    float axis_dot_size = axis_dot_size_scale * 0.02 * focal_length;
+
+    if (rotation_style == ROTATION_AXIS_ALIGNED) {
+        focal_length *= 2.6;
+    } else if (rotation_style == ROTATION_DEFAULT || rotation_style == ROTATION_DIAGONAL_ALIGNED) {
+        focal_length *= 2.2;
+    }
+
     if (inside_bounding_box(curr_pos, histogram_bounding_box)) {
 
         const float camera_x = 0.5;
@@ -402,7 +421,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         }
 
         float curr_depth = 1e10;
-        float3 histogram_color = make_float3(0.4f, 0.4f, 0.4f);
+        float3 histogram_color = make_float3(0.2f, 0.2f, 0.2f);
         float3 axes[12][2] = {
             {make_float3(0.0, 0.0, 0.0), make_float3(1.0, 0.0, 0.0)},
             {make_float3(0.0, 0.0, 0.0), make_float3(0.0, 1.0, 0.0)},

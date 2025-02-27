@@ -1466,27 +1466,29 @@ Creates a color ramp from 0 to 100% Hue, Saturation, or Luminance. This can be u
 Brings the Fusion 3D Histogram to the color page.
 
 #### DCTL Parameters
+**Rotation Yaw/Pitch/Roll**: Rotate the cube around the specified axis, so you can see it better. Units are degrees
+
 **Histogram Position X/Y**: Indicates the position of the drawn histogram in the frame.
 
 **Histogram Size**: Indicates how much of the frame the histogram will take up. The larger this is, the slower the DCTL will run.
 
 **Histogram Opacity**: Indicates how opaque the histogram will be
 
+**Zoom**: Indicates how zoomed in the picture of the histogram will be
+
 **Axis Dot Size**: Indicates the size of the dots of the cube outline
 
 **Histogram Dot Size**: Indicates the size of the dots representing the contents of the frame
 
-**Zoom**: Indicates how zoomed in the picture of the histogram will be
-
-**Rotation Yaw/Pitch/Roll**: Rotate the cube around the specified axis, so you can see it better. Units are degrees
-
-**Num X/Y Samples**: Indicate the quantity of pixels to sample in each direction. The total samples will be the product of these two sliders. The larger this product is, the slower the DCTL will run.
+**Num X/Y Samples**: Indicate the quantity of pixels to sample in each direction. The total samples will be the product of these two sliders. The larger this product is, the slower the DCTL will run. Refer to `Gang Num X/Y Samples` for more detail on Num Y Samples.
 
 **Rotation Style**: Indicate whether you want the rotation controls to be aligned to the viewer's axes (default) or to the cube's axes (axis aligned), or to the diagonals of the cube.
 
 **Axis Layout**: Indicate whether you want the RGB axes of the cube to be ordered according to the right hand rule (like Nobe, Lattice) or left hand rule (like Fusion)
 
-**Projection Mode**: Choose between projective or affine camera.
+**Projection Mode**: Choose between projective or affine camera (not projective).
+
+**Gang Num X/Y Samples**: Controls whether the number of Y samples is ganged to the number of X samples. Choose between "Uniform Spacing", in which the number of Y samples is set to `Num X Samples / Aspect Ratio`, Equal, in which `Num Y Samples = Num X Samples`, and `Unganged`, in which the number of y samples is specified by the user independently of the x samples.
 
 ---
 
