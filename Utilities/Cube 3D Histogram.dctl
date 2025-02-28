@@ -282,7 +282,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         // Do nothing
     }
 
-    float dot_size = dot_size_scale * 4.0 / _sqrtf((float)(num_x_samples * num_y_samples)) * focal_length;
+    float dot_size = dot_size_scale * 4.0 / _sqrtf((float)(_fmaxf(num_x_samples * num_y_samples, 400.0))) * focal_length;
     float axis_dot_size = axis_dot_size_scale * 0.02 * focal_length;
 
     if (rotation_style == ROTATION_AXIS_ALIGNED) {
