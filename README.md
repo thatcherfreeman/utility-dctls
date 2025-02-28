@@ -50,6 +50,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Random LGGO DCTL](#random-lggo-dctl)
         - [Random Linear Contrast](#random-linear-contrast)
         - [RGB Linear Contrast DCTL](#rgb-linear-contrast-dctl)
+        - [Separable Gaussian Blur DCTL](#separable-gaussian-blur-dctl)
         - [Subtractive Saturation DCTL](#subtractive-saturation-dctl)
         - [Tone Mapping DCTL](#tone-mapping-dctl)
         - [Vignette DCTL](#vignette-dctl)
@@ -880,7 +881,17 @@ The DCTL works in three steps:
 **Ungroup RGB**: If unchecked, only applies the Neutral Gamma, otherwise applies both Neutral gamma and the Color Gamma, multiplying together those two powers.
 
 
+---
 
+### Separable Gaussian Blur DCTL
+Sample code to demonstrate how you can get speedup by using gaussian blur in a separable form. The setup here is that you'd have two of these DCTLs in series, and you'd set the first one to "Horizontal" and the second to "Vertical". The first node controls the blur strength on both nodes thanks to an injected pixel in the top left.
+
+This implementation is normalized so that the strength is scaled according to the width of the frame. As long as the black bars (if any) stay on the top and bottom of the frame, this should give the same blur appearance when you change render resolution.
+
+#### DCTL Parameters
+**Blur Amount**: Controls the overall blur strength, only active on the first node in the sequence.
+
+**Direction**: Set to horizontal or vertical to run that part of the separable kernel. Put Horizontal first in the sequence of two nodes.
 
 ---
 

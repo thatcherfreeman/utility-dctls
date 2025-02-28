@@ -275,7 +275,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0 - p_Y);
 
     if (gang_num_samples == GANG_UNIFORM_SPACING) {
-        num_y_samples = (int) _round((float)num_x_samples * p_Height / p_Width);
+        num_y_samples = (int)_round((float)num_x_samples * p_Height / p_Width);
     } else if (gang_num_samples == GANG_EQUAL) {
         num_y_samples = num_x_samples;
     } else if (gang_num_samples == GANG_UNGANGED) {

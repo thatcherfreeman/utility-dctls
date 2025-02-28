@@ -1,0 +1,81 @@
+#line 2
+DEFINE_DCTL_ALPHA_MODE_STRAIGHT
+
+// clang-format off
+DEFINE_UI_PARAMS(blur_amount, Blur Amount, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 500.0, 0.01)
+DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {DIRECTION_HORIZONTAL, DIRECTION_VERTICAL}, {Horizontal (Node 1), Vertical (Node 2)})
+// clang-format on
+
+#define PI (3.14159265358979)
+
+__DEVICE__ float powf(float base, float exp) {
+    float out = _copysignf(_powf(_fabs(base), exp), base);
+    return out;
+}
+
+__DEVICE__ inline float get_weight_gaussian(float x, float std) {
+    float rs = x * x;
+    return _expf(rs / (-2.0 * std * std));
+}
+
+__DEVICE__ float3 sample_color(int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    return make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+}
+
+__DEVICE__ float3 gaussian_blur(float radius, int center_x, int center_y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, int direction) {
+
+    float std = (float)radius / 2.0;
+    int window_size = (int)_ceilf(std * 5.0);
+
+    if (window_size / 2 <= 0) {
+        return sample_color(center_x, center_y, p_TexR, p_TexG, p_TexB);
+    }
+
+    float3 sum = make_float3(0.0, 0.0, 0.0);
+    float weight_sum = 0;
+
+    if (direction == DIRECTION_HORIZONTAL) {
+        // master
+        for (int i = center_x - (window_size / 2); i <= center_x + (window_size / 2); ++i) {
+            float3 runner = sample_color(i, center_y, p_TexR, p_TexG, p_TexB);
+            float weight = get_weight_gaussian(center_x - i, std);
+            weight_sum += weight;
+            sum += runner * weight;
+        }
+    } else {
+        // vertical - slave
+        for (int j = center_y - (window_size / 2); j <= center_y + (window_size / 2); ++j) {
+            float3 runner = sample_color(center_x, j, p_TexR, p_TexG, p_TexB);
+            float weight = get_weight_gaussian(center_y - j, std);
+            if (center_x == 1 && j == 1) {
+                weight = 0.0;
+            }
+            weight_sum += weight;
+            sum += runner * weight;
+        }
+    }
+    return sum / weight_sum;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    float3 input = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+
+    float3 output = input;
+
+    if (direction == DIRECTION_VERTICAL) {
+        // Slave
+        // Read pixel 1,1
+        float3 pixel_00 = sample_color(1, 1, p_TexR, p_TexG, p_TexB);
+        blur_amount = pixel_00.x;
+    }
+
+    float blur_radius = blur_amount * 2.0 * p_Width / 4096.0;
+
+    output = gaussian_blur(blur_radius, p_X, p_Y, p_TexR, p_TexG, p_TexB, direction);
+
+    if (direction == DIRECTION_HORIZONTAL && p_X == 1 && p_Y == 1) {
+        // Master
+        output = make_float3(blur_amount, blur_amount, blur_amount);
+    }
+    return output;
+}
