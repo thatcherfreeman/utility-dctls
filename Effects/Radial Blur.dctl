@@ -12,10 +12,12 @@ DEFINE_UI_PARAMS(couple_xy, Couple XY, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_curve, Radius vs Strength Curve, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(draw_rotation_heat_map, Draw Blur Rotation Map, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(draw_radius_heat_map, Draw Blur Thickness Map, DCTLUI_CHECK_BOX, 0)
-DEFINE_UI_PARAMS(use_alpha_for_strength, Use Alpha In as Strength, DCTLUI_CHECK_BOX, 0)
 
 DEFINE_UI_PARAMS(angle_curve_type, Blur Rotation Falloff, DCTLUI_COMBO_BOX, 0, {CURVE_SIGMOID, CURVE_LINEAR, CURVE_ELLIPSE}, {Sigmoid, Linear, Ellipse})
 DEFINE_UI_PARAMS(radius_curve_type, Blur Thickness Falloff, DCTLUI_COMBO_BOX, 0, {RADIUS_CURVE_SIGMOID,RADIUS_CURVE_LINEAR}, {Sigmoid, Linear})
+
+DEFINE_UI_PARAMS(drive_blur_rotation, Drive Blur Rotation With, DCTLUI_COMBO_BOX, 0, {DRIVE_ROT_DCTL, DRIVE_ROT_ALPHA, DRIVE_ROT_CONSTANT}, {DCTL, Alpha, Constant})
+DEFINE_UI_PARAMS(drive_blur_thickness, Drive Blur Thickness With, DCTLUI_COMBO_BOX, 0, {DRIVE_THICK_DCTL, DRIVE_THICK_ALPHA, DRIVE_THICK_CONSTANT}, {DCTL, Alpha, Constant})
 
 // clang-format on
 
@@ -372,27 +374,79 @@ __DEVICE__ float3 blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p
     return total_color / weight;
 }
 
+// Aggregates together all the arguments and returns an appropriate blur kernel,
+// whether it's alpha-driven, dctl-driven, or constant for each argument.
+__DEVICE__ kernel_params_t get_params_from_selection(int drive_blur_rotation,
+                                                     int drive_blur_thickness,
+                                                     __TEXTURE__ p_TexA,
+                                                     float2 curr_pos,
+                                                     float2 dimensions,
+                                                     float max_blur_radius,
+                                                     float max_blur_theta_rad,
+                                                     float2 protected_radius,
+                                                     int angle_curve_type,
+                                                     int radius_curve_type,
+                                                     float curve_falloff) {
+    kernel_params_t params_alpha;
+    kernel_params_t params_dctl;
+    kernel_params_t params_constant;
+
+    if (drive_blur_rotation == DRIVE_ROT_ALPHA || drive_blur_thickness == DRIVE_THICK_ALPHA) {
+        float curr_alpha = _tex2D(p_TexA, curr_pos.x, curr_pos.y);
+        params_alpha = compute_kernel_params_with_alpha(curr_alpha, dimensions, max_blur_radius, max_blur_theta_rad);
+    }
+
+    if (drive_blur_rotation == DRIVE_ROT_DCTL || drive_blur_thickness == DRIVE_THICK_DCTL) {
+        params_dctl = compute_kernel_params(
+            curr_pos, dimensions, protected_radius, max_blur_theta_rad, max_blur_radius, angle_curve_type, radius_curve_type, curve_falloff);
+    }
+
+    if (drive_blur_rotation == DRIVE_ROT_CONSTANT || drive_blur_thickness == DRIVE_THICK_CONSTANT) {
+        params_constant = compute_kernel_params_with_alpha(1.0, dimensions, max_blur_radius, max_blur_theta_rad);
+    }
+    kernel_params_t params;
+    float blur_angle;
+    float disk_radius;
+    float curr_factor;
+    if (drive_blur_rotation == DRIVE_ROT_ALPHA) {
+        blur_angle = params_alpha.blur_angle;
+        curr_factor = params_alpha.curr_factor;
+    } else if (drive_blur_rotation == DRIVE_ROT_DCTL) {
+        blur_angle = params_dctl.blur_angle;
+        curr_factor = params_dctl.curr_factor;
+    } else {
+        blur_angle = params_constant.blur_angle;
+        curr_factor = params_constant.curr_factor;
+    }
+
+    if (drive_blur_thickness == DRIVE_THICK_ALPHA) {
+        disk_radius = params_alpha.disk_radius;
+    } else if (drive_blur_thickness == DRIVE_THICK_DCTL) {
+        disk_radius = params_dctl.disk_radius;
+    } else {
+        disk_radius = params_constant.disk_radius;
+    }
+    params = make_kernel_params(disk_radius, blur_angle, curr_factor);
+    return params;
+}
+
 __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, __TEXTURE__ p_TexA) {
     int2 curr_pos = make_int2(p_X, p_Y);
     float3 output_color;
     if (couple_xy) {
         protected_radius_y = protected_radius_x;
     }
-
-    kernel_params_t params;
-    if (use_alpha_for_strength) {
-        float curr_alpha = _tex2D(p_TexA, p_X, p_Y);
-        params = compute_kernel_params_with_alpha(curr_alpha, make_float2(p_Width, p_Height), max_blur_radius, max_blur_theta_deg * PI / 180.0f);
-    } else {
-        params = compute_kernel_params(make_float2((float)p_X, (float)p_Y),
-                                       make_float2(p_Width, p_Height),
-                                       make_float2(protected_radius_x, protected_radius_y),
-                                       max_blur_theta_deg * PI / 180.0f,
-                                       max_blur_radius,
-                                       angle_curve_type,
-                                       radius_curve_type,
-                                       curve_falloff);
-    }
+    kernel_params_t params = get_params_from_selection(drive_blur_rotation,
+                                                       drive_blur_thickness,
+                                                       p_TexA,
+                                                       make_float2(p_X, p_Y),
+                                                       make_float2(p_Width, p_Height),
+                                                       max_blur_radius,
+                                                       max_blur_theta_deg * PI / 180.0,
+                                                       make_float2(protected_radius_x, protected_radius_y),
+                                                       angle_curve_type,
+                                                       radius_curve_type,
+                                                       curve_falloff);
 
     output_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
 
@@ -409,19 +463,17 @@ __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         x = (x * 2.0) - 1.0; // normalize so that middle is zero
         y = 1 - y;
         float2 chart_pos = mixf2(make_float2(0.0, 0.0), make_float2(p_Width, p_Height) - 1.0f, p_X / (p_Width - 1.0));
-        if (use_alpha_for_strength) {
-            float chart_alpha = _tex2D(p_TexA, (int)_round(chart_pos.x), (int)_round(chart_pos.y));
-            params = compute_kernel_params_with_alpha(chart_alpha, make_float2(p_Width, p_Height), max_blur_radius, max_blur_theta_deg * PI / 180.0f);
-        } else {
-            params = compute_kernel_params(chart_pos,
+        params = get_params_from_selection(drive_blur_rotation,
+                                           drive_blur_thickness,
+                                           p_TexA,
+                                           chart_pos,
                                            make_float2(p_Width, p_Height),
-                                           make_float2(protected_radius_x, protected_radius_x),
-                                           max_blur_theta_deg * PI / 180.0f,
                                            max_blur_radius,
+                                           max_blur_theta_deg * PI / 180.0,
+                                           make_float2(protected_radius_x, protected_radius_y),
                                            angle_curve_type,
                                            radius_curve_type,
                                            curve_falloff);
-        }
         if (_fabs(y * 10.0 * PI / 180.0 - params.blur_angle) < 0.0005) {
             output_color = make_float3(1.0, 1.0, 1.0);
         }
