@@ -28,6 +28,11 @@ __DEVICE__ float3 gaussian_blur(float radius, int center_x, int center_y, __TEXT
     int window_size = (int)_ceilf(std * 5.0);
 
     if (window_size / 2 <= 0) {
+        if (direction == DIRECTION_VERTICAL && center_x == 1 && center_y == 1) {
+            return (sample_color(center_x + 1, center_y, p_TexR, p_TexG, p_TexB) + sample_color(center_x - 1, center_y, p_TexR, p_TexG, p_TexB) +
+                    sample_color(center_x, center_y + 1, p_TexR, p_TexG, p_TexB) + sample_color(center_x, center_y - 1, p_TexR, p_TexG, p_TexB)) /
+                   4.0;
+        }
         return sample_color(center_x, center_y, p_TexR, p_TexG, p_TexB);
     }
 
