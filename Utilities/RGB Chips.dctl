@@ -13,7 +13,7 @@ DEFINE_UI_PARAMS(band_interval, Band Interval, DCTLUI_COMBO_BOX, 1, {EQUAL, EXPO
 DEFINE_UI_PARAMS(model, Model, DCTLUI_COMBO_BOX, 0, {HSV, SPHERICAL}, {HSV, Spherical})
 DEFINE_UI_PARAMS(shuffle, Shuffle, DCTLUI_COMBO_BOX, 0, {SHUFFLE_NONE, SHUFFLE_HUES}, {None, Hues})
 DEFINE_UI_PARAMS(continuous, Continuous Mode, DCTLUI_COMBO_BOX, 0, {DISCRETE, CONTINUOUS_HUE, CONTINUOUS_EXP, CONTINUOUS_BOTH}, {Discrete, Continuous Hue, Continuous Exp, Fully Continuous})
-DEFINE_UI_PARAMS(gaps, Row Gaps, DCTLUI_COMBO_BOX, 0, {GAPS_NONE, GAPS_BLACK, GAPS_WHITE, GAPS_MID_GREY}, {None, Black, White, Mid Grey})
+DEFINE_UI_PARAMS(gaps, Row Gaps, DCTLUI_COMBO_BOX, 0, {GAPS_NONE, GAPS_BLACK, GAPS_WHITE, GAPS_MID_GREY, GAPS_GRAYSCALE}, {None, Black, White, Mid Grey, Grayscale})
 
 // clang-format on
 
@@ -181,6 +181,14 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         curr_row = _floorf(curr_row_cont);
     }
 
+    if (band_interval == EXPONENTIAL) {
+        curr_col -= _round(num_cols / 2.0);
+    }
+
+    float3 rgb;
+    float3 hsv;
+
+    bool is_gap = false;
     if (gaps != GAPS_NONE) {
         float3 gaps_color;
         if (gaps == GAPS_BLACK) {
@@ -189,16 +197,20 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             gaps_color = make_float3(1.0, 1.0, 1.0);
         } else if (gaps == GAPS_MID_GREY) {
             gaps_color = make_float3(mid_gray, mid_gray, mid_gray);
+        } else if (gaps == GAPS_GRAYSCALE) {
+            if (band_interval == EQUAL) {
+                gaps_color = hsv_to_rgb(0.0, 0.0, curr_col_cont / num_cols);
+            } else if (band_interval == EXPONENTIAL) {
+                gaps_color = hsv_to_rgb(0.0, 0.0, _exp2f(curr_col) * mid_gray);
+            }
         }
         if (continuous == DISCRETE || continuous == CONTINUOUS_EXP) {
             if (_fabs(curr_row_cont - curr_row) <= 0.25 || _fabs(curr_row_cont - curr_row) >= 0.75) {
-                return gaps_color;
+                is_gap = true;
+                rgb = gaps_color;
             }
         }
     }
-
-    float3 rgb;
-    float3 hsv;
 
     if (band_interval == EQUAL) {
         if (gray_ramp && curr_row < 0) {
@@ -207,7 +219,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             hsv = make_float3((curr_row / num_hues) * 360.0, saturation, curr_col / num_cols);
         }
     } else if (band_interval == EXPONENTIAL) {
-        curr_col -= _round(num_cols / 2.0);
         if (gray_ramp && curr_row < 0) {
             hsv = make_float3(0.0, 0.0, _exp2f(curr_col) * mid_gray);
         } else {
@@ -215,10 +226,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         }
     }
 
-    if (model == SPHERICAL) {
-        rgb = spherical_to_rgb(hsv.x, hsv.y, hsv.z);
-    } else if (model == HSV) {
-        rgb = hsv_to_rgb(hsv.x, hsv.y, hsv.z);
+    if (!is_gap) {
+        if (model == SPHERICAL) {
+            rgb = spherical_to_rgb(hsv.x, hsv.y, hsv.z);
+        } else if (model == HSV) {
+            rgb = hsv_to_rgb(hsv.x, hsv.y, hsv.z);
+        }
     }
 
     if (clamp_output) {

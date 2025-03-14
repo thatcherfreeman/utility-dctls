@@ -2,11 +2,22 @@ DEFINE_UI_PARAMS(exposure, Exposure Adjustment, DCTLUI_SLIDER_FLOAT, 0.0, -8.0, 
 DEFINE_UI_PARAMS(outer_border_width, Outer Border Width, DCTLUI_SLIDER_FLOAT, 0.01, 0.0, 1.0, 0.001)
 DEFINE_UI_PARAMS(inner_border_width, Inner Border Width, DCTLUI_SLIDER_FLOAT, 0.05, 0.0, 1.0, 0.001)
 DEFINE_UI_PARAMS(dataset, Dataset, DCTLUI_COMBO_BOX, 0, {OFFICIAL, MCCAMY}, {Official XRite, McCamy})
-DEFINE_UI_PARAMS(convert_illuminant, Adapt to D65, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(convert_illuminant, Adapt to, DCTLUI_COMBO_BOX, 1, {CAT_NOTHING, CAT_D65, CAT_ACES}, {Nothing, D65, ACES})
+
+__DEVICE__ float3 xy_to_XYZ(float2 xy) {
+    float x = xy.x;
+    float y = xy.y;
+    if (y == 0.0) {
+        return make_float3(x, 0.0, 1.0 - x);
+    }
+    float3 out = make_float3(x / y, 1.0, (1 - x - y) / y);
+    return out;
+}
 
 __CONSTANT__ float colors_official[24][3] = {
     // Copied from X-Rite website Colorchecker after 2014 LAB measurements
-    // LAB coordinates of the 24 color chips under M0 (tungsten) lighting condition.
+    // LAB coordinates of the 24 color chips were allegedly under M0 (tungsten) lighting condition.
+    // However, this M0 seems to be untrustworthy and therefore we should assume they were under M1 (D50) conditions.
     {37.54, 14.37, 14.92},   // Dark Skin
     {64.66, 19.27, 17.5},    // Light skin
     {49.32, -3.82, -22.54},  // blue sky
@@ -62,29 +73,93 @@ __CONSTANT__ float colors_mccamy[24][3] = {
     {0.3101, 0.3163, 0.0313}, // black
 };
 
-// Bradford chromatic adaptation matrix from Illuminant C XYZ to D65 XYZ
-__CONSTANT__ float ca_matrix_c_d65[3][3] = {
-    {0.9904476, -0.0071683, -0.0116156},
-    {-0.0123712, 1.0155950, -0.0029282},
-    {-0.0035635, 0.0067697, 0.9181569},
-};
-
-// Bradford chromatic adaptation matrix from Illuminant A XYZ to D65 XYZ
-__CONSTANT__ float ca_matrix_a_d65[3][3] = {
-    {0.8446965, -0.1179225, 0.3948108},
-    {-0.1366303, 1.1041226, 0.1291718},
-    {0.0798489, -0.1348999, 3.1924009},
-};
-
-__DEVICE__ float powf(float base, float exp) {
-    return _copysignf(_powf(_fabs(base), exp), base);
+__DEVICE__ float dot_product(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
+// Matrix math
 __DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    // matrix * vector multiplication
     float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
                              mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
                              mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
     return out;
+}
+
+__DEVICE__ void copy_mat_33(float to[3][3], float from[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            to[i][j] = from[i][j];
+        }
+    }
+}
+
+__DEVICE__ void mm_33_33(float dest[3][3], float a[3][3], float b[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            dest[i][j] = dot_product(make_float3(a[i][0], a[i][1], a[i][2]), make_float3(b[0][j], b[1][j], b[2][j]));
+        }
+    }
+}
+
+__DEVICE__ void mat_inverse_33(float m[3][3]) {
+    // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
+    float inv_buf[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+    inv_buf[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
+    inv_buf[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det;
+    inv_buf[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
+    inv_buf[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det;
+    inv_buf[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
+    inv_buf[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det;
+    inv_buf[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
+    inv_buf[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det;
+    inv_buf[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
+    copy_mat_33(m, inv_buf);
+}
+
+__DEVICE__ void mat_fill(float dest[3][3], float fill) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            dest[i][j] = fill;
+        }
+    }
+}
+
+__DEVICE__ void diagonal_matrix(float dest[3][3], float3 diagonal) {
+    mat_fill(dest, 0.0);
+    dest[0][0] = diagonal.x;
+    dest[1][1] = diagonal.y;
+    dest[2][2] = diagonal.z;
+}
+
+__DEVICE__ void cat02_adaptation_matrix(float dest[3][3], float2 source_white_xy, float2 dest_white_xy) {
+
+    float cat02[3][3] = {
+        {0.7328, 0.4296, -0.1624},
+        {-0.7036, 1.6975, 0.0061},
+        {0.003, 0.0136, 0.9834},
+    };
+    float cat02_inv[3][3] = {};
+    copy_mat_33(cat02_inv, cat02);
+    mat_inverse_33(cat02_inv);
+
+    float3 source_white = xy_to_XYZ(source_white_xy);
+    float3 dest_white = xy_to_XYZ(dest_white_xy);
+    float3 source_lms = mv_33_3(cat02, source_white);
+    float3 dest_lms = mv_33_3(cat02, dest_white);
+    float diag[3][3] = {};
+    diagonal_matrix(diag, dest_lms / source_lms);
+    float temp[3][3] = {};
+    mm_33_33(temp, diag, cat02);
+    mm_33_33(dest, cat02_inv, temp);
+}
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
 }
 
 __DEVICE__ float3 LAB_to_XYZ(float3 lab, float2 illuminant_xy) {
@@ -136,32 +211,40 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     // Get current color
     int idx = (int)col + ((int)row * 6);
     float3 tile_color_XYZ;
-    float adaptation_matrix[3][3] = {};
+    const float2 illuminant_d65 = make_float2(0.3127, 0.3290);    // D65
+    const float2 illuminant_d50 = make_float2(0.34567, 0.35850);  // D50
+    const float2 illuminant_c = make_float2(0.3101, 0.3163);      // C
+    const float2 illuminant_aces = make_float2(0.32168, 0.33767); // ACES
+
+    float2 source_illuminant;
     if (dataset == OFFICIAL) {
         float3 tile_color_LAB = make_float3(colors_official[idx][0], colors_official[idx][1], colors_official[idx][2]);
-        float2 illuminant_a_xy = make_float2(0.44757, 0.40745);
-        tile_color_XYZ = LAB_to_XYZ(tile_color_LAB, illuminant_a_xy);
-        for (int i = 0; i < 3; ++i) {
-            for (int j = 0; j < 3; ++j) {
-                adaptation_matrix[i][j] = ca_matrix_a_d65[i][j];
-            }
-        }
+
+        tile_color_XYZ = LAB_to_XYZ(tile_color_LAB, illuminant_d50);
+        source_illuminant = illuminant_d50;
     } else if (dataset == MCCAMY) {
         float3 tile_color_xyY = make_float3(colors_mccamy[idx][0], colors_mccamy[idx][1], colors_mccamy[idx][2]);
 
         tile_color_XYZ = make_float3(tile_color_xyY.x * tile_color_xyY.z / tile_color_xyY.y,
                                      tile_color_xyY.z,
                                      ((1 - tile_color_xyY.x - tile_color_xyY.y) * tile_color_xyY.z) / (tile_color_xyY.y));
-        for (int i = 0; i < 3; ++i) {
-            for (int j = 0; j < 3; ++j) {
-                adaptation_matrix[i][j] = ca_matrix_c_d65[i][j];
-            }
-        }
+
+        source_illuminant = illuminant_c;
     }
 
     float3 adapted_colors = tile_color_XYZ;
-    if (convert_illuminant) {
-        // Chromatic adaptation to D65.
+
+    if (convert_illuminant != CAT_NOTHING) {
+        float2 dest_illuminant;
+        float adaptation_matrix[3][3] = {};
+        if (convert_illuminant == CAT_D65) {
+            // Chromatic adaptation to D65.
+            dest_illuminant = illuminant_d65;
+        } else if (convert_illuminant == CAT_ACES) {
+            // Chromatic adaptation to ACES.
+            dest_illuminant = illuminant_aces;
+        }
+        cat02_adaptation_matrix(adaptation_matrix, source_illuminant, dest_illuminant);
         adapted_colors = mv_33_3(adaptation_matrix, tile_color_XYZ);
     }
 

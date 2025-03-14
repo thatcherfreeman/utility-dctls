@@ -1438,7 +1438,7 @@ Generates a synthetic image of the Macbeth ColorChecker based on one of two data
 
 **Dataset**: Choose Official to use the X-Rite values, and use McCamy to use the one from the old paper and wikipedia.
 
-**Adapt to D65**: Check this box to use a bradford chromatic adaptation matrix to best approximate what the chart would look like under a D65 illuminant. Leave unchecked to use the native white point for each dataset (Illuminant A for official, Illuminant C for McCamy).
+**Adapt to D65**: Choose whether to Cat02 chromatically adapt the chart to a certain white point rather than using the white point that the chart was shot under.
 
 ---
 ### Color Picker DCTL
@@ -1585,6 +1585,8 @@ Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and se
 **Show Linear Ramp**: Toggle to turn off the 0-1 scale ramp at the bottom.
 
 **Show Mid Gray Card**: Toggle to turn off the grey card in the middle.
+
+**Mid Gray Width**: Choose whether the mid gray card is wide or not.
 
 ---
 

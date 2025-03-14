@@ -4,6 +4,7 @@ DEFINE_UI_PARAMS(opt_steps, Show Exponential Steps, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(opt_exp_ramp, Show Exponential Ramp, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(opt_ramp, Show Linear Ramp, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(opt_card, Show Mid Gray Card, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(mid_gray_width, Mid Gray Style, DCTLUI_COMBO_BOX, 0, {MID_GRAY_NORMAL, MID_GRAY_WIDE}, {Normal, Wide})
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float x = (float)p_X / (p_Width - 1);
@@ -36,9 +37,18 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         curr_ramp += 1;
     }
 
-    if (opt_card && 0.25f <= x && x <= 0.75f && 0.33f <= y && y <= 0.66f) {
-        // Middle box
-        output_color = make_float3(mid_gray, mid_gray, mid_gray);
+    if (opt_card) {
+        if (mid_gray_width == MID_GRAY_NORMAL) {
+            if (0.25f <= x && x <= 0.75f && 0.33f <= y && y <= 0.66f) {
+                // Middle box
+                output_color = make_float3(mid_gray, mid_gray, mid_gray);
+            }
+        } else if (mid_gray_width == MID_GRAY_WIDE) {
+            if (0.33f <= y && y <= 0.66f) {
+                // Middle box
+                output_color = make_float3(mid_gray, mid_gray, mid_gray);
+            }
+        }
     }
 
     return output_color;
