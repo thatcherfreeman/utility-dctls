@@ -96,6 +96,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Current Resolution Display DCTL](#current-resolution-display-dctl)
         - [Cylindrical DCTL](#cylindrical-dctl)
         - [DaVinci LGGO DCTL](#davinci-lggo-dctl)
+        - [DaVinci RGB Mixer DCTL](#davinci-rgb-mixer-dctl)
         - [DaVinci Tone Mapping DCTL](#davinci-tone-mapping-dctl)
         - [Edge Extension DCTL](#edge-extension-dctl)
         - [Exposure Chart DCTL](#exposure-chart-dctl)
@@ -1537,6 +1538,19 @@ Recreation of DaVinci Resolve's Lift Gamma Gain Offset controls in the primaries
 **Lift/Gamma/Gain/Offset**: Recreation of the corresponding controls in the Primaries panel.
 
 **Invert**: Inverts the adjustment made by these controls.
+
+---
+
+### DaVinci RGB Mixer DCTL
+
+Recreation of the RGB Mixer's Preserve Luminance functionality in Resolve.
+
+#### DCTL Parameters
+**Red/Green/Blue => Red/Green/Blue**: Matrix parameters. Read these off top to bottom and that corresponds to the RGB Mixer panel parameters going from left to right.
+
+**Preserve Luminance**: Ensures that the Rec709 Luminance of the incoming pixel is unchanged.
+
+**Invert**: Take the inverse of the selected matrix, if you were ever so inclined.
 
 ---
 

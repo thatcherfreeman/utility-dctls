@@ -1,0 +1,96 @@
+// clang-format off
+DEFINE_UI_PARAMS(mat0, Red => Red, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(mat1, Green => Red, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat2, Blue => Red, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat3, Red => Green, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat4, Green => Green, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(mat5, Blue => Green, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat6, Red => Blue, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat7, Green => Blue, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(mat8, Blue => Blue, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(preserve_luminance, Preserve Luminance, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
+
+// clang-format on
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ void copy_mat_33(float to[3][3], float from[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            to[i][j] = from[i][j];
+        }
+    }
+}
+
+// Outer product of a 1x3 vector times 3x3 matrix
+__DEVICE__ float3 vm_3_33(float3 v, float mat[3][3]) {
+    float3 out = make_float3(v.x * mat[0][0] + v.y * mat[1][0] + v.z * mat[2][0],
+                             v.x * mat[0][1] + v.y * mat[1][1] + v.z * mat[2][1],
+                             v.x * mat[0][2] + v.y * mat[1][2] + v.z * mat[2][2]);
+    return out;
+}
+
+__DEVICE__ void mat_inverse_33(float m[3][3]) {
+    // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
+    float inv_buf[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+    inv_buf[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
+    inv_buf[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det;
+    inv_buf[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
+    inv_buf[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det;
+    inv_buf[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
+    inv_buf[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det;
+    inv_buf[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
+    inv_buf[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det;
+    inv_buf[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
+    copy_mat_33(m, inv_buf);
+}
+
+// Modifies the matrix in place to preserve rec709 luminance
+__DEVICE__ void preserve_mat_luminance(float input[3][3]) {
+    float3 luminance_coefficients = make_float3(0.2126, 0.7152, 0.0722);
+    float3 column_luminances = vm_3_33(luminance_coefficients, input);
+    float3 diff = luminance_coefficients - column_luminances;
+    input[0][0] += diff.x;
+    input[1][0] += diff.x;
+    input[2][0] += diff.x;
+    input[0][1] += diff.y;
+    input[1][1] += diff.y;
+    input[2][1] += diff.y;
+    input[0][2] += diff.z;
+    input[1][2] += diff.z;
+    input[2][2] += diff.z;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 rgb = make_float3(p_R, p_G, p_B);
+
+    // NOTE: The Resolve implementation always truncates/rounds down to the nearest 0.01.
+    // I would never pull that shit on you guys.
+    float mat[3][3] = {
+        {mat0, mat1, mat2},
+        {mat3, mat4, mat5},
+        {mat6, mat7, mat8},
+    };
+
+    if (preserve_luminance) {
+        preserve_mat_luminance(mat);
+    }
+
+    if (invert) {
+        mat_inverse_33(mat);
+    }
+
+    float3 res;
+    res = mv_33_3(mat, rgb);
+    return res;
+}
