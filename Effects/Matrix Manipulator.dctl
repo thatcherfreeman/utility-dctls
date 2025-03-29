@@ -156,6 +156,8 @@ __DEVICE__ float3 rgb_to_hsv(float3 rgb) {
     }
     float V = c_max;
 
+    S = _clampf(S, 0.0f, 1.0f);
+
     float3 color = make_float3(H * 360.0, S, V);
     return color;
 }
