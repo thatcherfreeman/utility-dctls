@@ -369,6 +369,9 @@ __DEVICE__ float3 blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p
             num_pixels++;
         }
     }
+    if (num_pixels == 0) {
+        return sample_color(center_pos, p_TexR, p_TexG, p_TexB);
+    }
     return total_color / weight;
 }
 
