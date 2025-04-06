@@ -371,6 +371,7 @@ Navigate to the "ACES Transforms" folder in Resolve's main application support f
     - MacOS: "~/Library/Application Support/Blackmagic Design/DaVinci Resolve/ACES Transforms"
     - Windows: "%AppData%\Blackmagic Design\\DaVinci Resolve\\Support\\ACES Transforms"
     - Linux: "~/.local/share/DaVinciResolve/ACES Transforms"
+    - iPadOS: "On My iPad/DaVinciResolve/ACES Transforms"
 
 Place your custom ACES DCTL files for Input Device Transforms (IDTs) in the IDT subfolder.
 
