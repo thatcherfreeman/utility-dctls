@@ -1,0 +1,320 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(exposure, Exposure, DCTLUI_SLIDER_FLOAT, 0.0, -8.0, 8.0, 0.001)
+DEFINE_UI_PARAMS(offset, Flare, DCTLUI_SLIDER_FLOAT, 0.0, -0.2, 0.2, 0.0001)
+DEFINE_UI_PARAMS(temperature, Temperature, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(tint, Tint, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(contrast, Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+
+DEFINE_UI_PARAMS(log_lift, Log Lift, DCTLUI_SLIDER_FLOAT, 0.0, -0.5, 0.5, 0.01)
+DEFINE_UI_PARAMS(log_gamma, Log Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(log_gain, Log Gain, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.01)
+
+DEFINE_UI_PARAMS(_dummy, ====== CONFIG ======, DCTLUI_SLIDER_FLOAT, 0.5, 0.499, 0.501, 0.001)
+DEFINE_UI_PARAMS(gamma_compensation_strength, Mid Gray Comp Str., DCTLUI_SLIDER_FLOAT, 100.0, 0.0, 100.0, 0.001)
+DEFINE_UI_PARAMS(temp_axis_hue, Temperature Axis Hue, DCTLUI_SLIDER_FLOAT, 18.0, 0.0, 180.0, 0.001)
+DEFINE_UI_PARAMS(mid_gray, Linear Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(normalize_balance_by_luminance, Normalize WB by Lum, DCTLUI_CHECK_BOX, 1)
+
+DEFINE_UI_PARAMS(input_encoding, Input Transfer Function, DCTLUI_COMBO_BOX, 0, {TF_LINEAR, TF_LOGC3, TF_DI}, {Linear, Arri LogC3, DaVinci Intermediate})
+DEFINE_UI_PARAMS(log_space, Log Space, DCTLUI_COMBO_BOX, 0, {LOG_AUTO, LOG_LOGC3, LOG_DI}, {Auto, Arri LogC3, DaVinci Intermediate})
+// clang-format on
+
+#define PI (3.14159265358979323)
+
+__DEVICE__ float luminance(float3 rgb) {
+    return (0.212639 * rgb.x) + (0.715169 * rgb.y) + (0.072192 * rgb.z);
+}
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float3 powf3(float3 base, float exp) {
+    return make_float3(powf(base.x, exp), powf(base.y, exp), powf(base.z, exp));
+}
+
+__DEVICE__ inline float rad_to_deg(float deg) {
+    return deg * 360.0 / (2.0 * PI);
+}
+
+__DEVICE__ inline float deg_to_rad(float rad) {
+    return rad * (2.0 * PI) / 360.0;
+}
+
+__DEVICE__ float di_to_linear(float t) {
+    const float a = 0.0075f;
+    const float b = 7.0f;
+    const float c = 0.07329248f;
+    const float m = 10.44426855f;
+    // const float lin_cut = 0.00262409f; // Should be equal to ((cut2 - f) / e)
+    const float log_cut = 0.02740668f; // should be equal to (e * cut1 + f)
+
+    if (t > log_cut) {
+        return _exp2f((t / c) - b) - a;
+    } else {
+        return t / m;
+    }
+}
+
+__DEVICE__ float linear_to_di(float x) {
+    const float a = 0.0075f;
+    const float b = 7.0f;
+    const float c = 0.07329248f;
+    const float m = 10.44426855f;
+    const float lin_cut = 0.00262409f; // Should be equal to ((cut2 - f) / e)
+    // const float log_cut = 0.02740668f; // should be equal to (e * cut1 + f)
+
+    if (x > lin_cut) {
+        return (_log2f(x + a) + b) * c;
+    } else {
+        return x * m;
+    }
+}
+
+__DEVICE__ float linear_to_logc3(float x) {
+    float cut = 0.010591;
+    float a = 5.555556;
+    float b = 0.052272;
+    float c = 0.247190;
+    float d = 0.385537;
+    float e = 5.367655;
+    float f = 0.092809;
+
+    if (x > cut) {
+        return c * _log10f(a * x + b) + d;
+    } else {
+        return e * x + f;
+    }
+}
+
+__DEVICE__ float logc3_to_linear(float x) {
+    float cut = 0.010591;
+    float a = 5.555556;
+    float b = 0.052272;
+    float c = 0.247190;
+    float d = 0.385537;
+    float e = 5.367655;
+    float f = 0.092809;
+    if (x > e * cut + f) {
+        return (_exp10f((x - d) / c) - b) / a;
+    } else {
+        return (x - f) / e;
+    }
+}
+
+typedef struct {
+        float lift;
+        float gamma;
+        float gain;
+        float offset;
+        // Assumed to be wheels params.
+} lggo_params_t;
+
+__DEVICE__ lggo_params_t make_lggo_params(float lift, float gamma, float gain, float offset) {
+    lggo_params_t result = {};
+    result.lift = lift;
+    result.gamma = gamma;
+    result.gain = gain;
+    result.offset = offset;
+    return result;
+}
+
+__DEVICE__ float apply_lggo(float x, lggo_params_t params, bool invert) {
+    float white_out_x = 1.0 / params.gain;
+    float black_out_x = (1.0 - (1.0 / (1.0 - params.lift)));
+    float slope = 1.0 / (white_out_x - black_out_x);
+    float out;
+
+    if (invert) {
+        out = powf(x, 1.0 / params.gamma);
+        out = out - params.offset;
+        out = out / slope;
+        out = out + black_out_x;
+    } else {
+        out = slope * (x - black_out_x);
+        out = out + params.offset;
+        out = powf(out, params.gamma);
+    }
+    return out;
+}
+
+__DEVICE__ float3 apply_lggo_f3(float3 x, lggo_params_t params, bool invert) {
+    return make_float3(apply_lggo(x.x, params, invert), apply_lggo(x.y, params, invert), apply_lggo(x.z, params, invert));
+}
+
+__DEVICE__ float3 hsv_to_rgb(float3 hsv) {
+    // Expects hue as radians
+    float hue = hsv.x;
+    float sat = hsv.y;
+    float val = hsv.z;
+
+    hue = rad_to_deg(mod(hue, 2.0 * PI));
+
+    float c = val * sat;
+    float x = c * (1.0 - _fabs(_fmod(hue / 60.0, 2.0) - 1.0));
+    float m = val - c;
+    float3 rgbp = make_float3(0.0, 0.0, 0.0);
+    if (0.0 <= hue && hue < 60.0) {
+        rgbp = make_float3(c, x, 0.0);
+    } else if (60.0 <= hue && hue < 120.0) {
+        rgbp = make_float3(x, c, 0.0);
+    } else if (120.0 <= hue && hue < 180.0) {
+        rgbp = make_float3(0.0, c, x);
+    } else if (180.0 <= hue && hue < 240.0) {
+        rgbp = make_float3(0.0, x, c);
+    } else if (240.0 <= hue && hue < 300.0) {
+        rgbp = make_float3(x, 0.0, c);
+    } else if (300.0 <= hue && hue < 360.0) {
+        rgbp = make_float3(c, 0.0, x);
+    }
+    return rgbp + m;
+}
+
+__DEVICE__ float log_to_linear(float input, int encoding) {
+    float input_lin;
+    switch (encoding) {
+        case TF_LINEAR:
+            input_lin = input;
+            break;
+        case TF_DI:
+            input_lin = di_to_linear(input);
+            break;
+        case TF_LOGC3:
+            input_lin = logc3_to_linear(input);
+            break;
+    }
+    return input_lin;
+}
+
+__DEVICE__ float3 log_to_linear_f3(float3 input, int encoding) {
+    float3 lin_state = make_float3(log_to_linear(input.x, encoding), log_to_linear(input.y, encoding), log_to_linear(input.z, encoding));
+    return lin_state;
+}
+
+__DEVICE__ float linear_to_log(float input, int encoding) {
+    float log_state;
+    switch (encoding) {
+        case TF_DI:
+            log_state = linear_to_di(input);
+            break;
+        case TF_LOGC3:
+            log_state = linear_to_logc3(input);
+            break;
+        case TF_LINEAR:
+            log_state = input;
+            break;
+    }
+    return log_state;
+}
+
+__DEVICE__ float3 linear_to_log_f3(float3 input, int encoding) {
+    float3 log_state = make_float3(linear_to_log(input.x, encoding), linear_to_log(input.y, encoding), linear_to_log(input.z, encoding));
+    return log_state;
+}
+
+__DEVICE__ float convert_gamma_to_reals(float g) {
+    // Converts -1 to +1 range to an exponent
+    // Essentially what Resolve does with its gamma
+    // correction.
+    float out;
+    if (g <= 0) {
+        out = 1.0f + (-4.0f * g);
+    } else {
+        out = 1.0f / (4.0f * g + 1);
+    }
+    return out;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    int working_encoding;
+    if (log_space == LOG_AUTO) {
+        switch (input_encoding) {
+            case TF_LINEAR:
+                // Space to apply lift/gain in.
+                working_encoding = TF_DI;
+                break;
+            case TF_LOGC3:
+                working_encoding = TF_LOGC3;
+                break;
+            case TF_DI:
+                working_encoding = LOG_DI;
+                break;
+        }
+    } else if (log_space == LOG_DI) {
+        working_encoding = TF_DI;
+    } else if (log_space == LOG_LOGC3) {
+        working_encoding = TF_LOGC3;
+    }
+
+    // Temperature and tint gain coefficients. This is a simplified not-colorimetric approach.
+    float temp_axis_hue_rads = deg_to_rad(temp_axis_hue);
+    float temp_sat = _fabs(temperature);
+    if (temperature < 0.0) {
+        temp_axis_hue_rads += PI;
+    }
+    float3 temp_gains = hsv_to_rgb(make_float3(temp_axis_hue_rads, temp_sat, 1.0f));
+
+    float tint_axis_hue_rads = deg_to_rad(temp_axis_hue - 90.0);
+    float tint_sat = _fabs(tint);
+    if (tint < 0.0) {
+        tint_axis_hue_rads += PI;
+    }
+    float3 tint_gains = hsv_to_rgb(make_float3(tint_axis_hue_rads, tint_sat, 1.0f));
+
+    // Blend together temp gains and tint gains.
+    float3 balance_gains = temp_gains * tint_gains;
+
+    // Optionally normalize balance gains by luminance
+    if (normalize_balance_by_luminance) {
+        float balance_lum = luminance(balance_gains);
+        balance_gains /= balance_lum;
+    }
+
+    float3 input = make_float3(p_R, p_G, p_B);
+
+    // Go to linear.
+    float3 input_lin = log_to_linear_f3(input, input_encoding);
+
+    // Linear adjustments.
+    input_lin *= _exp2f(exposure);
+    input_lin *= balance_gains;
+    input_lin = mid_gray * powf3(input_lin / mid_gray, contrast);
+    input_lin += offset;
+
+    // Go to log.
+    float3 log_state = linear_to_log_f3(input_lin, working_encoding);
+    float log_mid_gray = linear_to_log(mid_gray, working_encoding);
+
+    // Apply Lift and Gain in log.
+    lggo_params_t lggo_params = make_lggo_params(log_lift, 1.0, log_gain, 0.0);
+    float new_log_mid_gray = apply_lggo(log_mid_gray, lggo_params, false);
+
+    // Apply gamma to correct mid gray to the right position.
+    float gamma = _logf(log_mid_gray) / _logf(new_log_mid_gray) - 1.0f;
+
+    // Allow user to modify the gamma.
+    lggo_params.gamma = 1.0f + gamma * (gamma_compensation_strength / 100.0) + (convert_gamma_to_reals(log_gamma) - 1.0f);
+    float3 lggo_log_state = apply_lggo_f3(log_state, lggo_params, false);
+
+    float3 output;
+    if (working_encoding == input_encoding) {
+        output = lggo_log_state;
+        return output;
+    }
+
+    // convert back to the user's input encoding, via linear.
+    float3 lggo_lin_state = log_to_linear_f3(lggo_log_state, working_encoding);
+    output = linear_to_log_f3(lggo_lin_state, input_encoding);
+
+    return output;
+}
