@@ -809,7 +809,9 @@ Titled and UI designed by Misha Beare.
 
 **Mid Gray Comp Strength**: Indicates how extremely Log Gamma should be applied to compensate for adjustments to **Log Lift** and **Log Gain** to restore mid gray.
 
-**Linear Mid Gray**: Indicate the linear code value for mid gray. This is used to calculate the target mid gray value in the selected **Log Space** and is the value preserved by the **Contrast** slider.
+**Contrast Lin Mid Gray**: Indicates the mid gray value in linear that is used as the pivot point of the contrast slider.
+
+**LGG Lin Mid Gray**: Indicate the linear code value for mid gray. This is used to calculate the target mid gray value in the selected **Log Space**
 
 **Normalize WB by Lum**: When checked, **Temperature** and **Tint** will attempt to preserve luminance. When unchecked, those two sliders will instead maintain `max(r,g,b)` and can only darken the image.
 

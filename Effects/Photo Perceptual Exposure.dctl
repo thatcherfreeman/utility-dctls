@@ -14,7 +14,8 @@ DEFINE_UI_PARAMS(log_gain, Log Gain, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.01)
 DEFINE_UI_PARAMS(_dummy, ====== CONFIG ======, DCTLUI_SLIDER_FLOAT, 0.5, 0.499, 0.501, 0.001)
 DEFINE_UI_PARAMS(gamma_compensation_strength, Mid Gray Comp Str., DCTLUI_SLIDER_FLOAT, 100.0, 0.0, 100.0, 0.001)
 DEFINE_UI_PARAMS(temp_axis_hue, Temperature Axis Hue, DCTLUI_SLIDER_FLOAT, 18.0, 0.0, 180.0, 0.001)
-DEFINE_UI_PARAMS(mid_gray, Linear Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(contrast_mid_gray, Contrast Lin Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(mid_gray, LGG Lin Mid Gray, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(normalize_balance_by_luminance, Normalize WB by Lum, DCTLUI_CHECK_BOX, 1)
 
 DEFINE_UI_PARAMS(input_encoding, Input Transfer Function, DCTLUI_COMBO_BOX, 0, {TF_LINEAR, TF_LOGC3, TF_DI}, {Linear, Arri LogC3, DaVinci Intermediate})
@@ -288,8 +289,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     // Linear adjustments.
     input_lin *= _exp2f(exposure);
     input_lin *= balance_gains;
-    input_lin = mid_gray * powf3(input_lin / mid_gray, contrast);
-    input_lin += offset;
+    input_lin = contrast_mid_gray * powf3(input_lin / contrast_mid_gray, contrast);
 
     // Go to log.
     float3 log_state = linear_to_log_f3(input_lin, working_encoding);
@@ -307,13 +307,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 lggo_log_state = apply_lggo_f3(log_state, lggo_params, false);
 
     float3 output;
-    if (working_encoding == input_encoding) {
-        output = lggo_log_state;
-        return output;
-    }
 
     // convert back to the user's input encoding, via linear.
     float3 lggo_lin_state = log_to_linear_f3(lggo_log_state, working_encoding);
+    lggo_lin_state += offset;
     output = linear_to_log_f3(lggo_lin_state, input_encoding);
 
     return output;
