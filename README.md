@@ -785,7 +785,14 @@ Blur kernel where you can choose the Distance vs Weight function. Use this on a 
 
 ### Photo Perceptual Exposure DCTL
 
-This tool combines the benefits of linear and log Lift/Gamma/Gain primaries into one tool, for faster application.
+This tool combines the benefits of linear and log Lift/Gamma/Gain primaries into one tool, for faster application. The internal order of operations is:
+
+1. Pre Flare (offset in linear)
+2. Exposure (Gain in linear)
+3. White balance (Gain in linear)
+4. Contrast (Gamma in linear, pivoted around mid gray)
+5. Lift/Gamma/Gain in Log
+6. Post Flare (offset in linear)
 
 #### Credits:
 
@@ -795,7 +802,9 @@ Titled and UI designed by Misha Beare.
 
 **Exposure**: Stops of linear gain to be applied to the image.
 
-**Flare**: Offset applied to the image in a linear state.
+**Pre Flare**: Offset applied to the image in a linear state as the first operation.
+
+**Post Flare**: Offset applied to the image in a linear state as the last operation in the internal pipeline, after the LGG stuff.
 
 **Temperature/Tint**: Allows you to white balance the image via RGB linear gain. You simply choose the hue corresponding to the Temperature slider using **Temperature Axis Hue**, and the Temperature slider will move along that direction, whereas the tint slider will move in a direction perpendicular to the temperature axis.
 

@@ -2,7 +2,8 @@
 
 // clang-format off
 DEFINE_UI_PARAMS(exposure, Exposure, DCTLUI_SLIDER_FLOAT, 0.0, -8.0, 8.0, 0.001)
-DEFINE_UI_PARAMS(offset, Flare, DCTLUI_SLIDER_FLOAT, 0.0, -0.2, 0.2, 0.0001)
+DEFINE_UI_PARAMS(offset1, Pre Flare, DCTLUI_SLIDER_FLOAT, 0.0, -0.2, 0.2, 0.0001)
+DEFINE_UI_PARAMS(offset2, Post Flare, DCTLUI_SLIDER_FLOAT, 0.0, -0.2, 0.2, 0.0001)
 DEFINE_UI_PARAMS(temperature, Temperature, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
 DEFINE_UI_PARAMS(tint, Tint, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
 DEFINE_UI_PARAMS(contrast, Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
@@ -12,8 +13,8 @@ DEFINE_UI_PARAMS(log_gamma, Log Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.01
 DEFINE_UI_PARAMS(log_gain, Log Gain, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.01)
 
 DEFINE_UI_PARAMS(_dummy, ====== CONFIG ======, DCTLUI_SLIDER_FLOAT, 0.5, 0.499, 0.501, 0.001)
-DEFINE_UI_PARAMS(gamma_compensation_strength, Mid Gray Comp Str., DCTLUI_SLIDER_FLOAT, 100.0, 0.0, 100.0, 0.001)
-DEFINE_UI_PARAMS(temp_axis_hue, Temperature Axis Hue, DCTLUI_SLIDER_FLOAT, 18.0, 0.0, 180.0, 0.001)
+DEFINE_UI_PARAMS(gamma_compensation_strength, Mid Gray Comp Str., DCTLUI_SLIDER_FLOAT, 50.0, 0.0, 100.0, 0.001)
+DEFINE_UI_PARAMS(temp_axis_hue, Temperature Axis Hue, DCTLUI_SLIDER_FLOAT, 18.0, -180.0, 180.0, 0.001)
 DEFINE_UI_PARAMS(contrast_mid_gray, Contrast Lin Mid Gray, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(mid_gray, LGG Lin Mid Gray, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(normalize_balance_by_luminance, Normalize WB by Lum, DCTLUI_CHECK_BOX, 1)
@@ -287,6 +288,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 input_lin = log_to_linear_f3(input, input_encoding);
 
     // Linear adjustments.
+    input_lin += offset1;
     input_lin *= _exp2f(exposure);
     input_lin *= balance_gains;
     input_lin = contrast_mid_gray * powf3(input_lin / contrast_mid_gray, contrast);
@@ -310,7 +312,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     // convert back to the user's input encoding, via linear.
     float3 lggo_lin_state = log_to_linear_f3(lggo_log_state, working_encoding);
-    lggo_lin_state += offset;
+    lggo_lin_state += offset2;
     output = linear_to_log_f3(lggo_lin_state, input_encoding);
 
     return output;
