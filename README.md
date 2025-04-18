@@ -592,6 +592,8 @@ Applies noise such that the Signal to Noise ratio is fixed; IE the standard devi
 
 **Noise Mode**: Indicates a different noise mode. In RGB, noise is computed on each channel independently, In Monochrome Noise mode, I recycle the same random seed for all three channels to avoid introducing chroma noise.
 
+**Clamp Methodology**: For convenience, choose whether not to clamp the output, or to ensure that the output is clamped to be nonnegative, or that the noise is clamped to be nonnegative. Note that obviously clamping the noise to be nonnegative will have the result that the noise mean and variance are changed.
+
 **Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
 
 ---
@@ -842,6 +844,8 @@ In order for the math to work out correctly, this DCTL expects that all inputs a
 **Photon Exposure** (stops): The input signal is multiplied by `_exp2f(photon exposure)`to compute the variance
 
 **Noise Mode**: Indicates a different noise mode. In RGB, noise is computed on each channel independently, In Monochrome Noise mode, I recycle the same random seed for all three channels to avoid introducing chroma noise.
+
+**Clamp Methodology**: For convenience, choose whether not to clamp the output, or to ensure that the output is clamped to be nonnegative, or that the noise is clamped to be nonnegative. Note that obviously clamping the noise to be nonnegative will have the result that the noise mean and variance are changed.
 
 **Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
 

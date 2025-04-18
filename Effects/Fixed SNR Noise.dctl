@@ -2,6 +2,7 @@
 // clang-format off
 DEFINE_UI_PARAMS(target_snr, Target SNR, DCTLUI_VALUE_BOX, 6.0)
 DEFINE_UI_PARAMS(noise_mode, Noise Mode, DCTLUI_COMBO_BOX, 1, {RGB, MONO}, {RGB Noise, Monochrome Noise})
+DEFINE_UI_PARAMS(clamp_methodology, Clamp Behavior, DCTLUI_COMBO_BOX, 0, {CLAMP_NONE, CLAMP_OUTPUT, CLAMP_NOISE}, {No Clamp, Nonnegative output, Nonnegative noise})
 DEFINE_UI_PARAMS(seed_position_x, Seed Position X, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(seed_position_y, Seed Position Y, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
 
@@ -124,19 +125,34 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     // target_snr = curr_color / sqrt(variance)
     // variance = curr_color^2 / target_snr^2
     float target_snr_sq = target_snr * target_snr;
-    float3 output_color = make_float3(0.0, 0.0, 0.0);
+    float3 output_color = curr_color;
+    float3 noise;
 
     if (noise_mode == MONO) {
         rand_state initial_state_value_red = *state;
         rand_state initial_state_value_green = *state;
         rand_state initial_state_value_blue = *state;
-        output_color.x = sample_norm(curr_color.x, curr_color.x * curr_color.x / target_snr_sq, &initial_state_value_red);
-        output_color.y = sample_norm(curr_color.y, curr_color.y * curr_color.y / target_snr_sq, &initial_state_value_green);
-        output_color.z = sample_norm(curr_color.z, curr_color.z * curr_color.z / target_snr_sq, &initial_state_value_blue);
+        noise.x = sample_norm(0.0f, curr_color.x * curr_color.x / target_snr_sq, &initial_state_value_red);
+        noise.y = sample_norm(0.0f, curr_color.y * curr_color.y / target_snr_sq, &initial_state_value_green);
+        noise.z = sample_norm(0.0f, curr_color.z * curr_color.z / target_snr_sq, &initial_state_value_blue);
     } else {
-        output_color.x = sample_norm(curr_color.x, curr_color.x * curr_color.x / target_snr_sq, state);
-        output_color.y = sample_norm(curr_color.y, curr_color.y * curr_color.y / target_snr_sq, state);
-        output_color.z = sample_norm(curr_color.z, curr_color.z * curr_color.z / target_snr_sq, state);
+        noise.x = sample_norm(0.0f, curr_color.x * curr_color.x / target_snr_sq, state);
+        noise.y = sample_norm(0.0f, curr_color.y * curr_color.y / target_snr_sq, state);
+        noise.z = sample_norm(0.0f, curr_color.z * curr_color.z / target_snr_sq, state);
+    }
+
+    if (clamp_methodology == CLAMP_NOISE) {
+        noise.x = _fmaxf(noise.x, 0.0f);
+        noise.y = _fmaxf(noise.y, 0.0f);
+        noise.z = _fmaxf(noise.z, 0.0f);
+    }
+
+    output_color += noise;
+
+    if (clamp_methodology == CLAMP_OUTPUT) {
+        output_color.x = _fmaxf(output_color.x, 0.0f);
+        output_color.y = _fmaxf(output_color.y, 0.0f);
+        output_color.z = _fmaxf(output_color.z, 0.0f);
     }
 
     return output_color;
