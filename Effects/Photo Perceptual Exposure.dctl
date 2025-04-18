@@ -8,11 +8,11 @@ DEFINE_UI_PARAMS(temperature, Temperature, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 
 DEFINE_UI_PARAMS(tint, Tint, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
 DEFINE_UI_PARAMS(contrast, Contrast, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
 
-DEFINE_UI_PARAMS(log_lift, Log Lift, DCTLUI_SLIDER_FLOAT, 0.0, -0.5, 0.5, 0.01)
-DEFINE_UI_PARAMS(log_gamma, Log Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.01)
-DEFINE_UI_PARAMS(log_gain, Log Gain, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.01)
+DEFINE_UI_PARAMS(log_lift, Log Lift, DCTLUI_SLIDER_FLOAT, 0.0, -0.3, 0.3, 0.001)
+DEFINE_UI_PARAMS(log_gamma, Log Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -0.5, 0.5, 0.001)
+DEFINE_UI_PARAMS(log_gain, Log Gain, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
 
-DEFINE_UI_PARAMS(_dummy, ====== CONFIG ======, DCTLUI_SLIDER_FLOAT, 0.5, 0.499, 0.501, 0.001)
+DEFINE_UI_PARAMS(_dummy, ====== CONFIG ======, DCTLUI_SLIDER_FLOAT, 0.0, -0.001, 0.001, 0.001)
 DEFINE_UI_PARAMS(gamma_compensation_strength, Mid Gray Comp Str., DCTLUI_SLIDER_FLOAT, 50.0, 0.0, 100.0, 0.001)
 DEFINE_UI_PARAMS(temp_axis_hue, Temperature Axis Hue, DCTLUI_SLIDER_FLOAT, 18.0, -180.0, 180.0, 0.001)
 DEFINE_UI_PARAMS(contrast_mid_gray, Contrast Lin Mid Gray, DCTLUI_VALUE_BOX, 0.18)
