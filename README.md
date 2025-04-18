@@ -52,6 +52,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Random Contrast Curve](#random-contrast-curve)
         - [Random LGGO DCTL](#random-lggo-dctl)
         - [Random Linear Contrast](#random-linear-contrast)
+        - [Read Noise DCTL](#read-noise-dctl)
         - [RGB Linear Contrast DCTL](#rgb-linear-contrast-dctl)
         - [Separable Gaussian Blur DCTL](#separable-gaussian-blur-dctl)
         - [Subtractive Saturation DCTL](#subtractive-saturation-dctl)
@@ -973,6 +974,22 @@ Expects a linear image, applies linear contrast to each channel via gamma, prese
 **Mid Gray**: Linear value of mid gray.
 
 **Use Random**: Choose whether to not use the random number generator, to randomly generate a split tone (randomness is applied only to the per-channel contrasts), to randomly augment the Global Contrast, or both.
+
+---
+### Read Noise DCTL
+Read noise is modelled by adding a gaussian random variable with some nonnegative mean and standard deviation to the signal in linear. This DCTL should be applied in linear and simulates this.
+
+#### DCTL Parameters
+
+**Seed Position X/Y**: Indicates which pixel in the frame is used to drive the random number generator.
+
+**Mean**: The mean of the random noise.
+
+**Noise Std. Dev**: The standard deviation of the random noise.
+
+**Noise Mode**: Indicate whether the noise should be monochromatic or RGB.
+
+**Clamp Methodology**: For convenience, choose whether not to clamp the output, or to ensure that the output is clamped to be nonnegative, or that the noise is clamped to be nonnegative. Note that obviously clamping the noise to be nonnegative will have the result that the noise mean and variance are changed.
 
 ---
 
