@@ -618,17 +618,26 @@ DCTL that physically emulates film halation, intended for Linear input images.
 
 #### How Halation works
 
-Light passes through three layers of film emulsion and various color filters, ultimately with the bottom channel being Red. Light then passes through the film base and reflects off the back of the film, and this red light then re-exposes the channels in reverse order (red, then green, then blue).
+Light passes through three layers of film emulsion and various color filters, ultimately with the bottom channel being Red. Light then passes through the film base and reflects off the back of the film, and this reddish light then re-exposes the channels in reverse order (red, then green, then blue).
+
+#### Credits
+Thanks to Caleb Keller for his thoughts in adding a few more controls to this tool.
 
 #### DCTL Parameters
 
 **Reflection exposure lost** (stops): As light passes through the film base and reflects off the anti-halation layer, it loses brightness. This parameter controls how many stops of light are lost by the time the reflection reaches the red channel again (as well as the other two channels) on the rebound. Use this slider to reduce or increase the overall amount of halation.
 
-**Green exposure lost** (stops): Controls how much light is lost when the reflected light passes through the red channel and then exposes the green channel. This is added to the Reflection exposure lost.
+**Green exposure lost** (stops): Controls how much light is lost when the reflected light passes through the red channel and then exposes the green channel, effectively controlling the sensitivity of the green layer to the double exposure. This is added to the Reflection exposure lost.
 
-**Blue exposure lost** (stops): Controls how much light is lost when the reflected light passes through the green channel and then exposes the blue channel. This is added to the Green exposure lost and the Reflection exposure lost.
+**Blue exposure lost** (stops): Controls how much light is lost when the reflected light passes through the green channel and then exposes the blue channel, effectively controlling the sensitivity of the blue layer to the double exposure. This is added to the Green exposure lost and the Reflection exposure lost.
 
-**Blur Amount** (Thousandths of image width): The light reflection is blurry by virtue of being out of focus and by being diffused by the film base and anti-halation layer. This control represents the width/spread of the applied blur.
+**Base Blur Amount** (Thousandths of image width): The light reflection is blurry by virtue of being out of focus and by being diffused by the film base and anti-halation layer. This control represents the width/spread of the applied blur.
+
+**Green Blur Amount**: This is the additional blurring above the base that is incurred by the time the light hits the green sensitive layer on the second exposure
+
+**Blue Blur Amount**: Additional blurring above the green blur that is incurred by the time the light hits the blue sensitive layer on the second exposure
+
+**Film Base Color R/G/B**: This controls how the double exposure image is computed.
 
 **Blur Type**: Choose which kernel to use when emulating the diffusion step.
 
