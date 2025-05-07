@@ -321,11 +321,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             input.x = convert_to_radians(input.x, hue_format);
         } else if (model == SPHERICAL) {
             input = rgb_to_spherical(input);
+            // Scale the saturation channel so that pure red maps to 1
+            float3 red_spherical = rgb_to_spherical(make_float3(1.0, 0.0, 0.0));
+            input.y = input.y / red_spherical.y;
         } else if (model == CYLINDRICAL) {
             input = rgb_to_cylindrical(input);
         } else if (model == HSV) {
             input = rgb_to_hsv(input);
         }
+
+        output.y *= 0.5;
 
         // need to apply an inverse of Resolve's RGB to HSL conversion
         // IE this would be an HSL to RGB conversion.
@@ -334,9 +339,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         // Apply a RGB to HSL conversion.
         output = rgb_to_hsl(input);
 
+        output.y *= 2.0f;
+
         if (model == CUSTOM) {
             output.x = convert_from_radians(output.x, hue_format);
         } else if (model == SPHERICAL) {
+            // Scale the saturation channel back.
+            float3 red_spherical = rgb_to_spherical(make_float3(1.0, 0.0, 0.0));
+            output.y = output.y * red_spherical.y;
+
             output = spherical_to_rgb(output);
         } else if (model == CYLINDRICAL) {
             output = cylindrical_to_rgb(output);
