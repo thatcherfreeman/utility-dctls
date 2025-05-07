@@ -51,6 +51,32 @@ __DEVICE__ float3 ycbcr_to_rgb_d(float3 y_cb_cr) {
     return rgb_d;
 }
 
+__DEVICE__ void get_rgb_to_ycbcr_mat(float dest[3][3], float3 lum_coeffs) {
+    // Arguably just goes to YPbPr space.
+    dest[0][0] = lum_coeffs.x;
+    dest[0][1] = lum_coeffs.y;
+    dest[0][2] = lum_coeffs.z;
+    dest[1][0] = -0.5f * (lum_coeffs.x / (1.0f - lum_coeffs.z));
+    dest[1][1] = -0.5f * (lum_coeffs.y / (1.0f - lum_coeffs.z));
+    dest[1][2] = 0.5f;
+    dest[2][0] = 0.5f;
+    dest[2][1] = -0.5f * (lum_coeffs.y / (1.0f - lum_coeffs.x));
+    dest[2][2] = -0.5f * (lum_coeffs.z / (1.0f - lum_coeffs.x));
+}
+
+__DEVICE__ void get_ycbcr_to_rgb_mat(float dest[3][3], float3 lum_coeffs) {
+    // Goes from YPbPr space to RGB.
+    dest[0][0] = 1.0f;
+    dest[0][1] = 0.0f;
+    dest[0][2] = 2.0f - 2.0f * lum_coeffs.x;
+    dest[1][0] = 1.0f;
+    dest[1][1] = -1.0f * lum_coeffs.z / lum_coeffs.y * (2.0f - 2.0f * lum_coeffs.z);
+    dest[1][2] = -1.0f * lum_coeffs.x / lum_coeffs.y * (2.0f - 2.0f * lum_coeffs.x);
+    dest[2][0] = 1.0f;
+    dest[2][1] = 2.0f - 2.0f * lum_coeffs.z;
+    dest[2][2] = 0.0f;
+}
+
 __DEVICE__ float3 chroma_subsample(chroma_subsample_params_t cs, float3 region[2][4], int rx, int ry) {
     float3 output_region[2][4] = {{{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}},
                                   {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}};

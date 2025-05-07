@@ -99,6 +99,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Cube Rotate DCTL](#cube-rotate-dctl)
         - [Current Resolution Display DCTL](#current-resolution-display-dctl)
         - [Cylindrical DCTL](#cylindrical-dctl)
+        - [DaVinci HSL Curves Conversion DCTL](#davinci-hsl-curves-conversion-dctl)
         - [DaVinci LGGO DCTL](#davinci-lggo-dctl)
         - [DaVinci RGB Mixer DCTL](#davinci-rgb-mixer-dctl)
         - [DaVinci Tone Mapping DCTL](#davinci-tone-mapping-dctl)
@@ -621,6 +622,7 @@ DCTL that physically emulates film halation, intended for Linear input images.
 Light passes through three layers of film emulsion and various color filters, ultimately with the bottom channel being Red. Light then passes through the film base and reflects off the back of the film, and this reddish light then re-exposes the channels in reverse order (red, then green, then blue).
 
 #### Credits
+
 Thanks to Caleb Keller for his thoughts in adding a few more controls to this tool.
 
 #### DCTL Parameters
@@ -989,7 +991,9 @@ Expects a linear image, applies linear contrast to each channel via gamma, prese
 **Use Random**: Choose whether to not use the random number generator, to randomly generate a split tone (randomness is applied only to the per-channel contrasts), to randomly augment the Global Contrast, or both.
 
 ---
+
 ### Read Noise DCTL
+
 Read noise is modelled by adding a gaussian random variable with some nonnegative mean and standard deviation to the signal in linear. This DCTL should be applied in linear and simulates this.
 
 #### DCTL Parameters
@@ -1716,6 +1720,42 @@ Converts between RGB and a Cylindrical color model. Outputs a 3-channel image, $
 #### DCTL Parameters
 
 **Direction**: Indicate whether to go from RGB to Cylindrical, or from Cylindrical to RGB.
+
+---
+
+### DaVinci HSL Curves Conversion DCTL
+
+Use Resolve's HSL with other color models.
+
+#### How it works:
+
+The HSL curves work by converting internally from RGB to an HSL-like space, applying some curves/crosstalk to the three resulting channels, and converting back to RGB. I have reverse engineered this conversion so that we can prepend our own inverse of the RGB to HSL transform, allowing us to substitute our own channels (computed for example via HSV or spherical) instead of the usual HSL ones. Afterwards, we must convert back to RGB too.
+
+#### Setup:
+
+There are two main ways you could set this up. The first is if you have some sort of custom color model that isn't already supported in the DCTL and you don't have the coding chops to modify this dctl with a pull request. What you'd do in that scenario is the sequence of the following five nodes
+
+1. Convert from RGB to the space of your color model (channel order would be HSL)
+2. DaVinci HSL Curves Conversion DCTL, set to Pre-Curves, the Input Hue Format scaling of your color model (usually Zero to One if that's the range of the hue dimension), and Custom.
+3. HSL Curves
+4. Copy of (2), but set to Post Curves. All other parameters must be identical to (2)
+5. Conversion from your color model's HSL channel ordering back to RGB.
+
+Suppose you wanted to use the HSL curves with one of the color models built into the dctl, such as Spherical. You would instead use the following order of 3 nodes:
+
+1. DaVinci HSL Curves Conversion DCTL, set to Pre Curves and Spherical (hue format won't matter)
+2. HSL Curves
+3. Copy of (1) but set to Post Curves. All other parameters must be identical to (1).
+
+Then the HSL curves will control the parameters of the desired color model.
+
+#### DCTL Parameters
+
+**Direction**: Indicates where in the chain this DCTL is. Either it's preparing for the input of the HSL curves, in which case you'd set this to Pre-Curves, or it's correcting the result of the HSL curves, in which case you'd set this to Post-Curves.
+
+**Input Hue Format**: If you have selected the **Color Model** of Custom, then the tool expects you to provide channels ordered HSL as input. This controls whether the H channel represents degrees, radians, or is scaled 0 to 1.
+
+**Color Model**: If custom, then you are expected to sandwich this tool as described in the Setup section with your own color model. Otherwise, I've included some presets to allow you to use the HSL curves in the space of your choice.
 
 ---
 
