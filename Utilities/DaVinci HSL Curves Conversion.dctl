@@ -330,16 +330,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             input = rgb_to_hsv(input);
         }
 
-        output.y *= 0.5;
-
         // need to apply an inverse of Resolve's RGB to HSL conversion
         // IE this would be an HSL to RGB conversion.
         output = hsl_to_rgb(input);
     } else {
         // Apply a RGB to HSL conversion.
         output = rgb_to_hsl(input);
-
-        output.y *= 2.0f;
 
         if (model == CUSTOM) {
             output.x = convert_from_radians(output.x, hue_format);
