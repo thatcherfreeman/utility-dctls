@@ -314,6 +314,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 input = make_float3(p_R, p_G, p_B);
     float3 output;
 
+    float3 red_spherical = rgb_to_spherical(make_float3(1.0, 0.0, 0.0));
+
     if (direction == PRE_CURVES) {
         // Need to go to HSL space.
         if (model == CUSTOM) {
@@ -322,7 +324,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         } else if (model == SPHERICAL) {
             input = rgb_to_spherical(input);
             // Scale the saturation channel so that pure red maps to 1
-            float3 red_spherical = rgb_to_spherical(make_float3(1.0, 0.0, 0.0));
             input.y = input.y / red_spherical.y;
         } else if (model == CYLINDRICAL) {
             input = rgb_to_cylindrical(input);
@@ -341,7 +342,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             output.x = convert_from_radians(output.x, hue_format);
         } else if (model == SPHERICAL) {
             // Scale the saturation channel back.
-            float3 red_spherical = rgb_to_spherical(make_float3(1.0, 0.0, 0.0));
             output.y = output.y * red_spherical.y;
 
             output = spherical_to_rgb(output);
