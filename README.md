@@ -2062,6 +2062,8 @@ Converts between full and (0-1023) legal levels (64-940)
 
 #### DCTL Parameters
 
+**Video Levels Lower/Upper Bound**: Indicate the 10-bit code value corresponding to the bounds of video levels, so you can override this if needed.
+
 **Mode**: Indicates whether to convert to Legal or to Full levels (the direction of the transform)
 
 **Clip**: Indicates whether to clip extreme values. If Mode is set to `Full to Legal`, then Clip will clip values outside of the range 64-940. Otherwise, clip will clip values outside of the range 0-1023.
