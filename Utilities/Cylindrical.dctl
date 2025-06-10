@@ -57,10 +57,11 @@ __DEVICE__ float3 rgb_to_cylindrical(float3 x) {
     float3 normalized_color = rotated_color / l;
     if (l == 0.0) {
         hsl = make_float3(0.0, 0.0, l);
-    } else if (normalized_color.y == 0.0 && normalized_color.z == 0.0) {
-        hsl = make_float3(0.0, 0.0, l);
     } else {
         float theta = _atan2f(normalized_color.z, normalized_color.x);
+        if (isnan(theta)) {
+            theta = 0.0;
+        }
         hsl.x = mod(theta, 2.0 * PI) / (2.0 * PI);
         hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0;
         hsl.z = l;
