@@ -49,7 +49,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     if (highlight_nans) {
-        if (isnan(curr_color.x) || isnan(curr_color.y) || isnan(curr_color.z)) {
+        if (isnan(curr_color.x) || isnan(curr_color.y) || isnan(curr_color.z) || curr_color.x != curr_color.x || curr_color.y != curr_color.y || curr_color.z != curr_color.z) {
             output = make_float3(highlight_r, highlight_g, highlight_b);
             flag = 1;
         }
