@@ -1,8 +1,8 @@
 #line 2
 // clang-format off
 DEFINE_DCTL_ALPHA_MODE_STRAIGHT
-DEFINE_UI_PARAMS(sample_x, Color Picker X, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
-DEFINE_UI_PARAMS(sample_y, Color Picker Y, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(sample_x, Color Picker X, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.0001)
+DEFINE_UI_PARAMS(sample_y, Color Picker Y, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.0001)
 
 DEFINE_UI_PARAMS(window_size, Sample Size px, DCTLUI_SLIDER_INT, 1, 1, 8, 1)
 DEFINE_UI_PARAMS(num_digits, Num Digits, DCTLUI_SLIDER_INT, 8, 3, 12, 1)
