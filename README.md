@@ -38,6 +38,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Fixed SNR Noise DCTL](#fixed-snr-noise-dctl)
         - [Gain Normalization](#gain-normalization)
         - [Halation DCTL](#halation-dctl)
+        - [Hot Pixel Noise](#hot-pixel-noise)
         - [Hue Curve DCTL](#hue-curve-dctl)
         - [Lens Distortion DCTL](#lens-distortion-dctl)
         - [Linear Contrast DCTL](#linear-contrast-dctl)
@@ -107,11 +108,12 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Exposure Chart DCTL](#exposure-chart-dctl)
         - [Exposure Strips DCTL](#exposure-strips-dctl)
         - [False Color Generator DCTL](#false-color-generator-dctl)
-        - [Grid Chart DCTL](#grid-chart-dctl)
         - [Frequency Test Chart DCTL](#frequency-test-chart-dctl)
         - [Gamma Curve DCTL](#gamma-curve-dctl)
         - [Gamut Primaries Conversion DCTL](#gamut-primaries-conversion-dctl)
         - [Gradient Smoothness Chart DCTL](#gradient-smoothness-chart-dctl)
+        - [Grid Chart DCTL](#grid-chart-dctl)
+        - [Hot Pixel Removal DCTL](#hot-pixel-removal-dctl)
         - [Legacy Log Curve DCTL](#legacy-log-curve-dctl)
         - [Levels Converter](#levels-converter)
         - [Line Scopes](#line-scopes)
@@ -644,6 +646,22 @@ Thanks to Caleb Keller for his thoughts in adding a few more controls to this to
 **Blur Type**: Choose which kernel to use when emulating the diffusion step.
 
 **Red Shift Correction**: Because Halation re-exposes the red channel first, it will make the exposed negative more red than it originally was. This allows you to choose how you want to correct for this red tint. If you select Matrix, then it will fully correct, otherwise RGB Gain just corrects the white point and No Correction skips this step and leaves the red tint.
+
+---
+
+### Hot Pixel Noise
+This isn't something that really looks good, but it's meant to simulate having salt and pepper noise in your image where some pixels by chance are completely cooked.
+
+#### DCTL Parameters
+**Noise Period: 1 per**: Indicates how often a hot pixel should appear. Larger is less frequent, this indicates 1 hot pixel per 10000 pixels, by default.
+
+**Enable RGB Noise**: Allows hot pixels to be red, green, or blue
+
+**Enable Black**: Allows hot pixels to be stuck at black (0, 0, 0).
+
+**Enable White**: Allows hot pixels to be stuck at white.
+
+**Seed Position X/Y**: Indicates the position on the frame that is used to seed the random number generator.
 
 ---
 
@@ -1914,24 +1932,6 @@ Generates a false color conversion for linear, computer generated images (not au
 
 ---
 
-### Grid Chart DCTL
-
-Draws a grid or a grid of dots so you can see how the [Field Curvature DCTL](#field-curvature-dctl) behaves. Or to photograph with your real lenses and see how their cats eye looks.
-
-#### DCTL Parameters
-
-**Number of Grids**: Amount of boxes to put on the X-axis.
-
-**Grid Thickness Px**: Thickness of the lines in the grid or dots, in pixels
-
-**White Level**: Indicate the code value of the drawn whites in the frame.
-
-**Invert**: Invert the color of the chart so it's black lines on a white backdrop.
-
-**Chart Type**: Choose whether to draw the grid or to draw dots.
-
----
-
 ### Frequency Test Chart DCTL
 
 Draws radial or vertical bars at the specified frequency. Code adapted from Thomas Berglund
@@ -2022,6 +2022,45 @@ Generates a test chart with a series of linear gradients. Each gradient is a ful
 **Band Interval**: If set to Equal, then each band will be a constant code value apart from the previous band. If set to Exponential, each band will be 2x the previous band. For pipelines expecting a log or gamma encoded image, use Equal, and for pipelines expecting a linear image, use Exponential (and probably turn off output clamping).
 
 **Continuous Mode**: Indicates whether either the color/mixture dimension and the exposure dimension should be continuous or discrete, or both.
+
+---
+
+### Grid Chart DCTL
+
+Draws a grid or a grid of dots so you can see how the [Field Curvature DCTL](#field-curvature-dctl) behaves. Or to photograph with your real lenses and see how their cats eye looks.
+
+#### DCTL Parameters
+
+**Number of Grids**: Amount of boxes to put on the X-axis.
+
+**Grid Thickness Px**: Thickness of the lines in the grid or dots, in pixels
+
+**White Level**: Indicate the code value of the drawn whites in the frame.
+
+**Invert**: Invert the color of the chart so it's black lines on a white backdrop.
+
+**Chart Type**: Choose whether to draw the grid or to draw dots.
+
+---
+
+### Hot Pixel Removal DCTL
+
+Removes hot pixels from your image, on the conditions that the hot pixel occupies only one pixel in the frame. Each pixel is compared to its four neighbors (up, down, left, right) and if it is far from its neighbors, then we consider the pixel to be hot. If the pixel is hot, then it will be replaced by the average of its neighbors.
+
+#### DCTL Parameters
+**Threshold Linear (Stops)**: If on a linear state image, we will consider a pixel to be hot if it is more than this number of stops away from its neighbors (IE division between them). The thresholds for this tool are computed by comparing $$\sqrt{r^2 + g^2 + b^2}$$ for the input and neighboring pixels.
+
+**Threshold Log (Code Value)**: If we are on a log state image, we wil consider a pixel to be hot if the difference between this pixel and its neighbors exceeds this value (ie pure subtraction).
+
+**Remove Hot Pixels**: Check to remove pixels that are generally brighter than their neighbors.
+
+**Remove Black Pixels**: Check to remove pixels that are generall darker than their neighbors.
+
+**Hot Pixel Mask via Alpha**: If you have a mask which is 0.0 where the hot pixels are, pass them in to the alpha input of this DCTL and we'll try to remove them.
+
+**Show Mask**: Highlight in yellow all pixels that have been identified as hot pixels.
+
+**Image State**: Indicate whether you are passing in a linear or log state image, which controls which threshold it uses.
 
 ---
 

@@ -1,0 +1,171 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(period, Noise Period: 1 per , DCTLUI_VALUE_BOX, 10000.0)
+DEFINE_UI_PARAMS(hot_pixel_value, Hot Pixel Value, DCTLUI_VALUE_BOX, 1.0)
+
+DEFINE_UI_PARAMS(enable_rgb_noise, Enable RGB Noise, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(enable_black_noise, Enable Black, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(enable_white_noise, Enable White, DCTLUI_CHECK_BOX, 1)
+
+DEFINE_UI_PARAMS(seed_position_x, Seed Position X, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(seed_position_y, Seed Position Y, DCTLUI_SLIDER_FLOAT, 0.4, 0.0, 1.0, 0.01)
+
+// clang-format on
+
+/////////////////////////////////////////////
+// PDFs and CDFs
+/////////////////////////////////////////////
+
+__DEVICE__ float standard_norm_cdf(float z) {
+    // Approximation of Normal CDF function with mean 0 and var 1.
+    const float k = _sqrtf(2.0 / 3.1415926535);
+    float output = 1.0 / (1.0 + _expf(-2.0 * k * z));
+    return output;
+}
+
+__DEVICE__ float norm_cdf(float z, float mean, float var) {
+    float output = standard_norm_cdf((z - mean) / _sqrtf(var));
+    return output;
+}
+
+__DEVICE__ float standard_norm_inv_cdf(float z) {
+    // Approximation from "Very Simply Explicitly Invertible Approximations of
+    // Normal Cumulative and Normal Quantile Function" by Alessandro Soranzo
+
+    // CDF
+    // float out = _powf(2.0, -1.0 * _powf(22, 1 - _powf(41, z / 10.0)));
+    float abs_z = _fabs(z - 0.5) + 0.5;
+    float out = 10.0 / _logf(41.0) * _logf(1.0 - (_logf((-1.0 * _logf(abs_z)) / _logf(2.0))) / _logf(22.0));
+    if (abs_z >= 0.995) {
+        out = 2.5758;
+    }
+
+    if (z <= 0.5) {
+        out *= -1.0;
+    }
+    return out;
+}
+
+__DEVICE__ float norm_inv_cdf(float z, float mean, float var) {
+    float out = standard_norm_inv_cdf(z) * _sqrtf(var) + mean;
+    return out;
+}
+
+__DEVICE__ float norm_pdf(float z, float mean, float var) {
+    float out = _expf(-0.5f * (z - mean) * (z - mean) / var);
+    out *= 1.0 / (_sqrtf(2.0f * 3.1415926535f * var));
+    return out;
+}
+
+/////////////////////////////////////////////
+// Random Number Generator
+/////////////////////////////////////////////
+
+typedef uint rand_state;
+
+__DEVICE__ float _randu_lcg(__PRIVATE__ rand_state* seed) {
+    // Returns random number in interval [0, 1)
+    rand_state old_seed = *seed;
+    const rand_state m = (~((rand_state)0));
+    const rand_state a = 48271;
+    rand_state new_seed = (a * old_seed) % m;
+    *seed = new_seed;
+    return (((float)new_seed) / (float)m);
+}
+
+__DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
+    rand_state x = *seed;
+    x ^= (x << 13 | x >> 19);
+    x ^= (x >> 7 | x << 25);
+    x ^= (x << 15 | x >> 15);
+    *seed = x;
+    return (((float)x) / (float)(~((rand_state)0)));
+}
+
+__DEVICE__ inline float randu(__PRIVATE__ rand_state* seed) {
+    return _randu_xorshift(seed);
+}
+
+/////////////////////////////////////////////
+// Distribution Sampling functions
+/////////////////////////////////////////////
+
+__DEVICE__ float sample_uniform(float a, float b, __PRIVATE__ rand_state* seed) {
+    float range = b - a;
+    float x = randu(seed);
+    return a + range * x;
+}
+
+__DEVICE__ float sample_binary(float a, float b, __PRIVATE__ rand_state* seed) {
+    // Samples a binary value between a and b.
+    float x = randu(seed);
+    return (x < 0.5f) ? a : b;
+}
+
+__DEVICE__ float sample_norm(float mean, float var, __PRIVATE__ rand_state* seed) {
+    float u_sample = randu(seed);
+    float out = norm_inv_cdf(u_sample, mean, var);
+    return out;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+
+    // Obtain random seed.
+    int2 seed_position = make_int2((int)(seed_position_x * (p_Width - 1)), (int)(seed_position_y * (p_Height - 1)));
+    float seed;
+    seed = _tex2D(p_TexR, seed_position.x, seed_position.y);
+    seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0;
+    seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0;
+    seed += curr_color.x * 10 + curr_color.y * 100 + curr_color.z * 1000;
+    rand_state state_value = *((__PRIVATE__ rand_state*)&seed);
+    __PRIVATE__ rand_state* state = &state_value;
+
+    float val;
+    *state ^= p_Width * p_Height;
+    *state ^= (p_Width * p_Y + p_X) << 10;
+    val = randu(state);
+    val = randu(state);
+    val = randu(state);
+    val = randu(state);
+    *state = *((__PRIVATE__ rand_state*)&val);
+
+    // Apply noise.
+    period = _fmaxf(period, 1.0f);
+
+    float3 output_color = curr_color;
+
+    // Figure out if current pixel is a hot pixel or not.
+    val = randu(state);
+    if (val < 1.0f / period) {
+        int enabled_count = enable_rgb_noise + enable_white_noise + enable_black_noise;
+        if (enabled_count > 0) {
+            float choice = sample_uniform(0.0f, (float)enabled_count, state);
+            int idx = (int)choice;
+            int opt = 0;
+            // 0: rgb, 1: white, 2: black
+            if (enable_rgb_noise && idx == opt++) {
+                // RGB noise constrained to red, green, or blue.
+                int channel_selector = (int)sample_uniform(0.0f, 3.0f, state);
+                if (channel_selector == 0) {
+                    // Red
+                    output_color.x = hot_pixel_value;
+                } else if (channel_selector == 1) {
+                    // Green
+                    output_color.y = hot_pixel_value;
+                } else if (channel_selector == 2) {
+                    // Blue
+                    output_color.z = hot_pixel_value;
+                }
+            } else if (enable_white_noise && idx == opt++) {
+                // White
+                output_color = make_float3(hot_pixel_value, hot_pixel_value, hot_pixel_value);
+            } else if (enable_black_noise && idx == opt++) {
+                // Black
+                output_color = make_float3(0.0f, 0.0f, 0.0f);
+            }
+        }
+    }
+
+    return output_color;
+}

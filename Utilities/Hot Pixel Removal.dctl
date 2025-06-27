@@ -1,0 +1,93 @@
+#line 2
+
+// clang-format off
+DEFINE_DCTL_ALPHA_MODE_STRAIGHT
+DEFINE_UI_PARAMS(threshold_linear, Threshold Linear (Stops), DCTLUI_SLIDER_FLOAT, 3.0, 0.001, 8.0, 0.001)
+DEFINE_UI_PARAMS(threshold_log, Threshold Log (Code Value), DCTLUI_SLIDER_FLOAT, 0.20, 0.001, 1.0, 0.001)
+DEFINE_UI_PARAMS(remove_hot_pixels, Remove Hot Pixels, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(remove_black_pixels, Remove Black Pixels, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(read_mask_from_alpha, Hot Pixel Mask via Alpha, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(output_mask, Show Mask, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(num_neighbors_threshold, Num Neighbors Compared, DCTLUI_COMBO_BOX, 0, {NUM_NEIGHBORS_3, NUM_NEIGHBORS_4}, {3 Neighbors (Loose), 4 Neighbors (Strict)})
+DEFINE_UI_PARAMS(image_state, Image State, DCTLUI_COMBO_BOX, 0, {IMAGE_STATE_LINEAR, IMAGE_STATE_LOG}, {Linear, Log})
+
+// clang-format on
+
+__DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, __TEXTURE__ p_TexA) {
+
+    float4 input = make_float4(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y), _tex2D(p_TexA, p_X, p_Y));
+    float4 up = make_float4(_tex2D(p_TexR, p_X, p_Y - 1), _tex2D(p_TexG, p_X, p_Y - 1), _tex2D(p_TexB, p_X, p_Y - 1), _tex2D(p_TexA, p_X, p_Y - 1));
+    float4 down = make_float4(_tex2D(p_TexR, p_X, p_Y + 1), _tex2D(p_TexG, p_X, p_Y + 1), _tex2D(p_TexB, p_X, p_Y + 1), _tex2D(p_TexA, p_X, p_Y + 1));
+    float4 left = make_float4(_tex2D(p_TexR, p_X - 1, p_Y), _tex2D(p_TexG, p_X - 1, p_Y), _tex2D(p_TexB, p_X - 1, p_Y), _tex2D(p_TexA, p_X - 1, p_Y));
+    float4 right = make_float4(_tex2D(p_TexR, p_X + 1, p_Y), _tex2D(p_TexG, p_X + 1, p_Y), _tex2D(p_TexB, p_X + 1, p_Y), _tex2D(p_TexA, p_X + 1, p_Y));
+
+    float4 neighbors[4] = {up, down, left, right};
+    bool is_hot_pixel = false;
+    int neighbors_to_check;
+
+    if (num_neighbors_threshold == NUM_NEIGHBORS_3) {
+        neighbors_to_check = 3;
+    } else if (num_neighbors_threshold == NUM_NEIGHBORS_4) {
+        neighbors_to_check = 4;
+    }
+
+    // Figure out if the current pixel is a hot pixel.
+    if (read_mask_from_alpha) {
+        is_hot_pixel = (input.w <= 1e-4f);
+    } else {
+        int num_exceeds_threshold = 0;
+        float len_input = _fmaxf(_sqrtf(input.x * input.x + input.y * input.y + input.z * input.z), 1e-6f);
+        float threshold;
+        if (image_state == IMAGE_STATE_LINEAR) {
+            threshold = threshold_linear;
+        } else if (image_state == IMAGE_STATE_LOG) {
+            threshold = threshold_log;
+        }
+
+        for (int i = 0; i < 4; ++i) {
+            float4 curr_neighbor = neighbors[i];
+            float len_neighbor =
+                _fmaxf(_sqrtf(curr_neighbor.x * curr_neighbor.x + curr_neighbor.y * curr_neighbor.y + curr_neighbor.z * curr_neighbor.z), 1e-6f);
+            float difference;
+            if (image_state == IMAGE_STATE_LINEAR) {
+                difference = _log2f(len_input) - _log2f(len_neighbor);
+            } else if (image_state == IMAGE_STATE_LOG) {
+                difference = len_input - len_neighbor;
+            }
+
+            if ((remove_hot_pixels && difference > threshold) || (remove_black_pixels && difference < -threshold)) {
+                num_exceeds_threshold++;
+            }
+        }
+        is_hot_pixel = (num_exceeds_threshold >= neighbors_to_check);
+    }
+
+    // Replace hot pixel with a function of its neighbors.
+    float4 result = input;
+
+    if (is_hot_pixel) {
+        float4 mean_of_neighbors = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        int num_valid_neighbors = 0;
+        for (int i = 1; i < 4; ++i) {
+            if (read_mask_from_alpha && neighbors[i].w == 0.0f) {
+                continue;
+            }
+            mean_of_neighbors += neighbors[i];
+            num_valid_neighbors++;
+        }
+        if (num_valid_neighbors) {
+            result = mean_of_neighbors / num_valid_neighbors;
+        } else {
+            // Do nothing, were no valid neighbors.
+            result = input;
+        }
+        result.w = 1.0f;
+    }
+
+    if (output_mask && is_hot_pixel) {
+        result = make_float4(1.0f, 1.0f, 0.0f, 1.0f); // Output yellow color for hot pixels
+    }
+
+    float4 output = make_float4(result.x, result.y, result.z, 1.0f);
+    return output;
+}
