@@ -2,13 +2,14 @@
 
 // clang-format off
 DEFINE_DCTL_ALPHA_MODE_STRAIGHT
-DEFINE_UI_PARAMS(threshold_linear, Threshold Linear (Stops), DCTLUI_SLIDER_FLOAT, 3.0, 0.001, 8.0, 0.001)
-DEFINE_UI_PARAMS(threshold_log, Threshold Log (Code Value), DCTLUI_SLIDER_FLOAT, 0.20, 0.001, 1.0, 0.001)
+
+DEFINE_UI_PARAMS(threshold_linear, Threshold Linear Stops, DCTLUI_SLIDER_FLOAT, 3.0, 0.001, 8.0, 0.001)
+DEFINE_UI_PARAMS(threshold_log, Threshold Log CV, DCTLUI_SLIDER_FLOAT, 0.20, 0.001, 1.0, 0.001)
 DEFINE_UI_PARAMS(remove_hot_pixels, Remove Hot Pixels, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(remove_black_pixels, Remove Black Pixels, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(read_mask_from_alpha, Hot Pixel Mask via Alpha, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(output_mask, Show Mask, DCTLUI_CHECK_BOX, 0)
-DEFINE_UI_PARAMS(num_neighbors_threshold, Num Neighbors Compared, DCTLUI_COMBO_BOX, 0, {NUM_NEIGHBORS_3, NUM_NEIGHBORS_4}, {3 Neighbors (Loose), 4 Neighbors (Strict)})
+DEFINE_UI_PARAMS(num_neighbors_threshold, Num Neighbors, DCTLUI_COMBO_BOX, 0, {NUM_NEIGHBORS_THREE, NUM_NEIGHBORS_FOUR}, {3 Neighbors (Loose), 4 Neighbors (Strict)})
 DEFINE_UI_PARAMS(image_state, Image State, DCTLUI_COMBO_BOX, 0, {IMAGE_STATE_LINEAR, IMAGE_STATE_LOG}, {Linear, Log})
 
 // clang-format on
@@ -25,9 +26,9 @@ __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     bool is_hot_pixel = false;
     int neighbors_to_check;
 
-    if (num_neighbors_threshold == NUM_NEIGHBORS_3) {
+    if (num_neighbors_threshold == NUM_NEIGHBORS_THREE) {
         neighbors_to_check = 3;
-    } else if (num_neighbors_threshold == NUM_NEIGHBORS_4) {
+    } else if (num_neighbors_threshold == NUM_NEIGHBORS_FOUR) {
         neighbors_to_check = 4;
     }
 

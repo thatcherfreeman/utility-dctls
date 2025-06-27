@@ -2048,9 +2048,9 @@ Draws a grid or a grid of dots so you can see how the [Field Curvature DCTL](#fi
 Removes hot pixels from your image, on the conditions that the hot pixel occupies only one pixel in the frame. Each pixel is compared to its four neighbors (up, down, left, right) and if it is far from its neighbors, then we consider the pixel to be hot. If the pixel is hot, then it will be replaced by the average of its neighbors.
 
 #### DCTL Parameters
-**Threshold Linear (Stops)**: If on a linear state image, we will consider a pixel to be hot if it is more than this number of stops away from its neighbors (IE division between them). The thresholds for this tool are computed by comparing $$\sqrt{r^2 + g^2 + b^2}$$ for the input and neighboring pixels.
+**Threshold Linear Stops**: If on a linear state image, we will consider a pixel to be hot if it is more than this number of stops away from its neighbors (IE division between them). The thresholds for this tool are computed by comparing $$\sqrt{r^2 + g^2 + b^2}$$ for the input and neighboring pixels.
 
-**Threshold Log (Code Value)**: If we are on a log state image, we wil consider a pixel to be hot if the difference between this pixel and its neighbors exceeds this value (ie pure subtraction).
+**Threshold Log CV**: If we are on a log state image, we wil consider a pixel to be hot if the difference between this pixel and its neighbors exceeds this value (ie pure subtraction).
 
 **Remove Hot Pixels**: Check to remove pixels that are generally brighter than their neighbors.
 
