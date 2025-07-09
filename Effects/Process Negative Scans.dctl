@@ -10,8 +10,8 @@ DEFINE_UI_PARAMS(printer_b, Printer Blue, DCTLUI_SLIDER_FLOAT, 25.0, 0.0, 50.0, 
 DEFINE_UI_PARAMS(print_contrast, Print Gamma, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 5.0, 0.01)
 DEFINE_UI_PARAMS(print_offset, Print Offset, DCTLUI_VALUE_BOX, 0.25)
 DEFINE_UI_PARAMS(display_gamma, Display Gamma, DCTLUI_SLIDER_FLOAT, 2.2, 1.961, 2.6, 0.01)
-DEFINE_UI_PARAMS(input_mode, Input Mode, DCTLUI_COMBO_BOX, 0, {INPUT_LINEAR}, {Scanner Linear})
-DEFINE_UI_PARAMS(output_mode, Output Mode, DCTLUI_COMBO_BOX, 0, {OUTPUT_LINEAR, OUTPUT_CINEON, OUTPUT_GAMMA}, {Linear, Cineon, Gamma})
+DEFINE_UI_PARAMS(input_mode, Input Mode, DCTLUI_COMBO_BOX, 0, {INPUT_LINEAR, INPUT_CINEON}, {Scanner Linear, Cineon})
+DEFINE_UI_PARAMS(output_mode, Output Mode, DCTLUI_COMBO_BOX, 0, {OUTPUT_LINEAR, OUTPUT_CINEON, OUTPUT_GAMMA, OUTPUT_CHARACTERISTIC_CURVE}, {Linear, Cineon, Gamma, Characteristic Curve})
 
 DEFINE_UI_PARAMS(dmin, Sample DMIN, DCTLUI_COLOR_PICKER, 1.0, 1.0, 1.0)
 DEFINE_UI_PARAMS(white_balance, White Balance, DCTLUI_COLOR_PICKER, 1.0, 1.0, 1.0)
@@ -43,6 +43,14 @@ __DEVICE__ float characteristic_curve(float x, characteristic_params_t params) {
     return out;
 }
 
+__DEVICE__ float to_linear(float x, int input_metric) {
+    if (input_metric == INPUT_LINEAR) {
+        return x;
+    } else if (input_metric == INPUT_CINEON) {
+        return _exp10f(-1.0f * (x * 1023.0f - 95.0f) * 0.002f);
+    }
+}
+
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
 
     if (flip_horizontal) {
@@ -52,15 +60,22 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         p_Y = p_Height - 1 - p_Y;
     }
     float3 input = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+    float3 input_linear = make_float3(to_linear(input.x, input_mode), to_linear(input.y, input_mode), to_linear(input.z, input_mode));
+    float3 dmin_linear = make_float3(to_linear(dmin.r, input_mode), to_linear(dmin.g, input_mode), to_linear(dmin.b, input_mode));
+    float3 white_balance_linear = make_float3(to_linear(white_balance.r, input_mode), to_linear(white_balance.g, input_mode), to_linear(white_balance.b, input_mode));
 
-    float3 relative_transmittance = make_float3(input.x / dmin.r, input.y / dmin.g, input.z / dmin.b);
+
+    float3 relative_transmittance = input_linear;
+    if (dmin.r != 1.0f || dmin.g != 1.0f || dmin.b != 1.0f) {
+        relative_transmittance = make_float3(input_linear.x / dmin_linear.x, input_linear.y / dmin_linear.y, input_linear.z / dmin_linear.z);
+    }
     float3 relative_density =
         make_float3(_log10f(1.0 / relative_transmittance.x), _log10f(1.0 / relative_transmittance.y), _log10f(1.0 / relative_transmittance.z));
 
     // Offset RGB channels in relative density so that white balance becomes neutral.
     if (white_balance.r != 1.0f || white_balance.g != 1.0f || white_balance.b != 1.0f) {
         float3 relative_white_balance_density =
-            -1.0f * make_float3(_log10f(white_balance.r / dmin.r), _log10f(white_balance.g / dmin.g), _log10f(white_balance.b / dmin.b));
+            -1.0f * make_float3(_log10f(white_balance_linear.x / dmin_linear.x), _log10f(white_balance_linear.y / dmin_linear.y), _log10f(white_balance_linear.z / dmin_linear.z));
         relative_white_balance_density -= (relative_white_balance_density.x + relative_white_balance_density.y + relative_white_balance_density.z) / 3.0f;
         relative_density.x -= relative_white_balance_density.x;
         relative_density.y -= relative_white_balance_density.y;
@@ -102,6 +117,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                                     _powf(print_transmittance.z, 1.0f / display_gamma));
     } else if (output_mode == OUTPUT_LINEAR) {
         display_color = print_transmittance;
+    } else if (output_mode == OUTPUT_CHARACTERISTIC_CURVE) {
+        display_color = print_stock_density;
     }
 
     return display_color;
