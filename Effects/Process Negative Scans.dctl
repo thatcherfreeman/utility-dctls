@@ -57,11 +57,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float3 relative_density =
         make_float3(_log10f(1.0 / relative_transmittance.x), _log10f(1.0 / relative_transmittance.y), _log10f(1.0 / relative_transmittance.z));
 
-    if (output_mode == OUTPUT_CINEON) {
-        float3 cineon = ((relative_density / 0.002f) + 95.0f) / 1023.0f;
-        return cineon;
-    }
-
     // Offset RGB channels in relative density so that white balance becomes neutral.
     if (white_balance.r != 1.0f && white_balance.g != 1.0f && white_balance.b != 1.0f) {
         float3 relative_white_balance_density =
@@ -71,6 +66,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         relative_density.y -= relative_white_balance_density.y;
         relative_density.z -= relative_white_balance_density.z;
     }
+
+    if (output_mode == OUTPUT_CINEON) {
+        float3 cineon = ((relative_density / 0.002f) + 95.0f) / 1023.0f;
+        return cineon;
+    }
+
 
     // What we expose to the printer
     float3 printer_image = _exp10f(-1.0 * relative_density);
