@@ -58,7 +58,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         make_float3(_log10f(1.0 / relative_transmittance.x), _log10f(1.0 / relative_transmittance.y), _log10f(1.0 / relative_transmittance.z));
 
     // Offset RGB channels in relative density so that white balance becomes neutral.
-    if (white_balance.r != 1.0f && white_balance.g != 1.0f && white_balance.b != 1.0f) {
+    if (white_balance.r != 1.0f || white_balance.g != 1.0f || white_balance.b != 1.0f) {
         float3 relative_white_balance_density =
             -1.0f * make_float3(_log10f(white_balance.r / dmin.r), _log10f(white_balance.g / dmin.g), _log10f(white_balance.b / dmin.b));
         relative_white_balance_density -= (relative_white_balance_density.x + relative_white_balance_density.y + relative_white_balance_density.z) / 3.0f;
