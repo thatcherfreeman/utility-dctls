@@ -34,7 +34,7 @@ __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     // Figure out if the current pixel is a hot pixel.
     if (read_mask_from_alpha) {
-        is_hot_pixel = (input.w <= 1e-4f);
+        is_hot_pixel = (input.w <= 0.5f);
     } else {
         int num_exceeds_threshold = 0;
         float len_input = _fmaxf(_sqrtf(input.x * input.x + input.y * input.y + input.z * input.z), 1e-6f);
