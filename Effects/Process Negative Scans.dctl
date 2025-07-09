@@ -1,0 +1,107 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(flip_horizontal, Flip Horizontal, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(flip_vertical, Flip Vertical, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(printer_global, Printer Global, DCTLUI_SLIDER_FLOAT, 25.0, 0.0, 50.0, 0.01)
+DEFINE_UI_PARAMS(printer_r, Printer Red, DCTLUI_SLIDER_FLOAT, 25.0, 0.0, 50.0, 0.01)
+DEFINE_UI_PARAMS(printer_g, Printer Green, DCTLUI_SLIDER_FLOAT, 25.0, 0.0, 50.0, 0.01)
+DEFINE_UI_PARAMS(printer_b, Printer Blue, DCTLUI_SLIDER_FLOAT, 25.0, 0.0, 50.0, 0.01)
+DEFINE_UI_PARAMS(print_contrast, Print Gamma, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 5.0, 0.01)
+DEFINE_UI_PARAMS(print_offset, Print Offset, DCTLUI_VALUE_BOX, 0.25)
+DEFINE_UI_PARAMS(display_gamma, Display Gamma, DCTLUI_SLIDER_FLOAT, 2.2, 1.961, 2.6, 0.01)
+DEFINE_UI_PARAMS(input_mode, Input Mode, DCTLUI_COMBO_BOX, 0, {INPUT_LINEAR}, {Scanner Linear})
+DEFINE_UI_PARAMS(output_mode, Output Mode, DCTLUI_COMBO_BOX, 0, {OUTPUT_LINEAR, OUTPUT_CINEON, OUTPUT_GAMMA}, {Linear, Cineon, Gamma})
+
+DEFINE_UI_PARAMS(dmin, Sample DMIN, DCTLUI_COLOR_PICKER, 1.0, 1.0, 1.0)
+DEFINE_UI_PARAMS(white_balance, White Balance, DCTLUI_COLOR_PICKER, 1.0, 1.0, 1.0)
+// clang-format on
+
+typedef struct {
+        float gamma;
+        float dmin, dmax;
+        float offset;
+} characteristic_params_t;
+
+__DEVICE__ characteristic_params_t make_characteristic_params(float gamma, float dmin, float dmax, float offset) {
+    characteristic_params_t params;
+    params.gamma = gamma;
+    params.dmin = dmin;
+    params.dmax = dmax;
+    params.offset = offset;
+    return params;
+}
+
+__DEVICE__ float sigmoid(float x) {
+    return 1.0 / (1.0 + _expf(-1.0 * x));
+}
+
+__DEVICE__ float characteristic_curve(float x, characteristic_params_t params) {
+    float out, coeff;
+    coeff = params.gamma / (0.25 * (params.dmax - params.dmin));
+    out = sigmoid(coeff * (x + params.offset)) * (params.dmax - params.dmin) + params.dmin;
+    return out;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    if (flip_horizontal) {
+        p_X = p_Width - 1 - p_X;
+    }
+    if (flip_vertical) {
+        p_Y = p_Height - 1 - p_Y;
+    }
+    float3 input = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+
+    float3 relative_transmittance = make_float3(input.x / dmin.r, input.y / dmin.g, input.z / dmin.b);
+    float3 relative_density =
+        make_float3(_log10f(1.0 / relative_transmittance.x), _log10f(1.0 / relative_transmittance.y), _log10f(1.0 / relative_transmittance.z));
+
+    if (output_mode == OUTPUT_CINEON) {
+        float3 cineon = ((relative_density / 0.002f) + 95.0f) / 1023.0f;
+        return cineon;
+    }
+
+    // Offset RGB channels in relative density so that white balance becomes neutral.
+    if (white_balance.r != 1.0f && white_balance.g != 1.0f && white_balance.b != 1.0f) {
+        float3 relative_white_balance_density =
+            -1.0f * make_float3(_log10f(white_balance.r / dmin.r), _log10f(white_balance.g / dmin.g), _log10f(white_balance.b / dmin.b));
+        relative_white_balance_density -= (relative_white_balance_density.x + relative_white_balance_density.y + relative_white_balance_density.z) / 3.0f;
+        relative_density.x -= relative_white_balance_density.x;
+        relative_density.y -= relative_white_balance_density.y;
+        relative_density.z -= relative_white_balance_density.z;
+    }
+
+    // What we expose to the printer
+    float3 printer_image = _exp10f(-1.0 * relative_density);
+    const float NEUTRAL_LIGHTS = 25.0f;
+    printer_image.x *= _exp10f(((printer_global - NEUTRAL_LIGHTS) + (printer_r - NEUTRAL_LIGHTS)) * 0.025f);
+    printer_image.y *= _exp10f(((printer_global - NEUTRAL_LIGHTS) + (printer_g - NEUTRAL_LIGHTS)) * 0.025f);
+    printer_image.z *= _exp10f(((printer_global - NEUTRAL_LIGHTS) + (printer_b - NEUTRAL_LIGHTS)) * 0.025f);
+
+    float3 printer_log_exposure = make_float3(_log10f(printer_image.x), _log10f(printer_image.y), _log10f(printer_image.z));
+
+    characteristic_params_t params = make_characteristic_params(print_contrast, 0.0f, 4.0f, print_offset);
+    float3 print_stock_density = make_float3(characteristic_curve(printer_log_exposure.x, params),
+                                             characteristic_curve(printer_log_exposure.y, params),
+                                             characteristic_curve(printer_log_exposure.z, params));
+
+    float3 print_transmittance =
+        make_float3(_exp10f(-1.0f * print_stock_density.x), _exp10f(-1.0f * print_stock_density.y), _exp10f(-1.0f * print_stock_density.z));
+
+    float3 display_color;
+
+    if (output_mode == OUTPUT_GAMMA) {
+        print_transmittance.x = _fmaxf(print_transmittance.x, 0.0f);
+        print_transmittance.y = _fmaxf(print_transmittance.y, 0.0f);
+        print_transmittance.z = _fmaxf(print_transmittance.z, 0.0f);
+
+        display_color = make_float3(_powf(print_transmittance.x, 1.0f / display_gamma),
+                                    _powf(print_transmittance.y, 1.0f / display_gamma),
+                                    _powf(print_transmittance.z, 1.0f / display_gamma));
+    } else if (output_mode == OUTPUT_LINEAR) {
+        display_color = print_transmittance;
+    }
+
+    return display_color;
+}

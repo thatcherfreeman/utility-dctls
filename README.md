@@ -47,6 +47,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Parametric Blur DCTL](#parametric-blur-dctl)
         - [Photo Perceptual Exposure DCTL](#photo-perceptual-exposure-dctl)
         - [Photon Noise DCTL](#photon-noise-dctl)
+        - [Process Negative Scans DCTL](#process-negative-scans-dctl)
         - [Protected Tone Mapping DCTL](#protected-tone-mapping-dctl)
         - [Radial Blur DCTL](#radial-blur-dctl)
         - [Random Channel Mixer DCTL](#random-channel-mixer-dctl)
@@ -877,6 +878,31 @@ In order for the math to work out correctly, this DCTL expects that all inputs a
 **Clamp Methodology**: For convenience, choose whether not to clamp the output, or to ensure that the output is clamped to be nonnegative, or that the noise is clamped to be nonnegative. Note that obviously clamping the noise to be nonnegative will have the result that the noise mean and variance are changed.
 
 **Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
+
+---
+### Process Negative Scans DCTL
+DCTL to help me with post processing my negative scans to turn them into JPGs. Expects a linear image from the sensor of the scanner.
+
+#### DCTL Parameters
+**Printer Global**: Global exposure adjustment when printing
+
+**Printer Red/Green/Blue**: Controls the corresponding printer light.
+
+**Print Gamma**: Controls gamma of the print stock.
+
+**Print Offset**: Effectively controls the base exposure of the print stock.
+
+**Display Gamma**: Indicate the display's gamma if the output mode is set to Gamma
+
+**Flip Horizontal/Vertical**: Flips the image horizontally or vertically, for convenience.
+
+**Input Mode**: Indicate the metric that you're passing to this DCTL.
+
+**Output Mode**: Indicates what metric the DCTL outputs. Linear is in terms of Print transmittance.
+
+**Sample DMIN**: Color pick a region corresponding to an area that is unexposed (usually orange colored). Recommend you do this with Flip horizontal/vertical **unchecked**.
+
+**White Balance**: Select a region that should be white, this will equivalently set the base printer lights to a point where this thing is rendered neutrally. Sample this with Flip horizontal/vertical **unchecked**.
 
 ---
 
