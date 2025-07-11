@@ -890,7 +890,11 @@ DCTL to help me with post processing my negative scans to turn them into JPGs. E
 
 **Print Gamma**: Controls gamma of the print stock.
 
+**Print Red/Green/Blue Gamma**: Further gamma for each of the three channels.
+
 **Print Offset**: Effectively controls the base exposure of the print stock.
+
+**Print Red/Green/Blue Offset**: Further controls offset for each of the three channels.
 
 **Display Gamma**: Indicate the display's gamma if the output mode is set to Gamma
 

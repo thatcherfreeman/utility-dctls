@@ -69,8 +69,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float3 input = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
     float3 input_linear = make_float3(to_linear(input.x, input_mode), to_linear(input.y, input_mode), to_linear(input.z, input_mode));
     float3 dmin_linear = make_float3(to_linear(dmin.r, input_mode), to_linear(dmin.g, input_mode), to_linear(dmin.b, input_mode));
-    float3 white_balance_linear = make_float3(to_linear(white_balance.r, input_mode), to_linear(white_balance.g, input_mode), to_linear(white_balance.b, input_mode));
-
+    float3 white_balance_linear =
+        make_float3(to_linear(white_balance.r, input_mode), to_linear(white_balance.g, input_mode), to_linear(white_balance.b, input_mode));
 
     float3 relative_transmittance = input_linear;
     if (dmin.r != 1.0f || dmin.g != 1.0f || dmin.b != 1.0f) {
@@ -81,8 +81,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     // Offset RGB channels in relative density so that white balance becomes neutral.
     if (white_balance.r != 1.0f || white_balance.g != 1.0f || white_balance.b != 1.0f) {
-        float3 relative_white_balance_density =
-            -1.0f * make_float3(_log10f(white_balance_linear.x / dmin_linear.x), _log10f(white_balance_linear.y / dmin_linear.y), _log10f(white_balance_linear.z / dmin_linear.z));
+        float3 relative_white_balance_density = -1.0f * make_float3(_log10f(white_balance_linear.x / dmin_linear.x),
+                                                                    _log10f(white_balance_linear.y / dmin_linear.y),
+                                                                    _log10f(white_balance_linear.z / dmin_linear.z));
         relative_white_balance_density -= (relative_white_balance_density.x + relative_white_balance_density.y + relative_white_balance_density.z) / 3.0f;
         relative_density.x -= relative_white_balance_density.x;
         relative_density.y -= relative_white_balance_density.y;
@@ -102,7 +103,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         printer_g += correction;
         printer_b += correction;
     }
-
 
     // What we expose to the printer
     float3 printer_image = _exp10f(-1.0 * relative_density);
