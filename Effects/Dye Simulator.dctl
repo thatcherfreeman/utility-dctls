@@ -1,27 +1,27 @@
 #line 2
 
 // clang-format off
-DEFINE_UI_PARAMS(cyan_mean, Cyan Mean, DCTLUI_SLIDER_FLOAT, 651, 380, 800, 0.01)
-DEFINE_UI_PARAMS(magenta_mean, Magenta Mean, DCTLUI_SLIDER_FLOAT, 522, 380, 800, 0.01)
-DEFINE_UI_PARAMS(yellow_mean, Yellow Mean, DCTLUI_SLIDER_FLOAT, 420, 380, 800, 0.01)
+DEFINE_UI_PARAMS(cyan_mean, Cyan Mean, DCTLUI_SLIDER_FLOAT, 640, 380, 800, 0.01)
+DEFINE_UI_PARAMS(magenta_mean, Magenta Mean, DCTLUI_SLIDER_FLOAT, 544, 380, 800, 0.01)
+DEFINE_UI_PARAMS(yellow_mean, Yellow Mean, DCTLUI_SLIDER_FLOAT, 430, 380, 800, 0.01)
 DEFINE_UI_PARAMS(silver_mean, Silver Mean, DCTLUI_SLIDER_FLOAT, 500, 380, 800, 0.01)
 
-DEFINE_UI_PARAMS(cyan_left_std, Cyan Left Std, DCTLUI_SLIDER_FLOAT, 60, 1, 200, 0.01)
-DEFINE_UI_PARAMS(magenta_left_std, Magenta Left Std, DCTLUI_SLIDER_FLOAT, 50, 1, 200, 0.01)
-DEFINE_UI_PARAMS(yellow_left_std, Yellow Left Std, DCTLUI_SLIDER_FLOAT, 60, 1, 200, 0.01)
+DEFINE_UI_PARAMS(cyan_left_std, Cyan Left Std, DCTLUI_SLIDER_FLOAT, 40, 1, 200, 0.01)
+DEFINE_UI_PARAMS(magenta_left_std, Magenta Left Std, DCTLUI_SLIDER_FLOAT, 44, 1, 200, 0.01)
+DEFINE_UI_PARAMS(yellow_left_std, Yellow Left Std, DCTLUI_SLIDER_FLOAT, 100, 1, 200, 0.01)
 DEFINE_UI_PARAMS(silver_left_std, Silver Left Std, DCTLUI_SLIDER_FLOAT, 300, 1, 300, 0.01)
 
-DEFINE_UI_PARAMS(cyan_right_std, Cyan Right Std, DCTLUI_SLIDER_FLOAT, 60, 1, 200, 0.01)
-DEFINE_UI_PARAMS(magenta_right_std, Magenta Right Std, DCTLUI_SLIDER_FLOAT, 50, 1, 200, 0.01)
-DEFINE_UI_PARAMS(yellow_right_std, Yellow Right Std, DCTLUI_SLIDER_FLOAT, 60, 1, 200, 0.01)
+DEFINE_UI_PARAMS(cyan_right_std, Cyan Right Std, DCTLUI_SLIDER_FLOAT, 100, 1, 200, 0.01)
+DEFINE_UI_PARAMS(magenta_right_std, Magenta Right Std, DCTLUI_SLIDER_FLOAT, 44, 1, 200, 0.01)
+DEFINE_UI_PARAMS(yellow_right_std, Yellow Right Std, DCTLUI_SLIDER_FLOAT, 46, 1, 200, 0.01)
 DEFINE_UI_PARAMS(silver_right_std, Silver Right Std, DCTLUI_SLIDER_FLOAT, 300, 1, 300, 0.01)
 
-DEFINE_UI_PARAMS(cyan_max_value, Cyan Max Value, DCTLUI_SLIDER_FLOAT, 1.08, 0, 2, 0.01)
-DEFINE_UI_PARAMS(magenta_max_value, Magenta Max Value, DCTLUI_SLIDER_FLOAT, 0.75, 0, 2, 0.01)
-DEFINE_UI_PARAMS(yellow_max_value, Yellow Max Value, DCTLUI_SLIDER_FLOAT, 0.82, 0, 2, 0.01)
+DEFINE_UI_PARAMS(cyan_max_value, Cyan Max Value, DCTLUI_SLIDER_FLOAT, 1.5, 0, 2, 0.01)
+DEFINE_UI_PARAMS(magenta_max_value, Magenta Max Value, DCTLUI_SLIDER_FLOAT, 1.25, 0, 2, 0.01)
+DEFINE_UI_PARAMS(yellow_max_value, Yellow Max Value, DCTLUI_SLIDER_FLOAT, 1.50, 0, 2, 0.01)
 DEFINE_UI_PARAMS(silver_max_value, Silver Max Value, DCTLUI_SLIDER_FLOAT, 1, 0, 2, 0.01)
 
-DEFINE_UI_PARAMS(cyan_min_value, Cyan Min Value, DCTLUI_SLIDER_FLOAT, 0.0, 0, 1, 0.01)
+DEFINE_UI_PARAMS(cyan_min_value, Cyan Min Value, DCTLUI_SLIDER_FLOAT, 0.05, 0, 1, 0.01)
 DEFINE_UI_PARAMS(magenta_min_value, Magenta Min Value, DCTLUI_SLIDER_FLOAT, 0.0, 0, 1, 0.01)
 DEFINE_UI_PARAMS(yellow_min_value, Yellow Min Value, DCTLUI_SLIDER_FLOAT, 0.0, 0, 1, 0.01)
 DEFINE_UI_PARAMS(silver_min_value, Silver Min Value, DCTLUI_SLIDER_FLOAT, 0.0, 0, 1, 0.01)
@@ -365,18 +365,9 @@ __DEVICE__ float3 get_observer_weight_stepped(int wavelength, int observer_type)
         weights.y = _exp10f(status_a_sensitivities[index][1]);
         weights.z = _exp10f(status_a_sensitivities[index][2]);
     } else if (observer_type == XYZ_D65_OBSERVER || observer_type == XYZ_A_OBSERVER || observer_type == XYZ_E_OBSERVER) {
-        float light = 1.0;
-        if (observer_type == XYZ_D65_OBSERVER) {
-            light = d65_illuminant[index] / 100.0;
-        } else if (observer_type == XYZ_A_OBSERVER) {
-            light = a_illuminant[index] / 100.0;
-        } else if (observer_type == XYZ_E_OBSERVER) {
-            light = 1.0;
-        }
-
-        weights.x = xyz_cmfs[index][0] * light;
-        weights.y = xyz_cmfs[index][1] * light;
-        weights.z = xyz_cmfs[index][2] * light;
+        weights.x = xyz_cmfs[index][0];
+        weights.y = xyz_cmfs[index][1];
+        weights.z = xyz_cmfs[index][2];
     }
     return weights;
 }
@@ -406,6 +397,7 @@ __DEVICE__ float3 get_observer_value(gaussian_piecewise_params_t dyes[3], int ob
     float3 curr_weights = make_float3(0.0, 0.0, 0.0);
     float curr_density;
     float curr_transmittance;
+    float curr_emission;
 
     for (int i = MIN_WAVELENGTH; i <= MAX_WAVELENGTH; i += WAVELENGTH_STEP) {
         curr_weights = get_observer_weight(i, observer_type);
@@ -414,7 +406,19 @@ __DEVICE__ float3 get_observer_value(gaussian_piecewise_params_t dyes[3], int ob
         curr_density = get_density(i, dyes);
         curr_transmittance = _exp10f(-1 * curr_density);
 
-        observed_color += make_float3(curr_weights.x * curr_transmittance, curr_weights.y * curr_transmittance, curr_weights.z * curr_transmittance);
+        int index = _floorf((i - MIN_WAVELENGTH) / WAVELENGTH_STEP);
+        float light = 1.0;
+        if (observer_type == XYZ_D65_OBSERVER) {
+            light = d65_illuminant[index] / 100.0;
+        } else if (observer_type == XYZ_A_OBSERVER) {
+            light = a_illuminant[index] / 100.0;
+        } else if (observer_type == XYZ_E_OBSERVER) {
+            light = 1.0;
+        }
+
+        curr_emission = light * curr_transmittance;
+
+        observed_color += make_float3(curr_weights.x * curr_emission, curr_weights.y * curr_emission, curr_weights.z * curr_emission);
     }
 
     // Integrate.

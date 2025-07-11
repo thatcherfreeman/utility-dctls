@@ -896,6 +896,8 @@ DCTL to help me with post processing my negative scans to turn them into JPGs. E
 
 **Flip Horizontal/Vertical**: Flips the image horizontally or vertically, for convenience.
 
+**Normalize RGB Printer Lights**: If checked, ensures that **Printer Red/Green/Blue** are normalized so that these controls don't affect overall brightness much or at all, and exposure is independently controlled by **Printer Global**.
+
 **Input Mode**: Indicate the metric that you're passing to this DCTL.
 
 **Output Mode**: Indicates what metric the DCTL outputs. Linear is in terms of Print transmittance.

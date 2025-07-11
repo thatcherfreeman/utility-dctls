@@ -3,12 +3,19 @@
 // clang-format off
 DEFINE_UI_PARAMS(flip_horizontal, Flip Horizontal, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(flip_vertical, Flip Vertical, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(normalize_rgb_printer_lights, Normalize RGB Printer Lights, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(printer_global, Printer Global, DCTLUI_SLIDER_FLOAT, 25.0, 0.0, 50.0, 0.01)
 DEFINE_UI_PARAMS(printer_r, Printer Red, DCTLUI_SLIDER_FLOAT, 25.0, 0.0, 50.0, 0.01)
 DEFINE_UI_PARAMS(printer_g, Printer Green, DCTLUI_SLIDER_FLOAT, 25.0, 0.0, 50.0, 0.01)
 DEFINE_UI_PARAMS(printer_b, Printer Blue, DCTLUI_SLIDER_FLOAT, 25.0, 0.0, 50.0, 0.01)
-DEFINE_UI_PARAMS(print_contrast, Print Gamma, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 5.0, 0.01)
-DEFINE_UI_PARAMS(print_offset, Print Offset, DCTLUI_VALUE_BOX, 0.25)
+DEFINE_UI_PARAMS(print_contrast, Print Gamma, DCTLUI_SLIDER_FLOAT, 3.8, 0.0, 5.0, 0.01)
+DEFINE_UI_PARAMS(red_contrast, Print Red Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.01)
+DEFINE_UI_PARAMS(green_contrast, Print Green Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.01)
+DEFINE_UI_PARAMS(blue_contrast, Print Blue Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.01)
+DEFINE_UI_PARAMS(print_offset, Print Offset, DCTLUI_VALUE_BOX, 0.23)
+DEFINE_UI_PARAMS(red_offset, Print Red Offset, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(green_offset, Print Green Offset, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(blue_offset, Print Blue Offset, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(display_gamma, Display Gamma, DCTLUI_SLIDER_FLOAT, 2.2, 1.961, 2.6, 0.01)
 DEFINE_UI_PARAMS(input_mode, Input Mode, DCTLUI_COMBO_BOX, 0, {INPUT_LINEAR, INPUT_CINEON}, {Scanner Linear, Cineon})
 DEFINE_UI_PARAMS(output_mode, Output Mode, DCTLUI_COMBO_BOX, 0, {OUTPUT_LINEAR, OUTPUT_CINEON, OUTPUT_GAMMA, OUTPUT_CHARACTERISTIC_CURVE}, {Linear, Cineon, Gamma, Characteristic Curve})
@@ -87,6 +94,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         return cineon;
     }
 
+    if (normalize_rgb_printer_lights) {
+        // Adjust mean of printer r/g/b to be NEUTRAL_LIGHTS
+        float mean = (printer_r + printer_g + printer_b) / 3.0f;
+        float correction = 25.0f - mean; // NEUTRAL_LIGHTS is 25.0f
+        printer_r += correction;
+        printer_g += correction;
+        printer_b += correction;
+    }
+
 
     // What we expose to the printer
     float3 printer_image = _exp10f(-1.0 * relative_density);
@@ -97,10 +113,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     float3 printer_log_exposure = make_float3(_log10f(printer_image.x), _log10f(printer_image.y), _log10f(printer_image.z));
 
-    characteristic_params_t params = make_characteristic_params(print_contrast, 0.0f, 4.0f, print_offset);
-    float3 print_stock_density = make_float3(characteristic_curve(printer_log_exposure.x, params),
-                                             characteristic_curve(printer_log_exposure.y, params),
-                                             characteristic_curve(printer_log_exposure.z, params));
+    characteristic_params_t red_params = make_characteristic_params(print_contrast + red_contrast, 0.0f, 4.0f, print_offset + red_offset);
+    characteristic_params_t green_params = make_characteristic_params(print_contrast + green_contrast, 0.0f, 4.0f, print_offset + green_offset);
+    characteristic_params_t blue_params = make_characteristic_params(print_contrast + blue_contrast, 0.0f, 4.0f, print_offset + blue_offset);
+    float3 print_stock_density = make_float3(characteristic_curve(printer_log_exposure.x, red_params),
+                                             characteristic_curve(printer_log_exposure.y, green_params),
+                                             characteristic_curve(printer_log_exposure.z, blue_params));
 
     float3 print_transmittance =
         make_float3(_exp10f(-1.0f * print_stock_density.x), _exp10f(-1.0f * print_stock_density.y), _exp10f(-1.0f * print_stock_density.z));
