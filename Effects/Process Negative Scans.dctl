@@ -12,7 +12,7 @@ DEFINE_UI_PARAMS(print_contrast, Print Gamma, DCTLUI_SLIDER_FLOAT, 3.85, 0.0, 5.
 DEFINE_UI_PARAMS(red_contrast, Print Red Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.01)
 DEFINE_UI_PARAMS(green_contrast, Print Green Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.01)
 DEFINE_UI_PARAMS(blue_contrast, Print Blue Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.01)
-DEFINE_UI_PARAMS(print_offset, Print Offset, DCTLUI_VALUE_BOX, 0.15)
+DEFINE_UI_PARAMS(print_offset, Print Offset, DCTLUI_VALUE_BOX, 0.1)
 DEFINE_UI_PARAMS(red_offset, Print Red Offset, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(green_offset, Print Green Offset, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(blue_offset, Print Blue Offset, DCTLUI_VALUE_BOX, 0.0)
