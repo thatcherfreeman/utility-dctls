@@ -274,8 +274,8 @@ __DEVICE__ float string_width_in_units(char str[], float scale) {
 // Main transform function
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
 
-    float x = (float)p_X / (p_Width - 1);
-    float y = (float)p_Y / (p_Height - 1);
+    float x = (float)p_X / (p_Width);
+    float y = (float)p_Y / (p_Height);
     float step_width = 1.0f / num_steps;
     int middle_step;
 
