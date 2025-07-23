@@ -342,6 +342,14 @@ __DEVICE__ void int2str(int f, char output[], int num_chars) {
     output[runner] = '\0';
 }
 
+__DEVICE__ inline int checksum_string(char str[]) {
+    // This stupid fucking function exists only because on AMD, the compiler optimizes away strings that aren't being used
+    // but they're really generous about what they consider to be unused. As a result, we need to demonstrate that a string is
+    // used by explicitly reading from it and then doing something with that value.
+    int sum = str[0];
+    return sum;
+}
+
 __DEVICE__ float4
 sample_color(int window_size, int width, int height, int px, int py, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b, __TEXTURE__ tex_a) {
     float weight = 0.0;
@@ -534,33 +542,48 @@ __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         float4 color_picker_sample = sample_color(window_size, p_Width, p_Height, sample_pos_x_px, sample_pos_y_px, p_TexR, p_TexG, p_TexB, p_TexA);
         color_picker_sample = convert_float4_to_format(color_picker_sample, format, &num_digits);
 
-        char string_buffer[100];
-        char number_buffer[16];
+        char string_buffer[100] = {0};
+        char number_buffer[16] = {0};
+        int net_checksum = 1;
 
         // Assemble strings together into one line.
         // Red
         float2str(color_picker_sample.x, number_buffer, num_digits);
+        net_checksum += checksum_string(number_buffer);
         strcat(red_str, number_buffer, string_buffer);
+        net_checksum += checksum_string(string_buffer);
 
         // Green
         strcat(string_buffer, green_str, string_buffer);
+        net_checksum += checksum_string(string_buffer);
         float2str(color_picker_sample.y, number_buffer, num_digits);
+        net_checksum += checksum_string(number_buffer);
         strcat(string_buffer, number_buffer, string_buffer);
+        net_checksum += checksum_string(string_buffer);
+
 
         // Blue
         strcat(string_buffer, blue_str, string_buffer);
+        net_checksum += checksum_string(string_buffer);
         float2str(color_picker_sample.z, number_buffer, num_digits);
+        net_checksum += checksum_string(number_buffer);
         strcat(string_buffer, number_buffer, string_buffer);
+        net_checksum += checksum_string(string_buffer);
 
         // Alpha
         strcat(string_buffer, alpha_str, string_buffer);
+        net_checksum += checksum_string(string_buffer);
         float2str(color_picker_sample.w, number_buffer, num_digits);
+        net_checksum += checksum_string(number_buffer);
+        net_checksum += strlen(number_buffer); // I don't know why I have to do this.
         strcat(string_buffer, number_buffer, string_buffer);
+        net_checksum += checksum_string(string_buffer);
 
         // Draw the string
         float3 curr_color_f3 = drop_alpha(curr_color);
         draw_string(string_buffer, drop_alpha(legend_color), &str_trans, &curr_pos, &curr_color_f3);
         curr_color = make_float4(curr_color_f3.x, curr_color_f3.y, curr_color_f3.z, 1.0);
+        curr_color.x *= net_checksum > 0;
     }
     curr_color.w = 1.0;
     return curr_color;
