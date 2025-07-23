@@ -561,7 +561,6 @@ __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         strcat(string_buffer, number_buffer, string_buffer);
         net_checksum += checksum_string(string_buffer);
 
-
         // Blue
         strcat(string_buffer, blue_str, string_buffer);
         net_checksum += checksum_string(string_buffer);
