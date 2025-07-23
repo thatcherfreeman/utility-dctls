@@ -15,7 +15,7 @@ __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
 }
 
-__DEVICE__ float smoothstep(float x) {
+__DEVICE__ float smoothstep1(float x) {
     x = _clampf(x, 0.0f, 1.0f);
     return 3.0 * powf(x, 2.0) - 2.0 * powf(x, 3.0);
 }
@@ -50,9 +50,9 @@ __DEVICE__ float single_hue_curve(float x, control_params_t params) {
 
     if (left_bound <= curr_hue && curr_hue <= 0.5) {
         // left sigmoid case
-        curr_hue = params.adjustment_amt * smoothstep((curr_hue - left_bound) / (0.5 - left_bound)) + curr_hue;
+        curr_hue = params.adjustment_amt * smoothstep1((curr_hue - left_bound) / (0.5 - left_bound)) + curr_hue;
     } else if (0.5 <= curr_hue && curr_hue <= right_bound) {
-        curr_hue = params.adjustment_amt * (1.0 - smoothstep((curr_hue - 0.5) / (right_bound - 0.5))) + curr_hue;
+        curr_hue = params.adjustment_amt * (1.0 - smoothstep1((curr_hue - 0.5) / (right_bound - 0.5))) + curr_hue;
     }
     float output = mod(curr_hue - offset, 1.0);
     return output;
@@ -77,9 +77,9 @@ __DEVICE__ float single_hue_variation_curve(float x, control_params_t params) {
 
     if (left_bound <= curr_hue && curr_hue <= 0.5) {
         // left sigmoid case
-        curr_hue = mixf(curr_hue, (target_slope * (curr_hue - 0.5) + 0.5), smoothstep((curr_hue - left_bound) / (0.5 - left_bound)));
+        curr_hue = mixf(curr_hue, (target_slope * (curr_hue - 0.5) + 0.5), smoothstep1((curr_hue - left_bound) / (0.5 - left_bound)));
     } else if (0.5 <= curr_hue && curr_hue <= right_bound) {
-        curr_hue = mixf((target_slope * (curr_hue - 0.5) + 0.5), curr_hue, smoothstep((curr_hue - 0.5) / (right_bound - 0.5)));
+        curr_hue = mixf((target_slope * (curr_hue - 0.5) + 0.5), curr_hue, smoothstep1((curr_hue - 0.5) / (right_bound - 0.5)));
     }
     float output = mod(curr_hue - offset, 1.0);
     return output;

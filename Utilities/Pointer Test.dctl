@@ -82,6 +82,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     } else {
         output = make_float3(C_ptr[2][0], C_ptr[2][1], C_ptr[2][2]);
     }
+    output /= 100.0f;
 
-    return output / 100.0;
+    return output;
 }

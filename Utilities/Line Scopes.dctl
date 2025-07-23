@@ -173,13 +173,13 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     float3 scope_color = output_color;
     if (draw_crosshairs && draw_crosshair(make_float2((float)p_X, (float)p_Y), endpoint1, crosshair_size)) {
-        scope_color = 1.0 - input_color;
+        scope_color = 1.0f - input_color;
     }
     if (draw_crosshairs && draw_crosshair(make_float2((float)p_X, (float)p_Y), endpoint2, crosshair_size)) {
-        scope_color = 1.0 - input_color;
+        scope_color = 1.0f - input_color;
     }
     if (draw_line && is_near_line_segment(endpoint1, endpoint2, curr_pos_img, crosshair_size / 10.0)) {
-        scope_color = 1.0 - input_color;
+        scope_color = 1.0f - input_color;
     }
 
     const float default_stops_above_mid_gray = 6.0f;
@@ -283,7 +283,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 scope_third = (int)((curr_pos.y - scope_bounding_box.left_bottom.y) / box_size * 3.0);
                 position_within_scope =
                     make_float2(_mix(low_bound.x, upper_bound.x, (curr_pos.x - scope_bounding_box.left_bottom.x) / box_size),
-                                _mix(low_bound.y, upper_bound.y, 3.0 * mod((curr_pos.y - scope_bounding_box.left_bottom.y) / (box_size), 1.0 / 3.0)));
+                                _mix(low_bound.y, upper_bound.y, 3.0f * mod((curr_pos.y - scope_bounding_box.left_bottom.y) / (box_size), 1.0f / 3.0f)));
             }
 
             // Draw grid
@@ -386,7 +386,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
             float2 position_within_scope =
                 make_float2(_mix(low_bound.x, upper_bound.x, (curr_pos.x - scope_bounding_box.left_bottom.x) / box_size),
-                            _mix(low_bound.y, upper_bound.y, 2.0 * mod((curr_pos.y - scope_bounding_box.left_bottom.y) / (box_size), 1.0 / 2.0)));
+                            _mix(low_bound.y, upper_bound.y, 2.0f * mod((curr_pos.y - scope_bounding_box.left_bottom.y) / (box_size), 1.0f / 2.0f)));
 
             // Draw grid
             if (draw_grid) {

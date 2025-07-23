@@ -13,7 +13,7 @@ __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
 }
 
-__DEVICE__ float smoothstep(float x) {
+__DEVICE__ float smoothstep1(float x) {
     x = _clampf(x, 0.0f, 1.0f);
     return 3.0 * powf(x, 2.0f) - 2.0 * powf(x, 3.0f);
 }
@@ -76,7 +76,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     } else if (threshold_max < input_metric) {
         shadow_mask = 0.0;
     } else {
-        shadow_mask = _mix(1.0f, 0.0f, smoothstep((input_metric_log - threshold_min_log) / (threshold_max_log - threshold_min_log)));
+        shadow_mask = _mix(1.0f, 0.0f, smoothstep1((input_metric_log - threshold_min_log) / (threshold_max_log - threshold_min_log)));
     }
 
     if (selection == THR_TO_INF) {
