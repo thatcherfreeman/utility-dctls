@@ -114,6 +114,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Gamut Primaries Conversion DCTL](#gamut-primaries-conversion-dctl)
         - [Gradient Smoothness Chart DCTL](#gradient-smoothness-chart-dctl)
         - [Grid Chart DCTL](#grid-chart-dctl)
+        - [Highlight Reconstruction DCTL](#highlight-reconstruction-dctl)
         - [Hot Pixel Removal DCTL](#hot-pixel-removal-dctl)
         - [Legacy Log Curve DCTL](#legacy-log-curve-dctl)
         - [Levels Converter](#levels-converter)
@@ -651,9 +652,11 @@ Thanks to Caleb Keller for his thoughts in adding a few more controls to this to
 ---
 
 ### Hot Pixel Noise
+
 This isn't something that really looks good, but it's meant to simulate having salt and pepper noise in your image where some pixels by chance are completely cooked.
 
 #### DCTL Parameters
+
 **Noise Period: 1 per**: Indicates how often a hot pixel should appear. Larger is less frequent, this indicates 1 hot pixel per 10000 pixels, by default.
 
 **Enable RGB Noise**: Allows hot pixels to be red, green, or blue
@@ -880,10 +883,13 @@ In order for the math to work out correctly, this DCTL expects that all inputs a
 **Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
 
 ---
+
 ### Process Negative Scans DCTL
+
 DCTL to help me with post processing my negative scans to turn them into JPGs. Expects a linear image from the sensor of the scanner.
 
 #### DCTL Parameters
+
 **Printer Global**: Global exposure adjustment when printing
 
 **Printer Red/Green/Blue**: Controls the corresponding printer light.
@@ -2075,11 +2081,64 @@ Draws a grid or a grid of dots so you can see how the [Field Curvature DCTL](#fi
 
 ---
 
+### Highlight Reconstruction DCTL
+
+In all traditional approaches to highlight reconstruction, we will have one or two clipped channels and the regions where those channels are clipped are replaced with code values from the unclipped channel, appropriately gained. Sometimes, a desaturation will also be applied to the highlights in order to make any color errors less noticeable.
+
+While sophisticated highlight recovery algorithms will segment the image and estimate the appropriate color for the clipped regions of the frame based on the unclipped channel and the colors of the boundaries of the clipped region, this is obviously too complicated to put into a DCTL that needs real-time playback performance. As a result, if you happen to have many colorful things in the frame at once, you'll either have to lean on the highlight desaturation slider, or on having multiple instances of this DCTL power windowed to different parts of the frame.
+
+In any case, do follow the below instructions on how to get good results with this DCTL.
+
+#### How to use this DCTL
+
+This DCTL is expected to be applied in scene linear, ideally in the native primaries of your camera. The closer we are to the camera original primaries, the easier of a time we will have because we will be able to find hopefully either one or two clipped channels and the rest are unclipped. If you were to transform to some intermediate space, then the clipped channel will become mixed with the unclipped ones and it'll be hard to reconstruct.
+
+Set up the following node tree:
+
+1. Convert to linear
+2. This DCTL
+3. Optional exposure reduction via gain so that you can see what you're doing
+4. Tone map or DRT to your display's transfer function. You can delete nodes 3 and 4 when you're done, or just replace them with the rest of your grade, if desired.
+
+Usage of the tool:
+
+1. Identify which channels are clipped. Do this by setting Display Mode to Display Red/Green/Blue Channel and use the waveform or rgb picker to see which ones are clipped. For example,let's suppose that we find that the blue channel is clipped.
+2. Identify which channels look best. Same methodology as before, but figure out which channel(s) are cleanest. You'll be using this channel to replace the clipped ones. For example, let's suppose that the red and green channels are not clipped and look good.
+3. Set the Display Mode to the "Mask" mode for one of the clipped channels. For our example, that will be Display Blue Mask.
+4. Specify the Clipping point for the clipped channel by raising the Clipping Point for that slider until the mask highlights all all regions where that channel is clipped. In our example, we would raise Clipping Point B until just below the clipping point. This is made relatively easy by paying attention to the waveform.
+5. Set the Display Mode to the "Channel" mode the clipped channel. In our case, that will be "Display Blue Channel"
+6. Set the "Output Channel" to send the good channel(s) into the clipped channel. It may make sense here to send Green to Blue, or perhaps the mean of Red and Green to Blue. Up to you which looks best.
+7. Raise the Gain for the selected area until the reconstructed clipped channel looks smooth and good. For our example, we would raise Gain B until the pixels we're substituting into the Blue channel integrate nicely into the image.
+8. Repeat steps (3) through (7) for all clipped channels.
+9. Set Display Mode to "Display Result"
+10. Adjust Highlight Desaturation to taste, if necessary.
+
+#### DCTL Parameters
+
+**Clipping Point R/G/B**: Specifies the stops above middle gray for which there is no more information in these channels. Only necessary to specify this for each clipped channel.
+
+**Clipping Feathering**: When we qualify the clipped channels, this indicates how many stops below the clipping point to which we feather the mask to zero.
+
+**Gain R/G/B**: Amount of stops of gain to boost the reconstructed pixels within the mask, such that they match the boundaries of the clipped region.
+
+**Highlight Desaturation**: Desaturates the highlights. On some images, setting just this and the clipping point might be enough, but you'll usually get better results by going through the exercise of reconstructing the clipped regions first.
+
+**Output Red/Green/Blue Channel**: Indicate what channel to use to replace pixels exceeding the clipping point for each channel. By default, we do nothing, but as an example, setting this to "Red to Blue" will copy code values from the red channel to the clipped regions of the blue channel. These red code values will then be gained by $$2^{\text{Gain B}}$$ before being pasted in. The options that include two channels will compute the mean of the two channels before copying them into the specified output channel.
+
+**Display Mode**: Choose what you want to output from this dctl. Please read the instructions above.
+
+#### Credits
+
+The methodology for the Highlight Desaturation slider was adapted from Juan Pablo Zambrano.
+
+---
+
 ### Hot Pixel Removal DCTL
 
 Removes hot pixels from your image, on the conditions that the hot pixel occupies only one pixel in the frame. Each pixel is compared to its four neighbors (up, down, left, right) and if it is far from its neighbors, then we consider the pixel to be hot. If the pixel is hot, then it will be replaced by the average of its neighbors.
 
 #### DCTL Parameters
+
 **Threshold Linear Stops**: If on a linear state image, we will consider a pixel to be hot if it is more than this number of stops away from its neighbors (IE division between them). The thresholds for this tool are computed by comparing $$\sqrt{r^2 + g^2 + b^2}$$ for the input and neighboring pixels.
 
 **Threshold Log CV**: If we are on a log state image, we wil consider a pixel to be hot if the difference between this pixel and its neighbors exceeds this value (ie pure subtraction).

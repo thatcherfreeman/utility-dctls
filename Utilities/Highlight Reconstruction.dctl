@@ -1,0 +1,162 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(clipping_point_r, Clipping Point R, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 8.0, 0.001)
+DEFINE_UI_PARAMS(clipping_point_g, Clipping Point G, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 8.0, 0.001)
+DEFINE_UI_PARAMS(clipping_point_b, Clipping Point B, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 8.0, 0.001)
+DEFINE_UI_PARAMS(clipping_feathering, Clipping Feathering, DCTLUI_SLIDER_FLOAT, -0.3, -2.0, 0.0, 0.001)
+
+DEFINE_UI_PARAMS(stops_r, Gain R, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 16.0, 0.001)
+DEFINE_UI_PARAMS(stops_g, Gain G, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 16.0, 0.001)
+DEFINE_UI_PARAMS(stops_b, Gain B, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 16.0, 0.001)
+
+DEFINE_UI_PARAMS(highlight_desaturation, Highlight Desaturation, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+
+DEFINE_UI_PARAMS(output_red_channel, Output Red Channel, DCTLUI_COMBO_BOX, 0, {RED_TO_RED, GREEN_TO_RED, BLUE_TO_RED, GREEN_BLUE_TO_RED}, {Red to Red, Green to Red, Blue to Red, Green Blue to Red})
+DEFINE_UI_PARAMS(output_green_channel, Output Green Channel, DCTLUI_COMBO_BOX, 0, {GREEN_TO_GREEN, RED_TO_GREEN, BLUE_TO_GREEN, RED_BLUE_TO_GREEN}, {Green to Green, Red to Green, Blue to Green, Red Blue to Green})
+DEFINE_UI_PARAMS(output_blue_channel, Output Blue Channel, DCTLUI_COMBO_BOX, 0, {BLUE_TO_BLUE, RED_TO_BLUE, GREEN_TO_BLUE, RED_GREEN_TO_BLUE}, {Blue to Blue, Red to Blue, Green to Blue, Red Green to Blue})
+
+DEFINE_UI_PARAMS(display_mode, Display Mode, DCTLUI_COMBO_BOX, 0, {DISPLAY_RESULT, DISPLAY_RED_MASK, DISPLAY_RED_CHANNEL, DISPLAY_GREEN_MASK, DISPLAY_GREEN_CHANNEL, DISPLAY_BLUE_MASK, DISPLAY_BLUE_CHANNEL}, {Display Result, Display Red Mask, Display Red Channel, Display Green Mask, Display Green Channel, Display Blue Mask, Display Blue Channel})
+// clang-format on
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float smoothstep1(float x) {
+    x = _clampf(x, 0.0f, 1.0f);
+    return 3.0 * powf(x, 2.0f) - 2.0 * powf(x, 3.0f);
+}
+
+__DEVICE__ float highlight_mask(float input, float clipping_point, float clipping_feathering) {
+
+    if (clipping_point == 0.0f) {
+        // Do nothing
+        return 0.0f;
+    }
+
+    const float mid_gray = 0.18;
+    float clipping_point_linear = mid_gray * _exp2f(clipping_point);
+    float clipping_feathering_point = mid_gray * _exp2f(clipping_point + clipping_feathering);
+
+    float clipping_point_log = _log2f(clipping_point_linear);
+    float clipping_feathering_log = _log2f(clipping_feathering_point);
+    float input_log = _log2f(input);
+
+    float mask = smoothstep1((input_log - clipping_feathering_log) / (clipping_point_log - clipping_feathering_log));
+    return mask;
+}
+
+__DEVICE__ float rebuild_highlight(float input_lin, float new_channel_lin, float mask, float exposure_adjustment) {
+    // Exposure adjustment applied to only the reconstructed highlights.
+    if (input_lin <= 0.0f) {
+        return input_lin;
+    }
+
+    float result = _mix(input_lin, new_channel_lin * _exp2f(exposure_adjustment), mask);
+    return result;
+}
+
+__DEVICE__ float protected_compression(float x, float threshold, float limit) {
+    float s = limit - threshold;
+
+    if (x <= threshold) {
+        return x;
+    } else {
+        return threshold + s * ((x - threshold) / s) / (1.0f + (x - threshold) / s);
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 input = make_float3(p_R, p_G, p_B);
+
+    float mask_r = highlight_mask(input.x, clipping_point_r, clipping_feathering);
+    float mask_g = highlight_mask(input.y, clipping_point_g, clipping_feathering);
+    float mask_b = highlight_mask(input.z, clipping_point_b, clipping_feathering);
+
+    float new_channel_r;
+    if (output_red_channel == RED_TO_RED) {
+        new_channel_r = input.x;
+    } else if (output_red_channel == GREEN_TO_RED) {
+        new_channel_r = input.y;
+    } else if (output_red_channel == BLUE_TO_RED) {
+        new_channel_r = input.z;
+    } else if (output_red_channel == GREEN_BLUE_TO_RED) {
+        new_channel_r = (input.y + input.z) / 2.0f;
+    }
+
+    float new_channel_g;
+    if (output_green_channel == RED_TO_GREEN) {
+        new_channel_g = input.x;
+    } else if (output_green_channel == GREEN_TO_GREEN) {
+        new_channel_g = input.y;
+    } else if (output_green_channel == BLUE_TO_GREEN) {
+        new_channel_g = input.z;
+    } else if (output_green_channel == RED_BLUE_TO_GREEN) {
+        new_channel_g = (input.x + input.z) / 2.0f;
+    }
+
+    float new_channel_b;
+    if (output_blue_channel == RED_TO_BLUE) {
+        new_channel_b = input.x;
+    } else if (output_blue_channel == GREEN_TO_BLUE) {
+        new_channel_b = input.y;
+    } else if (output_blue_channel == BLUE_TO_BLUE) {
+        new_channel_b = input.z;
+    } else if (output_blue_channel == RED_GREEN_TO_BLUE) {
+        new_channel_b = (input.x + input.y) / 2.0f;
+    }
+
+    float output_r = rebuild_highlight(input.x, new_channel_r, mask_r, stops_r);
+    float output_g = rebuild_highlight(input.y, new_channel_g, mask_g, stops_g);
+    float output_b = rebuild_highlight(input.z, new_channel_b, mask_b, stops_b);
+
+    float3 reconstructed_result = make_float3(output_r, output_g, output_b);
+
+    // Saturation step
+    if (clipping_point_r != 0.0f || clipping_point_g != 0.0f || clipping_point_b != 0.0f) {
+        float lowest_clipping_point = 10000.0f;
+        const float mid_gray = 0.18f;
+        if (clipping_point_r != 0.0f) {
+            lowest_clipping_point = _fminf(lowest_clipping_point, mid_gray * _exp2f(clipping_point_r));
+        }
+        if (clipping_point_g != 0.0f) {
+            lowest_clipping_point = _fminf(lowest_clipping_point, mid_gray * _exp2f(clipping_point_g));
+        }
+        if (clipping_point_b != 0.0f) {
+            lowest_clipping_point = _fminf(lowest_clipping_point, mid_gray * _exp2f(clipping_point_b));
+        }
+        float curved_feathering = clipping_feathering - 0.5f;
+        // Below is an adaptation of a method by Juan Zambrano.
+        // Curve will tend to push the channels closer to the max of the three. Try not to desaturate anything below `curved_feathering`.
+        float3 curved_result =
+            make_float3(protected_compression(reconstructed_result.x, lowest_clipping_point * _exp2f(curved_feathering), lowest_clipping_point),
+                        protected_compression(reconstructed_result.y, lowest_clipping_point * _exp2f(curved_feathering), lowest_clipping_point),
+                        protected_compression(reconstructed_result.z, lowest_clipping_point * _exp2f(curved_feathering), lowest_clipping_point));
+
+        float original_max = _fmaxf(reconstructed_result.x, _fmaxf(reconstructed_result.y, reconstructed_result.z));
+        float curved_max = _fmaxf(curved_result.x, _fmaxf(curved_result.y, curved_result.z));
+
+        float3 desaturated_result = curved_result * original_max / curved_max;
+        reconstructed_result = _mix(reconstructed_result, desaturated_result, highlight_desaturation);
+    }
+
+    float3 output_color;
+    if (display_mode == DISPLAY_RESULT) {
+        output_color = reconstructed_result;
+    } else if (display_mode == DISPLAY_RED_MASK) {
+        output_color = make_float3(mask_r, mask_r, mask_r) * input.x;
+    } else if (display_mode == DISPLAY_GREEN_MASK) {
+        output_color = make_float3(mask_g, mask_g, mask_g) * input.y;
+    } else if (display_mode == DISPLAY_BLUE_MASK) {
+        output_color = make_float3(mask_b, mask_b, mask_b) * input.z;
+    } else if (display_mode == DISPLAY_RED_CHANNEL) {
+        output_color = make_float3(output_r, output_r, output_r);
+    } else if (display_mode == DISPLAY_GREEN_CHANNEL) {
+        output_color = make_float3(output_g, output_g, output_g);
+    } else if (display_mode == DISPLAY_BLUE_CHANNEL) {
+        output_color = make_float3(output_b, output_b, output_b);
+    }
+
+    return output_color;
+}
