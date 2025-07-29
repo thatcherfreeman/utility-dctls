@@ -2117,7 +2117,7 @@ Usage of the tool:
 
 **Clipping Point R/G/B**: Specifies the stops above middle gray for which there is no more information in these channels. Only necessary to specify this for each clipped channel.
 
-**Clipping Feathering**: When we qualify the clipped channels, this indicates how many stops below the clipping point to which we feather the mask to zero.
+**Clipping Feathering**: When we qualify the clipped channels, this indicates how many stops below the clipping point to which we feather the mask to zero. Also affects the threshold for which the highlight desaturation slider affects the image.
 
 **Gain R/G/B**: Amount of stops of gain to boost the reconstructed pixels within the mask, such that they match the boundaries of the clipped region.
 
