@@ -2102,11 +2102,11 @@ Set up the following node tree:
 
 Usage of the tool:
 
-1. Identify which channels are clipped. Do this by setting Display Mode to Display Red/Green/Blue Channel and use the waveform or rgb picker to see which ones are clipped. For example,let's suppose that we find that the blue channel is clipped.
+1. Identify which channels are clipped. Do this by setting Display Mode to Display Red/Green/Blue Channel and use the waveform or rgb picker to see which ones are clipped. For example, let's suppose that we find that the blue channel is clipped.
 2. Identify which channels look best. Same methodology as before, but figure out which channel(s) are cleanest. You'll be using this channel to replace the clipped ones. For example, let's suppose that the red and green channels are not clipped and look good.
 3. Set the Display Mode to the "Mask" mode for one of the clipped channels. For our example, that will be Display Blue Mask.
 4. Specify the Clipping point for the clipped channel by raising the Clipping Point for that slider until the mask highlights all all regions where that channel is clipped. In our example, we would raise Clipping Point B until just below the clipping point. This is made relatively easy by paying attention to the waveform.
-5. Set the Display Mode to the "Channel" mode the clipped channel. In our case, that will be "Display Blue Channel"
+5. Set the Display Mode to the "Channel" mode for the clipped channel. In our case, that will be "Display Blue Channel"
 6. Set the "Output Channel" to send the good channel(s) into the clipped channel. It may make sense here to send Green to Blue, or perhaps the mean of Red and Green to Blue. Up to you which looks best.
 7. Raise the Gain for the selected area until the reconstructed clipped channel looks smooth and good. For our example, we would raise Gain B until the pixels we're substituting into the Blue channel integrate nicely into the image.
 8. Repeat steps (3) through (7) for all clipped channels.
