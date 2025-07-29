@@ -11,10 +11,12 @@ DEFINE_UI_PARAMS(stops_g, Gain G, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 16.0, 0.001)
 DEFINE_UI_PARAMS(stops_b, Gain B, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 16.0, 0.001)
 
 DEFINE_UI_PARAMS(highlight_desaturation, Highlight Desaturation, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(highlight_desaturation_methodology, Desaturation Model, DCTLUI_COMBO_BOX, 0, {DESATURATION_MAX, DESATURATION_MEAN}, {Preserve Max, Preserve Mean})
 
 DEFINE_UI_PARAMS(output_red_channel, Output Red Channel, DCTLUI_COMBO_BOX, 0, {RED_TO_RED, GREEN_TO_RED, BLUE_TO_RED, GREEN_BLUE_TO_RED}, {Red to Red, Green to Red, Blue to Red, Green Blue to Red})
 DEFINE_UI_PARAMS(output_green_channel, Output Green Channel, DCTLUI_COMBO_BOX, 0, {GREEN_TO_GREEN, RED_TO_GREEN, BLUE_TO_GREEN, RED_BLUE_TO_GREEN}, {Green to Green, Red to Green, Blue to Green, Red Blue to Green})
 DEFINE_UI_PARAMS(output_blue_channel, Output Blue Channel, DCTLUI_COMBO_BOX, 0, {BLUE_TO_BLUE, RED_TO_BLUE, GREEN_TO_BLUE, RED_GREEN_TO_BLUE}, {Blue to Blue, Red to Blue, Green to Blue, Red Green to Blue})
+
 
 DEFINE_UI_PARAMS(display_mode, Display Mode, DCTLUI_COMBO_BOX, 0, {DISPLAY_RESULT, DISPLAY_RED_MASK, DISPLAY_RED_CHANNEL, DISPLAY_GREEN_MASK, DISPLAY_GREEN_CHANNEL, DISPLAY_BLUE_MASK, DISPLAY_BLUE_CHANNEL}, {Display Result, Display Red Mask, Display Red Channel, Display Green Mask, Display Green Channel, Display Blue Mask, Display Blue Channel})
 // clang-format on
@@ -134,10 +136,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
                         protected_compression(reconstructed_result.y, lowest_clipping_point * _exp2f(curved_feathering), lowest_clipping_point),
                         protected_compression(reconstructed_result.z, lowest_clipping_point * _exp2f(curved_feathering), lowest_clipping_point));
 
-        float original_max = _fmaxf(reconstructed_result.x, _fmaxf(reconstructed_result.y, reconstructed_result.z));
-        float curved_max = _fmaxf(curved_result.x, _fmaxf(curved_result.y, curved_result.z));
-
-        float3 desaturated_result = curved_result * original_max / curved_max;
+        float3 desaturated_result;
+        if (highlight_desaturation_methodology == DESATURATION_MAX) {
+            float original_max = _fmaxf(reconstructed_result.x, _fmaxf(reconstructed_result.y, reconstructed_result.z));
+            float curved_max = _fmaxf(curved_result.x, _fmaxf(curved_result.y, curved_result.z));
+            desaturated_result = curved_result * original_max / curved_max;
+        } else if (highlight_desaturation_methodology == DESATURATION_MEAN) {
+            float original_mean = (reconstructed_result.x + reconstructed_result.y + reconstructed_result.z) / 3.0f;
+            float curved_mean = (curved_result.x + curved_result.y + curved_result.z) / 3.0f;
+            desaturated_result = curved_result * original_mean / curved_mean;
+        }
         reconstructed_result = _mix(reconstructed_result, desaturated_result, highlight_desaturation);
     }
 

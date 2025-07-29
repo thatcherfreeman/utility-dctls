@@ -2123,6 +2123,8 @@ Usage of the tool:
 
 **Highlight Desaturation**: Desaturates the highlights. On some images, setting just this and the clipping point might be enough, but you'll usually get better results by going through the exercise of reconstructing the clipped regions first.
 
+**Desaturation Model**: Setting this to Max will result in Highlight Desaturation having more contrast in the highlights, whereas Preserve Mean will be a bit more muted and perhaps appear to have smoother highlight rolloff.
+
 **Output Red/Green/Blue Channel**: Indicate what channel to use to replace pixels exceeding the clipping point for each channel. By default, we do nothing, but as an example, setting this to "Red to Blue" will copy code values from the red channel to the clipped regions of the blue channel. These red code values will then be gained by $$2^{\text{Gain B}}$$ before being pasted in. The options that include two channels will compute the mean of the two channels before copying them into the specified output channel.
 
 **Display Mode**: Choose what you want to output from this dctl. Please read the instructions above.
