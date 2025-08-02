@@ -1890,7 +1890,7 @@ Some users of Dolby Vision would prefer to set the frame analysis statistics the
 **Project Output Gamma**: Indicate what your project or timeline's output color space "Gamma" setting is set to. Dolby Vision analysis will convert from this state to PQ, so it's important that you set this correctly.
 
 #### Credits
-Special thanks to *Integer* for volunteering to help with the first implementation of this code.
+Special thanks to *Integer* for contributing the first implementation of this code.
 
 ---
 
