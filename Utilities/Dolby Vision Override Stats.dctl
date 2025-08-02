@@ -1,0 +1,113 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(target_min, Min, DCTLUI_VALUE_BOX, 0.00);
+DEFINE_UI_PARAMS(target_max, Max, DCTLUI_VALUE_BOX, 0.7518);
+DEFINE_UI_PARAMS(target_mean, Avg, DCTLUI_VALUE_BOX, 0.30);
+DEFINE_UI_PARAMS(toggle_vertical, Flip, DCTLUI_CHECK_BOX, 0);
+
+DEFINE_UI_PARAMS(metric, Stats Metric, DCTLUI_COMBO_BOX, 0, {METRIC_PQ_CV, METRIC_LINEAR, METRIC_NITS}, {PQ Code Value, Linear Reflectance (Nits / 100), Nits})
+DEFINE_UI_PARAMS(project_transfer_function, Project Output Gamma, DCTLUI_COMBO_BOX, 0, {PROJECT_PQ, PROJECT_GAMMA_22, PROJECT_GAMMA_24, PROJECT_GAMMA_26}, {ST.2084 PQ, Gamma 2.2, Gamma 2.4, Gamma 2.6})
+
+// clang-format on
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float st2084_to_linear(float x) {
+    // x is code value 0-1, outputs linear light with 1.0 = 100 nits.
+    const float m1 = 1305.0 / 8192.0;
+    const float m2 = 2523.0 / 32.0;
+    const float c1 = 3424.0 / 4096.0;
+    const float c2 = 2413.0 / 128.0;
+    const float c3 = 2392.0 / 128.0;
+
+    float out_lin = 100.0 * powf(_fmaxf(powf(x, 1.0 / m2) - c1, 0.0) / (c2 - (c3 * powf(x, 1.0 / m2))), 1.0 / m1);
+
+    return out_lin;
+}
+
+__DEVICE__ float linear_to_st2084(float y) {
+    // x is code value 0-1, y is linear light with 1.0 = 100 nits.
+    float x = y / 100.0;
+    const float m1 = 1305.0 / 8192.0;
+    const float m2 = 2523.0 / 32.0;
+    const float c1 = 3424.0 / 4096.0;
+    const float c2 = 2413.0 / 128.0;
+    const float c3 = 2392.0 / 128.0;
+
+    return powf((c1 + c2 * powf(x, m1)) / (1.0 + c3 * powf(x, m1)), m2);
+}
+
+__DEVICE__ inline float linear_to_gamma(float y, float gamma) {
+    return powf(y, 1.0 / gamma);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+
+    float target_min_linear;
+    float target_max_linear;
+    float target_mean_linear;
+
+    if (metric == METRIC_PQ_CV) {
+        target_min_linear = st2084_to_linear(target_min);
+        target_max_linear = st2084_to_linear(target_max);
+        target_mean_linear = st2084_to_linear(target_mean);
+    } else if (metric == METRIC_NITS) {
+        target_min_linear = target_min / 100.0f;
+        target_max_linear = target_max / 100.0f;
+        target_mean_linear = target_mean / 100.0f;
+    } else if (metric == METRIC_LINEAR) {
+        target_min_linear = target_min;
+        target_max_linear = target_max;
+        target_mean_linear = target_mean;
+    }
+
+    // Dolby Vision analysis does the following:
+    // 1. convert from project gamma to pq.
+    // 2. compute min, max, mean in pq code value.
+
+    // It follows that we must do the inverse.
+    float target_min_cv;
+    float target_max_cv;
+    float target_mean_cv;
+
+    if (project_transfer_function == PROJECT_PQ) {
+        target_min_cv = linear_to_st2084(target_min_linear);
+        target_max_cv = linear_to_st2084(target_max_linear);
+        target_mean_cv = linear_to_st2084(target_mean_linear);
+    } else if (project_transfer_function == PROJECT_GAMMA_22) {
+        target_min_cv = linear_to_gamma(target_min_linear, 2.2f);
+        target_max_cv = linear_to_gamma(target_max_linear, 2.2f);
+        target_mean_cv = linear_to_gamma(target_mean_linear, 2.2f);
+    } else if (project_transfer_function == PROJECT_GAMMA_24) {
+        target_min_cv = linear_to_gamma(target_min_linear, 2.4f);
+        target_max_cv = linear_to_gamma(target_max_linear, 2.4f);
+        target_mean_cv = linear_to_gamma(target_mean_linear, 2.4f);
+    } else if (project_transfer_function == PROJECT_GAMMA_26) {
+        target_min_cv = linear_to_gamma(target_min_linear, 2.6f);
+        target_max_cv = linear_to_gamma(target_max_linear, 2.6f);
+        target_mean_cv = linear_to_gamma(target_mean_linear, 2.6f);
+    }
+
+    float target_min_pq = linear_to_st2084(target_min_linear);
+    float target_max_pq = linear_to_st2084(target_max_linear);
+    float target_mean_pq = linear_to_st2084(target_mean_linear);
+
+    // Construct bars so that the desired code value is hit (in PQ).
+    float min_bar_width_percentage = ((target_mean_pq / 2.0f) - (target_max_pq / 2.0f)) / (target_min_pq - target_max_pq);
+
+    int pixel_coordinate = toggle_vertical ? p_Y : p_X;
+    float total_pixels = toggle_vertical ? (float)p_Height : (float)p_Width;
+
+    float3 output;
+    if (pixel_coordinate <= total_pixels * min_bar_width_percentage) {
+        output = make_float3(target_min_cv, target_min_cv, target_min_cv);
+    } else if (pixel_coordinate <= total_pixels * min_bar_width_percentage + (total_pixels / 2.0f)) {
+        output = make_float3(target_mean_cv, target_mean_cv, target_mean_cv);
+    } else {
+        output = make_float3(target_max_cv, target_max_cv, target_max_cv);
+    }
+
+    return output;
+}

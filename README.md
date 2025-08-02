@@ -105,6 +105,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [DaVinci LGGO DCTL](#davinci-lggo-dctl)
         - [DaVinci RGB Mixer DCTL](#davinci-rgb-mixer-dctl)
         - [DaVinci Tone Mapping DCTL](#davinci-tone-mapping-dctl)
+        - [Dolby Vision Override Stats DCTL](#dolby-vision-override-stats-dctl)
         - [Edge Extension DCTL](#edge-extension-dctl)
         - [Exposure Chart DCTL](#exposure-chart-dctl)
         - [Exposure Strips DCTL](#exposure-strips-dctl)
@@ -1864,6 +1865,32 @@ DaVinci Tone Mapping is simply a function of $f(x) = a \frac{x}{x + b}$, with so
 **Invert**: Inverts the tone mapping with the specified parameters.
 
 **Clamp**: Allows you to disable white point clamping. Resolve would have this permanently enabled.
+
+---
+
+### Dolby Vision Override Stats DCTL
+
+Some users of Dolby Vision would prefer to set the frame analysis statistics themselves, rather than letting it be based on the actual frame contents. Dolby calculates their Min/Max/Avg statistics by taking the image after your timeline nodes, through a CST from your timeline output color space rec2020/st2084, at which point it computes the min, max, and average of the pixels in the frame.
+
+#### How to Use this DCTL
+
+1. Put the DCTL as your last node, after your DRT and everything.
+2. Enter the metrics you want the Dolby Min/Max/Avg to be set to - you can choose in the DCTL whether you'd like to specify these things in terms of PQ code value (which is what the Dolby Vision panel shows), Linear (1.0 corresponds to 100 nits), or just nits (100 corresponds to 100 nits).
+3. Set the Project Output Gamma to your timeline's output color space's transfer function/"gamma".
+4. Click one of the Analyze buttons in the Dolby Vision panel. The Frame one is the fastest.
+5. Copy the dolby vision adjustments to whatever clips you want.
+
+#### DCTL Parameters
+**Min/Max/Avg**: Indicates your desired values for these three statistics.
+
+**Flip**: Draws horizontal bars instead of vertical bars, in case you have pillarboxing or something like that.
+
+**Stats Metric**: Indicate what units you specified the Min/Max/Avg in. If set to ST.2084 PQ, then the Dolby Vision panel should reflect your chosen code values exactly. Otherwise, it will reflect the PQ values corresponding to your indicated nits/linear value.
+
+**Project Output Gamma**: Indicate what your project or timeline's output color space "Gamma" setting is set to. Dolby Vision analysis will convert from this state to PQ, so it's important that you set this correctly.
+
+#### Credits
+Special thanks to *Integer* for volunteering to help with the first implementation of this code.
 
 ---
 
