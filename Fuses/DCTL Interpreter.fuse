@@ -496,6 +496,7 @@ function ExtractParameters(dctl_source)
         ret1, rhs, var_name, tooltip_text = string.find(dctl_source, tooltip_pattern, rhs)
         if ret1 ~= nil then
             tooltip_text = tooltip_text:match('^"(.*)"$')
+            tooltip_text = tooltip_text:sub(1, 300)
             tooltips[var_name] = tooltip_text
         end
     until (ret1 == nil)
