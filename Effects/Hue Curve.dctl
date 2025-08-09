@@ -8,8 +8,11 @@ DEFINE_UI_PARAMS(draw_curve, Draw Curve, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(curve_type, Hue Selection, DCTLUI_COMBO_BOX, 0, {SINGLE_HUE, COMPLEMENTARY_HUES}, {Single Hue, Complementary Hues})
 DEFINE_UI_PARAMS(control_type, Control Type, DCTLUI_COMBO_BOX, 0, {HUE_ROTATION, VARIATION_CONTROL}, {Hue Control, Variation Control})
 DEFINE_UI_PARAMS(channel, Channel, DCTLUI_COMBO_BOX, 0, {CHANNEL_1, CHANNEL_2, CHANNEL_3, CHANNEL_ALL}, {Channel 1, Channel 2, Channel 3, All Channels})
+DEFINE_UI_PARAMS(max_hue_selection, Max Hue Code Value, DCTLUI_COMBO_BOX, 0, {MAX_HUE_1, MAX_HUE_2PI, MAX_HUE_360}, {Max Hue 1, Max Hue 2pi, Max Hue 360})
 
 // clang-format on
+
+#define PI (3.14159265358979323)
 
 __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
@@ -104,6 +107,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 shifted_color;
     float curve_pos_y;
 
+    float hue_limit;
+    if (max_hue_selection == MAX_HUE_1) {
+        hue_limit = 1.0;
+    } else if (max_hue_selection == MAX_HUE_2PI) {
+        hue_limit = 2.0 * PI;
+    } else if (max_hue_selection == MAX_HUE_360) {
+        hue_limit = 360.0;
+    }
+
+    curr_color /= hue_limit;
+
     // Calculate the curve
     if (curve_type == SINGLE_HUE && control_type == HUE_ROTATION) {
         shifted_color =
@@ -149,5 +163,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             output_color = 0.5f * (1.0f - output_mask) + output_mask * curve_pos_y;
         }
     }
+
+    output_color *= hue_limit;
     return output_color;
 }

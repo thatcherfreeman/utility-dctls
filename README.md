@@ -696,6 +696,8 @@ To use this DCTL, convert your image to HSV or spherical or the color model of y
 
 **Channel**: Indicate which channel corresponds to hue in the input image.
 
+**Max Hue Code Value**: Indicate whether the hue on the input is scaled 0-1, 0-2pi, or 0-360.
+
 ---
 
 ### Lens Distortion DCTL
