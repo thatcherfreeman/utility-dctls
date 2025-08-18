@@ -6,9 +6,9 @@ DEFINE_UI_PARAMS(clipping_point_g, Clipping Point G, DCTLUI_SLIDER_FLOAT, 0.0, 0
 DEFINE_UI_PARAMS(clipping_point_b, Clipping Point B, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 8.0, 0.001)
 DEFINE_UI_PARAMS(clipping_feathering, Clipping Feathering, DCTLUI_SLIDER_FLOAT, -0.3, -2.0, 0.0, 0.001)
 
-DEFINE_UI_PARAMS(stops_r, Gain R, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 16.0, 0.001)
-DEFINE_UI_PARAMS(stops_g, Gain G, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 16.0, 0.001)
-DEFINE_UI_PARAMS(stops_b, Gain B, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 16.0, 0.001)
+DEFINE_UI_PARAMS(stops_r, Gain R, DCTLUI_SLIDER_FLOAT, 0.0, -16.0, 16.0, 0.001)
+DEFINE_UI_PARAMS(stops_g, Gain G, DCTLUI_SLIDER_FLOAT, 0.0, -16.0, 16.0, 0.001)
+DEFINE_UI_PARAMS(stops_b, Gain B, DCTLUI_SLIDER_FLOAT, 0.0, -16.0, 16.0, 0.001)
 
 DEFINE_UI_PARAMS(highlight_desaturation, Highlight Desaturation, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(highlight_desaturation_methodology, Desaturation Model, DCTLUI_COMBO_BOX, 0, {DESATURATION_MAX, DESATURATION_MEAN}, {Preserve Max, Preserve Mean})
@@ -117,7 +117,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     // Saturation step
     if (clipping_point_r != 0.0f || clipping_point_g != 0.0f || clipping_point_b != 0.0f) {
-        float lowest_clipping_point = 10000.0f;
+        float lowest_clipping_point = 100000.0f;
         const float mid_gray = 0.18f;
         if (clipping_point_r != 0.0f) {
             lowest_clipping_point = _fminf(lowest_clipping_point, mid_gray * _exp2f(clipping_point_r));
@@ -137,14 +137,19 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
                         protected_compression(reconstructed_result.z, lowest_clipping_point * _exp2f(curved_feathering), lowest_clipping_point));
 
         float3 desaturated_result;
+        float original_norm;
+        float curved_norm;
         if (highlight_desaturation_methodology == DESATURATION_MAX) {
-            float original_max = _fmaxf(reconstructed_result.x, _fmaxf(reconstructed_result.y, reconstructed_result.z));
-            float curved_max = _fmaxf(curved_result.x, _fmaxf(curved_result.y, curved_result.z));
-            desaturated_result = curved_result * original_max / curved_max;
+            original_norm = _fmaxf(reconstructed_result.x, _fmaxf(reconstructed_result.y, reconstructed_result.z));
+            curved_norm = _fmaxf(curved_result.x, _fmaxf(curved_result.y, curved_result.z));
         } else if (highlight_desaturation_methodology == DESATURATION_MEAN) {
-            float original_mean = (reconstructed_result.x + reconstructed_result.y + reconstructed_result.z) / 3.0f;
-            float curved_mean = (curved_result.x + curved_result.y + curved_result.z) / 3.0f;
-            desaturated_result = curved_result * original_mean / curved_mean;
+            original_norm = (reconstructed_result.x + reconstructed_result.y + reconstructed_result.z) / 3.0f;
+            curved_norm = (curved_result.x + curved_result.y + curved_result.z) / 3.0f;
+        }
+        if (curved_norm == 0.0f) {
+            desaturated_result = reconstructed_result;
+        } else {
+            desaturated_result = curved_result * original_norm / curved_norm;
         }
         reconstructed_result = _mix(reconstructed_result, desaturated_result, highlight_desaturation);
     }
