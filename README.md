@@ -590,7 +590,7 @@ In order for the math to work out correctly, this DCTL expects that all inputs a
 
 ### Fixed SNR Noise DCTL
 
-Applies noise such that the Signal to Noise ratio is fixed; IE the standard deviation of the noise distribution applied at each pixel is contrived to be a fixed ratio of the input signal. I would not recommend running this with an SNR below 3.0.
+Applies noise such that the Signal to Noise ratio is fixed; IE the standard deviation of the noise distribution applied at each pixel is contrived to be a fixed ratio of the input signal. I would not recommend running this with an SNR below 3.0. This DCTL expects a scene linear input.
 
 #### DCTL Parameters
 
