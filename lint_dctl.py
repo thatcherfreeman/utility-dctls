@@ -18,7 +18,9 @@ def lint_dctl(file):
 
     # TODO: Update this to NOT match something like this_var_33.that_var44f
     # Also avoid matching on things already ending in f.
-    pattern = re.compile(r"(?<![\w.])[-+]?(?:(?:\d+\.\d*|\.\d+)(?:[eE][-+]?\d+)?|\d+[eE][-+]?\d+)(?![fF\w])")
+    pattern = re.compile(
+        r"(?<![A-Za-z0-9_])[-+]?(?:(?:\d+\.\d*|\.\d+)(?:[eE][-+]?\d+)?|\d+[eE][-+]?\d+)(?![fF\w])"
+    )
 
     new_lines = []
     with open(file, "r", encoding="utf-8") as f:

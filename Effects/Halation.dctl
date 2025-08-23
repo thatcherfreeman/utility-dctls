@@ -1,19 +1,19 @@
 #line 2
 // clang-format off
-DEFINE_UI_PARAMS(exposure_lost, Reflection exposure lost, DCTLUI_SLIDER_FLOAT, -3.0, -10.0, 0.0, 0.1)
-DEFINE_UI_PARAMS(green_exposure_lost, Green exposure lost, DCTLUI_SLIDER_FLOAT, -1.4, -10.0, 0.0, 0.1)
-DEFINE_UI_PARAMS(blue_exposure_lost, Blue exposure lost, DCTLUI_SLIDER_FLOAT, -1.4, -10.0, 0.0, 0.1)
-DEFINE_UI_PARAMS(base_blur_amt, Base Blur Amount, DCTLUI_SLIDER_FLOAT, 3.0, 0.0, 30.0, 1.0)
-DEFINE_UI_PARAMS(green_blur_amt, Green Blur Amount, DCTLUI_SLIDER_FLOAT, 0.2, 0.0, 30.0, 1.0)
-DEFINE_UI_PARAMS(blue_blur_amt, Blue Blur Amount, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 30.0, 1.0)
-DEFINE_UI_PARAMS(base_r, Film Base Color R, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 1.0)
-DEFINE_UI_PARAMS(base_g, Film Base Color G, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 1.0)
-DEFINE_UI_PARAMS(base_b, Film Base Color B, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 1.0)
+DEFINE_UI_PARAMS(exposure_lost, Reflection exposure lost, DCTLUI_SLIDER_FLOAT, -3.0f, -10.0f, 0.0f, 0.1f)
+DEFINE_UI_PARAMS(green_exposure_lost, Green exposure lost, DCTLUI_SLIDER_FLOAT, -1.4f, -10.0f, 0.0f, 0.1f)
+DEFINE_UI_PARAMS(blue_exposure_lost, Blue exposure lost, DCTLUI_SLIDER_FLOAT, -1.4f, -10.0f, 0.0f, 0.1f)
+DEFINE_UI_PARAMS(base_blur_amt, Base Blur Amount, DCTLUI_SLIDER_FLOAT, 3.0f, 0.0f, 30.0f, 1.0f)
+DEFINE_UI_PARAMS(green_blur_amt, Green Blur Amount, DCTLUI_SLIDER_FLOAT, 0.2f, 0.0f, 30.0f, 1.0f)
+DEFINE_UI_PARAMS(blue_blur_amt, Blue Blur Amount, DCTLUI_SLIDER_FLOAT, 0.1f, 0.0f, 30.0f, 1.0f)
+DEFINE_UI_PARAMS(base_r, Film Base Color R, DCTLUI_SLIDER_FLOAT, 1.0f, 0.0f, 1.0f, 1.0f)
+DEFINE_UI_PARAMS(base_g, Film Base Color G, DCTLUI_SLIDER_FLOAT, 0.1f, 0.0f, 1.0f, 1.0f)
+DEFINE_UI_PARAMS(base_b, Film Base Color B, DCTLUI_SLIDER_FLOAT, 0.1f, 0.0f, 1.0f, 1.0f)
 DEFINE_UI_PARAMS(blur_type, Blur Type, DCTLUI_COMBO_BOX, 0, {GAUSSIAN, EXPONENTIAL}, {Gaussian Blur, Exponential Blur})
 DEFINE_UI_PARAMS(correct_red_shift, Red Shift Correction, DCTLUI_COMBO_BOX, 2, {OFF, GAIN, MATRIX}, {No Correction, RGB Gain, Matrix})
 // clang-format on
 
-#define PI (3.14159265358979)
+#define PI (3.14159265358979f)
 
 __DEVICE__ float powf(float base, float exp) {
     float out = _copysignf(_powf(_fabs(base), exp), base);
@@ -87,7 +87,7 @@ __DEVICE__ float3 broadcast_3(float v) {
 
 __DEVICE__ float3
 gaussian_blur(float3 radius, float3 base_color, float x, float y, int p_Width, int p_Height, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
-    float3 std = radius / 2.0;
+    float3 std = radius / 2.0f;
     int window_size = (int)_ceilf(2 * std.z * 3);
 
     int center_x = get_coord(x, p_Width);
@@ -104,8 +104,8 @@ gaussian_blur(float3 radius, float3 base_color, float x, float y, int p_Width, i
         for (int j = center_y - (window_size / 2); j <= center_y + (window_size / 2); ++j) {
             float runner = dot_product(get_color(i, j, p_TexR, p_TexG, p_TexB, base_color), base_color); // current sample
             // blur this derived channel by three different amounts
-            float3 weight = 1.0 / (2.0 * PI * std * std) *
-                            expf3((powf(_fabs((float)(center_x - i)), 2.0) + powf(_fabs((float)(center_y - j)), 2.0)) / (-2.0 * std * std));
+            float3 weight = 1.0f / (2.0f * PI * std * std) *
+                            expf3((powf(_fabs((float)(center_x - i)), 2.0f) + powf(_fabs((float)(center_y - j)), 2.0f)) / (-2.0f * std * std));
             weight_sum += weight;
             sum += runner * weight;
         }
@@ -123,7 +123,7 @@ exp_blur(float3 radius, float3 base_color, float x, float y, int p_Width, int p_
     int center_x = get_coord(x, p_Width);
     int center_y = get_coord(y, p_Height);
 
-    int window_size = (int)_ceilf(2 * radius.z * 4.5);
+    int window_size = (int)_ceilf(2.0f * radius.z * 4.5f);
     if (window_size / 2 <= 0) {
         float curr_color = dot_product(get_color(center_x, center_y, p_TexR, p_TexG, p_TexB, base_color), base_color);
         return make_float3(curr_color, curr_color, curr_color);
@@ -174,18 +174,18 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         scale_color = exp_blur(blur_radii / 3, film_base_color, X, Y, p_Width, p_Height, p_TexR, p_TexG, p_TexB);
     }
 
-    float3 curr_color = get_color(p_X, p_Y, p_TexR, p_TexG, p_TexB, make_float3(1.0, 1.0, 1.0));
+    float3 curr_color = get_color(p_X, p_Y, p_TexR, p_TexG, p_TexB, make_float3(1.0f, 1.0f, 1.0f));
     float3 halation_color = halation(curr_color, scale_color, exposure_lost_lin, green_exposure_lost_lin, blue_exposure_lost_lin);
 
     float3 output_color;
     if (correct_red_shift == MATRIX) {
-        float3 red = make_float3(1.0, 0.0, 0.0);
+        float3 red = make_float3(1.0f, 0.0f, 0.0f);
         float3 red_output =
             halation(red, broadcast_3(dot_product(red, film_base_color)), exposure_lost_lin, green_exposure_lost_lin, blue_exposure_lost_lin);
-        float3 green = make_float3(0.0, 1.0, 0.0);
+        float3 green = make_float3(0.0f, 1.0f, 0.0f);
         float3 green_output =
             halation(green, broadcast_3(dot_product(green, film_base_color)), exposure_lost_lin, green_exposure_lost_lin, blue_exposure_lost_lin);
-        float3 blue = make_float3(0.0, 0.0, 1.0);
+        float3 blue = make_float3(0.0f, 0.0f, 1.0f);
         float3 blue_output =
             halation(blue, broadcast_3(dot_product(blue, film_base_color)), exposure_lost_lin, green_exposure_lost_lin, blue_exposure_lost_lin);
 
@@ -198,7 +198,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         mat_inverse_33(inv_matrix_buf, forward_matrix);
         output_color = mv_33_3(inv_matrix_buf, halation_color);
     } else if (correct_red_shift == GAIN) {
-        float3 white = make_float3(1.0, 1.0, 1.0);
+        float3 white = make_float3(1.0f, 1.0f, 1.0f);
         float3 white_output = halation(white, white, exposure_lost_lin, green_exposure_lost_lin, blue_exposure_lost_lin);
         output_color = halation_color * white / white_output;
     } else if (correct_red_shift == OFF) {
