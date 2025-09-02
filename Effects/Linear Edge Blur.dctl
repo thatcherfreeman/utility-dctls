@@ -1,0 +1,287 @@
+#line 2
+DEFINE_DCTL_ALPHA_MODE_STRAIGHT
+// clang-format off
+
+DEFINE_UI_PARAMS(protected_radius_x, Protected Radius X, DCTLUI_SLIDER_FLOAT, 0.5f, 0.001f, 1.5f, 0.01f)
+DEFINE_UI_PARAMS(protected_radius_y, Protected Radius Y, DCTLUI_SLIDER_FLOAT, 0.5f, 0.001f, 1.5f, 0.01f)
+DEFINE_UI_PARAMS(edge_blur_strength, Max Blur Strength, DCTLUI_SLIDER_FLOAT, 10.0f, 0.0f, 100.0f, 0.01f)
+DEFINE_UI_PARAMS(curve_falloff, Curve Falloff, DCTLUI_SLIDER_FLOAT, 0.0f, 0.0f, 1.0f, 0.01f)
+
+DEFINE_UI_PARAMS(couple_xy, Couple XY, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(draw_curve, Radius vs Strength Curve, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(draw_heat_map, Draw Blur Map, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(use_alpha_for_strength, Use Alpha In as Strength, DCTLUI_CHECK_BOX, 0)
+
+DEFINE_UI_PARAMS(curve_type, Blur Falloff Function, DCTLUI_COMBO_BOX, 0, {CURVE_SIGMOID, CURVE_ELLIPSE, CURVE_LINEAR}, {Sigmoid, Ellipse, Linear})
+DEFINE_UI_PARAMS(blur_direction, Blur Direction, DCTLUI_COMBO_BOX, 0, {BLUR_DIRECTION_HORIZONTAL, BLUR_DIRECTION_VERTICAL}, {Horizontal, Vertical})
+
+// clang-format on
+
+__DEVICE__ float3 sample_color(int2 pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    return make_float3(_tex2D(p_TexR, pos.x, pos.y), _tex2D(p_TexG, pos.x, pos.y), _tex2D(p_TexB, pos.x, pos.y));
+}
+
+__DEVICE__ inline float maxf(float x, float y) {
+    return _fmaxf((float)x, (float)y);
+}
+
+__DEVICE__ float powi(float x, int exp) {
+    float out = 1.0f;
+    int abs_exp = exp < 0 ? exp * -1 : exp;
+    for (int i = 0; i < abs_exp; ++i) {
+        out *= x;
+    }
+    if (exp < 0) {
+        out = 1.0f / out;
+    }
+    return out;
+}
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float mixf(float x, float y, float a) {
+    return x * (1.0f - a) + y * a;
+}
+
+__DEVICE__ float2 mixf2(float2 x, float2 y, float a) {
+    return make_float2(mixf(x.x, y.x, a), mixf(x.y, y.y, a));
+}
+
+__DEVICE__ float convert_gamma_to_reals(float g) {
+    // Converts -1 to +1 range to an exponent
+    // Essentially what Resolve does with its gamma
+    // correction.
+    float out;
+    if (g <= 0) {
+        out = 1.0f + (-4.0f * g);
+    } else {
+        out = 1.0f / (4.0f * g + 1);
+    }
+    return out;
+}
+
+__DEVICE__ float pivot_contrast(float x, float pivot, float contrast) {
+    return (x - pivot) * contrast + pivot;
+}
+
+__DEVICE__ float smoothstep2(float start, float end, float alpha) {
+    // alpha expected to be from 0 to 1.f
+    // https://www.desmos.com/calculator/pernscu1gx
+    alpha = _clampf(alpha, 0.0f, 1.0f);
+    float factor;
+    if (alpha < 0.5f) {
+        factor = 0.5f * powi(alpha * 2.0f, 3);
+    } else {
+        factor = 0.5f * (2.0f - powi(2.0f - (alpha * 2.0f), 3));
+    }
+    return mixf(start, end, factor);
+}
+
+__DEVICE__ float ellipse_step(float start, float end, float alpha) {
+    // Bottom right corner of ellipse given by
+    // alpha^2 + ((y - end - start)/end))^2 = 1
+    return -_sqrtf(1.0f - alpha * alpha) * end + start + end;
+}
+
+typedef struct {
+        float blur_rad; // radius from center of blur that has zero weight.
+        float factor;
+        int blur_direction;
+} kernel_params_t;
+
+__DEVICE__ kernel_params_t make_kernel_params(float blur_rad, float factor, int blur_direction) {
+    kernel_params_t params;
+    params.blur_rad = blur_rad;
+    params.factor = factor;
+    params.blur_direction = blur_direction;
+    return params;
+}
+
+__DEVICE__ kernel_params_t compute_kernel_params_with_alpha(float alpha, float2 dimensions, float edge_blur_strength, int blur_direction) {
+    float blur_rad = edge_blur_strength * dimensions.x / 2048.0f; // max radius in pixels of blur.
+    return make_kernel_params(blur_rad * alpha, alpha, blur_direction);
+}
+
+__DEVICE__ kernel_params_t
+compute_kernel(float2 xy, float2 dimensions, float2 protected_radius, float edge_blur_strength, int curve_type, float curve_falloff, int blur_direction) {
+    // normalized_pos is normalized so that left edge is x=-1, right edge is x=1, and it's square coordinates.
+    float2 normalized_pos = make_float2(((xy.x / (dimensions.x - 1.0f)) - 0.5f) * 2.0f,
+                                        ((xy.y / (dimensions.y - 1.0f)) - 0.5f) * 2.0f // dimensions.y / dimensions.x
+    );
+
+    float blur_rad = edge_blur_strength * dimensions.x / 2048.0f; // max radius in pixels of blur.
+    float curr_angle = _atan2f(normalized_pos.y, normalized_pos.x);
+    float curr_radius = _hypotf(normalized_pos.x, normalized_pos.y);
+
+    float protected_radius_curr_x =
+        _sqrtf(1.0f / (1.0f / powi(protected_radius.x, 2) + powi(normalized_pos.y / (normalized_pos.x * protected_radius.y), 2)));
+    float protected_radius_curr_y = protected_radius_curr_x * normalized_pos.y / normalized_pos.x;
+    float protected_radius_threshold = _hypotf(protected_radius_curr_x, protected_radius_curr_y);
+
+    float2 max_blur_ellipse;
+    if (protected_radius.x == 0.0f && protected_radius.y == 0.0f) {
+        float2 temp_protected_radius = make_float2(1.0f, 1.0f);
+        max_blur_ellipse.y = (_hypotf(temp_protected_radius.x, temp_protected_radius.y) / temp_protected_radius.x);
+        max_blur_ellipse.x = temp_protected_radius.x / temp_protected_radius.y * max_blur_ellipse.y;
+    } else if (protected_radius.x != 0.0f) {
+        max_blur_ellipse.y = (_hypotf(protected_radius.x, protected_radius.y) / protected_radius.x);
+        max_blur_ellipse.x = protected_radius.x / protected_radius.y * max_blur_ellipse.y;
+    } else {
+        max_blur_ellipse.x = (_hypotf(protected_radius.y, protected_radius.x) / protected_radius.y);
+        max_blur_ellipse.y = protected_radius.y / protected_radius.x * max_blur_ellipse.x;
+    }
+
+    float max_radius_curr_x = _sqrtf(1.0f / (1.0f / powi(max_blur_ellipse.x, 2) + powi(normalized_pos.y / (normalized_pos.x * max_blur_ellipse.y), 2)));
+    float max_radius_curr_y = max_radius_curr_x * normalized_pos.y / normalized_pos.x;
+    float max_radius_threshold = _hypotf(max_radius_curr_x, max_radius_curr_y);
+    max_radius_threshold = maxf(protected_radius_threshold, max_radius_threshold);
+
+    float curr_factor = _clampf((curr_radius - protected_radius_threshold) / (max_radius_threshold - protected_radius_threshold), 0.0f, 1.0f);
+
+    float kernel_blur_factor = curr_factor;
+    if (curve_type == CURVE_SIGMOID) {
+        curr_factor = _clampf(pivot_contrast(curr_factor, 0.5f, 1.0f + curve_falloff), 0.0f, 1.0f);
+        kernel_blur_factor = smoothstep2(0.0f, 1.0f, curr_factor);
+    } else if (curve_type == CURVE_ELLIPSE) {
+        curr_factor = powf(curr_factor, convert_gamma_to_reals(-1 * curve_falloff));
+        kernel_blur_factor = ellipse_step(0.0f, 1.0f, curr_factor);
+    } else if (curve_type == CURVE_LINEAR) {
+        curr_factor = _clampf(pivot_contrast(curr_factor, 0.5f, 1.0f + curve_falloff), 0.0f, 1.0f);
+        kernel_blur_factor = curr_factor;
+    }
+
+    return make_kernel_params(kernel_blur_factor * blur_rad, kernel_blur_factor, blur_direction);
+}
+
+__DEVICE__ float approx_circle_weight(float2 pos_trans, float radius) {
+    // pos_trans is in pixels.
+    float distance = _hypotf(pos_trans.x, pos_trans.y);
+
+    if (distance > radius + 0.5f) {
+        return 0.0f;
+    } else if (distance < radius - 0.5f) {
+        return 1.0f;
+    } else {
+        return smoothstep2(1.0f, 0.0f, distance - (radius - 0.5f));
+    }
+}
+
+__DEVICE__ float blur_kernel(float2 pos_trans, float2 window_center, float2 dimensions, kernel_params_t params) {
+    // window_center and dimensions are in pixels.
+    // pos_trans is number of pixels away from the center of the blur. IE curr_pos - window_center
+    return approx_circle_weight(pos_trans, params.blur_rad);
+}
+
+__DEVICE__ float3 blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, kernel_params_t params) {
+    float3 total_color = make_float3(0.0f, 0.0f, 0.0f);
+    float weight = 0.0f;
+    if (params.blur_rad < 0.5f) {
+        return sample_color(center_pos, p_TexR, p_TexG, p_TexB);
+    }
+
+    float2 center_pos_f = make_float2(center_pos.x, center_pos.y);
+    float2 dimensions = make_float2(p_Width, p_Height);
+    float3 curr_color;
+
+    if (params.blur_direction == BLUR_DIRECTION_HORIZONTAL) {
+        // Only iterate with x.
+        int y = 0;
+        for (int x = -params.blur_rad - 1; x <= params.blur_rad + 1; x++) {
+            float w = blur_kernel(make_float2(x, y), center_pos_f, dimensions, params);
+            if (w == 0.0f) {
+                // Don't sample the pixel if the weight is known to be zero.
+                continue;
+            }
+            int2 runner_pos = center_pos + make_int2(x, y);
+            curr_color = sample_color(runner_pos, p_TexR, p_TexG, p_TexB);
+
+            total_color += curr_color * w;
+            weight += w;
+        }
+    } else {
+        int x = 0;
+        for (int y = -params.blur_rad - 1; y <= params.blur_rad + 1; y++) {
+            float w = blur_kernel(make_float2(x, y), center_pos_f, dimensions, params);
+            if (w == 0.0f) {
+                // Don't sample the pixel if the weight is known to be zero.
+                continue;
+            }
+            int2 runner_pos = center_pos + make_int2(x, y);
+            curr_color = sample_color(runner_pos, p_TexR, p_TexG, p_TexB);
+
+            total_color += curr_color * w;
+            weight += w;
+        }
+    }
+    return total_color / weight;
+}
+
+__DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, __TEXTURE__ p_TexA) {
+    int2 curr_pos = make_int2(p_X, p_Y);
+
+    if (couple_xy) {
+        protected_radius_y = protected_radius_x;
+    }
+    kernel_params_t params;
+    if (use_alpha_for_strength) {
+        float curr_alpha = _tex2D(p_TexA, p_X, p_Y);
+        params = compute_kernel_params_with_alpha(curr_alpha, make_float2(p_Width, p_Height), edge_blur_strength, blur_direction);
+    } else {
+        params = compute_kernel(make_float2((float)p_X, (float)p_Y),
+                                make_float2(p_Width, p_Height),
+                                make_float2(protected_radius_x, protected_radius_y),
+                                edge_blur_strength,
+                                curve_type,
+                                curve_falloff,
+                                blur_direction);
+    }
+
+    float3 output_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
+
+    if (draw_heat_map) {
+        output_color = make_float3(params.blur_rad, params.blur_rad, params.blur_rad);
+    }
+
+    if (draw_curve) {
+        float x = (float)p_X / (float)(p_Width - 1);
+        float y = (float)p_Y / (float)(p_Height - 1);
+        x = (x * 2.0f) - 1.0f; // normalize so that middle is zero
+        y = 1 - y;
+        y *= 3.0f;
+
+        float2 chart_pos = mixf2(make_float2(0.0f, 0.0f), make_float2(p_Width, p_Height) - 1.0f, p_X / (p_Width - 1.0f));
+
+        if (use_alpha_for_strength) {
+            float chart_alpha = _tex2D(p_TexA, (int)_round(chart_pos.x), (int)_round(chart_pos.y));
+            params = compute_kernel_params_with_alpha(chart_alpha, make_float2(p_Width, p_Height), edge_blur_strength, blur_direction);
+        } else {
+            params = compute_kernel(chart_pos,
+                                    make_float2(p_Width, p_Height),
+                                    make_float2(protected_radius_x, protected_radius_x),
+                                    edge_blur_strength / 20.0f,
+                                    curve_type,
+                                    curve_falloff,
+                                    blur_direction);
+        }
+
+        if (_fabs(y - params.blur_rad) < 0.002f) {
+            output_color = make_float3(1.0f, 1.0f, 1.0f);
+        }
+        if (_fabs(x) < 0.002f && mod(y, 0.15f) < 0.1f) {
+            output_color = make_float3(0.5f, 0.5f, 0.5f);
+        }
+    }
+
+    float4 output_rgba = make_float4(output_color.x, output_color.y, output_color.z, 1.0f);
+    return output_rgba;
+}

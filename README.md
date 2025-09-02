@@ -42,6 +42,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Hue Curve DCTL](#hue-curve-dctl)
         - [Lens Distortion DCTL](#lens-distortion-dctl)
         - [Linear Contrast DCTL](#linear-contrast-dctl)
+        - [Linear Edge Blur DCTL](#linear-edge-blur-dctl)
         - [Matrix Manipulator](#matrix-manipulator)
         - [MTF Curve DCTL](#mtf-curve-dctl)
         - [Parametric Blur DCTL](#parametric-blur-dctl)
@@ -748,6 +749,31 @@ The DCTL works in three steps:
 **Blue Gamma**: Gamma to be applied only to the Blue Channel
 
 **Mid Gray**: Specifies the middle gray code value that is preserved.
+
+---
+
+### Linear Edge Blur DCTL
+Applies a horizontal or vertical blur to the edge of the clip, where the blur strength increases with distance from the center of the frame. Apply this on a linear state image. This DCTL requires Resolve 19.1 or later. This runs much faster than the Radial Blur or Field Curvature blurs do.
+
+#### DCTL Parameters
+
+**Protected Radius X/Y**: Choose what portion of the center of the frame is not blurred at all.
+
+**Max Blur Strength**: Choose the maximum radius of the blur in the image, which will occur in the corners of the frame.
+
+**Curve Falloff**: Affects the contrast of the selected curve, IE how quickly we go from zero blur to the max blur.
+
+**Couple XY**: If checked, we substitute **Protected Radius Y** with your value entered for **Protected Radius X**
+
+**Radius vs Strength Curve**: Shows you the blur length used for different distances from the center of the frame, The x-axis represents location from the bottom left corner to the top right corner and the Y axis is the amount of blur.
+
+**Draw Blur Map**: Shows the blur radius for each pixel in the frame, scaled 0-1.
+
+**Use Alpha In as Strength**: New to Resolve 19.1, if you pipe in a power window as the alpha input, when this checkbox is checked, we will just power the blur strength from the provided alpha.
+
+**Blur Falloff Function**: Controls how the blur strength maps from zero to **Max Blur Strength** as radius increases.
+
+**Blur Direction**: Indicate if you want to do a horizontal or vertical blur.
 
 ---
 
