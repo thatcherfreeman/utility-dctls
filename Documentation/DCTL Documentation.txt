@@ -456,30 +456,32 @@ Optional fields:
                              e.g. "ODT.Academy.Rec2020_P3D65limited_100nits_dim.ctl" - corresponding OutputColorSpaceTag name is "Rec2020_P3D65limited_100nits_dim"
                  By default, if this tag is not present the output colorspace is assumed to be Rec 709, Gamma 2.4.
 
-Writing a Parametric ACES Transform:
-------------------------------------
+Writing a Parametric ACES Transform V1:
+---------------------------------------
 Example Files:
 
     IDT_P3D65_108.dctl and ODT_P3D65_108.dctl
 
-Parametric ACES transforms are supported under ACES version 1.1 or above. To write a parametric ACES transform following this standard, you need to define the following fields:
+Use DEFINE_ACES_PARAM to define the parametric arguments.
 
-    - Y_MIN: black luminance (cd/m^2) - float.
-    - Y_MID: mid-point luminance (cd/m^2) - float.
-    - Y_MAX: peak white luminance (cd/m^2) - float.
+Parametric ACES transforms V1 are supported for ACES version 1.1 to 1.3. To write a parametric ACES transform following this standard, you need to define the following fields:
+
+    - Y_MIN: Black luminance (cd/m^2) - float.
+    - Y_MID: Mid-point luminance (cd/m^2) - float.
+    - Y_MAX: Peak white luminance (cd/m^2) - float.
     - DISPLAY_PRI: Display primaries - array of 8 floats inside curly brackets "{}".
     - LIMITING_PRI: Limiting primaries - array of 8 floats inside curly brackets "{}".
     - EOTF: Display device EOTF - integer in range [0-5] (see below)
     - INVERSE_EOTF: Input device EOTF - integer in range [0-5] (see below)
-    - SURROUND: Viewing environment - integer (either 0,1) representing a boolean flag
-    - STRETCH_BLACK: Stretch black luminance to a PQ code value of 0 - integer (either 0,1) representing a boolean flag
-    - D60_SIM: Is user D60 adapted - integer (either 0,1) representing a boolean flag
-    - LEGAL_RANGE: Output to legal range - integer (either 0,1) representing a boolean flag
+    - SURROUND: Viewing environment - integer (either 0 or 1) representing a boolean flag
+    - STRETCH_BLACK: Stretch black luminance to a PQ code value of 0 - integer (either 0 or 1) representing a boolean flag
+    - D60_SIM: Is user D60 adapted - integer (either 0 or 1) representing a boolean flag
+    - LEGAL_RANGE: Output to legal range - integer (either 0 or 1) representing a boolean flag
 
 Optional fields:
 
     - SKIP_STANDARD_ACES_RRT: Users can choose to run or skip standard ACES RRT (in output transform) or InvRRT (in input transform), and use their own custom RRT implementation.
-                              Integer (either 0,1) representing a boolean flag.
+                              Integer (either 0 or 1) representing a boolean flag.
                   By default, this value is treated as 0 and the standard ACES RRT (or InvRRT) is always used.
 
     - OUTPUT_COLORSPACE_TAG: Users can tag the output colorspace for ACES DCTL ODT file so that Resolve can set the display correspondingly and tag rendered media correctly.
@@ -580,6 +582,49 @@ The second parameter in the custom functions is an input struct encapsulating th
 
 The ACES DCTL format follows the DCTL coding standard with extra options for users to define ACES parametric and non-parametric transforms, custom EOTF functions and custom RRT/invRRT functions.
 
+Writing a Parametric ACES Transform V2:
+---------------------------------------
+Example Files:
+
+    IDT_P3D65_300nits_V2.dctl and ODT_P3D65_300nits_V2.dctl
+
+Use DEFINE_ACES_V2_PARAM to define the parametric arguments.
+
+Parametric ACES transforms V2 are supported for ACES version 2.0 by defining the following fields:
+
+    - PEAK_LUMINANCE: Luminance of the tone scale highlight rolloff will target in cd/m^2 (nits) - float
+    - LINEAR_SCALE_FACTOR: Linear scale factor - float
+    - LIMITING_PRI: Limiting primaries - array of 8 floats inside curly brackets "{}".
+    - ENCODING_PRI: Encoding primaries - array of 8 floats inside curly brackets "{}".
+    - EOTF: Display device EOTF - integer in range [0-7] (see below)
+    - IS_SCALE_WHITE: Enable to apply scaling to compress output so that the largest channel hits 1.0 - integer (either 0 or 1) representing a boolean flag
+
+The EOTF fields correspond to the following Academy standard EOTF transforms:
+
+    - 0: ST-2084 (PQ)
+    - 1: BT.1886 (Rec.709/2020 settings)
+    - 2: sRGB (mon_curve w/ presets)
+    - 3: Gamma 2.6
+    - 4: Linear (no EOTF)
+    - 5: HLG
+    - 6: BT.1886 with Gamma 2.4
+    - 7: Gamma 2.2
+
+Example:
+
+    DEFINE_ACES_V2_PARAM(PEAK_LUMINANCE: 625.0,
+                         LINEAR_SCALE_FACTOR: 0.48,
+                         LIMITING_PRI: { 0.68000, 0.32000, 0.26500, 0.69000, 0.15000, 0.06000, 0.31270, 0.32900 },
+                         ENCODING_PRI: { 1.000, 0.000, 0.000, 1.000, 0.000, 0.000, 0.333, 0.333 },
+                         EOTF: 0,
+                         IS_SCALE_WHITE: 0)
+
+Note: - To invoke the parametric ACES Transform V2, we use the same functionalities as V1.
+      - V2 parametric definition uses new template "DEFINE_ACES_V2_PARAM" comparing to "DEFINE_ACES_PARAM" in V1.
+      - V2 parametric definition doesn't support Custom EOTF and skipping RRT.
+      - V2 parametric definition supports 2 new EOTF options: BT.1886 with Gamma 2.4 and Gamma 2.2.
+      - To write non-parametric ACES Transform, use V1 definition DEFINE_ACES_PARAM(IS_PARAMETRIC_ACES_TRANSFORM: 0).
+
 Invoking Parametric Transforms from the Main Transform Function:
 ----------------------------------------------------------------
 To apply the ACES transform, call the generated AcesOutputTransform or AcesInvOutputTransform in the DCTL's main transform function:
@@ -629,7 +674,7 @@ If you have set "SKIP_STANDARD_ACES_RRT: 1", you will need to chain in the custo
         __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B)
         {
             // Call AcesInvOutputTransform first
-            const float3 result = AcesInvOutputTransform(p_R, p_G, p_B); //<ambiguous - this is repeated from prev example. intentional?>
+            const float3 result = AcesInvOutputTransform(p_R, p_G, p_B);
 
             // Call your custom Inverse RRT with the results.
             const float3 invRRTResult = customInvRRT(result.x, result.y, result.z);
@@ -665,13 +710,15 @@ If you have set "SKIP_STANDARD_ACES_RRT: 1", you will need to chain in the custo
 
 5. Example ACES DCTLs:
 ----------------------
-    - ODT_P3D65_108.dctl: parametric Output Transform implementation following Academy standard for P3D65 108 nits.
-    - ODT_CustomRRT.dctl: parametric Output Transform implementation that bypasses the standard ACES RRT function, and uses customRRT().
-    - ODT_Custom_sRGB.dctl: non-parametric Output Transform implementation to converts ACES to sRGB data with no RRT or tonemapping.
+    - ODT_P3D65_108.dctl: parametric Output Transform V1 implementation following Academy standard for P3D65 108 nits.
+    - ODT_CustomRRT.dctl: parametric Output Transform V1 implementation that bypasses the standard ACES RRT function, and uses customRRT().
+    - ODT_Custom_sRGB.dctl: non-parametric Output Transform V1 implementation to converts ACES to sRGB data with no RRT or tonemapping.
+    - ODT_P3D65_300nits_V2.dctl: parametric Output Transform V2 implementation following Academy standard for DCDM (300 nit P3-D65 Limited).
 
-    - IDT_P3D65_108.dctl: parametric Input Transform implementation following Academy standard for P3D65 108 nits.
-    - IDT_CustomEOTF.dctl: parametric Input Transform implementation using custom EOTF function.
-    - IDT_Custom_sRGB.dctl: non-parametric Input Transform implementation to convert sRGB to ACES data with no RRT or tonemapping.
+    - IDT_P3D65_108.dctl: parametric Input Transform V1 implementation following Academy standard for P3D65 108 nits.
+    - IDT_CustomEOTF.dctl: parametric Input Transform V1 implementation using custom EOTF function.
+    - IDT_Custom_sRGB.dctl: non-parametric Input Transform V1 implementation to convert sRGB to ACES data with no RRT or tonemapping.
+    - IDT_P3D65_300nits_V2.dctl: parametric Input Transform V2 implementation following Academy standard for Inverse DCDM (300 nit P3-D65 Limited).
 
 CHANGELOG
 Resolve 17.0
@@ -695,3 +742,6 @@ Resolve 19.1
     - DCTL plugin's Reset Plus button resets the current selected DCTL's custom UI values.
     - DCTL combo box's Reset button rebuilds the current selected DCTL's source code and keeps the current custom UI values if possible.
     - Remove DCTL plugin's Reload button.
+
+Resolve 20.1
+    - Support Parametric ACES Transform for ACES V2.0
