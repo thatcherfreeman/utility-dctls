@@ -606,7 +606,7 @@ Applies noise such that the Signal to Noise ratio is fixed; IE the standard devi
 
 ---
 ### FXAA DCTL
-Port of FXAA to DCTL. As an algorithm, FXAA is built around SDR images. Strictly speaking, it's mostly optimized for gamma 2.2 images, but it should work fine on gamma 2.4/rec709 images too (though the primaries are more flexible). This mode currently works better than the Linear mode I've built for it.
+Port of FXAA to DCTL. As an algorithm, FXAA is built around SDR images. Strictly speaking, it's mostly optimized for gamma 2.2 images, but it should work fine on gamma 2.4/rec709 images too (though the primaries are more flexible).
 
 #### DCTL Parameters
 **Subpixel Quality**: *Choose the amount of sub-pixel aliasing removal.* The default value in official FXAA is 0.75 for this, but 1.0 gives nicer results.
