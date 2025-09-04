@@ -1,0 +1,379 @@
+#line 2
+
+//----------------------------------------------------------------------------------
+// File:        FXAA3_11.h
+// SDK Version: v3.00
+// Email:       gameworks@nvidia.com
+// Site:        http://developer.nvidia.com/
+//
+// Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+//  * Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+//  * Neither the name of NVIDIA CORPORATION nor the names of its
+//    contributors may be used to endorse or promote products derived
+//    from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+// PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+// OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+//----------------------------------------------------------------------------------
+
+// clang-format off
+DEFINE_UI_PARAMS(quality_subpix, Subpixel Quality, DCTLUI_SLIDER_FLOAT, 1.0f, 0.0f, 1.0f, 0.01f)
+DEFINE_UI_PARAMS(quality_edge_threshold, Edge Threshold, DCTLUI_SLIDER_FLOAT, 0.166f, 0.063f, 0.333f, 0.001f)
+DEFINE_UI_PARAMS(quality_edge_threshold_min, Edge Threshold Min, DCTLUI_SLIDER_FLOAT, 0.0833f, 0.0833f, 0.312f, 0.001f)
+
+
+DEFINE_UI_PARAMS(luma_method, Luma Computation, DCTLUI_COMBO_BOX, 1, {LUMA_GREEN_CHANNEL, LUMA_PER_PIXEL}, {Treat Green channel as Luma, Compute Luma per pixel})
+DEFINE_UI_PARAMS(input_transfer_function, Transfer Function, DCTLUI_COMBO_BOX, 0, {TRANSFER_LINEAR, TRANSFER_GAMMA_2_4}, {Linear, Gamma 2.4})
+DEFINE_UI_PARAMS(fxaa_preset, Quality Preset, DCTLUI_COMBO_BOX, 16, {FXAA_PRESET_10, FXAA_PRESET_11, FXAA_PRESET_12, FXAA_PRESET_13, FXAA_PRESET_14, FXAA_PRESET_15, FXAA_PRESET_20, FXAA_PRESET_21, FXAA_PRESET_22, FXAA_PRESET_23, FXAA_PRESET_24, FXAA_PRESET_25, FXAA_PRESET_26, FXAA_PRESET_27, FXAA_PRESET_28, FXAA_PRESET_29, FXAA_PRESET_39}, {Preset 10, Preset 11, Preset 12, Preset 13, Preset 14, Preset 15, Preset 20, Preset 21, Preset 22, Preset 23, Preset 24, Preset 25, Preset 26, Preset 27, Preset 28, Preset 29, Preset 39})
+
+// clang-format on
+
+// Port of PC version of FXAA.
+#define FXAA_PC 1
+
+typedef struct {
+        int FXAA_QUALITY__PS;
+        float FXAA_QUALITY__P0;
+        float FXAA_QUALITY__P1;
+        float FXAA_QUALITY__P2;
+        float FXAA_QUALITY__P3;
+        float FXAA_QUALITY__P4;
+        float FXAA_QUALITY__P5;
+        float FXAA_QUALITY__P6;
+        float FXAA_QUALITY__P7;
+        float FXAA_QUALITY__P8;
+        float FXAA_QUALITY__P9;
+        float FXAA_QUALITY__P10;
+        float FXAA_QUALITY__P11;
+} preset_params_t;
+
+__DEVICE__ preset_params_t
+make_preset_params(int quality, float p0, float p1, float p2, float p3, float p4, float p5, float p6, float p7, float p8, float p9, float p10, float p11) {
+    preset_params_t params;
+    params.FXAA_QUALITY__PS = quality;
+    params.FXAA_QUALITY__P0 = p0;
+    params.FXAA_QUALITY__P1 = p1;
+    params.FXAA_QUALITY__P2 = p2;
+    params.FXAA_QUALITY__P3 = p3;
+    params.FXAA_QUALITY__P4 = p4;
+    params.FXAA_QUALITY__P5 = p5;
+    params.FXAA_QUALITY__P6 = p6;
+    params.FXAA_QUALITY__P7 = p7;
+    params.FXAA_QUALITY__P8 = p8;
+    params.FXAA_QUALITY__P9 = p9;
+    params.FXAA_QUALITY__P10 = p10;
+    params.FXAA_QUALITY__P11 = p11;
+    return params;
+}
+
+__DEVICE__ preset_params_t get_preset_params(int fxaa_preset) {
+    if (fxaa_preset == FXAA_PRESET_39) {
+        return make_preset_params(12, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.5f, 2.0f, 2.0f, 2.0f, 2.0f, 4.0f, 8.0f);
+    } else if (fxaa_preset == FXAA_PRESET_10) {
+        return make_preset_params(3, 1.5f, 3.0f, 12.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_11) {
+        return make_preset_params(4, 1.0f, 1.5f, 3.0f, 12.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_12) {
+        return make_preset_params(5, 1.0f, 1.5f, 2.0f, 4.0f, 12.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_13) {
+        return make_preset_params(6, 1.0f, 1.5f, 2.0f, 2.0f, 4.0f, 12.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_14) {
+        return make_preset_params(7, 1.0f, 1.5f, 2.0f, 2.0f, 2.0f, 4.0f, 12.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_15) {
+        return make_preset_params(8, 1.0f, 1.5f, 2.0f, 2.0f, 2.0f, 2.0f, 4.0f, 12.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_20) {
+        return make_preset_params(3, 1.5f, 2.0f, 8.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_21) {
+        return make_preset_params(4, 1.0f, 1.5f, 2.0f, 8.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_22) {
+        return make_preset_params(5, 1.0f, 1.5f, 2.0f, 2.0f, 8.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_23) {
+        return make_preset_params(6, 1.0f, 1.5f, 2.0f, 2.0f, 2.0f, 8.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_24) {
+        return make_preset_params(7, 1.0f, 1.5f, 2.0f, 2.0f, 2.0f, 3.0f, 8.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_25) {
+        return make_preset_params(8, 1.0f, 1.5f, 2.0f, 2.0f, 2.0f, 2.0f, 4.0f, 8.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_26) {
+        return make_preset_params(9, 1.0f, 1.5f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 4.0f, 8.0f, 0.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_27) {
+        return make_preset_params(10, 1.0f, 1.5f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 4.0f, 8.0f, 0.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_28) {
+        return make_preset_params(11, 1.0f, 1.5f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 4.0f, 8.0f, 0.0f);
+    } else if (fxaa_preset == FXAA_PRESET_29) {
+        return make_preset_params(12, 1.0f, 1.5f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 4.0f, 8.0f);
+    }
+    return make_preset_params(12, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.5f, 2.0f, 2.0f, 2.0f, 2.0f, 4.0f, 8.0f);
+}
+
+__DEVICE__ inline float dot_product(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float get_luma(float3 color, int luma_method, int transfer_function) {
+    // Note: the official implementation assumes gamma 2.2 and rec601 weights, but we'll assume gamma 2.4/rec709
+
+    if (luma_method == LUMA_GREEN_CHANNEL && transfer_function == TRANSFER_GAMMA_2_4) {
+        return color.y;
+    } else if (luma_method == LUMA_GREEN_CHANNEL && transfer_function == TRANSFER_LINEAR) {
+        return powf(color.y, 1.0f / 2.4f);
+    } else if (luma_method == LUMA_PER_PIXEL && transfer_function == TRANSFER_GAMMA_2_4) {
+        return dot_product(color, make_float3(0.2126f, 0.7152f, 0.0722f));
+    } else { // luma_method == LUMA_PER_PIXEL && transfer_function == TRANSFER_LINEAR
+        return powf(dot_product(color, make_float3(0.2126f, 0.7152f, 0.0722f)), 1.0f / 2.4f);
+    }
+}
+
+__DEVICE__ inline float3 get_color(int2 pos, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
+    return make_float3(_tex2D(tex_r, pos.x, pos.y), _tex2D(tex_g, pos.x, pos.y), _tex2D(tex_b, pos.x, pos.y));
+}
+
+__DEVICE__ inline float3 linear_sample(float2 pos, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
+    bool x_isint = (_fabs(pos.x - _round(pos.x)) < 0.0001f);
+    bool y_isint = (_fabs(pos.y - _round(pos.y)) < 0.0001f);
+
+    int x = (int)_round(pos.x);
+    int y = (int)_round(pos.y);
+
+    if (x_isint && y_isint) {
+        return get_color(make_int2(x, y), tex_r, tex_g, tex_b);
+    } else if (x_isint && !y_isint) {
+        float3 a = get_color(make_int2(x, (int)_floorf(pos.y)), tex_r, tex_g, tex_b);
+        float3 b = get_color(make_int2(x, (int)_ceilf(pos.y)), tex_r, tex_g, tex_b);
+        float weight = pos.y - _floorf(pos.y);
+        return _mix(a, b, weight);
+    } else if (!x_isint && y_isint) {
+        float3 a = get_color(make_int2((int)_floorf(pos.x), y), tex_r, tex_g, tex_b);
+        float3 b = get_color(make_int2((int)_ceilf(pos.x), y), tex_r, tex_g, tex_b);
+        float weight = pos.x - _floorf(pos.x);
+        return _mix(a, b, weight);
+    } else {
+        // Hopefully doesn't happen
+        float3 a = get_color(make_int2((int)_floorf(pos.x), (int)_floorf(pos.y)), tex_r, tex_g, tex_b);
+        float3 b = get_color(make_int2((int)_ceilf(pos.x), (int)_floorf(pos.y)), tex_r, tex_g, tex_b);
+        float3 c = get_color(make_int2((int)_floorf(pos.x), (int)_ceilf(pos.y)), tex_r, tex_g, tex_b);
+        float3 d = get_color(make_int2((int)_ceilf(pos.x), (int)_ceilf(pos.y)), tex_r, tex_g, tex_b);
+        float wx = pos.x - _floorf(pos.x);
+        float wy = pos.y - _floorf(pos.y);
+        float3 ab = _mix(a, b, wx);
+        float3 cd = _mix(c, d, wx);
+        return _mix(ab, cd, wy);
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    float2 rcp_frame = make_float2(1.0f, 1.0f);
+    preset_params_t params = get_preset_params(fxaa_preset);
+
+    int2 pos_curr = make_int2(p_X, p_Y);
+    float3 curr_color = get_color(pos_curr, p_TexR, p_TexG, p_TexB);
+    float3 color_south = get_color(make_int2(pos_curr.x, pos_curr.y + 1), p_TexR, p_TexG, p_TexB);
+    float3 color_east = get_color(make_int2(pos_curr.x + 1, pos_curr.y), p_TexR, p_TexG, p_TexB);
+    float3 color_north = get_color(make_int2(pos_curr.x, pos_curr.y - 1), p_TexR, p_TexG, p_TexB);
+    float3 color_west = get_color(make_int2(pos_curr.x - 1, pos_curr.y), p_TexR, p_TexG, p_TexB);
+
+    float luma_curr = get_luma(curr_color, luma_method, input_transfer_function);
+    float luma_south = get_luma(color_south, luma_method, input_transfer_function);
+    float luma_east = get_luma(color_east, luma_method, input_transfer_function);
+    float luma_north = get_luma(color_north, luma_method, input_transfer_function);
+    float luma_west = get_luma(color_west, luma_method, input_transfer_function);
+    /*--------------------------------------------------------------------------*/
+
+    float max_sm = _fmaxf(luma_south, luma_curr);
+    float min_sm = _fminf(luma_south, luma_curr);
+    float max_esm = _fmaxf(luma_east, max_sm);
+    float min_esm = _fminf(luma_east, min_sm);
+    float max_wn = _fmaxf(luma_west, luma_north);
+    float min_wn = _fminf(luma_west, luma_north);
+    float range_max = _fmaxf(max_wn, max_esm);
+    float range_min = _fminf(min_wn, min_esm);
+    float range_max_scaled = range_max * quality_edge_threshold;
+    float range = range_max - range_min;
+    float range_max_clamped = _fmaxf(quality_edge_threshold_min, range_max_scaled);
+    bool early_exit = range < range_max_clamped;
+    /*--------------------------------------------------------------------------*/
+    if (early_exit) {
+        return curr_color;
+    }
+    /*--------------------------------------------------------------------------*/
+    float3 color_northwest = get_color(make_int2(pos_curr.x - 1, pos_curr.y - 1), p_TexR, p_TexG, p_TexB);
+    float3 color_southeast = get_color(make_int2(pos_curr.x + 1, pos_curr.y + 1), p_TexR, p_TexG, p_TexB);
+    float3 color_northeast = get_color(make_int2(pos_curr.x + 1, pos_curr.y - 1), p_TexR, p_TexG, p_TexB);
+    float3 color_southwest = get_color(make_int2(pos_curr.x - 1, pos_curr.y + 1), p_TexR, p_TexG, p_TexB);
+
+    float luma_northwest = get_luma(color_northwest, luma_method, input_transfer_function);
+    float luma_southeast = get_luma(color_southeast, luma_method, input_transfer_function);
+    float luma_northeast = get_luma(color_northeast, luma_method, input_transfer_function);
+    float luma_southwest = get_luma(color_southwest, luma_method, input_transfer_function);
+    /*--------------------------------------------------------------------------*/
+    float luma_northsouth = luma_north + luma_south;
+    float luma_westeast = luma_west + luma_east;
+    float subpix_rcp_range = 1.0f / range;
+    float subpix_northsouthwesteast = luma_northsouth + luma_westeast;
+    float edge_horz1 = (-2.0f * luma_curr) + luma_northsouth;
+    float edge_vert1 = (-2.0f * luma_curr) + luma_westeast;
+    /*--------------------------------------------------------------------------*/
+    float luma_northeastsoutheast = luma_northeast + luma_southeast;
+    float luma_northwestnortheast = luma_northwest + luma_northeast;
+    float edge_horz2 = (-2.0f * luma_east) + luma_northeastsoutheast;
+    float edge_vert2 = (-2.0f * luma_north) + luma_northwestnortheast;
+    /*--------------------------------------------------------------------------*/
+    float luma_northwestsouthwest = luma_northwest + luma_southwest;
+    float luma_southwestsoutheast = luma_southwest + luma_southeast;
+    float edge_horz4 = (_fabs(edge_horz1) * 2.0f) + _fabs(edge_horz2);
+    float edge_vert4 = (_fabs(edge_vert1) * 2.0f) + _fabs(edge_vert2);
+    float edge_horz3 = (-2.0f * luma_west) + luma_northwestsouthwest;
+    float edge_vert3 = (-2.0f * luma_south) + luma_southwestsoutheast;
+    float edge_horz = _fabs(edge_horz3) + edge_horz4;
+    float edge_vert = _fabs(edge_vert3) + edge_vert4;
+    /*--------------------------------------------------------------------------*/
+    float subpix_northwestsouthwest_northeastsoutheast = luma_northwestsouthwest + luma_northeastsoutheast;
+    float length_sign = rcp_frame.x;
+    bool horz_span = edge_horz >= edge_vert;
+    float subpix_a = subpix_northsouthwesteast * 2.0f + subpix_northwestsouthwest_northeastsoutheast;
+    /*--------------------------------------------------------------------------*/
+    if (!horz_span) {
+        luma_north = luma_west;
+        luma_south = luma_east;
+    } else {
+        length_sign = rcp_frame.y;
+    }
+    float subpix_b = (subpix_a * (1.0f / 12.0f)) - luma_curr;
+    /*--------------------------------------------------------------------------*/
+    float gradient_north = luma_north - luma_curr;
+    float gradient_south = luma_south - luma_curr;
+    float luma_nn = luma_north + luma_curr;
+    float luma_ss = luma_south + luma_curr;
+    bool pair_n = (_fabs(gradient_north) >= _fabs(gradient_south));
+    float gradient = _fmaxf(_fabs(gradient_north), _fabs(gradient_south));
+    if (pair_n) {
+        length_sign = -length_sign;
+    }
+    float subpix_c = _clampf(_fabs(subpix_b) * subpix_rcp_range, 0.0f, 1.0f);
+    /*--------------------------------------------------------------------------*/
+    float2 pos_b = make_float2((float)pos_curr.x, (float)pos_curr.y);
+    float2 offset_np;
+    if (horz_span) {
+        offset_np = make_float2(rcp_frame.x, 0.0f);
+        pos_b.y += length_sign * 0.5f;
+    } else {
+        offset_np = make_float2(0.0f, rcp_frame.y);
+        pos_b.x += length_sign * 0.5f;
+    }
+    /*--------------------------------------------------------------------------*/
+    float2 pos_n = pos_b - offset_np * params.FXAA_QUALITY__P0;
+    float2 pos_p = pos_b + offset_np * params.FXAA_QUALITY__P0;
+    float subpix_d = ((-2.0f) * subpix_c) + 3.0f;
+    float luma_end_n = get_luma(linear_sample(pos_n, p_TexR, p_TexG, p_TexB), luma_method, input_transfer_function);
+    float subpix_e = subpix_c * subpix_c;
+    float luma_end_p = get_luma(linear_sample(pos_p, p_TexR, p_TexG, p_TexB), luma_method, input_transfer_function);
+    /*--------------------------------------------------------------------------*/
+    if (!pair_n) {
+        luma_nn = luma_ss;
+    }
+    float gradient_scaled = gradient * 1.0f / 4.0f;
+    float luma_mm = luma_curr - luma_nn * 0.5f;
+    float subpix_f = subpix_d * subpix_e;
+    bool luma_mm_zero = luma_mm < 0.0f;
+    /*--------------------------------------------------------------------------*/
+    luma_end_n -= luma_nn * 0.5f;
+    luma_end_p -= luma_nn * 0.5f;
+    bool done_n = (_fabs(luma_end_n) >= gradient_scaled);
+    bool done_p = (_fabs(luma_end_p) >= gradient_scaled);
+    bool done_np = (!done_n) || (!done_p); // really represents (not done np) but this way the negation is computed fewer times.
+    if (!done_n) {
+        pos_n -= offset_np * params.FXAA_QUALITY__P1;
+    }
+    if (!done_p) {
+        pos_p += offset_np * params.FXAA_QUALITY__P1;
+    }
+    /*--------------------------------------------------------------------------*/
+    float quality_scalars[12] = {
+        params.FXAA_QUALITY__P0,
+        params.FXAA_QUALITY__P1,
+        params.FXAA_QUALITY__P2,
+        params.FXAA_QUALITY__P3,
+        params.FXAA_QUALITY__P4,
+        params.FXAA_QUALITY__P5,
+        params.FXAA_QUALITY__P6,
+        params.FXAA_QUALITY__P7,
+        params.FXAA_QUALITY__P8,
+        params.FXAA_QUALITY__P9,
+        params.FXAA_QUALITY__P10,
+        params.FXAA_QUALITY__P11,
+    };
+
+    for (int i = 2; i < params.FXAA_QUALITY__PS; i++){
+        if (done_np) {
+            if (!done_n) luma_end_n = get_luma(linear_sample(pos_n, p_TexR, p_TexG, p_TexB), luma_method, input_transfer_function);
+            if (!done_p) luma_end_p = get_luma(linear_sample(pos_p, p_TexR, p_TexG, p_TexB), luma_method, input_transfer_function);
+            if (!done_n) luma_end_n = luma_end_n - luma_nn * 0.5f;
+            if (!done_p) luma_end_p = luma_end_p - luma_nn * 0.5f;
+            done_n = _fabs(luma_end_n) >= gradient_scaled;
+            done_p = _fabs(luma_end_p) >= gradient_scaled;
+            done_np = (!done_n) || (!done_p);
+            if (!done_n) pos_n -= offset_np * quality_scalars[i];
+            if (!done_p) pos_p += offset_np * quality_scalars[i];
+        }
+    }
+    /*--------------------------------------------------------------------------*/
+    float dst_n = pos_curr.x - pos_n.x;
+    float dst_p = pos_p.x - pos_curr.x;
+    if (!horz_span) {
+        dst_n = pos_curr.y - pos_n.y;
+        dst_p = pos_p.y - pos_curr.y;
+    }
+    /*--------------------------------------------------------------------------*/
+    bool good_span_n = ((luma_end_n < 0.0f) != luma_mm_zero);
+    float span_length = (dst_p + dst_n);
+    bool good_span_p = ((luma_end_p < 0.0f) != luma_mm_zero);
+    float span_length_rcp = 1.0f / span_length;
+    /*--------------------------------------------------------------------------*/
+    bool direction_n = dst_n < dst_p;
+    float dst = _fminf(dst_n, dst_p);
+    bool good_span;
+    if (direction_n) {
+        good_span = good_span_n;
+    } else {
+        good_span = good_span_p;
+    }
+    float subpix_g = subpix_f * subpix_f;
+    float pixel_offset = (dst * (-span_length_rcp)) + 0.5f;
+    float subpix_h = subpix_g * quality_subpix;
+    /*--------------------------------------------------------------------------*/
+    float pixel_offset_good = 0.0f;
+    if (good_span) {
+        pixel_offset_good = pixel_offset;
+    }
+    float pixel_offset_subpix = _fmaxf(pixel_offset_good, subpix_h);
+    float2 pos_curr_f2 = make_float2((float)pos_curr.x, (float)pos_curr.y);
+    if (!horz_span) {
+        pos_curr_f2.x += pixel_offset_subpix * length_sign;
+    } else {
+        pos_curr_f2.y += pixel_offset_subpix * length_sign;
+    }
+    float3 output = linear_sample(pos_curr_f2, p_TexR, p_TexG, p_TexB);
+    return output;
+}

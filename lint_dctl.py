@@ -8,24 +8,29 @@ def lint_dctl(file):
     print(f"Linting {file}")
 
     # Identify any doubles in the file and put f at the end of them
-    # Ie convert from 1.0 to 1.0f
-
     def convert_to_float(match: re.Match[str]):
         fl = match.group(0)
         if fl.endswith("f"):
             return fl
         return fl + "f"
 
-    # TODO: Update this to NOT match something like this_var_33.that_var44f
-    # Also avoid matching on things already ending in f.
     pattern = re.compile(
         r"(?<![A-Za-z0-9_])[-+]?(?:(?:\d+\.\d*|\.\d+)(?:[eE][-+]?\d+)?|\d+[eE][-+]?\d+)(?![fF\w])"
     )
+
+    skip_prefixes = ("DEFINE_UI_PARAMS(", "DEFINE_UI_TOOLTIP(")
 
     new_lines = []
     with open(file, "r", encoding="utf-8") as f:
         all_lines = f.readlines()
         for line in all_lines:
+            stripped = line.strip()
+
+            # Skip if line is a comment or starts with DEFINE macros
+            if stripped.startswith("//") or stripped.startswith("/*") or stripped.startswith("*") or stripped.startswith(skip_prefixes):
+                new_lines.append(line)
+                continue
+
             matches = re.findall(pattern, line)
             new_line, num_changes = re.subn(pattern, convert_to_float, line)
             new_lines.append(new_line)
