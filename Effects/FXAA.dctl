@@ -35,7 +35,7 @@
 //----------------------------------------------------------------------------------
 
 // clang-format off
-DEFINE_UI_PARAMS(quality_subpix, Subpixel Quality, DCTLUI_SLIDER_FLOAT, 1.0f, 0.0f, 1.0f, 0.01f)
+DEFINE_UI_PARAMS(quality_subpix, Subpixel Quality, DCTLUI_SLIDER_FLOAT, 0.75f, 0.0f, 1.0f, 0.01f)
 DEFINE_UI_PARAMS(quality_edge_threshold, Edge Threshold, DCTLUI_SLIDER_FLOAT, 0.166f, 0.063f, 0.333f, 0.001f)
 DEFINE_UI_PARAMS(quality_edge_threshold_min, Edge Threshold Min, DCTLUI_SLIDER_FLOAT, 0.0833f, 0.0f, 0.312f, 0.001f)
 
