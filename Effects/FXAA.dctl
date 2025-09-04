@@ -37,11 +37,10 @@
 // clang-format off
 DEFINE_UI_PARAMS(quality_subpix, Subpixel Quality, DCTLUI_SLIDER_FLOAT, 1.0f, 0.0f, 1.0f, 0.01f)
 DEFINE_UI_PARAMS(quality_edge_threshold, Edge Threshold, DCTLUI_SLIDER_FLOAT, 0.166f, 0.063f, 0.333f, 0.001f)
-DEFINE_UI_PARAMS(quality_edge_threshold_min, Edge Threshold Min, DCTLUI_SLIDER_FLOAT, 0.0833f, 0.0833f, 0.312f, 0.001f)
+DEFINE_UI_PARAMS(quality_edge_threshold_min, Edge Threshold Min, DCTLUI_SLIDER_FLOAT, 0.0833f, 0.0f, 0.312f, 0.001f)
 
 
-DEFINE_UI_PARAMS(luma_method, Luma Computation, DCTLUI_COMBO_BOX, 1, {LUMA_GREEN_CHANNEL, LUMA_PER_PIXEL}, {Treat Green channel as Luma, Compute Luma per pixel})
-DEFINE_UI_PARAMS(input_transfer_function, Transfer Function, DCTLUI_COMBO_BOX, 0, {TRANSFER_LINEAR, TRANSFER_GAMMA_2_4}, {Linear, Gamma 2.4})
+DEFINE_UI_PARAMS(input_transfer_function, Transfer Function, DCTLUI_COMBO_BOX, 1, {TRANSFER_LINEAR, TRANSFER_GAMMA_2_4}, {Linear, Gamma 2.4})
 DEFINE_UI_PARAMS(fxaa_preset, Quality Preset, DCTLUI_COMBO_BOX, 16, {FXAA_PRESET_10, FXAA_PRESET_11, FXAA_PRESET_12, FXAA_PRESET_13, FXAA_PRESET_14, FXAA_PRESET_15, FXAA_PRESET_20, FXAA_PRESET_21, FXAA_PRESET_22, FXAA_PRESET_23, FXAA_PRESET_24, FXAA_PRESET_25, FXAA_PRESET_26, FXAA_PRESET_27, FXAA_PRESET_28, FXAA_PRESET_29, FXAA_PRESET_39}, {Preset 10, Preset 11, Preset 12, Preset 13, Preset 14, Preset 15, Preset 20, Preset 21, Preset 22, Preset 23, Preset 24, Preset 25, Preset 26, Preset 27, Preset 28, Preset 29, Preset 39})
 
 // clang-format on
@@ -131,25 +130,24 @@ __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
 }
 
-__DEVICE__ float get_luma(float3 color, int luma_method, int transfer_function) {
-    // Note: the official implementation assumes gamma 2.2 and rec601 weights, but we'll assume gamma 2.4/rec709
+__DEVICE__ inline float get_luma(float3 color) {
+    // Note: the official implementation assumes gamma 2.2 and rec601 weights, but we'll assume all inputs are gamma 2.4/rec709
+    return dot_product(color, make_float3(0.2126f, 0.7152f, 0.0722f));
+}
 
-    if (luma_method == LUMA_GREEN_CHANNEL && transfer_function == TRANSFER_GAMMA_2_4) {
-        return color.y;
-    } else if (luma_method == LUMA_GREEN_CHANNEL && transfer_function == TRANSFER_LINEAR) {
-        return powf(color.y, 1.0f / 2.4f);
-    } else if (luma_method == LUMA_PER_PIXEL && transfer_function == TRANSFER_GAMMA_2_4) {
-        return dot_product(color, make_float3(0.2126f, 0.7152f, 0.0722f));
-    } else { // luma_method == LUMA_PER_PIXEL && transfer_function == TRANSFER_LINEAR
-        return powf(dot_product(color, make_float3(0.2126f, 0.7152f, 0.0722f)), 1.0f / 2.4f);
+__DEVICE__ inline float3 get_color(int2 pos, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b, int input_transfer_function) {
+    float3 result = make_float3(_tex2D(tex_r, pos.x, pos.y), _tex2D(tex_g, pos.x, pos.y), _tex2D(tex_b, pos.x, pos.y));
+
+    if (input_transfer_function == TRANSFER_LINEAR) {
+        // Gamma 2.4 encode so that other stuff works.
+        result.x = powf(result.x, 1.0f / 2.4f);
+        result.y = powf(result.y, 1.0f / 2.4f);
+        result.z = powf(result.z, 1.0f / 2.4f);
     }
+    return result;
 }
 
-__DEVICE__ inline float3 get_color(int2 pos, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
-    return make_float3(_tex2D(tex_r, pos.x, pos.y), _tex2D(tex_g, pos.x, pos.y), _tex2D(tex_b, pos.x, pos.y));
-}
-
-__DEVICE__ inline float3 linear_sample(float2 pos, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
+__DEVICE__ inline float3 linear_sample(float2 pos, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b, int input_transfer_function) {
     bool x_isint = (_fabs(pos.x - _round(pos.x)) < 0.0001f);
     bool y_isint = (_fabs(pos.y - _round(pos.y)) < 0.0001f);
 
@@ -157,23 +155,23 @@ __DEVICE__ inline float3 linear_sample(float2 pos, __TEXTURE__ tex_r, __TEXTURE_
     int y = (int)_round(pos.y);
 
     if (x_isint && y_isint) {
-        return get_color(make_int2(x, y), tex_r, tex_g, tex_b);
+        return get_color(make_int2(x, y), tex_r, tex_g, tex_b, input_transfer_function);
     } else if (x_isint && !y_isint) {
-        float3 a = get_color(make_int2(x, (int)_floorf(pos.y)), tex_r, tex_g, tex_b);
-        float3 b = get_color(make_int2(x, (int)_ceilf(pos.y)), tex_r, tex_g, tex_b);
+        float3 a = get_color(make_int2(x, (int)_floorf(pos.y)), tex_r, tex_g, tex_b, input_transfer_function);
+        float3 b = get_color(make_int2(x, (int)_ceilf(pos.y)), tex_r, tex_g, tex_b, input_transfer_function);
         float weight = pos.y - _floorf(pos.y);
         return _mix(a, b, weight);
     } else if (!x_isint && y_isint) {
-        float3 a = get_color(make_int2((int)_floorf(pos.x), y), tex_r, tex_g, tex_b);
-        float3 b = get_color(make_int2((int)_ceilf(pos.x), y), tex_r, tex_g, tex_b);
+        float3 a = get_color(make_int2((int)_floorf(pos.x), y), tex_r, tex_g, tex_b, input_transfer_function);
+        float3 b = get_color(make_int2((int)_ceilf(pos.x), y), tex_r, tex_g, tex_b, input_transfer_function);
         float weight = pos.x - _floorf(pos.x);
         return _mix(a, b, weight);
     } else {
         // Hopefully doesn't happen
-        float3 a = get_color(make_int2((int)_floorf(pos.x), (int)_floorf(pos.y)), tex_r, tex_g, tex_b);
-        float3 b = get_color(make_int2((int)_ceilf(pos.x), (int)_floorf(pos.y)), tex_r, tex_g, tex_b);
-        float3 c = get_color(make_int2((int)_floorf(pos.x), (int)_ceilf(pos.y)), tex_r, tex_g, tex_b);
-        float3 d = get_color(make_int2((int)_ceilf(pos.x), (int)_ceilf(pos.y)), tex_r, tex_g, tex_b);
+        float3 a = get_color(make_int2((int)_floorf(pos.x), (int)_floorf(pos.y)), tex_r, tex_g, tex_b, input_transfer_function);
+        float3 b = get_color(make_int2((int)_ceilf(pos.x), (int)_floorf(pos.y)), tex_r, tex_g, tex_b, input_transfer_function);
+        float3 c = get_color(make_int2((int)_floorf(pos.x), (int)_ceilf(pos.y)), tex_r, tex_g, tex_b, input_transfer_function);
+        float3 d = get_color(make_int2((int)_ceilf(pos.x), (int)_ceilf(pos.y)), tex_r, tex_g, tex_b, input_transfer_function);
         float wx = pos.x - _floorf(pos.x);
         float wy = pos.y - _floorf(pos.y);
         float3 ab = _mix(a, b, wx);
@@ -188,17 +186,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     preset_params_t params = get_preset_params(fxaa_preset);
 
     int2 pos_curr = make_int2(p_X, p_Y);
-    float3 curr_color = get_color(pos_curr, p_TexR, p_TexG, p_TexB);
-    float3 color_south = get_color(make_int2(pos_curr.x, pos_curr.y + 1), p_TexR, p_TexG, p_TexB);
-    float3 color_east = get_color(make_int2(pos_curr.x + 1, pos_curr.y), p_TexR, p_TexG, p_TexB);
-    float3 color_north = get_color(make_int2(pos_curr.x, pos_curr.y - 1), p_TexR, p_TexG, p_TexB);
-    float3 color_west = get_color(make_int2(pos_curr.x - 1, pos_curr.y), p_TexR, p_TexG, p_TexB);
+    float3 curr_color = get_color(pos_curr, p_TexR, p_TexG, p_TexB, input_transfer_function);
+    float3 color_south = get_color(make_int2(pos_curr.x, pos_curr.y + 1), p_TexR, p_TexG, p_TexB, input_transfer_function);
+    float3 color_east = get_color(make_int2(pos_curr.x + 1, pos_curr.y), p_TexR, p_TexG, p_TexB, input_transfer_function);
+    float3 color_north = get_color(make_int2(pos_curr.x, pos_curr.y - 1), p_TexR, p_TexG, p_TexB, input_transfer_function);
+    float3 color_west = get_color(make_int2(pos_curr.x - 1, pos_curr.y), p_TexR, p_TexG, p_TexB, input_transfer_function);
 
-    float luma_curr = get_luma(curr_color, luma_method, input_transfer_function);
-    float luma_south = get_luma(color_south, luma_method, input_transfer_function);
-    float luma_east = get_luma(color_east, luma_method, input_transfer_function);
-    float luma_north = get_luma(color_north, luma_method, input_transfer_function);
-    float luma_west = get_luma(color_west, luma_method, input_transfer_function);
+    float luma_curr = get_luma(curr_color);
+    float luma_south = get_luma(color_south);
+    float luma_east = get_luma(color_east);
+    float luma_north = get_luma(color_north);
+    float luma_west = get_luma(color_west);
     /*--------------------------------------------------------------------------*/
 
     float max_sm = _fmaxf(luma_south, luma_curr);
@@ -215,18 +213,24 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     bool early_exit = range < range_max_clamped;
     /*--------------------------------------------------------------------------*/
     if (early_exit) {
+        if (input_transfer_function == TRANSFER_LINEAR) {
+            // linearize again
+            curr_color.x = powf(curr_color.x, 2.4f);
+            curr_color.y = powf(curr_color.y, 2.4f);
+            curr_color.z = powf(curr_color.z, 2.4f);
+        }
         return curr_color;
     }
     /*--------------------------------------------------------------------------*/
-    float3 color_northwest = get_color(make_int2(pos_curr.x - 1, pos_curr.y - 1), p_TexR, p_TexG, p_TexB);
-    float3 color_southeast = get_color(make_int2(pos_curr.x + 1, pos_curr.y + 1), p_TexR, p_TexG, p_TexB);
-    float3 color_northeast = get_color(make_int2(pos_curr.x + 1, pos_curr.y - 1), p_TexR, p_TexG, p_TexB);
-    float3 color_southwest = get_color(make_int2(pos_curr.x - 1, pos_curr.y + 1), p_TexR, p_TexG, p_TexB);
+    float3 color_northwest = get_color(make_int2(pos_curr.x - 1, pos_curr.y - 1), p_TexR, p_TexG, p_TexB, input_transfer_function);
+    float3 color_southeast = get_color(make_int2(pos_curr.x + 1, pos_curr.y + 1), p_TexR, p_TexG, p_TexB, input_transfer_function);
+    float3 color_northeast = get_color(make_int2(pos_curr.x + 1, pos_curr.y - 1), p_TexR, p_TexG, p_TexB, input_transfer_function);
+    float3 color_southwest = get_color(make_int2(pos_curr.x - 1, pos_curr.y + 1), p_TexR, p_TexG, p_TexB, input_transfer_function);
 
-    float luma_northwest = get_luma(color_northwest, luma_method, input_transfer_function);
-    float luma_southeast = get_luma(color_southeast, luma_method, input_transfer_function);
-    float luma_northeast = get_luma(color_northeast, luma_method, input_transfer_function);
-    float luma_southwest = get_luma(color_southwest, luma_method, input_transfer_function);
+    float luma_northwest = get_luma(color_northwest);
+    float luma_southeast = get_luma(color_southeast);
+    float luma_northeast = get_luma(color_northeast);
+    float luma_southwest = get_luma(color_southwest);
     /*--------------------------------------------------------------------------*/
     float luma_northsouth = luma_north + luma_south;
     float luma_westeast = luma_west + luma_east;
@@ -286,9 +290,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float2 pos_n = pos_b - offset_np * params.FXAA_QUALITY__P0;
     float2 pos_p = pos_b + offset_np * params.FXAA_QUALITY__P0;
     float subpix_d = ((-2.0f) * subpix_c) + 3.0f;
-    float luma_end_n = get_luma(linear_sample(pos_n, p_TexR, p_TexG, p_TexB), luma_method, input_transfer_function);
+    float luma_end_n = get_luma(linear_sample(pos_n, p_TexR, p_TexG, p_TexB, input_transfer_function));
     float subpix_e = subpix_c * subpix_c;
-    float luma_end_p = get_luma(linear_sample(pos_p, p_TexR, p_TexG, p_TexB), luma_method, input_transfer_function);
+    float luma_end_p = get_luma(linear_sample(pos_p, p_TexR, p_TexG, p_TexB, input_transfer_function));
     /*--------------------------------------------------------------------------*/
     if (!pair_n) {
         luma_nn = luma_ss;
@@ -325,17 +329,23 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         params.FXAA_QUALITY__P11,
     };
 
-    for (int i = 2; i < params.FXAA_QUALITY__PS; i++){
+    for (int i = 2; i < params.FXAA_QUALITY__PS; i++) {
         if (done_np) {
-            if (!done_n) luma_end_n = get_luma(linear_sample(pos_n, p_TexR, p_TexG, p_TexB), luma_method, input_transfer_function);
-            if (!done_p) luma_end_p = get_luma(linear_sample(pos_p, p_TexR, p_TexG, p_TexB), luma_method, input_transfer_function);
-            if (!done_n) luma_end_n = luma_end_n - luma_nn * 0.5f;
-            if (!done_p) luma_end_p = luma_end_p - luma_nn * 0.5f;
+            if (!done_n)
+                luma_end_n = get_luma(linear_sample(pos_n, p_TexR, p_TexG, p_TexB, input_transfer_function));
+            if (!done_p)
+                luma_end_p = get_luma(linear_sample(pos_p, p_TexR, p_TexG, p_TexB, input_transfer_function));
+            if (!done_n)
+                luma_end_n = luma_end_n - luma_nn * 0.5f;
+            if (!done_p)
+                luma_end_p = luma_end_p - luma_nn * 0.5f;
             done_n = _fabs(luma_end_n) >= gradient_scaled;
             done_p = _fabs(luma_end_p) >= gradient_scaled;
             done_np = (!done_n) || (!done_p);
-            if (!done_n) pos_n -= offset_np * quality_scalars[i];
-            if (!done_p) pos_p += offset_np * quality_scalars[i];
+            if (!done_n)
+                pos_n -= offset_np * quality_scalars[i];
+            if (!done_p)
+                pos_p += offset_np * quality_scalars[i];
         }
     }
     /*--------------------------------------------------------------------------*/
@@ -374,6 +384,13 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     } else {
         pos_curr_f2.y += pixel_offset_subpix * length_sign;
     }
-    float3 output = linear_sample(pos_curr_f2, p_TexR, p_TexG, p_TexB);
+    float3 output = linear_sample(pos_curr_f2, p_TexR, p_TexG, p_TexB, input_transfer_function);
+
+    if (input_transfer_function == TRANSFER_LINEAR) {
+        // linearize again
+        output.x = powf(output.x, 2.4f);
+        output.y = powf(output.y, 2.4f);
+        output.z = powf(output.z, 2.4f);
+    }
     return output;
 }

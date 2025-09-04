@@ -36,6 +36,7 @@ Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymea
         - [Film Curve DCTL](#film-curve-dctl)
         - [Film Grain DCTL](#film-grain-dctl)
         - [Fixed SNR Noise DCTL](#fixed-snr-noise-dctl)
+        - [FXAA DCTL](#fxaa-dctl)
         - [Gain Normalization](#gain-normalization)
         - [Halation DCTL](#halation-dctl)
         - [Hot Pixel Noise](#hot-pixel-noise)
@@ -602,6 +603,21 @@ Applies noise such that the Signal to Noise ratio is fixed; IE the standard devi
 **Clamp Methodology**: For convenience, choose whether not to clamp the output, or to ensure that the output is clamped to be nonnegative, or that the noise is clamped to be nonnegative. Note that obviously clamping the noise to be nonnegative will have the result that the noise mean and variance are changed.
 
 **Seed Position X/Y**: Coordinate of the pixel used to generate a random seed.
+
+---
+### FXAA DCTL
+Port of FXAA to DCTL. As an algorithm, FXAA is built around SDR images. Strictly speaking, it's mostly optimized for gamma 2.2 images, but it should work fine on gamma 2.4/rec709 images too (though the primaries are more flexible). This mode currently works better than the Linear mode I've built for it.
+
+#### DCTL Parameters
+**Subpixel Quality**: *Choose the amount of sub-pixel aliasing removal.* The default value in official FXAA is 0.75 for this, but 1.0 gives nicer results.
+
+**Edge Threshold**: *The minimum amount of local contrast required to apply algorithm.* Controls how much aliasing is needed before it gets antialiased.
+
+**Edge Threshold Min**: *Trims the algorithm from processing darks.* Essentially excludes shadows from being antialiased.
+
+**Transfer Function**: Indicate whether the image is Gamma encoded or Linearly encoded. If linear, then under the hood the dctl gamma 2.4 encodes it before applying FXAA. If your image is currently gamma 2.2 encoded or log encoded, just choose the 2.4 mode and mess with the other settings. It's probably fine.
+
+**Quality Preset**: Choose the quality preset. Preset 39 is the best one. 10-15 are "Medium Dither" presets and 20-29 are "Low dither" presets. Increasing ones digit increases quality of the preset and also means it'll take longer to run.
 
 ---
 
