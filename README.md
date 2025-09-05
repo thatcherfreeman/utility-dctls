@@ -11,7 +11,7 @@ If you see these DCTLs for sale elsewhere on the internet, that is not me and I 
 
 **Why do parts of Qazi's Toolkit have resemblance to these DCTLs?**
 
-I work with Qazi and built that DCTL pack, so nothing sketchy is happening there. I am not currently partnered with any for-sale products, though the licensing agreement within these tools allows for other developers to use them as reference and adapt them as needed.
+I work with Qazi and built that DCTL pack, so nothing sketchy is happening there. I am not currently partnered with any other for-sale products, though the licensing agreement within these tools allows for other developers to use them as reference and adapt them as needed.
 
 **I found a bug in one of your DCTLs**
 
