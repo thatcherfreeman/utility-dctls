@@ -4,9 +4,27 @@ These are DCTLs that I have developed.
 
 Support me at: [https://www.buymeacoffee.com/thatcherfreeman](https://www.buymeacoffee.com/thatcherfreeman)
 
+## FAQ
+**Are you selling X dctl on Y website?**
+
+If you see these DCTLs for sale elsewhere on the internet, that is not me and I get none of that money if you choose to buy from them.
+
+**Why do parts of Qazi's Toolkit have resemblance to these DCTLs?**
+
+I work with Qazi and built that DCTL pack, so nothing sketchy is happening there. I am not currently partnered with any for-sale products, though the licensing agreement within these tools allows for other developers to use them as reference and adapt them as needed.
+
+**I found a bug in one of your DCTLs**
+
+Great! Please make an Issue here on Github or reach out to me via my website (linked in my Github profile) to let me know.
+
+**I have a feature idea for one of your DCTLs**
+
+Either let me know and I'll consider it, or implement the feature yourself and make a pull request and you can become one of the eternal contributors to this repository!
+
 ## Contents
 
 - [Utility DCTLS](#utility-dctls)
+    - [FAQ](#faq)
     - [Contents](#contents)
 - [Installation](#installation)
 - [The Fuses](#the-fuses)
