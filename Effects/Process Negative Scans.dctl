@@ -40,12 +40,12 @@ __DEVICE__ characteristic_params_t make_characteristic_params(float gamma, float
 }
 
 __DEVICE__ float sigmoid(float x) {
-    return 1.0 / (1.0 + _expf(-1.0 * x));
+    return 1.0f / (1.0f + _expf(-1.0f * x));
 }
 
 __DEVICE__ float characteristic_curve(float x, characteristic_params_t params) {
     float out, coeff;
-    coeff = params.gamma / (0.25 * (params.dmax - params.dmin));
+    coeff = params.gamma / (0.25f * (params.dmax - params.dmin));
     out = sigmoid(coeff * (x + params.offset)) * (params.dmax - params.dmin) + params.dmin;
     return out;
 }
@@ -56,6 +56,7 @@ __DEVICE__ float to_linear(float x, int input_metric) {
     } else if (input_metric == INPUT_CINEON) {
         return _exp10f(-1.0f * (x * 1023.0f - 95.0f) * 0.002f);
     }
+    return 0.0f;
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
@@ -77,7 +78,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         relative_transmittance = make_float3(input_linear.x / dmin_linear.x, input_linear.y / dmin_linear.y, input_linear.z / dmin_linear.z);
     }
     float3 relative_density =
-        make_float3(_log10f(1.0 / relative_transmittance.x), _log10f(1.0 / relative_transmittance.y), _log10f(1.0 / relative_transmittance.z));
+        make_float3(_log10f(1.0f / relative_transmittance.x), _log10f(1.0f / relative_transmittance.y), _log10f(1.0f / relative_transmittance.z));
 
     // Offset RGB channels in relative density so that white balance becomes neutral.
     if (white_balance.r != 1.0f || white_balance.g != 1.0f || white_balance.b != 1.0f) {
@@ -105,7 +106,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     }
 
     // What we expose to the printer
-    float3 printer_image = _exp10f(-1.0 * relative_density);
+    float3 printer_image = make_float3(_exp10f(-1.0f * relative_density.x), _exp10f(-1.0f * relative_density.y), _exp10f(-1.0f * relative_density.z));
     const float NEUTRAL_LIGHTS = 25.0f;
     printer_image.x *= _exp10f(((printer_global - NEUTRAL_LIGHTS) + (printer_r - NEUTRAL_LIGHTS)) * 0.025f);
     printer_image.y *= _exp10f(((printer_global - NEUTRAL_LIGHTS) + (printer_g - NEUTRAL_LIGHTS)) * 0.025f);
