@@ -120,7 +120,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         float x = (float)p_X / (float)(p_Width - 1);
         float y = (float)p_Y / (float)(p_Height - 1);
         x = (x * 2.0f) - 1.0f; // normalize so that middle is zero
-        x = x * 1.2f;         // Go a little wider so that we can see the smoothness of the PSF.
+        x = x * 1.2f;          // Go a little wider so that we can see the smoothness of the PSF.
         y = 1 - y;
         y = y * 2.0f;
         params.blur_rad = 1.0f;

@@ -295,9 +295,11 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
 
     switch (gamut) {
         case SRC_GAMUT_ACES_AP0:
-            return make_gamut_primaries(make_float2(0.7347f, 0.2653f), make_float2(0.0f, 1.0f), make_float2(0.0001f, -0.0770f), make_float2(0.32168f, 0.33767f));
+            return make_gamut_primaries(
+                make_float2(0.7347f, 0.2653f), make_float2(0.0f, 1.0f), make_float2(0.0001f, -0.0770f), make_float2(0.32168f, 0.33767f));
         case SRC_GAMUT_ACES_AP1:
-            return make_gamut_primaries(make_float2(0.713f, 0.293f), make_float2(0.165f, 0.830f), make_float2(0.128f, 0.0444f), make_float2(0.32168f, 0.33767f));
+            return make_gamut_primaries(
+                make_float2(0.713f, 0.293f), make_float2(0.165f, 0.830f), make_float2(0.128f, 0.0444f), make_float2(0.32168f, 0.33767f));
         case SRC_GAMUT_AWG3:
             return make_gamut_primaries(
                 make_float2(0.6840f, 0.3130f), make_float2(0.2210f, 0.8480f), make_float2(0.0861f, -0.1020f), make_float2(0.3127f, 0.3290f));
@@ -313,20 +315,25 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
             return make_gamut_primaries(
                 make_float2(0.8000f, 0.3177f), make_float2(0.1800f, 0.9000f), make_float2(0.0650f, -0.0805f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_EGAMUT2:
-            return make_gamut_primaries(make_float2(0.83f, 0.31f), make_float2(0.15f, 0.95f), make_float2(0.065f, -0.0805f), make_float2(0.3127f, 0.3290f));
+            return make_gamut_primaries(
+                make_float2(0.83f, 0.31f), make_float2(0.15f, 0.95f), make_float2(0.065f, -0.0805f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_P3_D65:
-            return make_gamut_primaries(make_float2(0.680f, 0.320f), make_float2(0.265f, 0.690f), make_float2(0.150f, 0.060f), make_float2(0.3127f, 0.3290f));
+            return make_gamut_primaries(
+                make_float2(0.680f, 0.320f), make_float2(0.265f, 0.690f), make_float2(0.150f, 0.060f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_REC709:
             return make_gamut_primaries(make_float2(0.64f, 0.33f), make_float2(0.30f, 0.60f), make_float2(0.15f, 0.06f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_REC2020:
-            return make_gamut_primaries(make_float2(0.708f, 0.292f), make_float2(0.170f, 0.797f), make_float2(0.131f, 0.046f), make_float2(0.3127f, 0.3290f));
+            return make_gamut_primaries(
+                make_float2(0.708f, 0.292f), make_float2(0.170f, 0.797f), make_float2(0.131f, 0.046f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_REDWIDEGAMUTRGB:
             return make_gamut_primaries(
                 make_float2(0.780308f, 0.304253f), make_float2(0.121595f, 1.493994f), make_float2(0.095612f, -0.084589f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_SGAMUT3:
-            return make_gamut_primaries(make_float2(0.730f, 0.280f), make_float2(0.140f, 0.855f), make_float2(0.100f, -0.050f), make_float2(0.3127f, 0.3290f));
+            return make_gamut_primaries(
+                make_float2(0.730f, 0.280f), make_float2(0.140f, 0.855f), make_float2(0.100f, -0.050f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_SGAMUT3CINE:
-            return make_gamut_primaries(make_float2(0.766f, 0.275f), make_float2(0.225f, 0.800f), make_float2(0.089f, -0.087f), make_float2(0.3127f, 0.3290f));
+            return make_gamut_primaries(
+                make_float2(0.766f, 0.275f), make_float2(0.225f, 0.800f), make_float2(0.089f, -0.087f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_XYZ:
             return make_gamut_primaries(make_float2(1.0f, 0.0f), make_float2(0.0f, 1.0f), make_float2(0.0f, 0.0f), make_float2(1.0f / 3.0f, 1.0f / 3.0f));
         case SRC_GAMUT_CUSTOM:

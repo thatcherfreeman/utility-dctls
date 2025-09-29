@@ -349,7 +349,8 @@ __DEVICE__ void get_blur_bands_quality(int px, int py, __TEXTURE__ pr, __TEXTURE
 
     float3 value;
     int window_radius = 8 * scale;
-    float3 band_total_values[NUM_BANDS] = {make_float3(0.0f, 0.0f, 0.0f), make_float3(0.0f, 0.0f, 0.0f), make_float3(0.0f, 0.0f, 0.0f), make_float3(0.0f, 0.0f, 0.0f)};
+    float3 band_total_values[NUM_BANDS] = {
+        make_float3(0.0f, 0.0f, 0.0f), make_float3(0.0f, 0.0f, 0.0f), make_float3(0.0f, 0.0f, 0.0f), make_float3(0.0f, 0.0f, 0.0f)};
     float band_total_weights[NUM_BANDS] = {0.0f, 0.0f, 0.0f, 0.0f};
 
     for (int y = -window_radius; y <= window_radius; y++) {
