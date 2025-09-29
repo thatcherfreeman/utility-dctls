@@ -1,8 +1,8 @@
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float length = _powf(p_R * p_R + p_G * p_G + p_B * p_B, 0.5f);
     float3 output;
-    if (length == 0.0) {
-        output = make_float3(0.0, 0.0, 0.0);
+    if (length == 0.0f) {
+        output = make_float3(0.0f, 0.0f, 0.0f);
     } else {
         output = make_float3(p_R / length, p_G / length, p_B / length);
     }

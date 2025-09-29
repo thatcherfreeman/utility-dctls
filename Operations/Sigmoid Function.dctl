@@ -4,7 +4,7 @@ DEFINE_UI_PARAMS(white, Output White, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(black, Output Black, DCTLUI_VALUE_BOX, 0.0)
 
 __DEVICE__ float sigmoid(float x) {
-    return 1.0 / (1.0 + _expf(-x));
+    return 1.0f / (1.0f + _expf(-x));
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {

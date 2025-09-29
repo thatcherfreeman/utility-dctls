@@ -30,7 +30,7 @@ __DEVICE__ void copy_mat_33(float to[3][3], float from[3][3]) {
 
 __DEVICE__ void mat_inverse_33(float m[3][3]) {
     // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
-    float inv_buf[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+    float inv_buf[3][3] = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
 
     float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
                 m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
@@ -61,11 +61,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     float3 res = mv_33_3(mat, rgb);
-    float3 white_out = mv_33_3(mat, make_float3(1.0, 1.0, 1.0));
+    float3 white_out = mv_33_3(mat, make_float3(1.0f, 1.0f, 1.0f));
     if (preserve_neutral) {
-        res.x *= 1.0 / white_out.x;
-        res.y *= 1.0 / white_out.y;
-        res.z *= 1.0 / white_out.z;
+        res.x *= 1.0f / white_out.x;
+        res.y *= 1.0f / white_out.y;
+        res.z *= 1.0f / white_out.z;
     }
     return res;
 }

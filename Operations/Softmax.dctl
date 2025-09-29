@@ -5,7 +5,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float sum = output.x + output.y + output.z;
     output = output / sum;
     if (sum == 0) {
-        output = make_float3(0.0, 0.0, 0.0);
+        output = make_float3(0.0f, 0.0f, 0.0f);
     }
     return output;
 }

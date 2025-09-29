@@ -15,7 +15,7 @@ __DEVICE__ float powf(float base, float exp) {
 
 __DEVICE__ float smoothstep1(float x) {
     x = _clampf(x, 0.0f, 1.0f);
-    return 3.0 * powf(x, 2.0f) - 2.0 * powf(x, 3.0f);
+    return 3.0f * powf(x, 2.0f) - 2.0f * powf(x, 3.0f);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
@@ -28,14 +28,14 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float threshold_min;
 
     if (center_feathering && selection == ZERO_TO_THR) {
-        threshold_min = mid_grey * _exp2f(threshold_stops - 0.5 * feathering_stops);
-        threshold_max = mid_grey * _exp2f(threshold_stops + 0.5 * feathering_stops);
+        threshold_min = mid_grey * _exp2f(threshold_stops - 0.5f * feathering_stops);
+        threshold_max = mid_grey * _exp2f(threshold_stops + 0.5f * feathering_stops);
     } else if (!center_feathering && selection == ZERO_TO_THR) {
         threshold_min = mid_grey * _exp2f(threshold_stops);
         threshold_max = mid_grey * _exp2f(threshold_stops + feathering_stops);
     } else if (center_feathering && selection == THR_TO_INF) {
-        threshold_min = mid_grey * _exp2f(threshold_stops - 0.5 * feathering_stops);
-        threshold_max = mid_grey * _exp2f(threshold_stops + 0.5 * feathering_stops);
+        threshold_min = mid_grey * _exp2f(threshold_stops - 0.5f * feathering_stops);
+        threshold_max = mid_grey * _exp2f(threshold_stops + 0.5f * feathering_stops);
     } else if (!center_feathering && selection == THR_TO_INF) {
         threshold_min = mid_grey * _exp2f(threshold_stops - feathering_stops);
         threshold_max = mid_grey * _exp2f(threshold_stops);
@@ -53,10 +53,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             input_metric = input.z;
             break;
         case CHANNEL_Y:
-            input_metric = (0.212639 * input.x) + (0.715169 * input.y) + (0.072192 * input.z);
+            input_metric = (0.212639f * input.x) + (0.715169f * input.y) + (0.072192f * input.z);
             break;
         case CHANNEL_MEAN:
-            input_metric = (input.x + input.y + input.z) / 3.0;
+            input_metric = (input.x + input.y + input.z) / 3.0f;
             break;
         case CHANNEL_MAX:
             input_metric = _fmaxf(_fmaxf(input.x, input.y), input.z);
@@ -72,16 +72,16 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     float shadow_mask;
     if (input_metric < threshold_min) {
-        shadow_mask = 1.0;
+        shadow_mask = 1.0f;
     } else if (threshold_max < input_metric) {
-        shadow_mask = 0.0;
+        shadow_mask = 0.0f;
     } else {
         shadow_mask = _mix(1.0f, 0.0f, smoothstep1((input_metric_log - threshold_min_log) / (threshold_max_log - threshold_min_log)));
     }
 
     if (selection == THR_TO_INF) {
         // Invert selection
-        shadow_mask = 1.0 - shadow_mask;
+        shadow_mask = 1.0f - shadow_mask;
     } else if (selection == ZERO_TO_THR) {
         // do nothing.
     }

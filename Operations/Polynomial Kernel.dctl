@@ -32,9 +32,9 @@ DEFINE_UI_PARAMS(normalize_gray, Normalize Powers, DCTLUI_CHECK_BOX, 1)
 // clang-format on
 
 __DEVICE__ float3 mv_310_10(float mat[3][9], float vec[9]) {
-    float out[3] = {0.0, 0.0, 0.0};
+    float out[3] = {0.0f, 0.0f, 0.0f};
     for (int i = 0; i < 3; ++i) {
-        float cumulative = 0.0;
+        float cumulative = 0.0f;
         for (int j = 0; j < 9; ++j) {
             cumulative += mat[i][j] * vec[j];
         }
@@ -83,9 +83,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     };
 
     float mat[3][9] = {
-        {red_0, 0.0, 0.0, red_1, red_2, red_3, red_4, red_5, red_6},
-        {0.0, green_0, 0.0, green_1, green_2, green_3, green_4, green_5, green_6},
-        {0.0, 0.0, blue_0, blue_1, blue_2, blue_3, blue_4, blue_5, blue_6},
+        {red_0, 0.0f, 0.0f, red_1, red_2, red_3, red_4, red_5, red_6},
+        {0.0f, green_0, 0.0f, green_1, green_2, green_3, green_4, green_5, green_6},
+        {0.0f, 0.0f, blue_0, blue_1, blue_2, blue_3, blue_4, blue_5, blue_6},
     };
     float3 out_gray = mv_310_10(mat, gray);
     float3 out = mv_310_10(mat, vec);

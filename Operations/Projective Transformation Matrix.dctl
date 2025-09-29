@@ -30,12 +30,12 @@ __DEVICE__ float4 mv_44_4(float mat[4][4], float4 v) {
 }
 
 __DEVICE__ float3 apply_mat(float mat[4][4], float3 v, int linearize) {
-    float4 res = mv_44_4(mat, make_float4(v.x, v.y, v.z, 1.0));
+    float4 res = mv_44_4(mat, make_float4(v.x, v.y, v.z, 1.0f));
     res /= res.w;
     if (linearize) {
-        res.x = mat[3][3] / ((1.0 / res.x) - mat[3][0] - mat[3][1] - mat[3][2]);
-        res.y = mat[3][3] / ((1.0 / res.y) - mat[3][0] - mat[3][1] - mat[3][2]);
-        res.z = mat[3][3] / ((1.0 / res.z) - mat[3][0] - mat[3][1] - mat[3][2]);
+        res.x = mat[3][3] / ((1.0f / res.x) - mat[3][0] - mat[3][1] - mat[3][2]);
+        res.y = mat[3][3] / ((1.0f / res.y) - mat[3][0] - mat[3][1] - mat[3][2]);
+        res.z = mat[3][3] / ((1.0f / res.z) - mat[3][0] - mat[3][1] - mat[3][2]);
     }
     return make_float3(res.x, res.y, res.z);
 }
@@ -50,7 +50,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         {mat12, mat13, mat14, mat15},
     };
     float3 res = apply_mat(mat, rgb, linear_white);
-    float3 white_out = apply_mat(mat, make_float3(1.0, 1.0, 1.0), linear_white);
+    float3 white_out = apply_mat(mat, make_float3(1.0f, 1.0f, 1.0f), linear_white);
     if (preserve_neutral) {
         res.x /= white_out.x;
         res.y /= white_out.y;

@@ -27,7 +27,7 @@ __DEVICE__ float powf(float base, float exp) {
 
 __DEVICE__ void mv_36_6(float out[3], float mat[3][6], float vec[6]) {
     for (int r = 0; r < 3; ++r) {
-        out[r] = 0.0;
+        out[r] = 0.0f;
         for (int c = 0; c < 6; ++c) {
             out[r] += mat[r][c] * vec[c];
         }
@@ -42,7 +42,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     };
     float input[3] = {p_R, p_G, p_B};
     float augmented_input[6] = {
-        input[0], input[1], input[2], powf(input[0] * input[1], 0.5), powf(input[0] * input[2], 0.5), powf(input[1] * input[2], 0.5)};
+        input[0], input[1], input[2], powf(input[0] * input[1], 0.5f), powf(input[0] * input[2], 0.5f), powf(input[1] * input[2], 0.5f)};
     float output[3] = {};
     mv_36_6(output, mat, augmented_input);
 

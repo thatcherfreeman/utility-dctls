@@ -12,21 +12,21 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 vec = make_float3(p_R, p_G, p_B);
     float norm;
     if (norm_type == L1) {
-        norm = lp_norm(vec, 1.0);
+        norm = lp_norm(vec, 1.0f);
     } else if (norm_type == L2) {
-        norm = lp_norm(vec, 2.0);
+        norm = lp_norm(vec, 2.0f);
     } else if (norm_type == MAX) {
         norm = _fmaxf(vec.x, _fmaxf(vec.y, vec.z));
     } else if (norm_type == LP) {
         norm = lp_norm(vec, p);
     } else if (norm_type == AVG) {
-        norm = (vec.x + vec.y + vec.z) / 3.0;
+        norm = (vec.x + vec.y + vec.z) / 3.0f;
     } else if (norm_type == MIN) {
         norm = _fminf(vec.x, _fminf(vec.y, vec.z));
     } else if (norm_type == GEOM) {
         norm = _powf(_fabs(vec.x * vec.y * vec.z), 1.0f / 3.0f);
     } else if (norm_type == HARMONIC) {
-        norm = 3.0 / (1.0 / vec.x + 1.0 / vec.y + 1.0 / vec.z);
+        norm = 3.0f / (1.0f / vec.x + 1.0f / vec.y + 1.0f / vec.z);
     }
     float3 out = make_float3(norm, norm, norm);
     return out;
