@@ -5,7 +5,7 @@ DEFINE_UI_PARAMS(blur_amount, Blur Amount, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 500.0,
 DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {DIRECTION_HORIZONTAL, DIRECTION_VERTICAL}, {Horizontal (Node 1), Vertical (Node 2)})
 // clang-format on
 
-#define PI (3.14159265358979)
+#define PI (3.14159265358979f)
 
 __DEVICE__ float powf(float base, float exp) {
     float out = _copysignf(_powf(_fabs(base), exp), base);
@@ -14,7 +14,7 @@ __DEVICE__ float powf(float base, float exp) {
 
 __DEVICE__ inline float get_weight_gaussian(float x, float std) {
     float rs = x * x;
-    return _expf(rs / (-2.0 * std * std));
+    return _expf(rs / (-2.0f * std * std));
 }
 
 __DEVICE__ float3 sample_color(int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
@@ -23,19 +23,19 @@ __DEVICE__ float3 sample_color(int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__
 
 __DEVICE__ float3 gaussian_blur(float radius, int center_x, int center_y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, int direction) {
 
-    float std = (float)radius / 2.0;
-    int window_size = (int)_ceilf(std * 5.0);
+    float std = (float)radius / 2.0f;
+    int window_size = (int)_ceilf(std * 5.0f);
 
     if (window_size / 2 <= 0) {
         if (direction == DIRECTION_VERTICAL && center_x == 1 && center_y == 1) {
             return (sample_color(center_x + 1, center_y, p_TexR, p_TexG, p_TexB) + sample_color(center_x - 1, center_y, p_TexR, p_TexG, p_TexB) +
                     sample_color(center_x, center_y + 1, p_TexR, p_TexG, p_TexB) + sample_color(center_x, center_y - 1, p_TexR, p_TexG, p_TexB)) /
-                   4.0;
+                   4.0f;
         }
         return sample_color(center_x, center_y, p_TexR, p_TexG, p_TexB);
     }
 
-    float3 sum = make_float3(0.0, 0.0, 0.0);
+    float3 sum = make_float3(0.0f, 0.0f, 0.0f);
     float weight_sum = 0;
 
     if (direction == DIRECTION_HORIZONTAL) {
@@ -52,7 +52,7 @@ __DEVICE__ float3 gaussian_blur(float radius, int center_x, int center_y, __TEXT
             float3 runner = sample_color(center_x, j, p_TexR, p_TexG, p_TexB);
             float weight = get_weight_gaussian(center_y - j, std);
             if (center_x == 1 && j == 1) {
-                weight = 0.0;
+                weight = 0.0f;
             }
             weight_sum += weight;
             sum += runner * weight;
@@ -73,7 +73,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         blur_amount = pixel_00.x;
     }
 
-    float blur_radius = blur_amount * 2.0 * p_Width / 4096.0;
+    float blur_radius = blur_amount * 2.0f * p_Width / 4096.0f;
 
     output = gaussian_blur(blur_radius, p_X, p_Y, p_TexR, p_TexG, p_TexB, direction);
 

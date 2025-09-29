@@ -18,8 +18,8 @@ DEFINE_UI_PARAMS(seed_position_y, Seed Position Y, DCTLUI_SLIDER_FLOAT, 0.4, 0.0
 
 __DEVICE__ float standard_norm_cdf(float z) {
     // Approximation of Normal CDF function with mean 0 and var 1.
-    const float k = _sqrtf(2.0 / 3.1415926535);
-    float output = 1.0 / (1.0 + _expf(-2.0 * k * z));
+    const float k = _sqrtf(2.0f / 3.1415926535f);
+    float output = 1.0f / (1.0f + _expf(-2.0f * k * z));
     return output;
 }
 
@@ -34,14 +34,14 @@ __DEVICE__ float standard_norm_inv_cdf(float z) {
 
     // CDF
     // float out = _powf(2.0, -1.0 * _powf(22, 1 - _powf(41, z / 10.0)));
-    float abs_z = _fabs(z - 0.5) + 0.5;
-    float out = 10.0 / _logf(41.0) * _logf(1.0 - (_logf((-1.0 * _logf(abs_z)) / _logf(2.0))) / _logf(22.0));
-    if (abs_z >= 0.995) {
-        out = 2.5758;
+    float abs_z = _fabs(z - 0.5f) + 0.5f;
+    float out = 10.0f / _logf(41.0f) * _logf(1.0f - (_logf((-1.0f * _logf(abs_z)) / _logf(2.0f))) / _logf(22.0f));
+    if (abs_z >= 0.995f) {
+        out = 2.5758f;
     }
 
-    if (z <= 0.5) {
-        out *= -1.0;
+    if (z <= 0.5f) {
+        out *= -1.0f;
     }
     return out;
 }
@@ -53,7 +53,7 @@ __DEVICE__ float norm_inv_cdf(float z, float mean, float var) {
 
 __DEVICE__ float norm_pdf(float z, float mean, float var) {
     float out = _expf(-0.5f * (z - mean) * (z - mean) / var);
-    out *= 1.0 / (_sqrtf(2.0f * 3.1415926535f * var));
+    out *= 1.0f / (_sqrtf(2.0f * 3.1415926535f * var));
     return out;
 }
 
@@ -64,7 +64,7 @@ __DEVICE__ float poisson_cdf(float z, float lambda) {
 }
 
 __DEVICE__ float binomial_cdf(float z, float n, float p) {
-    float out = norm_cdf(z, n * p, n * p * (1.0 - p));
+    float out = norm_cdf(z, n * p, n * p * (1.0f - p));
     return out;
 }
 
@@ -120,20 +120,20 @@ __DEVICE__ float sample_norm(float mean, float var, __PRIVATE__ rand_state* seed
 __DEVICE__ float sample_poisson(float lambda, __PRIVATE__ rand_state* seed) {
     // approximate just using normal distribution.
     float sample = sample_norm(lambda, lambda, seed);
-    return maxf(0.001, sample);
+    return maxf(0.001f, sample);
 }
 
 __DEVICE__ float sample_bernoulli(float p, __PRIVATE__ rand_state* seed) {
     float sample = randu(seed);
-    float out = 0.0;
+    float out = 0.0f;
     if (sample <= p) {
-        out = 1.0;
+        out = 1.0f;
     }
     return out;
 }
 
 __DEVICE__ float sample_binomial_continuous(float n, float p, __PRIVATE__ rand_state* seed) {
-    float cont_sample = sample_norm(n * p, n * p * (1.0 - p), seed);
+    float cont_sample = sample_norm(n * p, n * p * (1.0f - p), seed);
     return cont_sample;
 }
 
@@ -155,10 +155,10 @@ __DEVICE__ inline float3 _powf3(float3 base, float gamma) {
 }
 
 __DEVICE__ inline float3 _threshold3(float3 input, float threshold) {
-    float3 output = make_float3(0.0, 0.0, 0.0);
-    output.x = 1.0 * (input.x >= threshold);
-    output.y = 1.0 * (input.y >= threshold);
-    output.z = 1.0 * (input.z >= threshold);
+    float3 output = make_float3(0.0f, 0.0f, 0.0f);
+    output.x = 1.0f * (input.x >= threshold);
+    output.y = 1.0f * (input.y >= threshold);
+    output.z = 1.0f * (input.z >= threshold);
     return output;
 }
 
@@ -171,12 +171,12 @@ __DEVICE__ float convert_photons_to_transmittance(
 
     // Probability of a grain being activated, given its threshold
     // P(activated) = P(x >= threshold) = 1 - P(x <= threshold)
-    float p = 1.0 - poisson_cdf(threshold, pixel_photons);
+    float p = 1.0f - poisson_cdf(threshold, pixel_photons);
 
-    float T = 1.0;
+    float T = 1.0f;
 
-    float layer_transmittance = _powf(_powf(10.0, -1.0 * dmin), 1.0 / num_layers);
-    float grain_absorption = 1 - _powf(_powf(10.0, -1.0 * dmax), 1.0 / num_layers);
+    float layer_transmittance = _powf(_powf(10.0f, -1.0f * dmin), 1.0f / num_layers);
+    float grain_absorption = 1 - _powf(_powf(10.0f, -1.0f * dmax), 1.0f / num_layers);
 
     for (int i = 0; i < num_layers; ++i) {
         float N = sample_binomial_continuous(num_grains, p, seed);
@@ -189,11 +189,11 @@ __DEVICE__ float convert_photons_to_transmittance(
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y)) * photon_gain;
-    curr_color = make_float3(maxf(curr_color.x, 0.0), maxf(curr_color.y, 0.0), maxf(curr_color.z, 0.0));
+    curr_color = make_float3(maxf(curr_color.x, 0.0f), maxf(curr_color.y, 0.0f), maxf(curr_color.z, 0.0f));
 
     float seed = _tex2D(p_TexR, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height));
-    seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0;
-    seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0;
+    seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0f;
+    seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0f;
 
     seed += curr_color.x * 10 + curr_color.y * 100 + curr_color.z * 1000;
 
@@ -210,7 +210,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     val = randu(state);
     *state = *((__PRIVATE__ rand_state*)&val);
 
-    float3 output_color = make_float3(0.0, 0.0, 0.0);
+    float3 output_color = make_float3(0.0f, 0.0f, 0.0f);
 
     if (noise_mode == MONO) {
         // As the seed of the random number generators is only dependent

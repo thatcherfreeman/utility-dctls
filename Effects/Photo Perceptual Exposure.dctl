@@ -23,10 +23,10 @@ DEFINE_UI_PARAMS(input_encoding, Input Transfer Function, DCTLUI_COMBO_BOX, 0, {
 DEFINE_UI_PARAMS(log_space, Log Space, DCTLUI_COMBO_BOX, 0, {LOG_AUTO, LOG_LOGC3, LOG_DI}, {Auto, Arri LogC3, DaVinci Intermediate})
 // clang-format on
 
-#define PI (3.14159265358979323)
+#define PI (3.14159265358979323f)
 
 __DEVICE__ float luminance(float3 rgb) {
-    return (0.212639 * rgb.x) + (0.715169 * rgb.y) + (0.072192 * rgb.z);
+    return (0.212639f * rgb.x) + (0.715169f * rgb.y) + (0.072192f * rgb.z);
 }
 
 __DEVICE__ float mod(float x, float y) {
@@ -46,11 +46,11 @@ __DEVICE__ float3 powf3(float3 base, float exp) {
 }
 
 __DEVICE__ inline float rad_to_deg(float deg) {
-    return deg * 360.0 / (2.0 * PI);
+    return deg * 360.0f / (2.0f * PI);
 }
 
 __DEVICE__ inline float deg_to_rad(float rad) {
-    return rad * (2.0 * PI) / 360.0;
+    return rad * (2.0f * PI) / 360.0f;
 }
 
 __DEVICE__ float di_to_linear(float t) {
@@ -84,13 +84,13 @@ __DEVICE__ float linear_to_di(float x) {
 }
 
 __DEVICE__ float linear_to_logc3(float x) {
-    float cut = 0.010591;
-    float a = 5.555556;
-    float b = 0.052272;
-    float c = 0.247190;
-    float d = 0.385537;
-    float e = 5.367655;
-    float f = 0.092809;
+    float cut = 0.010591f;
+    float a = 5.555556f;
+    float b = 0.052272f;
+    float c = 0.247190f;
+    float d = 0.385537f;
+    float e = 5.367655f;
+    float f = 0.092809f;
 
     if (x > cut) {
         return c * _log10f(a * x + b) + d;
@@ -100,13 +100,13 @@ __DEVICE__ float linear_to_logc3(float x) {
 }
 
 __DEVICE__ float logc3_to_linear(float x) {
-    float cut = 0.010591;
-    float a = 5.555556;
-    float b = 0.052272;
-    float c = 0.247190;
-    float d = 0.385537;
-    float e = 5.367655;
-    float f = 0.092809;
+    float cut = 0.010591f;
+    float a = 5.555556f;
+    float b = 0.052272f;
+    float c = 0.247190f;
+    float d = 0.385537f;
+    float e = 5.367655f;
+    float f = 0.092809f;
     if (x > e * cut + f) {
         return (_exp10f((x - d) / c) - b) / a;
     } else {
@@ -132,13 +132,13 @@ __DEVICE__ lggo_params_t make_lggo_params(float lift, float gamma, float gain, f
 }
 
 __DEVICE__ float apply_lggo(float x, lggo_params_t params, bool invert) {
-    float white_out_x = 1.0 / params.gain;
-    float black_out_x = (1.0 - (1.0 / (1.0 - params.lift)));
-    float slope = 1.0 / (white_out_x - black_out_x);
+    float white_out_x = 1.0f / params.gain;
+    float black_out_x = (1.0f - (1.0f / (1.0f - params.lift)));
+    float slope = 1.0f / (white_out_x - black_out_x);
     float out;
 
     if (invert) {
-        out = powf(x, 1.0 / params.gamma);
+        out = powf(x, 1.0f / params.gamma);
         out = out - params.offset;
         out = out / slope;
         out = out + black_out_x;
@@ -160,24 +160,24 @@ __DEVICE__ float3 hsv_to_rgb(float3 hsv) {
     float sat = hsv.y;
     float val = hsv.z;
 
-    hue = rad_to_deg(mod(hue, 2.0 * PI));
+    hue = rad_to_deg(mod(hue, 2.0f * PI));
 
     float c = val * sat;
-    float x = c * (1.0 - _fabs(_fmod(hue / 60.0, 2.0) - 1.0));
+    float x = c * (1.0f - _fabs(_fmod(hue / 60.0f, 2.0f) - 1.0f));
     float m = val - c;
-    float3 rgbp = make_float3(0.0, 0.0, 0.0);
-    if (0.0 <= hue && hue < 60.0) {
-        rgbp = make_float3(c, x, 0.0);
-    } else if (60.0 <= hue && hue < 120.0) {
-        rgbp = make_float3(x, c, 0.0);
-    } else if (120.0 <= hue && hue < 180.0) {
-        rgbp = make_float3(0.0, c, x);
-    } else if (180.0 <= hue && hue < 240.0) {
-        rgbp = make_float3(0.0, x, c);
-    } else if (240.0 <= hue && hue < 300.0) {
-        rgbp = make_float3(x, 0.0, c);
-    } else if (300.0 <= hue && hue < 360.0) {
-        rgbp = make_float3(c, 0.0, x);
+    float3 rgbp = make_float3(0.0f, 0.0f, 0.0f);
+    if (0.0f <= hue && hue < 60.0f) {
+        rgbp = make_float3(c, x, 0.0f);
+    } else if (60.0f <= hue && hue < 120.0f) {
+        rgbp = make_float3(x, c, 0.0f);
+    } else if (120.0f <= hue && hue < 180.0f) {
+        rgbp = make_float3(0.0f, c, x);
+    } else if (180.0f <= hue && hue < 240.0f) {
+        rgbp = make_float3(0.0f, x, c);
+    } else if (240.0f <= hue && hue < 300.0f) {
+        rgbp = make_float3(x, 0.0f, c);
+    } else if (300.0f <= hue && hue < 360.0f) {
+        rgbp = make_float3(c, 0.0f, x);
     }
     return rgbp + m;
 }
@@ -261,14 +261,14 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     // Temperature and tint gain coefficients. This is a simplified not-colorimetric approach.
     float temp_axis_hue_rads = deg_to_rad(temp_axis_hue);
     float temp_sat = _fabs(temperature);
-    if (temperature < 0.0) {
+    if (temperature < 0.0f) {
         temp_axis_hue_rads += PI;
     }
     float3 temp_gains = hsv_to_rgb(make_float3(temp_axis_hue_rads, temp_sat, 1.0f));
 
-    float tint_axis_hue_rads = deg_to_rad(temp_axis_hue - 90.0);
+    float tint_axis_hue_rads = deg_to_rad(temp_axis_hue - 90.0f);
     float tint_sat = _fabs(tint);
-    if (tint < 0.0) {
+    if (tint < 0.0f) {
         tint_axis_hue_rads += PI;
     }
     float3 tint_gains = hsv_to_rgb(make_float3(tint_axis_hue_rads, tint_sat, 1.0f));
@@ -298,14 +298,14 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float log_mid_gray = linear_to_log(mid_gray, working_encoding);
 
     // Apply Lift and Gain in log.
-    lggo_params_t lggo_params = make_lggo_params(log_lift, 1.0, log_gain, 0.0);
+    lggo_params_t lggo_params = make_lggo_params(log_lift, 1.0f, log_gain, 0.0f);
     float new_log_mid_gray = apply_lggo(log_mid_gray, lggo_params, false);
 
     // Apply gamma to correct mid gray to the right position.
     float gamma = _logf(log_mid_gray) / _logf(new_log_mid_gray) - 1.0f;
 
     // Allow user to modify the gamma.
-    lggo_params.gamma = 1.0f + gamma * (gamma_compensation_strength / 100.0) + (convert_gamma_to_reals(log_gamma) - 1.0f);
+    lggo_params.gamma = 1.0f + gamma * (gamma_compensation_strength / 100.0f) + (convert_gamma_to_reals(log_gamma) - 1.0f);
     float3 lggo_log_state = apply_lggo_f3(log_state, lggo_params, false);
 
     float3 output;

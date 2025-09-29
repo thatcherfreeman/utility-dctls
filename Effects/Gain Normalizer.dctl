@@ -10,7 +10,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float3 output_color;
     if (mode == MODE_REFERENCE) {
         if (p_X == 0 && p_Y == 0) {
-            output_color = make_float3(1.0, 1.0, 1.0);
+            output_color = make_float3(1.0f, 1.0f, 1.0f);
         } else {
             output_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
         }
@@ -28,7 +28,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         if (normalization_mode == NORMALIZE_MAX) {
             magnitude = _fmaxf(curr_white.x, _fmaxf(curr_white.y, curr_white.z));
         } else {
-            magnitude = (curr_white.x + curr_white.y + curr_white.z) / 3.0;
+            magnitude = (curr_white.x + curr_white.y + curr_white.z) / 3.0f;
         }
         output_color = curr_color / magnitude;
     }

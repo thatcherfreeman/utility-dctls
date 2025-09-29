@@ -39,7 +39,7 @@ __DEVICE__ float sample_point_bilinear_1ch(float x, float y, __TEXTURE__ tex, fl
 }
 
 __DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
-    float3 out = make_float3(0.0, 0.0, 0.0);
+    float3 out = make_float3(0.0f, 0.0f, 0.0f);
     out.x = sample_point_bilinear_1ch(x, y, p_TexR, scale);
     out.y = sample_point_bilinear_1ch(x, y, p_TexG, scale);
     out.z = sample_point_bilinear_1ch(x, y, p_TexB, scale);
@@ -59,7 +59,7 @@ __DEVICE__ float sample_point_nn_1ch(float x, float y, __TEXTURE__ tex, float sc
 }
 
 __DEVICE__ float3 sample_point_nn_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
-    float3 out = make_float3(0.0, 0.0, 0.0);
+    float3 out = make_float3(0.0f, 0.0f, 0.0f);
     out.x = sample_point_nn_1ch(x, y, p_TexR, scale);
     out.y = sample_point_nn_1ch(x, y, p_TexG, scale);
     out.z = sample_point_nn_1ch(x, y, p_TexB, scale);
@@ -74,14 +74,14 @@ __DEVICE__ float3 sample_point_nn_3ch(float x, float y, __TEXTURE__ p_TexR, __TE
 // https://github.com/roukou3/DCTL/blob/master/defisheye.h
 __DEVICE__ float bicubic_h(const float t, const float scale) {
     const float x = _fabs(t / scale);
-    const float B = 1.0;
-    const float C = 0.0;
-    if (x <= 1.0) {
-        return (2.0 - 1.5 * B - C) * _powf(x, 3.0f) + (-3.0 + 2.0 * B + C) * _powf(x, 2.0f) + (1.0 - (B / 3.0));
-    } else if (x <= 2.0) {
-        return (-B / 6.0 - C) * _powf(x, 3.0f) + (B + 5.0 * C) * _powf(x, 2.0f) + (-2.0 * B - 8.0 * C) * x + (4.0 / 3.0 * B + 4.0 * C);
+    const float B = 1.0f;
+    const float C = 0.0f;
+    if (x <= 1.0f) {
+        return (2.0f - 1.5f * B - C) * _powf(x, 3.0f) + (-3.0f + 2.0f * B + C) * _powf(x, 2.0f) + (1.0f - (B / 3.0f));
+    } else if (x <= 2.0f) {
+        return (-B / 6.0f - C) * _powf(x, 3.0f) + (B + 5.0f * C) * _powf(x, 2.0f) + (-2.0f * B - 8.0f * C) * x + (4.0f / 3.0f * B + 4.0f * C);
     }
-    return 0.0;
+    return 0.0f;
 }
 
 __DEVICE__ float sample_point_bicubic_1ch(const float pX, const float pY, const __TEXTURE__ p_Tex, const float scale) {
@@ -101,7 +101,7 @@ __DEVICE__ float sample_point_bicubic_1ch(const float pX, const float pY, const 
         for (int j = 0; j < 4; j++) {
             float hY = bicubic_h(vecY[j], scale_round);
             // Could also consider bilinear sampling here or something.
-            sum += hY * hX * sample_point_nn_1ch(iX + (int)((i - 1) * scale_round), iY + (int)((j - 1) * scale_round), p_Tex, 1.0);
+            sum += hY * hX * sample_point_nn_1ch(iX + (int)((i - 1) * scale_round), iY + (int)((j - 1) * scale_round), p_Tex, 1.0f);
             coef += hY * hX;
         }
     }
@@ -109,7 +109,7 @@ __DEVICE__ float sample_point_bicubic_1ch(const float pX, const float pY, const 
 }
 
 __DEVICE__ float3 sample_point_bicubic_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
-    float3 out = make_float3(0.0, 0.0, 0.0);
+    float3 out = make_float3(0.0f, 0.0f, 0.0f);
     out.x = sample_point_bicubic_1ch(x, y, p_TexR, scale);
     out.y = sample_point_bicubic_1ch(x, y, p_TexG, scale);
     out.z = sample_point_bicubic_1ch(x, y, p_TexB, scale);
@@ -132,7 +132,7 @@ __DEVICE__ void reduce_resolution(int x,
                                   __PRIVATE__ float3* ret) {
     float p_x = (float)x / (float)init_width;
     float p_y = (float)y / (float)init_height;
-    float3 out = make_float3(0.0, 0.0, 0.0);
+    float3 out = make_float3(0.0f, 0.0f, 0.0f);
     if (init_width <= new_width) {
         // New image is larger than the original one, we can't really make an image
         // larger than p_Width and p_Height, so we'll just cap the resolution at the
@@ -156,7 +156,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     int new_width = p_Width / scale;
     int new_height = p_Height / scale;
 
-    float3 downres = make_float3(0.0, 0.0, 0.0);
+    float3 downres = make_float3(0.0f, 0.0f, 0.0f);
     reduce_resolution(p_X, p_Y, p_Width, p_Height, new_width, new_height, p_TexR, p_TexG, p_TexB, resize_mode, &downres);
     return downres;
 }

@@ -82,9 +82,9 @@ __DEVICE__ float gaussian_piecewise(float x, gaussian_piecewise_params_t params)
     float out;
     if (x < params.mean) {
         // Control it only with left std
-        out = _expf(-1 * pow2(1.0 / params.left_std) * pow2(x - params.mean) / 2.0);
+        out = _expf(-1 * pow2(1.0f / params.left_std) * pow2(x - params.mean) / 2.0f);
     } else {
-        out = _expf(-1 * pow2(1.0 / params.right_std) * pow2(x - params.mean) / 2.0);
+        out = _expf(-1 * pow2(1.0f / params.right_std) * pow2(x - params.mean) / 2.0f);
     }
     out = out * (params.max_value - params.min_value) + params.min_value;
     return out;
@@ -101,7 +101,7 @@ __DEVICE__ gaussian_piecewise_params_t scale_gaussian_piecewise_params(gaussian_
 }
 
 __DEVICE__ float get_density(float wavelength, gaussian_piecewise_params_t params[4]) {
-    float out = 0.0;
+    float out = 0.0f;
     for (int i = 0; i < 4; i++) {
         out += gaussian_piecewise(wavelength, params[i]);
     }
@@ -116,246 +116,246 @@ __DEVICE__ float get_density(float wavelength, gaussian_piecewise_params_t param
 #define WAVELENGTH_STEP (10)
 
 __CONSTANT__ float xyz_cmfs[43][3] = {
-    {0.0001299, 0.000003917, 0.0006061}, //
-    {0.0004149, 0.00001239, 0.001946},   //
-    {0.001368, 0.000039, 0.006450001},   //
-    {0.004243, 0.00012, 0.02005001},     //
-    {0.01431, 0.000396, 0.06785001},     //
-    {0.04351, 0.00121, 0.2074},          //
-    {0.13438, 0.004, 0.6456},            //
-    {0.2839, 0.0116, 1.3856},            //
-    {0.34828, 0.023, 1.74706},           //
-    {0.3362, 0.038, 1.77211},            //
-    {0.2908, 0.06, 1.6692},              //
-    {0.19536, 0.09098, 1.28764},         //
-    {0.09564, 0.13902, 0.8129501},       //
-    {0.03201, 0.20802, 0.46518},         //
-    {0.0049, 0.323, 0.272},              //
-    {0.0093, 0.503, 0.1582},             //
-    {0.06327, 0.71, 0.07824999},         //
-    {0.1655, 0.862, 0.04216},            //
-    {0.2904, 0.954, 0.0203},             //
-    {0.4334499, 0.9949501, 0.008749999}, //
-    {0.5945, 0.995, 0.0039},             //
-    {0.7621, 0.952, 0.0021},             //
-    {0.9163, 0.87, 0.001650001},         //
-    {1.0263, 0.757, 0.0011},             //
-    {1.0622, 0.631, 0.0008},             //
-    {1.0026, 0.503, 0.00034},            //
-    {0.8544499, 0.381, 0.00019},         //
-    {0.6424, 0.265, 0.00004999999},      //
-    {0.4479, 0.175, 0.00002},            //
-    {0.2835, 0.107, 0},                  //
-    {0.1649, 0.061, 0},                  //
-    {0.0874, 0.032, 0},                  //
-    {0.04677, 0.017, 0},                 //
-    {0.0227, 0.00821, 0},                //
-    {0.01135916, 0.004102, 0},           //
-    {0.005790346, 0.002091, 0},          //
-    {0.002899327, 0.001047, 0},          //
-    {0.001439971, 0.00052, 0},           //
-    {0.0006900786, 0.0002492, 0},        //
-    {0.0003323011, 0.00012, 0},          //
-    {0.0001661505, 0.00006, 0},          //
-    {0.00008307527, 0.00003, 0},         //
-    {0.00004150994, 0.00001499, 0},      //
+    {0.0001299f, 0.000003917f, 0.0006061f}, //
+    {0.0004149f, 0.00001239f, 0.001946f},   //
+    {0.001368f, 0.000039f, 0.006450001f},   //
+    {0.004243f, 0.00012f, 0.02005001f},     //
+    {0.01431f, 0.000396f, 0.06785001f},     //
+    {0.04351f, 0.00121f, 0.2074f},          //
+    {0.13438f, 0.004f, 0.6456f},            //
+    {0.2839f, 0.0116f, 1.3856f},            //
+    {0.34828f, 0.023f, 1.74706f},           //
+    {0.3362f, 0.038f, 1.77211f},            //
+    {0.2908f, 0.06f, 1.6692f},              //
+    {0.19536f, 0.09098f, 1.28764f},         //
+    {0.09564f, 0.13902f, 0.8129501f},       //
+    {0.03201f, 0.20802f, 0.46518f},         //
+    {0.0049f, 0.323f, 0.272f},              //
+    {0.0093f, 0.503f, 0.1582f},             //
+    {0.06327f, 0.71f, 0.07824999f},         //
+    {0.1655f, 0.862f, 0.04216f},            //
+    {0.2904f, 0.954f, 0.0203f},             //
+    {0.4334499f, 0.9949501f, 0.008749999f}, //
+    {0.5945f, 0.995f, 0.0039f},             //
+    {0.7621f, 0.952f, 0.0021f},             //
+    {0.9163f, 0.87f, 0.001650001f},         //
+    {1.0263f, 0.757f, 0.0011f},             //
+    {1.0622f, 0.631f, 0.0008f},             //
+    {1.0026f, 0.503f, 0.00034f},            //
+    {0.8544499f, 0.381f, 0.00019f},         //
+    {0.6424f, 0.265f, 0.00004999999f},      //
+    {0.4479f, 0.175f, 0.00002f},            //
+    {0.2835f, 0.107f, 0},                  //
+    {0.1649f, 0.061f, 0},                  //
+    {0.0874f, 0.032f, 0},                  //
+    {0.04677f, 0.017f, 0},                 //
+    {0.0227f, 0.00821f, 0},                //
+    {0.01135916f, 0.004102f, 0},           //
+    {0.005790346f, 0.002091f, 0},          //
+    {0.002899327f, 0.001047f, 0},          //
+    {0.001439971f, 0.00052f, 0},           //
+    {0.0006900786f, 0.0002492f, 0},        //
+    {0.0003323011f, 0.00012f, 0},          //
+    {0.0001661505f, 0.00006f, 0},          //
+    {0.00008307527f, 0.00003f, 0},         //
+    {0.00004150994f, 0.00001499f, 0},      //
 };
 
 // 360 to 780 nm in 10 nm steps, log10 spectral product
 __CONSTANT__ float status_a_sensitivities[43][3] = {
-    {-62.232, -29.150, -19.198}, //
-    {-59.532, -26.950, -15.398}, //
-    {-56.832, -24.750, -11.598}, //
-    {-54.132, -22.550, -7.798},  //
-    {-51.432, -20.350, -3.998},  //
-    {-48.732, -18.150, -0.198},  //
-    {-46.032, -15.950, 3.602},   //
-    {-43.332, -13.750, 4.819},   //
-    {-40.632, -11.550, 5.000},   //
-    {-37.932, -9.350, 4.912},    //
-    {-35.232, -7.150, 4.620},    //
-    {-32.532, -4.950, 4.040},    //
-    {-29.832, -2.750, 2.989},    //
-    {-27.132, -0.550, 1.566},    //
-    {-24.432, 1.650, 0.165},     //
-    {-21.732, 3.822, -1.235},    //
-    {-19.032, 4.782, -2.635},    //
-    {-16.332, 5.000, -4.035},    //
-    {-13.632, 4.906, -5.435},    //
-    {-10.932, 4.644, -6.835},    //
-    {-8.232, 4.221, -8.235},     //
-    {-5.532, 3.609, -9.635},     //
-    {-2.832, 2.766, -11.035},    //
-    {-0.132, 1.579, -12.435},    //
-    {2.568, -0.121, -13.835},    //
-    {4.638, -1.821, -15.235},    //
-    {5.000, -3.521, -16.635},    //
-    {4.871, -5.221, -18.035},    //
-    {4.604, -6.921, -19.435},    //
-    {4.286, -8.621, -20.835},    //
-    {3.900, -10.321, -22.235},   //
-    {3.551, -12.021, -23.635},   //
-    {3.165, -13.721, -25.035},   //
-    {2.776, -15.421, -26.435},   //
-    {2.383, -17.121, -27.835},   //
-    {1.970, -18.821, -29.235},   //
-    {1.551, -20.521, -30.635},   //
-    {1.141, -22.221, -32.035},   //
-    {0.741, -23.921, -33.435},   //
-    {0.341, -25.621, -34.835},   //
-    {-0.059, -27.321, -36.235},  //
-    {-0.459, -29.021, -37.635},  //
-    {-0.859, -30.721, -39.035},  //
+    {-62.232f, -29.150f, -19.198f}, //
+    {-59.532f, -26.950f, -15.398f}, //
+    {-56.832f, -24.750f, -11.598f}, //
+    {-54.132f, -22.550f, -7.798f},  //
+    {-51.432f, -20.350f, -3.998f},  //
+    {-48.732f, -18.150f, -0.198f},  //
+    {-46.032f, -15.950f, 3.602f},   //
+    {-43.332f, -13.750f, 4.819f},   //
+    {-40.632f, -11.550f, 5.000f},   //
+    {-37.932f, -9.350f, 4.912f},    //
+    {-35.232f, -7.150f, 4.620f},    //
+    {-32.532f, -4.950f, 4.040f},    //
+    {-29.832f, -2.750f, 2.989f},    //
+    {-27.132f, -0.550f, 1.566f},    //
+    {-24.432f, 1.650f, 0.165f},     //
+    {-21.732f, 3.822f, -1.235f},    //
+    {-19.032f, 4.782f, -2.635f},    //
+    {-16.332f, 5.000f, -4.035f},    //
+    {-13.632f, 4.906f, -5.435f},    //
+    {-10.932f, 4.644f, -6.835f},    //
+    {-8.232f, 4.221f, -8.235f},     //
+    {-5.532f, 3.609f, -9.635f},     //
+    {-2.832f, 2.766f, -11.035f},    //
+    {-0.132f, 1.579f, -12.435f},    //
+    {2.568f, -0.121f, -13.835f},    //
+    {4.638f, -1.821f, -15.235f},    //
+    {5.000f, -3.521f, -16.635f},    //
+    {4.871f, -5.221f, -18.035f},    //
+    {4.604f, -6.921f, -19.435f},    //
+    {4.286f, -8.621f, -20.835f},    //
+    {3.900f, -10.321f, -22.235f},   //
+    {3.551f, -12.021f, -23.635f},   //
+    {3.165f, -13.721f, -25.035f},   //
+    {2.776f, -15.421f, -26.435f},   //
+    {2.383f, -17.121f, -27.835f},   //
+    {1.970f, -18.821f, -29.235f},   //
+    {1.551f, -20.521f, -30.635f},   //
+    {1.141f, -22.221f, -32.035f},   //
+    {0.741f, -23.921f, -33.435f},   //
+    {0.341f, -25.621f, -34.835f},   //
+    {-0.059f, -27.321f, -36.235f},  //
+    {-0.459f, -29.021f, -37.635f},  //
+    {-0.859f, -30.721f, -39.035f},  //
 };
 
 // 360 to 780 nm in 10 nm steps, log10 spectral product
 __CONSTANT__ float status_m_sensitivities[43][3] = {
-    {-65.491, -10.508, -10.397}, //
-    {-62.891, -9.448, -7.897},   //
-    {-60.291, -8.388, -5.397},   //
-    {-57.691, -7.328, -2.897},   //
-    {-55.091, -6.268, -0.397},   //
-    {-52.491, -5.208, 2.103},    //
-    {-49.891, -4.148, 4.111},    //
-    {-47.291, -3.088, 4.632},    //
-    {-44.691, -2.028, 4.871},    //
-    {-42.091, -0.968, 5.000},    //
-    {-39.491, 0.092, 4.955},     //
-    {-36.891, 1.152, 4.743},     //
-    {-34.291, 2.207, 4.343},     //
-    {-31.691, 3.156, 3.743},     //
-    {-29.091, 3.804, 2.990},     //
-    {-26.491, 4.272, 1.852},     //
-    {-23.891, 4.626, -0.348},    //
-    {-21.291, 4.872, -2.548},    //
-    {-18.691, 5.000, -4.748},    //
-    {-16.091, 4.995, -6.948},    //
-    {-13.491, 4.818, -9.148},    //
-    {-10.891, 4.458, -11.348},   //
-    {-8.291, 3.915, -13.548},    //
-    {-5.691, 3.172, -15.748},    //
-    {-3.091, 2.239, -17.948},    //
-    {-0.491, 1.070, -20.148},    //
-    {2.109, -0.130, -22.348},    //
-    {4.479, -1.330, -24.548},    //
-    {5.000, -2.530, -26.748},    //
-    {4.899, -3.730, -28.948},    //
-    {4.578, -4.930, -31.148},    //
-    {4.252, -6.130, -33.348},    //
-    {3.875, -7.330, -35.548},    //
-    {3.491, -8.530, -37.748},    //
-    {3.099, -9.730, -39.948},    //
-    {2.687, -10.930, -42.148},   //
-    {2.269, -12.130, -44.348},   //
-    {1.859, -13.330, -46.548},   //
-    {1.449, -14.530, -48.748},   //
-    {1.054, -15.730, -50.948},   //
-    {0.654, -16.930, -53.148},   //
-    {0.265, -18.130, -55.348},   //
-    {-0.135, -19.330, -57.548},  //
+    {-65.491f, -10.508f, -10.397f}, //
+    {-62.891f, -9.448f, -7.897f},   //
+    {-60.291f, -8.388f, -5.397f},   //
+    {-57.691f, -7.328f, -2.897f},   //
+    {-55.091f, -6.268f, -0.397f},   //
+    {-52.491f, -5.208f, 2.103f},    //
+    {-49.891f, -4.148f, 4.111f},    //
+    {-47.291f, -3.088f, 4.632f},    //
+    {-44.691f, -2.028f, 4.871f},    //
+    {-42.091f, -0.968f, 5.000f},    //
+    {-39.491f, 0.092f, 4.955f},     //
+    {-36.891f, 1.152f, 4.743f},     //
+    {-34.291f, 2.207f, 4.343f},     //
+    {-31.691f, 3.156f, 3.743f},     //
+    {-29.091f, 3.804f, 2.990f},     //
+    {-26.491f, 4.272f, 1.852f},     //
+    {-23.891f, 4.626f, -0.348f},    //
+    {-21.291f, 4.872f, -2.548f},    //
+    {-18.691f, 5.000f, -4.748f},    //
+    {-16.091f, 4.995f, -6.948f},    //
+    {-13.491f, 4.818f, -9.148f},    //
+    {-10.891f, 4.458f, -11.348f},   //
+    {-8.291f, 3.915f, -13.548f},    //
+    {-5.691f, 3.172f, -15.748f},    //
+    {-3.091f, 2.239f, -17.948f},    //
+    {-0.491f, 1.070f, -20.148f},    //
+    {2.109f, -0.130f, -22.348f},    //
+    {4.479f, -1.330f, -24.548f},    //
+    {5.000f, -2.530f, -26.748f},    //
+    {4.899f, -3.730f, -28.948f},    //
+    {4.578f, -4.930f, -31.148f},    //
+    {4.252f, -6.130f, -33.348f},    //
+    {3.875f, -7.330f, -35.548f},    //
+    {3.491f, -8.530f, -37.748f},    //
+    {3.099f, -9.730f, -39.948f},    //
+    {2.687f, -10.930f, -42.148f},   //
+    {2.269f, -12.130f, -44.348f},   //
+    {1.859f, -13.330f, -46.548f},   //
+    {1.449f, -14.530f, -48.748f},   //
+    {1.054f, -15.730f, -50.948f},   //
+    {0.654f, -16.930f, -53.148f},   //
+    {0.265f, -18.130f, -55.348f},   //
+    {-0.135f, -19.330f, -57.548f},  //
 };
 
 // Normalized at 100 at 560 nm
 __CONSTANT__ float d65_illuminant[43] = {
-    46.63868,   //
-    52.089531,  //
-    49.975798,  //
-    54.648416,  //
-    82.755073,  //
-    91.486209,  //
-    93.43199,   //
-    86.682439,  //
-    104.864986, //
-    117.007671, //
-    117.812258, //
-    114.860942, //
-    115.922925, //
-    108.810733, //
-    109.354525, //
-    107.801717, //
-    104.789799, //
-    107.689494, //
-    104.405502, //
-    104.046198, //
+    46.63868f,   //
+    52.089531f,  //
+    49.975798f,  //
+    54.648416f,  //
+    82.755073f,  //
+    91.486209f,  //
+    93.43199f,   //
+    86.682439f,  //
+    104.864986f, //
+    117.007671f, //
+    117.812258f, //
+    114.860942f, //
+    115.922925f, //
+    108.810733f, //
+    109.354525f, //
+    107.801717f, //
+    104.789799f, //
+    107.689494f, //
+    104.405502f, //
+    104.046198f, //
     100,        //
-    96.334199,  //
-    95.788001,  //
-    88.685659,  //
-    90.006288,  //
-    89.599214,  //
-    87.698829,  //
-    83.288739,  //
-    83.699391,  //
-    80.027013,  //
-    80.214854,  //
-    82.278088,  //
-    78.284505,  //
-    69.721543,  //
-    71.609384,  //
-    74.349246,  //
-    61.604203,  //
-    69.88582,   //
-    75.087231,  //
-    63.592894,  //
-    46.418351,  //
-    66.805615,  //
-    63.382997,  //
+    96.334199f,  //
+    95.788001f,  //
+    88.685659f,  //
+    90.006288f,  //
+    89.599214f,  //
+    87.698829f,  //
+    83.288739f,  //
+    83.699391f,  //
+    80.027013f,  //
+    80.214854f,  //
+    82.278088f,  //
+    78.284505f,  //
+    69.721543f,  //
+    71.609384f,  //
+    74.349246f,  //
+    61.604203f,  //
+    69.88582f,   //
+    75.087231f,  //
+    63.592894f,  //
+    46.418351f,  //
+    66.805615f,  //
+    63.382997f,  //
 };
 
 // Normalized at 100 at 560 nm
 __CONSTANT__ float a_illuminant[43] = {
-    6.144620,   //
-    7.821350,   //
-    9.795100,   //
-    12.085300,  //
-    14.708000,  //
-    17.675300,  //
-    20.995000,  //
-    24.670900,  //
-    28.702700,  //
-    33.085900,  //
-    37.812100,  //
-    42.869300,  //
-    48.242300,  //
-    53.913200,  //
-    59.861100,  //
-    66.063500,  //
-    72.495900,  //
-    79.132600,  //
-    85.947000,  //
-    92.912000,  //
-    100.000000, //
-    107.184000, //
-    114.436000, //
-    121.731000, //
-    129.043000, //
-    136.346000, //
-    143.618000, //
-    150.836000, //
-    157.979000, //
-    165.028000, //
-    171.963000, //
-    178.769000, //
-    185.429000, //
-    191.931000, //
-    198.261000, //
-    204.409000, //
-    210.365000, //
-    216.120000, //
-    221.667000, //
-    227.000000, //
-    232.115000, //
-    237.008000, //
-    241.675000, //
+    6.144620f,   //
+    7.821350f,   //
+    9.795100f,   //
+    12.085300f,  //
+    14.708000f,  //
+    17.675300f,  //
+    20.995000f,  //
+    24.670900f,  //
+    28.702700f,  //
+    33.085900f,  //
+    37.812100f,  //
+    42.869300f,  //
+    48.242300f,  //
+    53.913200f,  //
+    59.861100f,  //
+    66.063500f,  //
+    72.495900f,  //
+    79.132600f,  //
+    85.947000f,  //
+    92.912000f,  //
+    100.000000f, //
+    107.184000f, //
+    114.436000f, //
+    121.731000f, //
+    129.043000f, //
+    136.346000f, //
+    143.618000f, //
+    150.836000f, //
+    157.979000f, //
+    165.028000f, //
+    171.963000f, //
+    178.769000f, //
+    185.429000f, //
+    191.931000f, //
+    198.261000f, //
+    204.409000f, //
+    210.365000f, //
+    216.120000f, //
+    221.667000f, //
+    227.000000f, //
+    232.115000f, //
+    237.008000f, //
+    241.675000f, //
 
 };
 
 __DEVICE__ float3 get_observer_weight_stepped(int wavelength, int observer_type) {
     if (wavelength < MIN_WAVELENGTH || wavelength > MAX_WAVELENGTH) {
-        return make_float3(0.0, 0.0, 0.0);
+        return make_float3(0.0f, 0.0f, 0.0f);
     }
     int index = _floorf((wavelength - MIN_WAVELENGTH) / WAVELENGTH_STEP);
-    float3 weights = make_float3(0.0, 0.0, 0.0);
+    float3 weights = make_float3(0.0f, 0.0f, 0.0f);
     if (observer_type == STATUS_M_DENSITY_OBSERVER || observer_type == STATUS_M_TRANSMITTANCE_OBSERVER) {
         weights.x = _exp10f(status_m_sensitivities[index][0]);
         weights.y = _exp10f(status_m_sensitivities[index][1]);
@@ -374,10 +374,10 @@ __DEVICE__ float3 get_observer_weight_stepped(int wavelength, int observer_type)
 
 __DEVICE__ float3 get_observer_weight(float wavelength, int observer_type) {
     if (wavelength < MIN_WAVELENGTH || wavelength > MAX_WAVELENGTH) {
-        return make_float3(0.0, 0.0, 0.0);
+        return make_float3(0.0f, 0.0f, 0.0f);
     }
     float3 weights;
-    if (_fabs((wavelength - MIN_WAVELENGTH) / WAVELENGTH_STEP - _round((wavelength - MIN_WAVELENGTH) / WAVELENGTH_STEP)) < 0.0001) {
+    if (_fabs((wavelength - MIN_WAVELENGTH) / WAVELENGTH_STEP - _round((wavelength - MIN_WAVELENGTH) / WAVELENGTH_STEP)) < 0.0001f) {
         int index = _round(wavelength);
         weights = get_observer_weight_stepped(index, observer_type);
     } else {
@@ -392,9 +392,9 @@ __DEVICE__ float3 get_observer_weight(float wavelength, int observer_type) {
 
 __DEVICE__ float3 get_observer_value(gaussian_piecewise_params_t dyes[3], int observer_type, __PRIVATE__ float3* areas_ret) {
 
-    float3 observed_color = make_float3(0.0, 0.0, 0.0);
-    float3 areas = make_float3(0.0, 0.0, 0.0);
-    float3 curr_weights = make_float3(0.0, 0.0, 0.0);
+    float3 observed_color = make_float3(0.0f, 0.0f, 0.0f);
+    float3 areas = make_float3(0.0f, 0.0f, 0.0f);
+    float3 curr_weights = make_float3(0.0f, 0.0f, 0.0f);
     float curr_density;
     float curr_transmittance;
     float curr_emission;
@@ -407,13 +407,13 @@ __DEVICE__ float3 get_observer_value(gaussian_piecewise_params_t dyes[3], int ob
         curr_transmittance = _exp10f(-1 * curr_density);
 
         int index = _floorf((i - MIN_WAVELENGTH) / WAVELENGTH_STEP);
-        float light = 1.0;
+        float light = 1.0f;
         if (observer_type == XYZ_D65_OBSERVER) {
-            light = d65_illuminant[index] / 100.0;
+            light = d65_illuminant[index] / 100.0f;
         } else if (observer_type == XYZ_A_OBSERVER) {
-            light = a_illuminant[index] / 100.0;
+            light = a_illuminant[index] / 100.0f;
         } else if (observer_type == XYZ_E_OBSERVER) {
-            light = 1.0;
+            light = 1.0f;
         }
 
         curr_emission = light * curr_transmittance;
@@ -434,7 +434,7 @@ __DEVICE__ float3 get_observer_value(gaussian_piecewise_params_t dyes[3], int ob
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 input = make_float3(p_R, p_G, p_B);
-    input = make_float3(maxf(input.x, 0.0), maxf(input.y, 0.0), maxf(input.z, 0.0));
+    input = make_float3(maxf(input.x, 0.0f), maxf(input.y, 0.0f), maxf(input.z, 0.0f));
 
     float3 gel_concentration = input * input_gain;
     // TODO: Implement other input metrics
@@ -464,28 +464,28 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         scale_gaussian_piecewise_params(dyes[3], (gel_concentration.x + gel_concentration.y + gel_concentration.z) * silver_ratio),
     };
 
-    float3 areas = make_float3(0.0, 0.0, 0.0);
+    float3 areas = make_float3(0.0f, 0.0f, 0.0f);
     float3 observed_color = get_observer_value(scaled_dyes, observer, &areas);
     float3 output_color = observed_color;
     float x = (float)(p_X) / (p_Width - 1);
-    float y = 1.0 - (float)(p_Y) / (p_Height - 1);
+    float y = 1.0f - (float)(p_Y) / (p_Height - 1);
 
-    const float chart_max_density = 2.0;
+    const float chart_max_density = 2.0f;
     if (density_charts || observer_charts) {
         // Draw vertical wavelength lines
-        float threshold = 0.5;
+        float threshold = 0.5f;
         float curr_wavelength = MIN_WAVELENGTH + (MAX_WAVELENGTH - MIN_WAVELENGTH) * x;
-        if (_fabs(mod(curr_wavelength + 50.0, 100.0) - 50.0) < threshold || _fabs(mod(curr_wavelength, 100.0) - 50.0) < threshold) {
-            if (mod(y, 0.1) < 0.05) {
-                output_color = make_float3(0.5, 0.5, 0.5);
+        if (_fabs(mod(curr_wavelength + 50.0f, 100.0f) - 50.0f) < threshold || _fabs(mod(curr_wavelength, 100.0f) - 50.0f) < threshold) {
+            if (mod(y, 0.1f) < 0.05f) {
+                output_color = make_float3(0.5f, 0.5f, 0.5f);
             }
         }
     }
 
     if (density_charts) {
         // draw horizontal density lines
-        if (_fabs(mod(y * chart_max_density + 0.5, 1.0) - 0.5) < 0.005 && mod(x, 0.1) < 0.05) {
-            output_color = make_float3(0.25, 0.25, 0.25);
+        if (_fabs(mod(y * chart_max_density + 0.5f, 1.0f) - 0.5f) < 0.005f && mod(x, 0.1f) < 0.05f) {
+            output_color = make_float3(0.25f, 0.25f, 0.25f);
         }
 
         // Draw density curves
@@ -506,14 +506,14 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
         float chart_densities[5] = {cyan_density_f, magenta_density_f, yellow_density_f, silver_density_f, total_density_f};
         float3 chart_colors[5] = {
-            make_float3(0.0, 1.0, 1.0),
-            make_float3(1.0, 0.0, 1.0),
-            make_float3(1.0, 1.0, 0.0),
-            make_float3(0.18, 0.18, 0.18),
-            make_float3(1.0, 1.0, 1.0),
+            make_float3(0.0f, 1.0f, 1.0f),
+            make_float3(1.0f, 0.0f, 1.0f),
+            make_float3(1.0f, 1.0f, 0.0f),
+            make_float3(0.18f, 0.18f, 0.18f),
+            make_float3(1.0f, 1.0f, 1.0f),
         };
         for (int i = 0; i < 5; ++i) {
-            if (_fabs(chart_densities[i] - y * chart_max_density) < 0.02) {
+            if (_fabs(chart_densities[i] - y * chart_max_density) < 0.02f) {
                 output_color = chart_colors[i];
             }
         }
@@ -521,18 +521,18 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     if (observer_charts) {
         // Draw sensitivity curves
-        const float chart_max_sensitivity = 1.0;
+        const float chart_max_sensitivity = 1.0f;
         float curr_wavelength = MIN_WAVELENGTH + (MAX_WAVELENGTH - MIN_WAVELENGTH) * x;
 
         float3 curr_weights = get_observer_weight(curr_wavelength, observer) / areas;
         float chart_weights[3] = {curr_weights.x, curr_weights.y, curr_weights.z};
         float3 chart_colors[3] = {
-            make_float3(1.0, 0.0, 0.0),
-            make_float3(0.0, 1.0, 0.0),
-            make_float3(0.0, 0.0, 1.0),
+            make_float3(1.0f, 0.0f, 0.0f),
+            make_float3(0.0f, 1.0f, 0.0f),
+            make_float3(0.0f, 0.0f, 1.0f),
         };
         for (int i = 0; i < 3; ++i) {
-            if (_fabs(chart_weights[i] - y * chart_max_sensitivity) < 0.02) {
+            if (_fabs(chart_weights[i] - y * chart_max_sensitivity) < 0.02f) {
                 output_color = chart_colors[i];
             }
         }

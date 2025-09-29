@@ -49,17 +49,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     randu(seed);
     randu(seed);
 
-    float global_adjustment = randu_interval(-1.0 * interval, interval, seed);
-    float red_gamma_adjustment = randu_interval(-1.0 * interval, interval, seed);
-    float green_gamma_adjustment = randu_interval(-1.0 * interval, interval, seed);
-    float blue_gamma_adjustment = randu_interval(-1.0 * interval, interval, seed);
+    float global_adjustment = randu_interval(-1.0f * interval, interval, seed);
+    float red_gamma_adjustment = randu_interval(-1.0f * interval, interval, seed);
+    float green_gamma_adjustment = randu_interval(-1.0f * interval, interval, seed);
+    float blue_gamma_adjustment = randu_interval(-1.0f * interval, interval, seed);
     if (use_random == NO_RANDOM || use_random == RAND_SPLIT_TONE) {
-        global_adjustment = 0.0;
+        global_adjustment = 0.0f;
     }
     if (use_random == NO_RANDOM || use_random == RAND_CONTRAST) {
-        red_gamma_adjustment = 0.0;
-        green_gamma_adjustment = 0.0;
-        blue_gamma_adjustment = 0.0;
+        red_gamma_adjustment = 0.0f;
+        green_gamma_adjustment = 0.0f;
+        blue_gamma_adjustment = 0.0f;
     }
 
     // Apply a contrast adjustment to each of the three channels

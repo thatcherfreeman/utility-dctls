@@ -23,19 +23,19 @@ __DEVICE__ inline float maxf(float x, float y) {
 
 __DEVICE__ float daniele_curve(float x, float peak_luminance, float normalized_white, float contrast_gamma, float exposure, float toe) {
     const float m = peak_luminance / normalized_white;
-    const float s = exposure * powf(m, 1.0 / contrast_gamma);
-    float fx = m * powf(maxf(0.0, x) / (x + s), contrast_gamma);
-    float y = maxf(0.0, fx * fx / (fx + toe));
+    const float s = exposure * powf(m, 1.0f / contrast_gamma);
+    float fx = m * powf(maxf(0.0f, x) / (x + s), contrast_gamma);
+    float y = maxf(0.0f, fx * fx / (fx + toe));
     return y;
 }
 
 __DEVICE__ float daniele_curve_inverse(float y, float peak_luminance, float normalized_white, float contrast_gamma, float exposure, float toe) {
     const float m = peak_luminance / normalized_white;
-    const float s = exposure * powf(m, 1.0 / contrast_gamma);
+    const float s = exposure * powf(m, 1.0f / contrast_gamma);
 
-    float fx = 0.5 * (y + powf(y, 0.5) * powf(4.0 * toe + y, 0.5));
-    float u = powf(fx / m, 1.0 / contrast_gamma);
-    float x = u * s / (1.0 - u);
+    float fx = 0.5f * (y + powf(y, 0.5f) * powf(4.0f * toe + y, 0.5f));
+    float u = powf(fx / m, 1.0f / contrast_gamma);
+    float x = u * s / (1.0f - u);
 
     return x;
 }

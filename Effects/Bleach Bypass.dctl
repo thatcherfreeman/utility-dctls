@@ -17,9 +17,9 @@ __DEVICE__ float3 bleach_bypass(float3 input, float gamma, float amount) {
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 curr_color = make_float3(p_R, p_G, p_B);
-    float3 bleach_bypass_color = bleach_bypass(curr_color, gamma, 1.0 - saturation);
+    float3 bleach_bypass_color = bleach_bypass(curr_color, gamma, 1.0f - saturation);
     // Correct mid gray.
-    float3 gain = make_float3(mid_gray, mid_gray, mid_gray) / (bleach_bypass(make_float3(mid_gray, mid_gray, mid_gray), gamma, 1.0 - saturation));
+    float3 gain = make_float3(mid_gray, mid_gray, mid_gray) / (bleach_bypass(make_float3(mid_gray, mid_gray, mid_gray), gamma, 1.0f - saturation));
     bleach_bypass_color *= gain;
     return bleach_bypass_color;
 }

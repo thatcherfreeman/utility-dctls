@@ -15,7 +15,7 @@ __DEVICE__ float powf(float base, float exp) {
 }
 
 __DEVICE__ float pow2f(float base) {
-    return powf(_fabs(base), 2.0);
+    return powf(_fabs(base), 2.0f);
 }
 
 __DEVICE__ float maxf3(float3 x) {
@@ -43,19 +43,19 @@ typedef struct {
 __DEVICE__ float compute_norm(float3 input_rgb, int switcher) {
     float lum;
     if (switcher == GEOM) {
-        lum = powf(input_rgb.x * input_rgb.y * input_rgb.z, 1.0 / 3.0);
+        lum = powf(input_rgb.x * input_rgb.y * input_rgb.z, 1.0f / 3.0f);
     } else if (switcher == MEAN) {
-        lum = (input_rgb.x + input_rgb.y + input_rgb.z) / 3.0;
+        lum = (input_rgb.x + input_rgb.y + input_rgb.z) / 3.0f;
     } else if (switcher == MAX) {
         lum = maxf3(input_rgb);
     } else if (switcher == MIN) {
         lum = minf3(input_rgb);
     } else if (switcher == HARMONIC) {
-        lum = 3.0 / ((1.0 / input_rgb.x) + (1.0 / input_rgb.y) + (1.0 / input_rgb.z));
+        lum = 3.0f / ((1.0f / input_rgb.x) + (1.0f / input_rgb.y) + (1.0f / input_rgb.z));
     } else if (switcher == L2_NORM) {
         lum = _sqrtf(input_rgb.x * input_rgb.x + input_rgb.y * input_rgb.y + input_rgb.z * input_rgb.z);
     } else if (switcher == BOLTZMAN) {
-        const float boltzman_parameter = 3.0;
+        const float boltzman_parameter = 3.0f;
         float3 weights =
             make_float3(_expf(boltzman_parameter * input_rgb.x), _expf(boltzman_parameter * input_rgb.y), _expf(boltzman_parameter * input_rgb.z));
         lum = (input_rgb.x * weights.x + input_rgb.y * weights.y + input_rgb.z * weights.z) / (weights.x + weights.y + weights.z);
@@ -83,7 +83,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     };
 
     float3 initial_output = saturate(input_rgb, gamma, params);
-    float3 white_output = saturate(make_float3(1.0, 1.0, 1.0), gamma, params);
+    float3 white_output = saturate(make_float3(1.0f, 1.0f, 1.0f), gamma, params);
     float3 output = initial_output / white_output;
     return output;
 }

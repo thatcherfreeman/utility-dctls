@@ -29,13 +29,13 @@ typedef struct {
 } characteristic_params_t;
 
 __DEVICE__ float sigmoid(float x) {
-    return 1.0 / (1.0 + _expf(-1.0 * x));
+    return 1.0f / (1.0f + _expf(-1.0f * x));
 }
 
 __DEVICE__ float smoothrelu(float x, float window) {
-    if (x <= -1.0 * window) {
-        return 0.0;
-    } else if (-1.0 * window <= x && x <= window) {
+    if (x <= -1.0f * window) {
+        return 0.0f;
+    } else if (-1.0f * window <= x && x <= window) {
         float coeff = window / _powf(window * 2.0f, 2.0f);
         return coeff * (x + window) * (x + window);
     } else {
@@ -45,18 +45,18 @@ __DEVICE__ float smoothrelu(float x, float window) {
 
 __DEVICE__ float quadratic_sigmoid(float x) {
     // Similar to sigmoid, but just a piecewise function with some hard borders.
-    if (x < 0.0) {
-        return smoothrelu(x + 0.5, 0.1);
+    if (x < 0.0f) {
+        return smoothrelu(x + 0.5f, 0.1f);
     } else {
         // x >= 0.0
-        return 1.0 - smoothrelu(-1.0 * x + 0.5, 0.1);
+        return 1.0f - smoothrelu(-1.0f * x + 0.5f, 0.1f);
     }
 }
 
 __DEVICE__ float characteristic_curve(float x, __PRIVATE__ characteristic_params_t* params) {
     float out, coeff;
     if (params->curve_type == SIGMOID) {
-        coeff = params->gamma / (0.25 * (params->dmax - params->dmin));
+        coeff = params->gamma / (0.25f * (params->dmax - params->dmin));
         out = sigmoid(coeff * (x + params->offset)) * (params->dmax - params->dmin) + params->dmin;
     } else if (params->curve_type == QUAD_SIGMOID) {
         coeff = params->gamma / (params->dmax - params->dmin);
@@ -67,10 +67,10 @@ __DEVICE__ float characteristic_curve(float x, __PRIVATE__ characteristic_params
 
 __DEVICE__ float3 draw_grid_lines(float x, float y, float3 curr_color) {
     float major_line_x = _fabs(_fmod(_fabs(x) + 0.1f, 1.0f) - 0.1f);
-    float zero_line_x = _fabs(x - 0.0);
+    float zero_line_x = _fabs(x - 0.0f);
     float major_line_y = _fabs(_fmod(y, 1.0f));
     float3 output_color = curr_color;
-    if (-4.0 < x && x < 4.0 && 0.0 < y && y < 6.0 && (major_line_x <= 0.02 || major_line_y <= 0.02 || zero_line_x <= 0.05)) {
+    if (-4.0f < x && x < 4.0f && 0.0f < y && y < 6.0f && (major_line_x <= 0.02f || major_line_y <= 0.02f || zero_line_x <= 0.05f)) {
         output_color += 0.1f;
     }
     return output_color;
@@ -79,8 +79,8 @@ __DEVICE__ float3 draw_grid_lines(float x, float y, float3 curr_color) {
 __DEVICE__ float3 draw_curve(float x, float y, float3 replacement_color, __PRIVATE__ characteristic_params_t* params) {
     float y_val = characteristic_curve(x, params);
     float diff = _fabs(y_val - y);
-    float3 output_color = make_float3(0.0, 0.0, 0.0);
-    if (diff <= 0.01) {
+    float3 output_color = make_float3(0.0f, 0.0f, 0.0f);
+    if (diff <= 0.01f) {
         output_color = replacement_color;
     }
     return output_color;
@@ -110,19 +110,19 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     if (density_to_transmittance) {
-        curr_color = make_float3(_exp10f(-1.0 * curr_color.x), _exp10f(-1.0 * curr_color.y), _exp10f(-1.0 * curr_color.z));
+        curr_color = make_float3(_exp10f(-1.0f * curr_color.x), _exp10f(-1.0f * curr_color.y), _exp10f(-1.0f * curr_color.z));
     }
 
     if (show_curve) {
         float x = (float)p_X / p_Width;
-        x = (x - 0.5) * p_Width / p_Height + 0.5;
-        float y = 1.0 - (float)p_Y / p_Height;
+        x = (x - 0.5f) * p_Width / p_Height + 0.5f;
+        float y = 1.0f - (float)p_Y / p_Height;
         x = _mix(-4.0f, 4.0f, x);
         y = _mix(0.0f, 6.0f, y);
         curr_color = draw_grid_lines(x, y, curr_color);
-        curr_color += draw_curve(x, y, make_float3(1.0, 0.0, 0.0), &red_curve);
-        curr_color += draw_curve(x, y, make_float3(0.0, 1.0, 0.0), &green_curve);
-        curr_color += draw_curve(x, y, make_float3(0.0, 0.0, 1.0), &blue_curve);
+        curr_color += draw_curve(x, y, make_float3(1.0f, 0.0f, 0.0f), &red_curve);
+        curr_color += draw_curve(x, y, make_float3(0.0f, 1.0f, 0.0f), &green_curve);
+        curr_color += draw_curve(x, y, make_float3(0.0f, 0.0f, 1.0f), &blue_curve);
     }
 
     return curr_color;

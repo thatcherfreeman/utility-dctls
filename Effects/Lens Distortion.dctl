@@ -38,7 +38,7 @@ __DEVICE__ float sample_point_bilinear_1ch(float x, float y, __TEXTURE__ tex, fl
 }
 
 __DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
-    float3 out = make_float3(0.0, 0.0, 0.0);
+    float3 out = make_float3(0.0f, 0.0f, 0.0f);
     out.x = sample_point_bilinear_1ch(x, y, p_TexR, scale);
     out.y = sample_point_bilinear_1ch(x, y, p_TexG, scale);
     out.z = sample_point_bilinear_1ch(x, y, p_TexB, scale);
@@ -51,8 +51,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float aspect_ratio = (float)p_Width / (float)p_Height;
     float p_x_scaled = (float)p_X / (float)(p_Width - 1);
     float p_y_scaled = (float)p_Y / (float)(p_Height - 1);
-    float x_d = (p_x_scaled - 0.5) * aspect_ratio;
-    float y_d = p_y_scaled - 0.5;
+    float x_d = (p_x_scaled - 0.5f) * aspect_ratio;
+    float y_d = p_y_scaled - 0.5f;
 
     // Compute r_d, distance of the current pixel from the center of the frame.
     float r_d = _hypotf(x_d, y_d);
@@ -62,17 +62,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         k_1_y = k_1_x;
         k_2_y = k_2_x;
     }
-    float x_u = x_d * (1.0 + k_1_x * powf(r_d, 2.0) + k_2_x * powf(r_d, 4.0));
-    float y_u = y_d * (1.0 + k_1_y * powf(r_d, 2.0) + k_2_y * powf(r_d, 4.0));
+    float x_u = x_d * (1.0f + k_1_x * powf(r_d, 2.0f) + k_2_x * powf(r_d, 4.0f));
+    float y_u = y_d * (1.0f + k_1_y * powf(r_d, 2.0f) + k_2_y * powf(r_d, 4.0f));
 
     // Transform x_u, y_u into new p_X_u, p_Y_u coordinates where the origin is in the top left
-    float p_x_u_scaled = (x_u / aspect_ratio) + 0.5;
-    float p_y_u_scaled = y_u + 0.5;
+    float p_x_u_scaled = (x_u / aspect_ratio) + 0.5f;
+    float p_y_u_scaled = y_u + 0.5f;
     float p_x_u = p_x_u_scaled * (float)(p_Width - 1);
     float p_y_u = p_y_u_scaled * (float)(p_Height - 1);
 
     // Look up the pixel at p_X_u, p_Y_u in each of the three channels
-    float3 out = sample_point_bilinear_3ch(p_x_u, p_y_u, p_TexR, p_TexG, p_TexB, 1.0);
+    float3 out = sample_point_bilinear_3ch(p_x_u, p_y_u, p_TexR, p_TexG, p_TexB, 1.0f);
 
     // Return that pixel value.
     return out;

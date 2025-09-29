@@ -37,7 +37,7 @@ __DEVICE__ float randu(__PRIVATE__ uint* seed) {
 
 __DEVICE__ float randu_bi(__PRIVATE__ uint* seed) {
     // Returns random number in interval (-1, +1)
-    return randu(seed) * 2.0 - 1.0;
+    return randu(seed) * 2.0f - 1.0f;
 }
 
 __DEVICE__ inline float3 _max3(float3 x, float3 y) {
@@ -102,14 +102,14 @@ __DEVICE__ float quadratic_interpolate(float x, float x1, float y1, float m1, fl
     y1p = y1;
 
     float a, b, c;
-    a = -1.0 * (m1 * m1 - 2 * m1 * m2 + m2 * m2) / (4 * (y2 - y1p - m2 * x2 + m2 * x1p));
+    a = -1.0f * (m1 * m1 - 2 * m1 * m2 + m2 * m2) / (4 * (y2 - y1p - m2 * x2 + m2 * x1p));
     b = (2 * m1 * y2 - 2 * m1 * y1p + m1 * m1 * x1p + m2 * m2 * x1p - 2 * m1 * m2 * x2) / (2 * (y2 - y1p - m2 * x2 + m2 * x1p));
     c = y1p - (a * x1p * x1p) - b * x1p;
     x2p = (m2 - b) / (2 * a);
     y2p = (x2p - x2) * m2 + y2;
 
     // Inflection point
-    float inf = -1.0 * b / (2.0 * a);
+    float inf = -1.0f * b / (2.0f * a);
 
     float interp = a * x * x + b * x + c;
 
@@ -206,40 +206,40 @@ __DEVICE__ float3 draw_contrast_curve(__PRIVATE__ contrast_params_t* contrast_r,
     float3 y_val = render_contrast_3ch(contrast_r, contrast_g, contrast_b, make_float3(x, x, x));
     float3 output_color = curr_color;
     float3 diff = make_float3(_fabs(y_val.x - y), _fabs(y_val.y - y), _fabs(y_val.z - y));
-    if (diff.x <= 0.002) {
-        output_color = _max3(output_color, make_float3(1.0, 0.0, 0.0));
+    if (diff.x <= 0.002f) {
+        output_color = _max3(output_color, make_float3(1.0f, 0.0f, 0.0f));
     }
-    if (diff.y <= 0.002) {
-        output_color = _max3(output_color, make_float3(0.0, 1.0, 0.0));
+    if (diff.y <= 0.002f) {
+        output_color = _max3(output_color, make_float3(0.0f, 1.0f, 0.0f));
     }
-    if (diff.z <= 0.002) {
-        output_color = _max3(output_color, make_float3(0.0, 0.0, 1.0));
+    if (diff.z <= 0.002f) {
+        output_color = _max3(output_color, make_float3(0.0f, 0.0f, 1.0f));
     }
     return output_color;
 }
 
 __DEVICE__ float3 draw_grid_lines(float x, float y, float3 curr_color) {
-    float major_line_x = _fabs(_fmod(x + 0.1f, 0.2f) - 0.1);
+    float major_line_x = _fabs(_fmod(x + 0.1f, 0.2f) - 0.1f);
     float minor_line_x = _fabs(_fmod(x + 0.02f, 1.0f / 25.0f) - 0.02f);
     float major_line_y = _fabs(_fmod(y + 0.1f, 0.2f) - 0.1f);
     float minor_line_y = _fabs(_fmod(y + 0.02f, 1.0f / 25.0f) - 0.02f);
 
     float3 output_color = curr_color;
-    if (0 < x && x < 1.0 && 0 < y && y < 1.0 && (major_line_x <= 0.002 || major_line_y <= 0.002)) {
+    if (0 < x && x < 1.0f && 0 < y && y < 1.0f && (major_line_x <= 0.002f || major_line_y <= 0.002f)) {
         output_color += 0.1f;
     }
-    if (0 < x && x < 1.0 && 0 < y && y < 1.0 && (minor_line_x <= 0.001 || minor_line_y <= 0.001)) {
+    if (0 < x && x < 1.0f && 0 < y && y < 1.0f && (minor_line_x <= 0.001f || minor_line_y <= 0.001f)) {
         output_color += 0.05f;
     }
     return output_color;
 }
 
 __DEVICE__ void randomize_contrast(__PRIVATE__ contrast_params_t* params, __PRIVATE__ uint* seed) {
-    params->black_y += randu_bi(seed) * 0.2;
-    params->white_y += randu_bi(seed) * 0.2;
-    params->pivot_slope += randu_bi(seed) * 0.4;
-    params->toe += randu_bi(seed) * 0.4;
-    params->shoulder += randu_bi(seed) * 0.2;
+    params->black_y += randu_bi(seed) * 0.2f;
+    params->white_y += randu_bi(seed) * 0.2f;
+    params->pivot_slope += randu_bi(seed) * 0.4f;
+    params->toe += randu_bi(seed) * 0.4f;
+    params->shoulder += randu_bi(seed) * 0.2f;
 
     params->toe = _saturatef(params->toe);
     params->shoulder = _saturatef(params->shoulder);
@@ -296,23 +296,23 @@ __DEVICE__ void compute_toe_shoulder_quadratic(__PRIVATE__ contrast_params_t* pa
         // Low contrast, highlights.
         params->shoulder_x = _mix(params->pivot_x, params->white_x, params->shoulder);
         params->shoulder_y = point_slope(params->shoulder_x, params->pivot_x, params->pivot_y, params->pivot_slope);
-        params->white_slope = 2.0 * (params->white_y - params->shoulder_y) / (params->white_x - params->shoulder_x);
+        params->white_slope = 2.0f * (params->white_y - params->shoulder_y) / (params->white_x - params->shoulder_x);
     } else {
         // High contrast, highlights
         params->shoulder_y = _mix(params->pivot_y, params->white_y, params->shoulder);
         params->shoulder_x = point_slope_inv(params->shoulder_y, params->pivot_x, params->pivot_y, params->pivot_slope);
-        params->white_slope = 0.5 * (params->white_y - params->shoulder_y) / (params->white_x - params->shoulder_x);
+        params->white_slope = 0.5f * (params->white_y - params->shoulder_y) / (params->white_x - params->shoulder_x);
     }
 
     if (point_slope(params->black_x, params->pivot_x, params->pivot_y, params->pivot_slope) >= params->black_y) {
         // Low contrast, shadows
         params->toe_x = _mix(params->pivot_x, params->black_x, params->toe);
         params->toe_y = point_slope(params->toe_x, params->pivot_x, params->pivot_y, params->pivot_slope);
-        params->black_slope = 2.0 * (params->black_y - params->toe_y) / (params->black_x - params->toe_x);
+        params->black_slope = 2.0f * (params->black_y - params->toe_y) / (params->black_x - params->toe_x);
     } else {
         params->toe_y = _mix(params->pivot_y, params->black_y, params->toe);
         params->toe_x = point_slope_inv(params->toe_y, params->pivot_x, params->pivot_y, params->pivot_slope);
-        params->black_slope = 0.5 * (params->black_y - params->toe_y) / (params->black_x - params->toe_x);
+        params->black_slope = 0.5f * (params->black_y - params->toe_y) / (params->black_x - params->toe_x);
     }
 }
 
@@ -331,9 +331,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     contrast_params_t params;
     params.pivot_x = pivot;
     params.pivot_y = pivot;
-    params.black_x = 0.0;
+    params.black_x = 0.0f;
     params.black_y = black_point;
-    params.white_x = 1.0;
+    params.white_x = 1.0f;
     params.white_y = white_point;
     params.pivot_slope = pivot_slope;
     params.toe = toe;
@@ -365,8 +365,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     // Drawing grid lines and the contrast curve.
     float x = (float)p_X / p_Width;
-    x = (x - 0.5) * p_Width / p_Height + 0.5;
-    float y = 1.0 - (float)p_Y / p_Height;
+    x = (x - 0.5f) * p_Width / p_Height + 0.5f;
+    float y = 1.0f - (float)p_Y / p_Height;
     if (show_curve) {
         float3 curve_line = draw_contrast_curve(&params_r, &params_g, &params_b, x, y, output_color);
         float3 grid_line = draw_grid_lines(x, y, output_color);

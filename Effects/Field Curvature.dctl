@@ -27,13 +27,13 @@ __DEVICE__ inline float maxf(float x, float y) {
 }
 
 __DEVICE__ float powi(float x, int exp) {
-    float out = 1.0;
+    float out = 1.0f;
     int abs_exp = exp < 0 ? exp * -1 : exp;
     for (int i = 0; i < abs_exp; ++i) {
         out *= x;
     }
     if (exp < 0) {
-        out = 1.0 / out;
+        out = 1.0f / out;
     }
     return out;
 }
@@ -51,7 +51,7 @@ __DEVICE__ float powf(float base, float exp) {
 }
 
 __DEVICE__ float mixf(float x, float y, float a) {
-    return x * (1.0 - a) + y * a;
+    return x * (1.0f - a) + y * a;
 }
 
 __DEVICE__ float2 mixf2(float2 x, float2 y, float a) {
@@ -80,10 +80,10 @@ __DEVICE__ float smoothstep2(float start, float end, float alpha) {
     // https://www.desmos.com/calculator/pernscu1gx
     alpha = _clampf(alpha, 0.0f, 1.0f);
     float factor;
-    if (alpha < 0.5) {
-        factor = 0.5 * powi(alpha * 2.0, 3);
+    if (alpha < 0.5f) {
+        factor = 0.5f * powi(alpha * 2.0f, 3);
     } else {
-        factor = 0.5 * (2.0 - powi(2.0 - (alpha * 2.0), 3));
+        factor = 0.5f * (2.0f - powi(2.0f - (alpha * 2.0f), 3));
     }
     return mixf(start, end, factor);
 }
@@ -91,7 +91,7 @@ __DEVICE__ float smoothstep2(float start, float end, float alpha) {
 __DEVICE__ float ellipse_step(float start, float end, float alpha) {
     // Bottom right corner of ellipse given by
     // alpha^2 + ((y - end - start)/end))^2 = 1
-    return -_sqrtf(1.0 - alpha * alpha) * end + start + end;
+    return -_sqrtf(1.0f - alpha * alpha) * end + start + end;
 }
 
 typedef struct {
@@ -104,39 +104,39 @@ typedef struct {
 __DEVICE__ kernel_params_t make_kernel_params(float blur_rad, float cats_eye, bool distort, float factor) {
     kernel_params_t params;
     params.blur_rad = blur_rad;
-    params.cats_eye = cats_eye; // 0.0 is no cats eye, 1.0 is full cats eye (zero bokeh left)
+    params.cats_eye = cats_eye; // 0.0f is no cats eye, 1.0f is full cats eye (zero bokeh left)
     params.distort = distort;
     params.factor = factor;
     return params;
 }
 
 __DEVICE__ kernel_params_t compute_kernel_params_with_alpha(float alpha, float2 dimensions, float edge_blur_strength, float cats_eye, bool distort) {
-    float blur_rad = edge_blur_strength * dimensions.x / 2048.0; // max radius in pixels of blur.
+    float blur_rad = edge_blur_strength * dimensions.x / 2048.0f; // max radius in pixels of blur.
     return make_kernel_params(blur_rad * alpha, cats_eye * alpha, distort, alpha);
 }
 
 __DEVICE__ kernel_params_t compute_kernel(
     float2 xy, float2 dimensions, float2 protected_radius, float edge_blur_strength, float cats_eye, bool distort, int curve_type, float curve_falloff) {
     // normalized_pos is normalized so that left edge is x=-1, right edge is x=1, and it's square coordinates.
-    float2 normalized_pos = make_float2(((xy.x / (dimensions.x - 1.0)) - 0.5) * 2.0,
-                                        ((xy.y / (dimensions.y - 1.0)) - 0.5) * 2.0 // dimensions.y / dimensions.x
+    float2 normalized_pos = make_float2(((xy.x / (dimensions.x - 1.0f)) - 0.5f) * 2.0f,
+                                        ((xy.y / (dimensions.y - 1.0f)) - 0.5f) * 2.0f // dimensions.y / dimensions.x
     );
 
-    float blur_rad = edge_blur_strength * dimensions.x / 2048.0; // max radius in pixels of blur.
+    float blur_rad = edge_blur_strength * dimensions.x / 2048.0f; // max radius in pixels of blur.
     float curr_angle = _atan2f(normalized_pos.y, normalized_pos.x);
     float curr_radius = _hypotf(normalized_pos.x, normalized_pos.y);
 
     float protected_radius_curr_x =
-        _sqrtf(1.0 / (1.0 / powi(protected_radius.x, 2) + powi(normalized_pos.y / (normalized_pos.x * protected_radius.y), 2)));
+        _sqrtf(1.0f / (1.0f / powi(protected_radius.x, 2) + powi(normalized_pos.y / (normalized_pos.x * protected_radius.y), 2)));
     float protected_radius_curr_y = protected_radius_curr_x * normalized_pos.y / normalized_pos.x;
     float protected_radius_threshold = _hypotf(protected_radius_curr_x, protected_radius_curr_y);
 
     float2 max_blur_ellipse;
-    if (protected_radius.x == 0.0 && protected_radius.y == 0.0) {
-        float2 temp_protected_radius = make_float2(1.0, 1.0);
+    if (protected_radius.x == 0.0f && protected_radius.y == 0.0f) {
+        float2 temp_protected_radius = make_float2(1.0f, 1.0f);
         max_blur_ellipse.y = (_hypotf(temp_protected_radius.x, temp_protected_radius.y) / temp_protected_radius.x);
         max_blur_ellipse.x = temp_protected_radius.x / temp_protected_radius.y * max_blur_ellipse.y;
-    } else if (protected_radius.x != 0.0) {
+    } else if (protected_radius.x != 0.0f) {
         max_blur_ellipse.y = (_hypotf(protected_radius.x, protected_radius.y) / protected_radius.x);
         max_blur_ellipse.x = protected_radius.x / protected_radius.y * max_blur_ellipse.y;
     } else {
@@ -144,7 +144,7 @@ __DEVICE__ kernel_params_t compute_kernel(
         max_blur_ellipse.y = protected_radius.y / protected_radius.x * max_blur_ellipse.x;
     }
 
-    float max_radius_curr_x = _sqrtf(1.0 / (1.0 / powi(max_blur_ellipse.x, 2) + powi(normalized_pos.y / (normalized_pos.x * max_blur_ellipse.y), 2)));
+    float max_radius_curr_x = _sqrtf(1.0f / (1.0f / powi(max_blur_ellipse.x, 2) + powi(normalized_pos.y / (normalized_pos.x * max_blur_ellipse.y), 2)));
     float max_radius_curr_y = max_radius_curr_x * normalized_pos.y / normalized_pos.x;
     float max_radius_threshold = _hypotf(max_radius_curr_x, max_radius_curr_y);
     max_radius_threshold = maxf(protected_radius_threshold, max_radius_threshold);
@@ -154,28 +154,28 @@ __DEVICE__ kernel_params_t compute_kernel(
     float kernel_blur_factor = curr_factor;
     if (curve_type == CURVE_SIGMOID) {
         curr_factor = _clampf(pivot_contrast(curr_factor, 0.5f, 1.0f + curve_falloff), 0.0f, 1.0f);
-        kernel_blur_factor = smoothstep2(0.0, 1.0, curr_factor);
+        kernel_blur_factor = smoothstep2(0.0f, 1.0f, curr_factor);
     } else if (curve_type == CURVE_ELLIPSE) {
         curr_factor = powf(curr_factor, convert_gamma_to_reals(-1 * curve_falloff));
-        kernel_blur_factor = ellipse_step(0.0, 1.0, curr_factor);
+        kernel_blur_factor = ellipse_step(0.0f, 1.0f, curr_factor);
     } else if (curve_type == CURVE_LINEAR) {
         curr_factor = _clampf(pivot_contrast(curr_factor, 0.5f, 1.0f + curve_falloff), 0.0f, 1.0f);
         kernel_blur_factor = curr_factor;
     }
 
-    return make_kernel_params(kernel_blur_factor * blur_rad, mixf(0.0, cats_eye, curr_factor), distort, kernel_blur_factor);
+    return make_kernel_params(kernel_blur_factor * blur_rad, mixf(0.0f, cats_eye, curr_factor), distort, kernel_blur_factor);
 }
 
 __DEVICE__ float approx_circle_weight(float2 pos_trans, float radius) {
     // pos_trans is in pixels.
     float distance = _hypotf(pos_trans.x, pos_trans.y);
 
-    if (distance > radius + 0.5) {
-        return 0.0;
-    } else if (distance < radius - 0.5) {
-        return 1.0;
+    if (distance > radius + 0.5f) {
+        return 0.0f;
+    } else if (distance < radius - 0.5f) {
+        return 1.0f;
     } else {
-        return smoothstep2(1.0, 0.0, distance - (radius - 0.5));
+        return smoothstep2(1.0f, 0.0f, distance - (radius - 0.5f));
     }
 }
 
@@ -183,17 +183,17 @@ __DEVICE__ float blur_kernel(float2 pos_trans, float2 window_center, float2 dime
     // window_center and dimensions are in pixels.
     // pos_trans is number of pixels away from the center of the blur. IE curr_pos - window_center
     float distance = _hypotf(pos_trans.x, pos_trans.y);
-    if (params.cats_eye == 0.0) {
+    if (params.cats_eye == 0.0f) {
         // one circle situation
         return approx_circle_weight(pos_trans, params.blur_rad);
     }
 
     // Cats eye second circle is going to be offset by distance blur_rad * cats_eye towards the center of the frame.
-    float second_circle_radius = params.blur_rad * (1.2);
+    float second_circle_radius = params.blur_rad * (1.2f);
 
     float offset_factor = 1;
     if (params.distort) {
-        offset_factor *= 2.0;
+        offset_factor *= 2.0f;
     }
     float2 frame_center = 0.5f * (dimensions - 1.0f);
 
@@ -202,7 +202,7 @@ __DEVICE__ float blur_kernel(float2 pos_trans, float2 window_center, float2 dime
     float2 second_circle_center = frame_center_direction * params.blur_rad * params.cats_eye * offset_factor;
     float2 primary_circle_center = -1.0f * frame_center_direction * params.blur_rad * params.cats_eye * offset_factor;
     if (params.distort) {
-        primary_circle_center = make_float2(0.0, 0.0);
+        primary_circle_center = make_float2(0.0f, 0.0f);
     }
 
     // intersection of two circles
@@ -220,9 +220,9 @@ __DEVICE__ float blur_kernel(float2 pos_trans, float2 window_center, float2 dime
 }
 
 __DEVICE__ float3 blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, kernel_params_t params) {
-    float3 total_color = make_float3(0.0, 0.0, 0.0);
-    float weight = 0.0;
-    if (params.blur_rad < 0.5) {
+    float3 total_color = make_float3(0.0f, 0.0f, 0.0f);
+    float weight = 0.0f;
+    if (params.blur_rad < 0.5f) {
         return sample_color(center_pos, p_TexR, p_TexG, p_TexB);
     }
     int num_pixels = 0;
@@ -231,11 +231,11 @@ __DEVICE__ float3 blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p
     float2 dimensions = make_float2(p_Width, p_Height);
     float3 curr_color;
     for (int y = -params.blur_rad - 1; y <= params.blur_rad + 1; y++) {
-        float prev_weight = 0.0;
+        float prev_weight = 0.0f;
         for (int x = -params.blur_rad - 1; x <= params.blur_rad + 1; x++) {
             float w = blur_kernel(make_float2(x, y), center_pos_f, dimensions, params);
-            if (w == 0.0) {
-                if (prev_weight > 0.0) {
+            if (w == 0.0f) {
+                if (prev_weight > 0.0f) {
                     // Performance optimization: if the weight drops to zero for this line, all further entries in this row are zero weight
                     // and can be skipped.
                     break;
@@ -285,11 +285,11 @@ __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     if (draw_curve) {
         float x = (float)p_X / (float)(p_Width - 1);
         float y = (float)p_Y / (float)(p_Height - 1);
-        x = (x * 2.0) - 1.0; // normalize so that middle is zero
+        x = (x * 2.0f) - 1.0f; // normalize so that middle is zero
         y = 1 - y;
-        y *= 3.0;
+        y *= 3.0f;
 
-        float2 chart_pos = mixf2(make_float2(0.0, 0.0), make_float2(p_Width, p_Height) - 1.0f, p_X / (p_Width - 1.0));
+        float2 chart_pos = mixf2(make_float2(0.0f, 0.0f), make_float2(p_Width, p_Height) - 1.0f, p_X / (p_Width - 1.0f));
 
         if (use_alpha_for_strength) {
             float chart_alpha = _tex2D(p_TexA, (int)_round(chart_pos.x), (int)_round(chart_pos.y));
@@ -298,18 +298,18 @@ __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             params = compute_kernel(chart_pos,
                                     make_float2(p_Width, p_Height),
                                     make_float2(protected_radius_x, protected_radius_x),
-                                    edge_blur_strength / 20.0,
+                                    edge_blur_strength / 20.0f,
                                     cats_eye,
                                     distort,
                                     curve_type,
                                     curve_falloff);
         }
 
-        if (_fabs(y - params.blur_rad) < 0.002) {
-            output_color = make_float3(1.0, 1.0, 1.0);
+        if (_fabs(y - params.blur_rad) < 0.002f) {
+            output_color = make_float3(1.0f, 1.0f, 1.0f);
         }
-        if (_fabs(x) < 0.002 && mod(y, 0.15) < 0.1) {
-            output_color = make_float3(0.5, 0.5, 0.5);
+        if (_fabs(x) < 0.002f && mod(y, 0.15f) < 0.1f) {
+            output_color = make_float3(0.5f, 0.5f, 0.5f);
         }
     }
 

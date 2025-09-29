@@ -15,11 +15,11 @@ __DEVICE__ float random(__PRIVATE__ uint* seed) {
     const uint a = 48271;
     uint new_seed = (a * old_seed) % m;
     *seed = new_seed;
-    return (((float)new_seed) / (float)m) * 2.0 - 1.0;
+    return (((float)new_seed) / (float)m) * 2.0f - 1.0f;
 }
 
 __DEVICE__ float3 matmul(__PRIVATE__ Matrix* A, float3 rgb) {
-    float3 output = make_float3(0.0, 0.0, 0.0);
+    float3 output = make_float3(0.0f, 0.0f, 0.0f);
     output.x = A->c00 * rgb.x + A->c01 * rgb.y + A->c02 * rgb.z;
     output.y = A->c10 * rgb.x + A->c11 * rgb.y + A->c12 * rgb.z;
     output.z = A->c20 * rgb.x + A->c21 * rgb.y + A->c22 * rgb.z;
@@ -59,26 +59,26 @@ __DEVICE__ void scale_matrix(__PRIVATE__ Matrix* A, float c) {
 
 __DEVICE__ float get_mat_value(__PRIVATE__ Matrix* A, float x, float y) {
     float out;
-    if (x < 1.0 / 3.0) {
-        if (y < 1.0 / 3.0) {
+    if (x < 1.0f / 3.0f) {
+        if (y < 1.0f / 3.0f) {
             out = A->c00;
-        } else if (1.0 / 3.0 <= y && y < 2.0 / 3.0) {
+        } else if (1.0f / 3.0f <= y && y < 2.0f / 3.0f) {
             out = A->c10;
         } else {
             out = A->c20;
         }
-    } else if (1.0 / 3.0 <= x && x < 2.0 / 3.0) {
-        if (y < 1.0 / 3.0) {
+    } else if (1.0f / 3.0f <= x && x < 2.0f / 3.0f) {
+        if (y < 1.0f / 3.0f) {
             out = A->c01;
-        } else if (1.0 / 3.0 <= y && y < 2.0 / 3.0) {
+        } else if (1.0f / 3.0f <= y && y < 2.0f / 3.0f) {
             out = A->c11;
         } else {
             out = A->c21;
         }
     } else {
-        if (y < 1.0 / 3.0) {
+        if (y < 1.0f / 3.0f) {
             out = A->c02;
-        } else if (1.0 / 3.0 <= y && y < 2.0 / 3.0) {
+        } else if (1.0f / 3.0f <= y && y < 2.0f / 3.0f) {
             out = A->c12;
         } else {
             out = A->c22;
@@ -103,9 +103,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     scale_matrix(&mat, eps);
 
-    mat.c00 += 1.0;
-    mat.c11 += 1.0;
-    mat.c22 += 1.0;
+    mat.c00 += 1.0f;
+    mat.c11 += 1.0f;
+    mat.c22 += 1.0f;
 
     if (maintain_white) {
         // each row should sum to 1.
@@ -131,8 +131,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         // represents the 2-digit value to type
         // into the channel mixer.
         float c = get_mat_value(&mat, x, y);
-        c *= 100.0 / 1023.0;
-        c += 500.0 / 1023.0;
+        c *= 100.0f / 1023.0f;
+        c += 500.0f / 1023.0f;
         output_color = make_float3(c, c, c);
     } else {
         // show_matrix_opt == OFF

@@ -18,8 +18,8 @@ DEFINE_UI_PARAMS(seed_position_y, Seed Position Y, DCTLUI_SLIDER_FLOAT, 0.4, 0.0
 
 __DEVICE__ float standard_norm_cdf(float z) {
     // Approximation of Normal CDF function with mean 0 and var 1.
-    const float k = _sqrtf(2.0 / 3.1415926535);
-    float output = 1.0 / (1.0 + _expf(-2.0 * k * z));
+    const float k = _sqrtf(2.0f / 3.1415926535f);
+    float output = 1.0f / (1.0f + _expf(-2.0f * k * z));
     return output;
 }
 
@@ -34,14 +34,14 @@ __DEVICE__ float standard_norm_inv_cdf(float z) {
 
     // CDF
     // float out = _powf(2.0, -1.0 * _powf(22, 1 - _powf(41, z / 10.0)));
-    float abs_z = _fabs(z - 0.5) + 0.5;
-    float out = 10.0 / _logf(41.0) * _logf(1.0 - (_logf((-1.0 * _logf(abs_z)) / _logf(2.0))) / _logf(22.0));
-    if (abs_z >= 0.995) {
-        out = 2.5758;
+    float abs_z = _fabs(z - 0.5f) + 0.5f;
+    float out = 10.0f / _logf(41.0f) * _logf(1.0f - (_logf((-1.0f * _logf(abs_z)) / _logf(2.0f))) / _logf(22.0f));
+    if (abs_z >= 0.995f) {
+        out = 2.5758f;
     }
 
-    if (z <= 0.5) {
-        out *= -1.0;
+    if (z <= 0.5f) {
+        out *= -1.0f;
     }
     return out;
 }
@@ -53,7 +53,7 @@ __DEVICE__ float norm_inv_cdf(float z, float mean, float var) {
 
 __DEVICE__ float norm_pdf(float z, float mean, float var) {
     float out = _expf(-0.5f * (z - mean) * (z - mean) / var);
-    out *= 1.0 / (_sqrtf(2.0f * 3.1415926535f * var));
+    out *= 1.0f / (_sqrtf(2.0f * 3.1415926535f * var));
     return out;
 }
 
@@ -115,8 +115,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     int2 seed_position = make_int2((int)(seed_position_x * (p_Width - 1)), (int)(seed_position_y * (p_Height - 1)));
     float seed;
     seed = _tex2D(p_TexR, seed_position.x, seed_position.y);
-    seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0;
-    seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0;
+    seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0f;
+    seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0f;
     seed += curr_color.x * 10 + curr_color.y * 100 + curr_color.z * 1000;
     rand_state state_value = *((__PRIVATE__ rand_state*)&seed);
     __PRIVATE__ rand_state* state = &state_value;

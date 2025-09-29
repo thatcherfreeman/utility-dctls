@@ -16,13 +16,13 @@ __DEVICE__ float3 sample_color(int2 pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG,
 }
 
 __DEVICE__ float powi(float x, int exp) {
-    float out = 1.0;
+    float out = 1.0f;
     int abs_exp = exp < 0 ? exp * -1 : exp;
     for (int i = 0; i < abs_exp; ++i) {
         out *= x;
     }
     if (exp < 0) {
-        out = 1.0 / out;
+        out = 1.0f / out;
     }
     return out;
 }
@@ -36,10 +36,10 @@ __DEVICE__ float smoothstep2(float start, float end, float alpha) {
     // https://www.desmos.com/calculator/pernscu1gx
     alpha = _clampf(alpha, 0.0f, 1.0f);
     float factor;
-    if (alpha < 0.5) {
-        factor = 0.5 * powi(alpha * 2.0, 3);
+    if (alpha < 0.5f) {
+        factor = 0.5f * powi(alpha * 2.0f, 3);
     } else {
-        factor = 0.5 * (2.0 - powi(2.0 - (alpha * 2.0), 3));
+        factor = 0.5f * (2.0f - powi(2.0f - (alpha * 2.0f), 3));
     }
     return _mix(start, end, factor);
 }
@@ -75,16 +75,16 @@ __DEVICE__ float blur_kernel(float2 pos_trans, kernel_params_t params) {
     // pos_trans is number of pixels away from the center of the blur. IE curr_pos - center_pos
     float distance = _hypotf(pos_trans.x, pos_trans.y);
     if (distance > params.blur_rad) {
-        return 0.0;
+        return 0.0f;
     }
 
     return smoothstep2(
-        1.0, 0.0, powf((distance / params.blur_rad - params.falloff_start) / (1.0 - params.falloff_start), convert_gamma_to_reals(-1 * params.gamma)));
+        1.0f, 0.0f, powf((distance / params.blur_rad - params.falloff_start) / (1.0f - params.falloff_start), convert_gamma_to_reals(-1 * params.gamma)));
 }
 
 __DEVICE__ float3 blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, kernel_params_t params) {
-    float3 total_color = make_float3(0.0, 0.0, 0.0);
-    float weight = 0.0;
+    float3 total_color = make_float3(0.0f, 0.0f, 0.0f);
+    float weight = 0.0f;
     if (params.blur_rad < 1) {
         return sample_color(center_pos, p_TexR, p_TexG, p_TexB);
     }
@@ -93,7 +93,7 @@ __DEVICE__ float3 blur(int p_Width, int p_Height, int2 center_pos, __TEXTURE__ p
         for (int x = -params.blur_rad; x <= params.blur_rad; x++) {
             int2 runner_pos = center_pos + make_int2(x, y);
             float w = blur_kernel(make_float2(x, y), params);
-            if (w == 0.0) {
+            if (w == 0.0f) {
                 continue;
             }
             float3 curr_color = sample_color(runner_pos, p_TexR, p_TexG, p_TexB);
@@ -110,7 +110,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     int2 curr_pos = make_int2(p_X, p_Y);
 
     float3 curr_color = sample_color(curr_pos, p_TexR, p_TexG, p_TexB);
-    kernel_params_t params = make_kernel_params(blur_rad * p_Width / 2048.0, falloff_start, gamma);
+    kernel_params_t params = make_kernel_params(blur_rad * p_Width / 2048.0f, falloff_start, gamma);
 
     float3 blur_color = blur(p_Width, p_Height, curr_pos, p_TexR, p_TexG, p_TexB, params);
     float3 output_color = _mix(curr_color, blur_color, blur_opacity);
@@ -119,21 +119,21 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         float max_weight = blur_kernel(make_float2(0, 0), params);
         float x = (float)p_X / (float)(p_Width - 1);
         float y = (float)p_Y / (float)(p_Height - 1);
-        x = (x * 2.0) - 1.0; // normalize so that middle is zero
-        x = x * 1.2;         // Go a little wider so that we can see the smoothness of the PSF.
+        x = (x * 2.0f) - 1.0f; // normalize so that middle is zero
+        x = x * 1.2f;         // Go a little wider so that we can see the smoothness of the PSF.
         y = 1 - y;
-        y = y * 2.0;
-        params.blur_rad = 1.0;
+        y = y * 2.0f;
+        params.blur_rad = 1.0f;
 
         float curr_weight = blur_kernel(make_float2(x, 0), params);
-        if (_fabs(y - (curr_weight / max_weight)) < 0.002) {
-            output_color = make_float3(1.0, 1.0, 1.0);
+        if (_fabs(y - (curr_weight / max_weight)) < 0.002f) {
+            output_color = make_float3(1.0f, 1.0f, 1.0f);
         }
-        if (_fabs(_fabs(x) - params.blur_rad) < 0.002 && _fmod(y, 0.1f) < 0.05) {
-            output_color = make_float3(0.2, 0.2, 0.2);
+        if (_fabs(_fabs(x) - params.blur_rad) < 0.002f && _fmod(y, 0.1f) < 0.05f) {
+            output_color = make_float3(0.2f, 0.2f, 0.2f);
         }
-        if (_fabs(x) < 0.002 && _fmod(y, 0.15f) < 0.1) {
-            output_color = make_float3(0.5, 0.5, 0.5);
+        if (_fabs(x) < 0.002f && _fmod(y, 0.15f) < 0.1f) {
+            output_color = make_float3(0.5f, 0.5f, 0.5f);
         }
     }
 
