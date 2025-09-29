@@ -8,7 +8,7 @@ DEFINE_UI_PARAMS(exposure, Exposure Adjustment, DCTLUI_SLIDER_FLOAT, 0.0, -8.0, 
 // https://github.com/ampas/aces-dev
 
 __DEVICE__ float acescc_to_linear(float in) {
-    if (in < -0.3013698630f) { // (9.72-15)/17.52
+    if (in < -0.3013698630f) { // (9.72f-15)/17.52f
         return (_exp2f(in * 17.52f - 9.72f) - _exp2f(-16.0f)) * 2.0f;
     } else {
         return _exp2f(in * 17.52f - 9.72f);
@@ -17,7 +17,7 @@ __DEVICE__ float acescc_to_linear(float in) {
 
 __DEVICE__ float linear_to_acescc(float in) {
     if (in <= 0.0f) {
-        return -0.3584474886f; // =(log2( pow(2.,-16.))+9.72)/17.52
+        return -0.3584474886f; // =(log2( pow(2.f,-16.f))+9.72f)/17.52f
     } else if (in < _exp2f(-15.0f)) {
         return (_log2f(_exp2f(-16.0f) + in * 0.5f) + 9.72f) / 17.52f;
     } else {

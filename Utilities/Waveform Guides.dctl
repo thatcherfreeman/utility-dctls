@@ -195,8 +195,8 @@ __DEVICE__ void draw_char(char c, __PRIVATE__ char_trans_t* char_trans, __PRIVAT
 
         if (char_symbol[row] & (1 << col)) {
             float lum;
-            if (char_trans->waveform_y == 0.0) {
-                lum = 0.0;
+            if (char_trans->waveform_y == 0.0f) {
+                lum = 0.0f;
             } else {
                 lum = _mix(char_trans->waveform_y, char_trans->waveform_y - char_height, (curr_pos->y - char_trans->y) / char_height);
             }
@@ -275,7 +275,7 @@ __DEVICE__ void int2str(int f, char output[], int num_chars) {
 
         // Extract left digits
         for (int i = left_digits; i > 0 && runner < num_chars; --i, ++runner) {
-            float base = _powf(10.0, i - 1);
+            float base = _powf(10.0f, i - 1);
             int d = (int)_truncf((float)f / base);
             f = _fmod((float)f, base);
             output[runner] = digit2char(d);
@@ -298,8 +298,8 @@ __DEVICE__ void draw_rect(__PRIVATE__ rect_pos_t* rect_pos, __PRIVATE__ curr_pos
     if (rect_pos->x <= curr_pos->x && curr_pos->x <= rect_pos->x + rect_pos->width && rect_pos->y <= curr_pos->y &&
         curr_pos->y <= rect_pos->y + rect_pos->height) {
         float lum;
-        if (rect_pos->waveform_y == 0.0) {
-            lum = 0.0;
+        if (rect_pos->waveform_y == 0.0f) {
+            lum = 0.0f;
         } else {
             lum = _mix(rect_pos->waveform_y, rect_pos->waveform_y - rect_pos->height, -1 * (rect_pos->y - curr_pos->y) / rect_pos->height);
         }
@@ -324,14 +324,14 @@ typedef struct {
 // BT1886 NITS              //
 //////////////////////////////
 __DEVICE__ float gamma_24_nits_to_cv(float n) {
-    return powf(n / 100.0, 1.0 / 2.4);
+    return powf(n / 100.0f, 1.0f / 2.4f);
 }
 
 __DEVICE__ float bt1886_nits_to_cv(float l, float lw, float lb, float gamma) {
-    const float a = powf(powf(lw, 1.0 / gamma) - powf(lb, 1.0 / gamma), gamma);
-    const float b = powf(lb, 1.0 / gamma) / (powf(lw, 1.0 / gamma) - powf(lb, 1.0 / gamma));
+    const float a = powf(powf(lw, 1.0f / gamma) - powf(lb, 1.0f / gamma), gamma);
+    const float b = powf(lb, 1.0f / gamma) / (powf(lw, 1.0f / gamma) - powf(lb, 1.0f / gamma));
     // L = a * _fmaxf((V + b), 0) ^ gamma
-    float v = powf(l / a, 1.0 / gamma) - b;
+    float v = powf(l / a, 1.0f / gamma) - b;
     return v;
 }
 
@@ -340,13 +340,13 @@ __DEVICE__ float bt1886_nits_to_cv(float l, float lw, float lb, float gamma) {
 //////////////////////////////
 __DEVICE__ float st2084_nits_to_cv(float n) {
     // n is scaled so 1.0 is 1 nit.
-    float Y = n / 10000.0; // scale 10k nits to 1.0
-    const float m1 = 2610.0 / 16384.0;
-    const float m2 = 128.0 * 2523.0 / 4096.0;
-    const float c2 = 32.0 * 2413.0 / 4096.0;
-    const float c3 = 32.0 * 2392.0 / 4096.0;
-    const float c1 = c3 - c2 + 1.0;
-    return powf((c1 + c2 * powf(Y, m1)) / (1.0 + c3 * powf(Y, m1)), m2);
+    float Y = n / 10000.0f; // scale 10k nits to 1.0f
+    const float m1 = 2610.0f / 16384.0f;
+    const float m2 = 128.0f * 2523.0f / 4096.0f;
+    const float c2 = 32.0f * 2413.0f / 4096.0f;
+    const float c3 = 32.0f * 2392.0f / 4096.0f;
+    const float c1 = c3 - c2 + 1.0f;
+    return powf((c1 + c2 * powf(Y, m1)) / (1.0f + c3 * powf(Y, m1)), m2);
 }
 
 #define copy_array(source, dest, num_entries)                                                                                                             \
@@ -373,24 +373,24 @@ __DEVICE__ void draw_waveform(float major_cvs[],
                               __PRIVATE__ float3* curr_color,
                               __PRIVATE__ working_area_t* working_area) {
 
-    const float left_axis = 0.0;
-    const float left_margin_height = 1.0;
+    const float left_axis = 0.0f;
+    const float left_margin_height = 1.0f;
     const float left_margin_width = margin_params->text_width + margin_params->minor_line_width;
     const float bottom_margin_height = (margin_params->line_thickness * num_major_axes * margin_params->num_repetitions);
-    const float major_line_width = 1.0 - left_margin_width;
+    const float major_line_width = 1.0f - left_margin_width;
     const float minor_line_width = margin_params->minor_line_width;
     const float text_scale = margin_params->text_scale;
 
     // Tell the caller function what space remains.
     working_area->low_x = left_margin_width;
-    working_area->low_y = 0.0;
-    working_area->high_x = 1.0;
-    working_area->high_y = 1.0 - bottom_margin_height;
+    working_area->low_y = 0.0f;
+    working_area->high_x = 1.0f;
+    working_area->high_y = 1.0f - bottom_margin_height;
 
     // Black out the left margin and bottom margin.
-    rect_pos_t left_margin = {0.0, 1.0 - left_margin_height, left_margin_width, left_margin_height, 0.0};
+    rect_pos_t left_margin = {0.0f, 1.0f - left_margin_height, left_margin_width, left_margin_height, 0.0f};
     draw_rect(&left_margin, curr_pos, curr_color);
-    rect_pos_t bottom_margin = {0.0, 1.0 - bottom_margin_height, 1.0, bottom_margin_height, 0.0};
+    rect_pos_t bottom_margin = {0.0f, 1.0f - bottom_margin_height, 1.0f, bottom_margin_height, 0.0f};
     draw_rect(&bottom_margin, curr_pos, curr_color);
 
     for (int i = 0; i < num_major_axes; ++i) {
@@ -398,21 +398,21 @@ __DEVICE__ void draw_waveform(float major_cvs[],
         // Draw a wide line at the bottom of the frame somewhere.
         for (int j = 0; j < margin_params->num_repetitions; ++j) {
             rect_pos_t major_line = {left_margin_width,
-                                     1.0 - ((i + 1 + num_major_axes * j) * margin_params->line_thickness),
+                                     1.0f - ((i + 1 + num_major_axes * j) * margin_params->line_thickness),
                                      // 1.0 - cv,
                                      major_line_width,
                                      margin_params->line_thickness,
-                                     cv + (margin_params->line_thickness / 2.0)};
+                                     cv + (margin_params->line_thickness / 2.0f)};
             draw_rect(&major_line, curr_pos, curr_color);
 
             // Draw the text.
-            float char_cv = cv + (text_scale / 2.0);
+            float char_cv = cv + (text_scale / 2.0f);
             if (i == 0) {
-                char_cv += text_scale / 2.0;
+                char_cv += text_scale / 2.0f;
             } else if (i == num_major_axes - 1) {
-                char_cv -= text_scale / 2.0;
+                char_cv -= text_scale / 2.0f;
             }
-            char_trans_t char_trans = {left_axis, 1.0 - (((i + 1) + num_major_axes * j) * text_scale), text_scale, char_cv};
+            char_trans_t char_trans = {left_axis, 1.0f - (((i + 1) + num_major_axes * j) * text_scale), text_scale, char_cv};
             draw_string(nits_names[i], &char_trans, curr_pos, curr_color);
         }
     }
@@ -422,11 +422,11 @@ __DEVICE__ void draw_waveform(float major_cvs[],
         for (int j = 0; j < margin_params->num_repetitions; ++j) {
             // Draw a wide line at the bottom of the frame somewhere.
             rect_pos_t minor_line = {left_margin_width - minor_line_width,
-                                     1.0 - ((i + num_minor_axes * j) * margin_params->line_thickness),
+                                     1.0f - ((i + num_minor_axes * j) * margin_params->line_thickness),
                                      // 1.0 - cv,
                                      minor_line_width,
                                      margin_params->line_thickness,
-                                     cv + (margin_params->line_thickness / 2.0)};
+                                     cv + (margin_params->line_thickness / 2.0f)};
             draw_rect(&minor_line, curr_pos, curr_color);
         }
     }
@@ -446,7 +446,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         text_width,
         num_repetitions,
     };
-    working_area_t working_area = {0.0, 0.0, 1.0, 1.0};
+    working_area_t working_area = {0.0f, 0.0f, 1.0f, 1.0f};
     float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
 
     int num_major_axes;
@@ -458,7 +458,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     if (waveform_scale == BT1886_NITS || waveform_scale == ST2084_NITS) {
         float max_nits;
         if (waveform_scale == ST2084_NITS) {
-            max_nits = 10000.0;
+            max_nits = 10000.0f;
         } else if (waveform_scale == BT1886_NITS) {
             max_nits = bt1886_lw;
         }
@@ -474,7 +474,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 next_nits = nits * 10;
             }
             for (int k = 0; k < 10; ++k, ++num_minor_axes) {
-                minor_nits[j * 10 + k] = (next_nits / 10.0) * k;
+                minor_nits[j * 10 + k] = (next_nits / 10.0f) * k;
             }
             nits = next_nits;
         }
@@ -494,7 +494,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 substeps = 1;
             }
             for (int k = 0; k < substeps; ++k) {
-                minor_nits[j * 3 + k] = mid_gray * _exp2f((float)stop + (k * 0.33333333));
+                minor_nits[j * 3 + k] = mid_gray * _exp2f((float)stop + (k * 0.33333333f));
             }
         }
     }
@@ -527,9 +527,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             } else if (margin_params.rescale_image == ASPECT) {
                 // figure out if new area is wider or taller than the original image.
                 float new_aspect = (working_area.high_x - working_area.low_x) / (working_area.high_y - working_area.low_y);
-                float working_area_center_x = (working_area.high_x + working_area.low_x) / 2.0;
-                float working_area_center_y = (working_area.high_y + working_area.low_y) / 2.0;
-                if (new_aspect > 1.0) {
+                float working_area_center_x = (working_area.high_x + working_area.low_x) / 2.0f;
+                float working_area_center_y = (working_area.high_y + working_area.low_y) / 2.0f;
+                if (new_aspect > 1.0f) {
                     // wide, low_y->high_y should be filled.
                     scaled_x = _round(_mix(0, p_Width, ((curr_pos.x - working_area_center_x) * new_aspect + working_area_center_x) - working_area.low_x) /
                                       (working_area.high_x - working_area.low_x));
@@ -542,7 +542,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 }
             }
             if (scaled_x < 0 || scaled_x > p_Width || scaled_y < 0 || scaled_y > p_Height) {
-                curr_color = make_float3(0.0, 0.0, 0.0);
+                curr_color = make_float3(0.0f, 0.0f, 0.0f);
             } else {
                 curr_color = make_float3(_tex2D(p_TexR, scaled_x, scaled_y), _tex2D(p_TexG, scaled_x, scaled_y), _tex2D(p_TexB, scaled_x, scaled_y));
             }

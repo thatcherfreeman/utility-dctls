@@ -6,7 +6,7 @@ __DEVICE__ float bit_depth_from_difference(float diff) {
     // Diff represents the floating point value difference between two code values.
     // diff = 2^-x
     // -x = log2 (diff)
-    return -1.0 * _log2f(_fabs(diff));
+    return -1.0f * _log2f(_fabs(diff));
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
@@ -14,7 +14,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     float3 current_pixel = input_pixel;
 
-    float lowest_diff = 100.0;
+    float lowest_diff = 100.0f;
     for (int i = -1; i < 2; ++i) {
         for (int j = -1; j < 2; ++j) {
             float3 candidate_pixel = make_float3(_tex2D(p_TexR, p_X + i, p_Y + j), _tex2D(p_TexG, p_X + i, p_Y + j), _tex2D(p_TexB, p_X + i, p_Y + j));
@@ -24,13 +24,13 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             differences.y = _fabs(differences.y);
             differences.z = _fabs(differences.z);
 
-            if (differences.x > 0.0) {
+            if (differences.x > 0.0f) {
                 lowest_diff = _fminf(lowest_diff, differences.x);
             }
-            if (differences.y > 0.0) {
+            if (differences.y > 0.0f) {
                 lowest_diff = _fminf(lowest_diff, differences.y);
             }
-            if (differences.z > 0.0) {
+            if (differences.z > 0.0f) {
                 lowest_diff = _fminf(lowest_diff, differences.z);
             }
         }
@@ -40,7 +40,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float3 output = make_float3(curr_bit_depth, curr_bit_depth, curr_bit_depth);
 
     if (highlight_on) {
-        if (_fabs(curr_bit_depth - highlight_bit_depth) > 0.1) {
+        if (_fabs(curr_bit_depth - highlight_bit_depth) > 0.1f) {
             output = input_pixel;
         }
     }

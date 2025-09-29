@@ -32,22 +32,22 @@ __DEVICE__ float3 rgb_d_to_rgb(float3 rgb_d) {
 __DEVICE__ float3 rgb_d_to_ycbcr(float3 rgb_d) {
     // Takes rgb_d as input, scaled 16-235.
     // Follows procedure from BT709 section 3
-    float3 y_cb_cr = make_float3(0.0, 0.0, 0.0);
-    y_cb_cr.x = 0.2126 * rgb_d.x + 0.7152 * rgb_d.y + 0.0722 * rgb_d.z;
-    y_cb_cr.y = ((-0.2126 * rgb_d.x - 0.7152 * rgb_d.y + 0.9278 * rgb_d.z) / 1.8556) * (224.0 / 219.0) + 128.0;
-    y_cb_cr.z = ((0.7874 * rgb_d.x - 0.7152 * rgb_d.y - 0.0722 * rgb_d.z) / 1.5748) * (224.0 / 219.0) + 128.0;
-    return y_cb_cr; // scaled 16-235, 16-240, 16-240.
+    float3 y_cb_cr = make_float3(0.0f, 0.0f, 0.0f);
+    y_cb_cr.x = 0.2126f * rgb_d.x + 0.7152f * rgb_d.y + 0.0722f * rgb_d.z;
+    y_cb_cr.y = ((-0.2126f * rgb_d.x - 0.7152f * rgb_d.y + 0.9278f * rgb_d.z) / 1.8556f) * (224.0f / 219.0f) + 128.0f;
+    y_cb_cr.z = ((0.7874f * rgb_d.x - 0.7152f * rgb_d.y - 0.0722f * rgb_d.z) / 1.5748f) * (224.0f / 219.0f) + 128.0f;
+    return y_cb_cr; // scaled 16-235, 16-240, 16-240.f
 }
 
 __DEVICE__ float3 ycbcr_to_rgb_d(float3 y_cb_cr) {
-    float3 rgb_d = make_float3(0.0, 0.0, 0.0);
+    float3 rgb_d = make_float3(0.0f, 0.0f, 0.0f);
     // blue_diff is equal to rgb_d.z - Y
     // red_diff is equal to rgb_d.x - Y
-    float blue_diff = (y_cb_cr.y - 128.0) * (219.0 / 224.0) * 1.8556;
-    float red_diff = (y_cb_cr.z - 128.0) * (219.0 / 224.0) * 1.5748;
+    float blue_diff = (y_cb_cr.y - 128.0f) * (219.0f / 224.0f) * 1.8556f;
+    float red_diff = (y_cb_cr.z - 128.0f) * (219.0f / 224.0f) * 1.5748f;
     rgb_d.x = red_diff + y_cb_cr.x;
     rgb_d.z = blue_diff + y_cb_cr.x;
-    rgb_d.y = (y_cb_cr.x - (0.2126 * rgb_d.x + 0.0722 * rgb_d.z)) / 0.7152;
+    rgb_d.y = (y_cb_cr.x - (0.2126f * rgb_d.x + 0.0722f * rgb_d.z)) / 0.7152f;
     return rgb_d;
 }
 
@@ -78,8 +78,8 @@ __DEVICE__ void get_ycbcr_to_rgb_mat(float dest[3][3], float3 lum_coeffs) {
 }
 
 __DEVICE__ float3 chroma_subsample(chroma_subsample_params_t cs, float3 region[2][4], int rx, int ry) {
-    float3 output_region[2][4] = {{{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}},
-                                  {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}};
+    float3 output_region[2][4] = {{{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}},
+                                  {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}}};
 
     int new_rx = rx, new_ry = ry;
     if (cs.a == 1) {
@@ -121,8 +121,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     int r_orig_x = p_X - rx;
     int r_orig_y = p_Y - ry;
 
-    float3 region[2][4] = {{{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}},
-                           {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}}};
+    float3 region[2][4] = {{{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}},
+                           {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}}};
 
     for (int r = 0; r < 2; ++r) {
         for (int c = 0; c < 4; ++c) {
@@ -131,7 +131,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             if (input_format == INPUT_RGB) {
                 color = rgb_d_to_ycbcr(rgb_to_rgb_d(color));
             } else if (input_format == INPUT_YCBCR) {
-                color = color * 255.0;
+                color = color * 255.0f;
             }
             region[r][c] = color;
         }

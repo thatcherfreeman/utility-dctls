@@ -44,15 +44,15 @@ __DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float
     float c = _cosf(angle);
     float s = _sinf(angle);
 
-    mat[0][0] = c + pow2f(axis.x) * (1.0 - c);
-    mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
-    mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
-    mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
-    mat[1][1] = c + pow2f(axis.y) * (1.0 - c);
-    mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
-    mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
-    mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
-    mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
+    mat[0][0] = c + pow2f(axis.x) * (1.0f - c);
+    mat[0][1] = axis.x * axis.y * (1.0f - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0f - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0f - c) + axis.z * s;
+    mat[1][1] = c + pow2f(axis.y) * (1.0f - c);
+    mat[1][2] = axis.y * axis.z * (1.0f - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0f - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0f - c) + axis.x * s;
+    mat[2][2] = c + pow2f(axis.z) * (1.0f - c);
 }
 
 __DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
@@ -93,7 +93,7 @@ __DEVICE__ float3 rgb_to_hsl(float3 rgb) {
     float3 lab = mv_33_3(mat, rgb);
 
     float3 hsl;
-    hsl.x = mod(_atan2f(lab.z, lab.y), 2.0 * PI);
+    hsl.x = mod(_atan2f(lab.z, lab.y), 2.0f * PI);
     hsl.y = _sqrtf(lab.y * lab.y + lab.z * lab.z);
     if (hsl.y == 0.0f) {
         hsl.x = 0.0f;
@@ -116,7 +116,7 @@ __DEVICE__ float3 hsl_to_rgb(float3 hsl) {
 
     mat_inverse_33(inv_mat, mat);
 
-    hsl.x = mod(hsl.x, 2.0 * PI);
+    hsl.x = mod(hsl.x, 2.0f * PI);
     hsl.y = _fmaxf(hsl.y, 0.0f);
     float3 lab = make_float3(hsl.z, hsl.y * _cosf(hsl.x), hsl.y * _sinf(hsl.x));
 
@@ -154,24 +154,24 @@ __DEVICE__ float3 hsv_to_rgb(float3 hsv) {
     float sat = hsv.y;
     float val = hsv.z;
 
-    hue = convert_from_radians(mod(hue, 2.0 * PI), DEGREES);
+    hue = convert_from_radians(mod(hue, 2.0f * PI), DEGREES);
 
     float c = val * sat;
-    float x = c * (1.0 - _fabs(_fmod(hue / 60.0, 2.0) - 1.0));
+    float x = c * (1.0f - _fabs(_fmod(hue / 60.0f, 2.0f) - 1.0f));
     float m = val - c;
-    float3 rgbp = make_float3(0.0, 0.0, 0.0);
-    if (0.0 <= hue && hue < 60.0) {
-        rgbp = make_float3(c, x, 0.0);
-    } else if (60.0 <= hue && hue < 120.0) {
-        rgbp = make_float3(x, c, 0.0);
-    } else if (120.0 <= hue && hue < 180.0) {
-        rgbp = make_float3(0.0, c, x);
-    } else if (180.0 <= hue && hue < 240.0) {
-        rgbp = make_float3(0.0, x, c);
-    } else if (240.0 <= hue && hue < 300.0) {
-        rgbp = make_float3(x, 0.0, c);
-    } else if (300.0 <= hue && hue < 360.0) {
-        rgbp = make_float3(c, 0.0, x);
+    float3 rgbp = make_float3(0.0f, 0.0f, 0.0f);
+    if (0.0f <= hue && hue < 60.0f) {
+        rgbp = make_float3(c, x, 0.0f);
+    } else if (60.0f <= hue && hue < 120.0f) {
+        rgbp = make_float3(x, c, 0.0f);
+    } else if (120.0f <= hue && hue < 180.0f) {
+        rgbp = make_float3(0.0f, c, x);
+    } else if (180.0f <= hue && hue < 240.0f) {
+        rgbp = make_float3(0.0f, x, c);
+    } else if (240.0f <= hue && hue < 300.0f) {
+        rgbp = make_float3(x, 0.0f, c);
+    } else if (300.0f <= hue && hue < 360.0f) {
+        rgbp = make_float3(c, 0.0f, x);
     }
     return rgbp + m;
 }
@@ -208,14 +208,14 @@ __DEVICE__ float3 rgb_to_hsv(float3 rgb) {
 
     S = _clampf(S, 0.0f, 1.0f);
 
-    float3 color = make_float3(H * 2.0 * PI, S, V);
+    float3 color = make_float3(H * 2.0f * PI, S, V);
     return color;
 }
 
 __DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
     // Expects hue in radians
     // Adapted from Juan Pablo Zambrano's code
-    float3 lsh = make_float3(hsv.z, hsv.y * 3.0, mod(hsv.x, 2.0 * PI));
+    float3 lsh = make_float3(hsv.z, hsv.y * 3.0f, mod(hsv.x, 2.0f * PI));
 
     float ctr = lsh.x * lsh.y * _cosf(lsh.z);
     float ctg = lsh.x;
@@ -223,9 +223,9 @@ __DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
     float3 c = make_float3(ctr, ctg, ctb);
 
     float mat[3][3] = {
-        {2.0 / 3.0, 1.0, 0.0},
-        {-1.0 / 3.0, 1.0, _sqrtf(3.0) / 3.0},
-        {-1.0 / 3.0, 1.0, -_sqrtf(3.0) / 3.0},
+        {2.0f / 3.0f, 1.0f, 0.0f},
+        {-1.0f / 3.0f, 1.0f, _sqrtf(3.0f) / 3.0f},
+        {-1.0f / 3.0f, 1.0f, -_sqrtf(3.0f) / 3.0f},
     };
 
     return mv_33_3(mat, c);
@@ -238,22 +238,22 @@ __DEVICE__ float3 rgb_to_cylindrical(float3 x) {
     // Also rotates input (1, 0, 0) above the red axis and ensures that
     // (1, 0, 0) input ends up having a red channel code value of (1).
     float mat[3][3] = {
-        {1.0, -1.0 / 2.0, -1.0 / 2.0},
-        {1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0},
-        {0.0, _sqrtf(3.0) / 2.0, -_sqrtf(3.0) / 2.0},
+        {1.0f, -1.0f / 2.0f, -1.0f / 2.0f},
+        {1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f},
+        {0.0f, _sqrtf(3.0f) / 2.0f, -_sqrtf(3.0f) / 2.0f},
     };
 
     float3 rotated_color = mv_33_3(mat, x);
     float l = rotated_color.y;
-    float3 hsl = make_float3(0.0, 0.0, 0.0);
+    float3 hsl = make_float3(0.0f, 0.0f, 0.0f);
 
     float3 normalized_color = rotated_color / l;
-    if (l == 0.0) {
-        hsl = make_float3(0.0, 0.0, l);
+    if (l == 0.0f) {
+        hsl = make_float3(0.0f, 0.0f, l);
     } else {
         float theta = _atan2f(normalized_color.z, normalized_color.x);
-        hsl.x = mod(theta, 2.0 * PI);
-        hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0;
+        hsl.x = mod(theta, 2.0f * PI);
+        hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0f;
         hsl.z = l;
     }
     return hsl;
@@ -261,26 +261,26 @@ __DEVICE__ float3 rgb_to_cylindrical(float3 x) {
 
 __DEVICE__ float3 rgb_to_spherical(float3 x) {
     // outputs hue in radians
-    const float3 achromatic = make_float3(1.0, 1.0, 1.0);
-    const float3 red_axis = make_float3(1.0, 0.0, 0.0);
-    float rot_mat[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
-    float rot_mat2[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    const float3 achromatic = make_float3(1.0f, 1.0f, 1.0f);
+    const float3 red_axis = make_float3(1.0f, 0.0f, 0.0f);
+    float rot_mat[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
+    float rot_mat2[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
 
     // Moves the achromatic axis to the red axis.
-    make_rotation_mat_axis_angle(rot_mat, unit_vec(cross_product(red_axis, achromatic)), -1.0 * _acosf(dot_product(red_axis, unit_vec(achromatic))));
+    make_rotation_mat_axis_angle(rot_mat, unit_vec(cross_product(red_axis, achromatic)), -1.0f * _acosf(dot_product(red_axis, unit_vec(achromatic))));
     // Rotates around (1, 0, 0) so that the old red vector points to (1, 0, 0).
-    make_rotation_mat_axis_angle(rot_mat2, red_axis, 3.0 * PI / 4.0);
+    make_rotation_mat_axis_angle(rot_mat2, red_axis, 3.0f * PI / 4.0f);
 
     float3 rotated_color = mv_33_3(rot_mat, x);
     rotated_color = mv_33_3(rot_mat2, rotated_color);
     float theta = _atan2f(rotated_color.z, rotated_color.y);
 
     float value = norm_f3(rotated_color);
-    float hue = mod(theta, 2.0 * PI);
-    float sat = _atan2f(norm_f3(make_float3(rotated_color.y, rotated_color.z, 0.0)), rotated_color.x);
+    float hue = mod(theta, 2.0f * PI);
+    float sat = _atan2f(norm_f3(make_float3(rotated_color.y, rotated_color.z, 0.0f)), rotated_color.x);
 
-    if (_fabs(sat - PI) < 1e-5) {
-        hue = 0.0;
+    if (_fabs(sat - PI) < 1e-5f) {
+        hue = 0.0f;
     }
 
     return make_float3(hue, sat, value);
@@ -288,19 +288,19 @@ __DEVICE__ float3 rgb_to_spherical(float3 x) {
 
 __DEVICE__ float3 spherical_to_rgb(float3 in) {
     // Expects hue to be radians.
-    const float3 achromatic = make_float3(1.0, 1.0, 1.0);
-    const float3 red_axis = make_float3(1.0, 0.0, 0.0);
+    const float3 achromatic = make_float3(1.0f, 1.0f, 1.0f);
+    const float3 red_axis = make_float3(1.0f, 0.0f, 0.0f);
 
-    float rot_mat_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
-    float rot_mat2_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    float rot_mat_inv[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
+    float rot_mat2_inv[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
     make_rotation_mat_axis_angle(rot_mat_inv, unit_vec(cross_product(red_axis, achromatic)), _acosf(dot_product(red_axis, unit_vec(achromatic))));
-    make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0 * PI / 4.0);
+    make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0f * PI / 4.0f);
 
-    float hue = mod(in.x, 2.0 * PI);
+    float hue = mod(in.x, 2.0f * PI);
     float sat = in.y;
     float value = in.z;
 
-    float3 direction = make_float3(1.0, 1.0, 1.0);
+    float3 direction = make_float3(1.0f, 1.0f, 1.0f);
     direction.x = value * _cosf(sat);
     direction.z = value * _sinf(hue) * _sinf(sat);
     direction.y = value * _cosf(hue) * _sinf(sat);
@@ -314,7 +314,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 input = make_float3(p_R, p_G, p_B);
     float3 output;
 
-    float3 red_spherical = rgb_to_spherical(make_float3(1.0, 0.0, 0.0));
+    float3 red_spherical = rgb_to_spherical(make_float3(1.0f, 0.0f, 0.0f));
 
     if (direction == PRE_CURVES) {
         // Need to go to HSL space.

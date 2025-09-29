@@ -33,7 +33,7 @@ __DEVICE__ float sample_point_bilinear_1ch(float x, float y, __TEXTURE__ tex, fl
 }
 
 __DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
-    float3 out = make_float3(0.0, 0.0, 0.0);
+    float3 out = make_float3(0.0f, 0.0f, 0.0f);
     out.x = sample_point_bilinear_1ch(x, y, p_TexR, scale);
     out.y = sample_point_bilinear_1ch(x, y, p_TexG, scale);
     out.z = sample_point_bilinear_1ch(x, y, p_TexB, scale);
@@ -42,19 +42,19 @@ __DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR
 
 __DEVICE__ float st2084_nits_to_cv(float n) {
     // n is scaled so 1.0 is 1 nit.
-    float Y = n / 10000.0; // scale 10k nits to 1.0
-    const float m1 = 2610.0 / 16384.0;
-    const float m2 = 128.0 * 2523.0 / 4096.0;
-    const float c2 = 32.0 * 2413.0 / 4096.0;
-    const float c3 = 32.0 * 2392.0 / 4096.0;
-    const float c1 = c3 - c2 + 1.0;
-    return powf((c1 + c2 * powf(Y, m1)) / (1.0 + c3 * powf(Y, m1)), m2);
+    float Y = n / 10000.0f; // scale 10k nits to 1.0f
+    const float m1 = 2610.0f / 16384.0f;
+    const float m2 = 128.0f * 2523.0f / 4096.0f;
+    const float c2 = 32.0f * 2413.0f / 4096.0f;
+    const float c3 = 32.0f * 2392.0f / 4096.0f;
+    const float c1 = c3 - c2 + 1.0f;
+    return powf((c1 + c2 * powf(Y, m1)) / (1.0f + c3 * powf(Y, m1)), m2);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
 
-    float x = (float)p_X / ((float)p_Width - 1) - 0.5;
-    float y = (float)p_Y / ((float)p_Height - 1) - 0.5;
+    float x = (float)p_X / ((float)p_Width - 1) - 0.5f;
+    float y = (float)p_Y / ((float)p_Height - 1) - 0.5f;
     float desired_width = p_Width;
     float desired_height = p_Height;
     if (!use_timeline_aspect_ratio) {
@@ -72,11 +72,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         x *= p_Width / desired_width;
         y *= p_Height / desired_height;
     }
-    float side_bar_width = (p_Width - desired_width) / 2.0;
-    float top_bar_width = (p_Height - desired_height) / 2.0;
+    float side_bar_width = (p_Width - desired_width) / 2.0f;
+    float top_bar_width = (p_Height - desired_height) / 2.0f;
 
-    float x_sample = (((x / scaling) + 0.5) * (desired_width - 1)) + side_bar_width;
-    float y_sample = (((y / scaling) + 0.5) * (desired_height - 1)) + top_bar_width;
+    float x_sample = (((x / scaling) + 0.5f) * (desired_width - 1)) + side_bar_width;
+    float y_sample = (((y / scaling) + 0.5f) * (desired_height - 1)) + top_bar_width;
 
     float3 out;
     if (x_sample < side_bar_width || x_sample >= desired_width + side_bar_width || y_sample < top_bar_width ||
@@ -84,27 +84,27 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         float white_point_cv;
         switch (white_point_units) {
             case UNITS_CODE_VALUE:
-                white_point_cv = white_point_input / 100.0;
+                white_point_cv = white_point_input / 100.0f;
                 break;
             case UNITS_GAMMA_22_NITS:
-                white_point_cv = powf(white_point_input / 100.0, 1.0 / 2.2);
+                white_point_cv = powf(white_point_input / 100.0f, 1.0f / 2.2f);
                 break;
             case UNITS_GAMMA_24_NITS:
-                white_point_cv = powf(white_point_input / 100.0, 1.0 / 2.4);
+                white_point_cv = powf(white_point_input / 100.0f, 1.0f / 2.4f);
                 break;
             case UNITS_GAMMA_26_NITS:
-                white_point_cv = powf(white_point_input / 100.0, 1.0 / 2.6);
+                white_point_cv = powf(white_point_input / 100.0f, 1.0f / 2.6f);
                 break;
             case UNITS_PQ_NITS:
                 white_point_cv = st2084_nits_to_cv(white_point_input);
                 break;
             default:
-                white_point_cv = -1.0;
+                white_point_cv = -1.0f;
                 break;
         }
         out = make_float3(white_point_cv, white_point_cv, white_point_cv);
     } else {
-        out = sample_point_bilinear_3ch(x_sample, y_sample, p_TexR, p_TexG, p_TexB, 1.0);
+        out = sample_point_bilinear_3ch(x_sample, y_sample, p_TexR, p_TexG, p_TexB, 1.0f);
     }
     return out;
 }

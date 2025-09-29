@@ -7,7 +7,7 @@ DEFINE_UI_PARAMS(output_mode, Output Mode, DCTLUI_COMBO_BOX, 4, {OUTPUT_MEAN, OU
 // clang-format on
 
 // Color model for false color stuff.
-#define PI (3.14159265358979323)
+#define PI (3.14159265358979323f)
 
 __DEVICE__ inline float pow2f(float base) {
     return base * base;
@@ -30,7 +30,7 @@ __DEVICE__ float mod(float x, float y) {
 
 __DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
     // Adapted from Juan Pablo Zambrano's code
-    float3 lsh = make_float3(hsv.z, hsv.y * 3.0, mod(hsv.x, 1.0) * 2.0 * PI);
+    float3 lsh = make_float3(hsv.z, hsv.y * 3.0f, mod(hsv.x, 1.0f) * 2.0f * PI);
 
     float ctr = lsh.x * lsh.y * _cosf(lsh.z);
     float ctg = lsh.x;
@@ -38,9 +38,9 @@ __DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
     float3 c = make_float3(ctr, ctg, ctb);
 
     float mat[3][3] = {
-        {2.0 / 3.0, 1.0, 0.0},
-        {-1.0 / 3.0, 1.0, _sqrtf(3.0) / 3.0},
-        {-1.0 / 3.0, 1.0, -_sqrtf(3.0) / 3.0},
+        {2.0f / 3.0f, 1.0f, 0.0f},
+        {-1.0f / 3.0f, 1.0f, _sqrtf(3.0f) / 3.0f},
+        {-1.0f / 3.0f, 1.0f, -_sqrtf(3.0f) / 3.0f},
     };
 
     return mv_33_3(mat, c);
@@ -52,22 +52,22 @@ __DEVICE__ float3 rgb_to_cylindrical(float3 x) {
     // Also rotates input (1, 0, 0) above the red axis and ensures that
     // (1, 0, 0) input ends up having a red channel code value of (1).
     float mat[3][3] = {
-        {1.0, -1.0 / 2.0, -1.0 / 2.0},
-        {1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0},
-        {0.0, _sqrtf(3.0) / 2.0, -_sqrtf(3.0) / 2.0},
+        {1.0f, -1.0f / 2.0f, -1.0f / 2.0f},
+        {1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f},
+        {0.0f, _sqrtf(3.0f) / 2.0f, -_sqrtf(3.0f) / 2.0f},
     };
 
     float3 rotated_color = mv_33_3(mat, x);
     float l = rotated_color.y;
-    float3 hsl = make_float3(0.0, 0.0, 0.0);
+    float3 hsl = make_float3(0.0f, 0.0f, 0.0f);
 
     float3 normalized_color = rotated_color / l;
-    if (l == 0.0) {
-        hsl = make_float3(0.0, 0.0, l);
+    if (l == 0.0f) {
+        hsl = make_float3(0.0f, 0.0f, l);
     } else {
         float theta = _atan2f(normalized_color.z, normalized_color.x);
-        hsl.x = mod(theta, 2.0 * PI) / (2.0 * PI);
-        hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0;
+        hsl.x = mod(theta, 2.0f * PI) / (2.0f * PI);
+        hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0f;
         hsl.z = l;
     }
     return hsl;
@@ -92,9 +92,9 @@ __DEVICE__ pixel_stats_t make_pixel_stats(float3 sample_mean, float3 sample_var)
 
 __DEVICE__ pixel_stats_t
 sample_color(int window_size, float black_point, int width, int height, int px, int py, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b) {
-    float weight = 0.0;
-    float3 total = make_float3(0.0, 0.0, 0.0);
-    float3 total_squared = make_float3(0.0, 0.0, 0.0);
+    float weight = 0.0f;
+    float3 total = make_float3(0.0f, 0.0f, 0.0f);
+    float3 total_squared = make_float3(0.0f, 0.0f, 0.0f);
 
     int left_margin = window_size / 2;
     int right_margin = window_size / 2;
@@ -110,7 +110,7 @@ sample_color(int window_size, float black_point, int width, int height, int px, 
 
                 float3 sample_color = make_float3(_tex2D(tex_r, i, j), _tex2D(tex_g, i, j), _tex2D(tex_b, i, j));
 
-                weight += 1.0;
+                weight += 1.0f;
                 total += sample_color;
                 total_squared += sample_color * sample_color;
             }
@@ -125,35 +125,35 @@ sample_color(int window_size, float black_point, int width, int height, int px, 
 
 __DEVICE__ float3 snr_false_color(float sample_average_snr) {
     float3 output_color;
-    const float false_color_sat = 0.5;
-    const float false_color_luminance = 0.18;
-    if (sample_average_snr < 0.5) {
+    const float false_color_sat = 0.5f;
+    const float false_color_luminance = 0.18f;
+    if (sample_average_snr < 0.5f) {
         // very noisy, magenta
-        output_color = cylindrical_to_rgb(make_float3(5.0 / 6.0, false_color_sat, false_color_luminance));
-    } else if (sample_average_snr < 1.0) {
+        output_color = cylindrical_to_rgb(make_float3(5.0f / 6.0f, false_color_sat, false_color_luminance));
+    } else if (sample_average_snr < 1.0f) {
         // blue
-        output_color = cylindrical_to_rgb(make_float3(4.0 / 6.0, false_color_sat, false_color_luminance));
-    } else if (sample_average_snr < 2.0) {
+        output_color = cylindrical_to_rgb(make_float3(4.0f / 6.0f, false_color_sat, false_color_luminance));
+    } else if (sample_average_snr < 2.0f) {
         // cyan
-        output_color = cylindrical_to_rgb(make_float3(3.0 / 6.0, false_color_sat, false_color_luminance));
-    } else if (sample_average_snr < 4.0) {
+        output_color = cylindrical_to_rgb(make_float3(3.0f / 6.0f, false_color_sat, false_color_luminance));
+    } else if (sample_average_snr < 4.0f) {
         // green
-        output_color = cylindrical_to_rgb(make_float3(2.0 / 6.0, false_color_sat, false_color_luminance));
-    } else if (sample_average_snr < 8.0) {
+        output_color = cylindrical_to_rgb(make_float3(2.0f / 6.0f, false_color_sat, false_color_luminance));
+    } else if (sample_average_snr < 8.0f) {
         // yellow
-        output_color = cylindrical_to_rgb(make_float3(1.0 / 6.0, false_color_sat, false_color_luminance));
-    } else if (sample_average_snr < 16.0) {
+        output_color = cylindrical_to_rgb(make_float3(1.0f / 6.0f, false_color_sat, false_color_luminance));
+    } else if (sample_average_snr < 16.0f) {
         // red
-        output_color = cylindrical_to_rgb(make_float3(0.0, false_color_sat, false_color_luminance));
+        output_color = cylindrical_to_rgb(make_float3(0.0f, false_color_sat, false_color_luminance));
     } else {
         // white
-        output_color = cylindrical_to_rgb(make_float3(0.0, 0.0, 1.0));
+        output_color = cylindrical_to_rgb(make_float3(0.0f, 0.0f, 1.0f));
     }
     return output_color;
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
-    float3 output_color = make_float3(1.0, 0.0, 0.0);
+    float3 output_color = make_float3(1.0f, 0.0f, 0.0f);
     if (input_mode == INPUT_IMAGE) {
         pixel_stats_t curr_stats = sample_color(window_size, black_point, p_Width, p_Height, p_X, p_Y, p_TexR, p_TexG, p_TexB);
         if (output_mode == OUTPUT_MEAN) {
@@ -165,7 +165,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         } else if (output_mode == OUTPUT_SNR) {
             output_color = curr_stats.sample_snr;
         } else if (output_mode == OUTPUT_FALSE_COLOR) {
-            float average_snr = (curr_stats.sample_snr.x + curr_stats.sample_snr.y + curr_stats.sample_snr.z) / 3.0;
+            float average_snr = (curr_stats.sample_snr.x + curr_stats.sample_snr.y + curr_stats.sample_snr.z) / 3.0f;
             output_color = snr_false_color(average_snr);
         }
     } else if (input_mode == INPUT_SNR) {
@@ -173,7 +173,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         if (output_mode == OUTPUT_SNR) {
             output_color = curr_snr;
         } else if (output_mode == OUTPUT_FALSE_COLOR) {
-            float average_snr = (curr_snr.x + curr_snr.y + curr_snr.z) / 3.0;
+            float average_snr = (curr_snr.x + curr_snr.y + curr_snr.z) / 3.0f;
             output_color = snr_false_color(average_snr);
         }
     }

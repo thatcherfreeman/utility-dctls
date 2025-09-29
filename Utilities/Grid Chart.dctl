@@ -22,10 +22,10 @@ __DEVICE__ float mod(float x, float y) {
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
-    float3 output = make_float3(0.0, 0.0, 0.0);
+    float3 output = make_float3(0.0f, 0.0f, 0.0f);
     const int grid_spacing = p_Width / num_grids;
-    const int grid_offset_x = p_Width / 2.0;
-    const int grid_offset_y = p_Height / 2.0;
+    const int grid_offset_x = p_Width / 2.0f;
+    const int grid_offset_y = p_Height / 2.0f;
 
     if (chart_type == CHART_GRID) {
         if (mod((p_X - grid_offset_x), grid_spacing) < grid_thickness || mod((p_Y - grid_offset_y), grid_spacing) < grid_thickness) {

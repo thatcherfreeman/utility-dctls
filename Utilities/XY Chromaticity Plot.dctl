@@ -39,7 +39,7 @@ DEFINE_UI_PARAMS(overlay_gamut, Overlay Primaries, DCTLUI_COMBO_BOX, 10, {OVERLA
 
 // clang-format on
 
-#define PI (3.14159265358979323)
+#define PI (3.14159265358979323f)
 
 __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
@@ -50,11 +50,11 @@ __DEVICE__ inline float pow2f(float base) {
 }
 
 __DEVICE__ inline float rad_to_deg(float deg) {
-    return deg * 360.0 / (2.0 * PI);
+    return deg * 360.0f / (2.0f * PI);
 }
 
 __DEVICE__ inline float deg_to_rad(float rad) {
-    return rad * (2.0 * PI) / 360.0;
+    return rad * (2.0f * PI) / 360.0f;
 }
 
 // Linalg
@@ -64,15 +64,15 @@ __DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float
     float c = _cosf(angle);
     float s = _sinf(angle);
 
-    mat[0][0] = c + pow2f(axis.x) * (1.0 - c);
-    mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
-    mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
-    mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
-    mat[1][1] = c + pow2f(axis.y) * (1.0 - c);
-    mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
-    mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
-    mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
-    mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
+    mat[0][0] = c + pow2f(axis.x) * (1.0f - c);
+    mat[0][1] = axis.x * axis.y * (1.0f - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0f - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0f - c) + axis.z * s;
+    mat[1][1] = c + pow2f(axis.y) * (1.0f - c);
+    mat[1][2] = axis.y * axis.z * (1.0f - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0f - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0f - c) + axis.x * s;
+    mat[2][2] = c + pow2f(axis.z) * (1.0f - c);
 }
 
 __DEVICE__ float3 cross_product(float3 a, float3 b) {
@@ -156,14 +156,14 @@ __DEVICE__ void mat_fill(float dest[3][3], float fill) {
 }
 
 __DEVICE__ void diagonal_matrix(float dest[3][3], float3 diagonal) {
-    mat_fill(dest, 0.0);
+    mat_fill(dest, 0.0f);
     dest[0][0] = diagonal.x;
     dest[1][1] = diagonal.y;
     dest[2][2] = diagonal.z;
 }
 
 __DEVICE__ void identity_matrix(float dest[3][3]) {
-    diagonal_matrix(dest, make_float3(1.0, 1.0, 1.0));
+    diagonal_matrix(dest, make_float3(1.0f, 1.0f, 1.0f));
 }
 
 // Inclusive on bounds. Assume left_bottom <= right_top
@@ -200,16 +200,16 @@ __DEVICE__ gamut_primaries_t make_gamut_primaries(float2 red_xy, float2 green_xy
 }
 
 __DEVICE__ float3 xy_to_XYZ(float2 xy) {
-    float3 xyz = make_float3(xy.x / xy.y, 1.0, (1.0 - xy.x - xy.y) / xy.y);
-    if (xy.y == 0.0) {
-        xyz = make_float3(xy.x, 0.0, 1.0 - xy.x);
+    float3 xyz = make_float3(xy.x / xy.y, 1.0f, (1.0f - xy.x - xy.y) / xy.y);
+    if (xy.y == 0.0f) {
+        xyz = make_float3(xy.x, 0.0f, 1.0f - xy.x);
     }
     return xyz;
 }
 
 __DEVICE__ float3 XYZ_to_xyY(float3 xyz, float2 white_xy) {
-    if (xyz.y == 0.0) {
-        return make_float3(white_xy.x, white_xy.y, 0.0);
+    if (xyz.y == 0.0f) {
+        return make_float3(white_xy.x, white_xy.y, 0.0f);
     }
     float sum = xyz.x + xyz.y + xyz.z;
     float x = xyz.x / sum;
@@ -246,9 +246,9 @@ __DEVICE__ float2 camera_observer_to_standard_observer(float2 xy, float rgb_to_x
 }
 
 __DEVICE__ void make_sat_matrix(float mat[3][3], float sat, float3 lum_coeffs) {
-    float sr = (1.0 - sat) * lum_coeffs.x;
-    float sg = (1.0 - sat) * lum_coeffs.y;
-    float sb = (1.0 - sat) * lum_coeffs.z;
+    float sr = (1.0f - sat) * lum_coeffs.x;
+    float sg = (1.0f - sat) * lum_coeffs.y;
+    float sb = (1.0f - sat) * lum_coeffs.z;
 
     mat[0][0] = sr + sat;
     mat[0][1] = sr;
@@ -268,7 +268,7 @@ __DEVICE__ void rgb_to_XYZ_mat_from_gamut(float dest[3][3], gamut_primaries_t pr
     float3 blue_xyz = xy_to_XYZ(primaries.blue_xy);
     float3 white_xyz = xy_to_XYZ(primaries.white_xy);
 
-    float temp[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+    float temp[3][3] = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
     temp[0][0] = red_xyz.x;
     temp[1][0] = red_xyz.y;
     temp[2][0] = red_xyz.z;
@@ -295,40 +295,40 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
 
     switch (gamut) {
         case SRC_GAMUT_ACES_AP0:
-            return make_gamut_primaries(make_float2(0.7347, 0.2653), make_float2(0.0, 1.0), make_float2(0.0001, -0.0770), make_float2(0.32168, 0.33767));
+            return make_gamut_primaries(make_float2(0.7347f, 0.2653f), make_float2(0.0f, 1.0f), make_float2(0.0001f, -0.0770f), make_float2(0.32168f, 0.33767f));
         case SRC_GAMUT_ACES_AP1:
-            return make_gamut_primaries(make_float2(0.713, 0.293), make_float2(0.165, 0.830), make_float2(0.128, 0.0444), make_float2(0.32168, 0.33767));
+            return make_gamut_primaries(make_float2(0.713f, 0.293f), make_float2(0.165f, 0.830f), make_float2(0.128f, 0.0444f), make_float2(0.32168f, 0.33767f));
         case SRC_GAMUT_AWG3:
             return make_gamut_primaries(
-                make_float2(0.6840, 0.3130), make_float2(0.2210, 0.8480), make_float2(0.0861, -0.1020), make_float2(0.3127, 0.3290));
+                make_float2(0.6840f, 0.3130f), make_float2(0.2210f, 0.8480f), make_float2(0.0861f, -0.1020f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_AWG4:
             return make_gamut_primaries(
-                make_float2(0.7347, 0.2653), make_float2(0.1424, 0.8576), make_float2(0.0991, -0.0308), make_float2(0.3127, 0.3290));
+                make_float2(0.7347f, 0.2653f), make_float2(0.1424f, 0.8576f), make_float2(0.0991f, -0.0308f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_CANON_CINEMA_GAMUT:
-            return make_gamut_primaries(make_float2(0.74, 0.27), make_float2(0.17, 1.14), make_float2(0.08, -0.1), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.74f, 0.27f), make_float2(0.17f, 1.14f), make_float2(0.08f, -0.1f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_DWG:
             return make_gamut_primaries(
-                make_float2(0.8000, 0.3130), make_float2(0.1682, 0.9877), make_float2(0.0790, -0.1155), make_float2(0.3127, 0.3290));
+                make_float2(0.8000f, 0.3130f), make_float2(0.1682f, 0.9877f), make_float2(0.0790f, -0.1155f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_EGAMUT:
             return make_gamut_primaries(
-                make_float2(0.8000, 0.3177), make_float2(0.1800, 0.9000), make_float2(0.0650, -0.0805), make_float2(0.3127, 0.3290));
+                make_float2(0.8000f, 0.3177f), make_float2(0.1800f, 0.9000f), make_float2(0.0650f, -0.0805f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_EGAMUT2:
-            return make_gamut_primaries(make_float2(0.83, 0.31), make_float2(0.15, 0.95), make_float2(0.065, -0.0805), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.83f, 0.31f), make_float2(0.15f, 0.95f), make_float2(0.065f, -0.0805f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_P3_D65:
-            return make_gamut_primaries(make_float2(0.680, 0.320), make_float2(0.265, 0.690), make_float2(0.150, 0.060), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.680f, 0.320f), make_float2(0.265f, 0.690f), make_float2(0.150f, 0.060f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_REC709:
-            return make_gamut_primaries(make_float2(0.64, 0.33), make_float2(0.30, 0.60), make_float2(0.15, 0.06), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.64f, 0.33f), make_float2(0.30f, 0.60f), make_float2(0.15f, 0.06f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_REC2020:
-            return make_gamut_primaries(make_float2(0.708, 0.292), make_float2(0.170, 0.797), make_float2(0.131, 0.046), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.708f, 0.292f), make_float2(0.170f, 0.797f), make_float2(0.131f, 0.046f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_REDWIDEGAMUTRGB:
             return make_gamut_primaries(
-                make_float2(0.780308, 0.304253), make_float2(0.121595, 1.493994), make_float2(0.095612, -0.084589), make_float2(0.3127, 0.3290));
+                make_float2(0.780308f, 0.304253f), make_float2(0.121595f, 1.493994f), make_float2(0.095612f, -0.084589f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_SGAMUT3:
-            return make_gamut_primaries(make_float2(0.730, 0.280), make_float2(0.140, 0.855), make_float2(0.100, -0.050), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.730f, 0.280f), make_float2(0.140f, 0.855f), make_float2(0.100f, -0.050f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_SGAMUT3CINE:
-            return make_gamut_primaries(make_float2(0.766, 0.275), make_float2(0.225, 0.800), make_float2(0.089, -0.087), make_float2(0.3127, 0.3290));
+            return make_gamut_primaries(make_float2(0.766f, 0.275f), make_float2(0.225f, 0.800f), make_float2(0.089f, -0.087f), make_float2(0.3127f, 0.3290f));
         case SRC_GAMUT_XYZ:
-            return make_gamut_primaries(make_float2(1.0, 0.0), make_float2(0.0, 1.0), make_float2(0.0, 0.0), make_float2(1.0 / 3.0, 1.0 / 3.0));
+            return make_gamut_primaries(make_float2(1.0f, 0.0f), make_float2(0.0f, 1.0f), make_float2(0.0f, 0.0f), make_float2(1.0f / 3.0f, 1.0f / 3.0f));
         case SRC_GAMUT_CUSTOM:
         default:
             return default_gamut;
@@ -341,88 +341,88 @@ __DEVICE__ gamut_primaries_t get_gamut_primaries(int gamut, gamut_primaries_t de
 #define NUM_CMFS (82)
 
 __CONSTANT__ float xyz_cmfs[NUM_CMFS][3] = {
-    {0.001368, 0.000039, 0.006450}, // 380nm
-    {0.002236, 0.000064, 0.010550}, //
-    {0.004243, 0.000120, 0.020050}, //
-    {0.007650, 0.000217, 0.036210}, //
-    {0.014310, 0.000396, 0.067850}, //
-    {0.023190, 0.000640, 0.110200}, //
-    {0.043510, 0.001210, 0.207400}, //
-    {0.077630, 0.002180, 0.371300}, //
-    {0.134380, 0.004000, 0.645600}, //
-    {0.214770, 0.007300, 1.039050}, //
-    {0.283900, 0.011600, 1.385600}, //
-    {0.328500, 0.016840, 1.622960}, //
-    {0.348280, 0.023000, 1.747060}, //
-    {0.348060, 0.029800, 1.782600}, //
-    {0.336200, 0.038000, 1.772110}, //
-    {0.318700, 0.048000, 1.744100}, //
-    {0.290800, 0.060000, 1.669200}, //
-    {0.251100, 0.073900, 1.528100}, //
-    {0.195360, 0.090980, 1.287640}, //
-    {0.142100, 0.112600, 1.041900}, //
-    {0.095640, 0.139020, 0.812950}, //
-    {0.057950, 0.169300, 0.616200}, //
-    {0.032010, 0.208020, 0.465180}, //
-    {0.014700, 0.258600, 0.353300}, //
-    {0.004900, 0.323000, 0.272000}, //
-    {0.002400, 0.407300, 0.212300}, //
-    {0.009300, 0.503000, 0.158200}, //
-    {0.029100, 0.608200, 0.111700}, //
-    {0.063270, 0.710000, 0.078250}, //
-    {0.109600, 0.793200, 0.057250}, //
-    {0.165500, 0.862000, 0.042160}, //
-    {0.225750, 0.914850, 0.029840}, //
-    {0.290400, 0.954000, 0.020300}, //
-    {0.359700, 0.980300, 0.013400}, //
-    {0.433450, 0.994950, 0.008750}, //
-    {0.512050, 1.000000, 0.005750}, //
-    {0.594500, 0.995000, 0.003900}, //
-    {0.678400, 0.978600, 0.002750}, //
-    {0.762100, 0.952000, 0.002100}, //
-    {0.842500, 0.915400, 0.001800}, //
-    {0.916300, 0.870000, 0.001650}, //
-    {0.978600, 0.816300, 0.001400}, //
-    {1.026300, 0.757000, 0.001100}, //
-    {1.056700, 0.694900, 0.001000}, //
-    {1.062200, 0.631000, 0.000800}, //
-    {1.045600, 0.566800, 0.000600}, //
-    {1.002600, 0.503000, 0.000340}, //
-    {0.938400, 0.441200, 0.000240}, //
-    {0.854450, 0.381000, 0.000190}, //
-    {0.751400, 0.321000, 0.000100}, //
-    {0.642400, 0.265000, 0.000050}, //
-    {0.541900, 0.217000, 0.000030}, //
-    {0.447900, 0.175000, 0.000020}, //
-    {0.360800, 0.138200, 0.000010}, //
-    {0.283500, 0.107000, 0.000000}, //
-    {0.218700, 0.081600, 0.000000}, //
-    {0.164900, 0.061000, 0.000000}, //
-    {0.121200, 0.044580, 0.000000}, //
-    {0.087400, 0.032000, 0.000000}, //
-    {0.063600, 0.023200, 0.000000}, //
-    {0.046770, 0.017000, 0.000000}, //
-    {0.032900, 0.011920, 0.000000}, //
-    {0.022700, 0.008210, 0.000000}, //
-    {0.015840, 0.005723, 0.000000}, //
-    {0.011359, 0.004102, 0.000000}, //
-    {0.008111, 0.002929, 0.000000}, //
-    {0.005790, 0.002091, 0.000000}, //
-    {0.004109, 0.001484, 0.000000}, //
-    {0.002899, 0.001047, 0.000000}, //
-    {0.002049, 0.000740, 0.000000}, //
-    {0.001440, 0.000520, 0.000000}, //
-    {0.001000, 0.000361, 0.000000}, //
-    {0.000690, 0.000249, 0.000000}, //
-    {0.000476, 0.000172, 0.000000}, //
-    {0.000332, 0.000120, 0.000000}, //
-    {0.000235, 0.000085, 0.000000}, //
-    {0.000166, 0.000060, 0.000000}, //
-    {0.000117, 0.000042, 0.000000}, //
-    {0.000083, 0.000030, 0.000000}, //
-    {0.000059, 0.000021, 0.000000}, //
-    {0.000042, 0.000015, 0.000000}, // 780nm
-    {0.001368, 0.000039, 0.006450}, // repeat of first entry
+    {0.001368f, 0.000039f, 0.006450f}, // 380nm
+    {0.002236f, 0.000064f, 0.010550f}, //
+    {0.004243f, 0.000120f, 0.020050f}, //
+    {0.007650f, 0.000217f, 0.036210f}, //
+    {0.014310f, 0.000396f, 0.067850f}, //
+    {0.023190f, 0.000640f, 0.110200f}, //
+    {0.043510f, 0.001210f, 0.207400f}, //
+    {0.077630f, 0.002180f, 0.371300f}, //
+    {0.134380f, 0.004000f, 0.645600f}, //
+    {0.214770f, 0.007300f, 1.039050f}, //
+    {0.283900f, 0.011600f, 1.385600f}, //
+    {0.328500f, 0.016840f, 1.622960f}, //
+    {0.348280f, 0.023000f, 1.747060f}, //
+    {0.348060f, 0.029800f, 1.782600f}, //
+    {0.336200f, 0.038000f, 1.772110f}, //
+    {0.318700f, 0.048000f, 1.744100f}, //
+    {0.290800f, 0.060000f, 1.669200f}, //
+    {0.251100f, 0.073900f, 1.528100f}, //
+    {0.195360f, 0.090980f, 1.287640f}, //
+    {0.142100f, 0.112600f, 1.041900f}, //
+    {0.095640f, 0.139020f, 0.812950f}, //
+    {0.057950f, 0.169300f, 0.616200f}, //
+    {0.032010f, 0.208020f, 0.465180f}, //
+    {0.014700f, 0.258600f, 0.353300f}, //
+    {0.004900f, 0.323000f, 0.272000f}, //
+    {0.002400f, 0.407300f, 0.212300f}, //
+    {0.009300f, 0.503000f, 0.158200f}, //
+    {0.029100f, 0.608200f, 0.111700f}, //
+    {0.063270f, 0.710000f, 0.078250f}, //
+    {0.109600f, 0.793200f, 0.057250f}, //
+    {0.165500f, 0.862000f, 0.042160f}, //
+    {0.225750f, 0.914850f, 0.029840f}, //
+    {0.290400f, 0.954000f, 0.020300f}, //
+    {0.359700f, 0.980300f, 0.013400f}, //
+    {0.433450f, 0.994950f, 0.008750f}, //
+    {0.512050f, 1.000000f, 0.005750f}, //
+    {0.594500f, 0.995000f, 0.003900f}, //
+    {0.678400f, 0.978600f, 0.002750f}, //
+    {0.762100f, 0.952000f, 0.002100f}, //
+    {0.842500f, 0.915400f, 0.001800f}, //
+    {0.916300f, 0.870000f, 0.001650f}, //
+    {0.978600f, 0.816300f, 0.001400f}, //
+    {1.026300f, 0.757000f, 0.001100f}, //
+    {1.056700f, 0.694900f, 0.001000f}, //
+    {1.062200f, 0.631000f, 0.000800f}, //
+    {1.045600f, 0.566800f, 0.000600f}, //
+    {1.002600f, 0.503000f, 0.000340f}, //
+    {0.938400f, 0.441200f, 0.000240f}, //
+    {0.854450f, 0.381000f, 0.000190f}, //
+    {0.751400f, 0.321000f, 0.000100f}, //
+    {0.642400f, 0.265000f, 0.000050f}, //
+    {0.541900f, 0.217000f, 0.000030f}, //
+    {0.447900f, 0.175000f, 0.000020f}, //
+    {0.360800f, 0.138200f, 0.000010f}, //
+    {0.283500f, 0.107000f, 0.000000f}, //
+    {0.218700f, 0.081600f, 0.000000f}, //
+    {0.164900f, 0.061000f, 0.000000f}, //
+    {0.121200f, 0.044580f, 0.000000f}, //
+    {0.087400f, 0.032000f, 0.000000f}, //
+    {0.063600f, 0.023200f, 0.000000f}, //
+    {0.046770f, 0.017000f, 0.000000f}, //
+    {0.032900f, 0.011920f, 0.000000f}, //
+    {0.022700f, 0.008210f, 0.000000f}, //
+    {0.015840f, 0.005723f, 0.000000f}, //
+    {0.011359f, 0.004102f, 0.000000f}, //
+    {0.008111f, 0.002929f, 0.000000f}, //
+    {0.005790f, 0.002091f, 0.000000f}, //
+    {0.004109f, 0.001484f, 0.000000f}, //
+    {0.002899f, 0.001047f, 0.000000f}, //
+    {0.002049f, 0.000740f, 0.000000f}, //
+    {0.001440f, 0.000520f, 0.000000f}, //
+    {0.001000f, 0.000361f, 0.000000f}, //
+    {0.000690f, 0.000249f, 0.000000f}, //
+    {0.000476f, 0.000172f, 0.000000f}, //
+    {0.000332f, 0.000120f, 0.000000f}, //
+    {0.000235f, 0.000085f, 0.000000f}, //
+    {0.000166f, 0.000060f, 0.000000f}, //
+    {0.000117f, 0.000042f, 0.000000f}, //
+    {0.000083f, 0.000030f, 0.000000f}, //
+    {0.000059f, 0.000021f, 0.000000f}, //
+    {0.000042f, 0.000015f, 0.000000f}, // 780nm
+    {0.001368f, 0.000039f, 0.006450f}, // repeat of first entry
 };
 
 __DEVICE__ bool is_near_line_segment(float2 segment_start, float2 segment_end, float2 curr_pos, float eps) {
@@ -430,11 +430,11 @@ __DEVICE__ bool is_near_line_segment(float2 segment_start, float2 segment_end, f
     float2 point_vector = curr_pos - segment_start;
     float segment_length = _hypotf(segment_vector.x, segment_vector.y);
     float projection_length =
-        dot_product(make_float3(segment_vector.x, segment_vector.y, 0.0), make_float3(point_vector.x, point_vector.y, 0.0)) / segment_length;
+        dot_product(make_float3(segment_vector.x, segment_vector.y, 0.0f), make_float3(point_vector.x, point_vector.y, 0.0f)) / segment_length;
     float2 projection_point = segment_start + (segment_vector * (projection_length / segment_length));
     float distance_to_segment = _hypotf(curr_pos.x - projection_point.x, curr_pos.y - projection_point.y);
 
-    return (distance_to_segment < eps && projection_length >= 0.0 && projection_length <= segment_length);
+    return (distance_to_segment < eps && projection_length >= 0.0f && projection_length <= segment_length);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
@@ -464,7 +464,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     histogram_bounding_box.left_bottom.y = min(histogram_bounding_box.left_bottom.y, histogram_margin.left_bottom.y);
     histogram_bounding_box.right_top.x = min(histogram_bounding_box.right_top.x, histogram_margin.right_top.x);
     histogram_bounding_box.right_top.y = min(histogram_bounding_box.right_top.y, histogram_margin.right_top.y);
-    float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0 - p_Y);
+    float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0f - p_Y);
 
     float to_xyz_33[3][3] = {};
     rgb_to_XYZ_mat_from_gamut(to_xyz_33, source_primaries);
@@ -473,10 +473,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     mat_inverse_33(xyz_to_working_33, to_xyz_33);
 
     if (inside_bounding_box(curr_pos, histogram_bounding_box)) {
-        float3 histogram_color = make_float3(0.0, 0.0, 0.0);
-        const float2 middle = make_float2(1.0 / 3.0, 1.0 / 3.0);
-        const float2 low_bound = middle - (1.0 / zoom) * middle;
-        const float2 upper_bound = middle + (1.0 / zoom) * (make_float2(1.0f, 1.0f) - middle);
+        float3 histogram_color = make_float3(0.0f, 0.0f, 0.0f);
+        const float2 middle = make_float2(1.0f / 3.0f, 1.0f / 3.0f);
+        const float2 low_bound = middle - (1.0f / zoom) * middle;
+        const float2 upper_bound = middle + (1.0f / zoom) * (make_float2(1.0f, 1.0f) - middle);
 
         float2 position_within_histogram = make_float2(_mix(low_bound.x, upper_bound.x, (curr_pos.x - histogram_bounding_box.left_bottom.x) / box_size),
                                                        _mix(low_bound.x, upper_bound.x, (curr_pos.y - histogram_bounding_box.left_bottom.y) / box_size));
@@ -489,9 +489,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 {source_primaries.blue_xy, source_primaries.red_xy},
             },
             {
-                {make_float2(0.0, 0.0), make_float2(1.0, 0.0)},
-                {make_float2(1.0, 0.0), make_float2(0.0, 1.0)},
-                {make_float2(0.0, 0.0), make_float2(0.0, 1.0)},
+                {make_float2(0.0f, 0.0f), make_float2(1.0f, 0.0f)},
+                {make_float2(1.0f, 0.0f), make_float2(0.0f, 1.0f)},
+                {make_float2(0.0f, 0.0f), make_float2(0.0f, 1.0f)},
             },
             {
                 {overlay_primaries.red_xy, overlay_primaries.green_xy},
@@ -501,9 +501,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         };
 
         float3 line_color[3] = {
-            make_float3(1.0, 1.0, 1.0), // current gamut
-            make_float3(0.1, 0.1, 0.0), // XYZ
-            make_float3(0.3, 0.3, 0.3), // overlay
+            make_float3(1.0f, 1.0f, 1.0f), // current gamut
+            make_float3(0.1f, 0.1f, 0.0f), // XYZ
+            make_float3(0.3f, 0.3f, 0.3f), // overlay
         };
 
         bool draw_triangle_toggle[3] = {draw_target_triangle > 0, draw_xyz_triangle > 0, draw_overlay_triangle > 0};
@@ -511,7 +511,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         // Draw grid
         if (draw_grid) {
             if (_fabs(_fmod(position_within_histogram.x, 0.10f)) < dot_size || _fabs(_fmod(position_within_histogram.y, 0.10f)) < dot_size) {
-                histogram_color = make_float3(0.05, 0.05, 0.05);
+                histogram_color = make_float3(0.05f, 0.05f, 0.05f);
             }
         }
 
@@ -546,7 +546,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                     } else {
                         histogram_color = mv_33_3(xyz_to_working_33, xy_to_XYZ(position_within_histogram));
                     }
-                    histogram_color /= _fmaxf(histogram_color.x, _fmaxf(histogram_color.y, histogram_color.z)) + 1e-6;
+                    histogram_color /= _fmaxf(histogram_color.x, _fmaxf(histogram_color.y, histogram_color.z)) + 1e-6f;
                 }
             }
         }
@@ -557,7 +557,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 white_point = standard_observer_to_camera_observer(white_point, xyz_to_working_33, source_gamut);
             }
             if (_hypotf(position_within_histogram.x - white_point.x, position_within_histogram.y - white_point.y) < 3.0f * dot_size) {
-                histogram_color = make_float3(1.0, 1.0, 1.0);
+                histogram_color = make_float3(1.0f, 1.0f, 1.0f);
             }
         }
 

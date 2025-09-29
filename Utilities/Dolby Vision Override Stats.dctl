@@ -16,31 +16,31 @@ __DEVICE__ float powf(float base, float exp) {
 
 __DEVICE__ float st2084_to_linear(float x) {
     // x is code value 0-1, outputs linear light with 1.0 = 100 nits.
-    const float m1 = 1305.0 / 8192.0;
-    const float m2 = 2523.0 / 32.0;
-    const float c1 = 3424.0 / 4096.0;
-    const float c2 = 2413.0 / 128.0;
-    const float c3 = 2392.0 / 128.0;
+    const float m1 = 1305.0f / 8192.0f;
+    const float m2 = 2523.0f / 32.0f;
+    const float c1 = 3424.0f / 4096.0f;
+    const float c2 = 2413.0f / 128.0f;
+    const float c3 = 2392.0f / 128.0f;
 
-    float out_lin = 100.0 * powf(_fmaxf(powf(x, 1.0 / m2) - c1, 0.0) / (c2 - (c3 * powf(x, 1.0 / m2))), 1.0 / m1);
+    float out_lin = 100.0f * powf(_fmaxf(powf(x, 1.0f / m2) - c1, 0.0f) / (c2 - (c3 * powf(x, 1.0f / m2))), 1.0f / m1);
 
     return out_lin;
 }
 
 __DEVICE__ float linear_to_st2084(float y) {
     // x is code value 0-1, y is linear light with 1.0 = 100 nits.
-    float x = y / 100.0;
-    const float m1 = 1305.0 / 8192.0;
-    const float m2 = 2523.0 / 32.0;
-    const float c1 = 3424.0 / 4096.0;
-    const float c2 = 2413.0 / 128.0;
-    const float c3 = 2392.0 / 128.0;
+    float x = y / 100.0f;
+    const float m1 = 1305.0f / 8192.0f;
+    const float m2 = 2523.0f / 32.0f;
+    const float c1 = 3424.0f / 4096.0f;
+    const float c2 = 2413.0f / 128.0f;
+    const float c3 = 2392.0f / 128.0f;
 
-    return powf((c1 + c2 * powf(x, m1)) / (1.0 + c3 * powf(x, m1)), m2);
+    return powf((c1 + c2 * powf(x, m1)) / (1.0f + c3 * powf(x, m1)), m2);
 }
 
 __DEVICE__ inline float linear_to_gamma(float y, float gamma) {
-    return powf(y, 1.0 / gamma);
+    return powf(y, 1.0f / gamma);
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {

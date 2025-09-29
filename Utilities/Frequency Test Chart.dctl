@@ -9,7 +9,7 @@ DEFINE_UI_PARAMS(amplitude_value, Amplitude, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0,
 DEFINE_UI_PARAMS(square_wave, Square Wave, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 0, {RADIAL, LINEAR}, {Radial, Linear})
 // clang-format on
-#define PI (3.14159265358979323)
+#define PI (3.14159265358979323f)
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
 
@@ -25,7 +25,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float normY;
 
     if (mode == LINEAR) {
-        normY = 0.0;
+        normY = 0.0f;
         normX = (float)p_X / (p_Width - 1);
     } else if (mode == RADIAL) {
         normX = (p_X - centerX) / centerX;
@@ -38,11 +38,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     float sin_value = _sinf(2.0f * PI * frequencyChange * (radius));
     if (square_wave) {
-        if (sin_value > 0.0) {
-            sin_value = 1.0;
+        if (sin_value > 0.0f) {
+            sin_value = 1.0f;
         }
-        if (sin_value < 0.0) {
-            sin_value = -1.0;
+        if (sin_value < 0.0f) {
+            sin_value = -1.0f;
         }
     }
     float pattern = 0.5f + amplitude_value * sin_value;

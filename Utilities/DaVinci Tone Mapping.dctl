@@ -27,8 +27,8 @@ __DEVICE__ float rolloff_function(float x, float a, float b, int invert) {
 }
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
-    float input_white = max_input_nits / 100.0;
-    float output_white = max_output_nits / 100.0;
+    float input_white = max_input_nits / 100.0f;
+    float output_white = max_output_nits / 100.0f;
 
     float3 out = make_float3(p_R, p_G, p_B);
     float b;
@@ -36,7 +36,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         b = user_b;
     } else {
         // Value of `b` when adaptation is 9.0:
-        b = (input_white - (adaptation / 100.0) * (input_white / output_white)) / ((input_white / output_white) - 1);
+        b = (input_white - (adaptation / 100.0f) * (input_white / output_white)) / ((input_white / output_white) - 1);
     }
 
     // Resolve evidently clamps the input to the input white point.

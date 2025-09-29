@@ -36,7 +36,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     float3 output_color = make_float3(p_R, p_G, p_B);
 
-    float values = (float)(1 << (bit_depth)) - 1.0;
+    float values = (float)(1 << (bit_depth)) - 1.0f;
     output_color *= values;
 
     if (rounding_opt == ROUND) {
@@ -50,7 +50,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     } else if (rounding_opt == STOCHASTIC) {
         // initialize seed.
         float val;
-        float seed = p_R + (p_G * 20.0) + (p_B * 400.0);
+        float seed = p_R + (p_G * 20.0f) + (p_B * 400.0f);
         rand_state state_value = *((__PRIVATE__ rand_state*)&seed);
         __PRIVATE__ rand_state* state = &state_value;
         *state ^= p_Width * p_Height;

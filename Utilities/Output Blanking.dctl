@@ -23,9 +23,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 out = make_float3(p_R, p_G, p_B);
 
     // Figure out how large the side bars are
-    float side_bar_width = (p_Width - desired_width) / 2.0;
+    float side_bar_width = (p_Width - desired_width) / 2.0f;
     // Figure out how large the top/bottom bars are
-    float top_bar_width = (p_Height - desired_height) / 2.0;
+    float top_bar_width = (p_Height - desired_height) / 2.0f;
 
     // Check if the current pixel is within one of the bars on the sides of the screen
     if (p_X < _round(side_bar_width) || p_X > _round(p_Width - side_bar_width - 1) || p_Y < _round(top_bar_width) ||

@@ -62,9 +62,9 @@ __DEVICE__ bounds_t get_bounds(int2 dimensions, float aspect_ratio) {
     }
 
     // Figure out how large the side bars are
-    float side_bar_width = (dimensions.x - desired_width) / 2.0;
+    float side_bar_width = (dimensions.x - desired_width) / 2.0f;
     // Figure out how large the top/bottom bars are
-    float top_bar_width = (dimensions.y - desired_height) / 2.0;
+    float top_bar_width = (dimensions.y - desired_height) / 2.0f;
 
     bounds_t bounds = make_bounds((int)_round(top_bar_width),
                                   (int)_round(dimensions.y - top_bar_width - 1),
@@ -94,17 +94,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     if (output_mode == OUTPUT_MODE_HIGHLIGHT_EDGES) {
         if (on_bounds(curr_pos, bounds)) {
             // Returns white border
-            output_color = make_float3(1.0, 1.0, 1.0);
+            output_color = make_float3(1.0f, 1.0f, 1.0f);
         }
     } else if (output_mode == OUTPUT_MODE_HIGHLIGHT_BLANKING) {
-        if (curr_color.x == 0.0 && curr_color.y == 0.0 && curr_color.z == 0.0) {
+        if (curr_color.x == 0.0f && curr_color.y == 0.0f && curr_color.z == 0.0f) {
             // Returns green.
-            output_color = make_float3(0.0, 1.0, 0.0);
+            output_color = make_float3(0.0f, 1.0f, 0.0f);
         }
     } else if (output_mode == OUTPUT_MODE_FULL_SCREEN_WARNING) {
-        if (curr_color.x == 0.0 && curr_color.y == 0.0 && curr_color.z == 0.0) {
+        if (curr_color.x == 0.0f && curr_color.y == 0.0f && curr_color.z == 0.0f) {
             // Returns green.
-            output_color = make_float3(0.0, 1.0, 0.0);
+            output_color = make_float3(0.0f, 1.0f, 0.0f);
         } else {
             // Check if the border pixels are black, just checking the main eight pixels
             if (performance_mode == MODE_PERFORMANCE) {
@@ -123,9 +123,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
                 for (int i = 0; i < 8; i++) {
                     float3 edge_color = sample_color(samples[i], p_TexR, p_TexG, p_TexB);
-                    if (edge_color.x == 0.0 && edge_color.y == 0.0 && edge_color.z == 0.0) {
+                    if (edge_color.x == 0.0f && edge_color.y == 0.0f && edge_color.z == 0.0f) {
                         // Make current pixel pink, filling the frame.
-                        output_color = _mix(curr_color, make_float3(1.0, 0.0, 1.0), opacity);
+                        output_color = _mix(curr_color, make_float3(1.0f, 0.0f, 1.0f), opacity);
                         break;
                     }
                 }
@@ -151,9 +151,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                         for (int y = runner_curr_pos.y; y <= runner_next_pos.y; y++) {
                             int2 pos = make_int2(x, y);
                             float3 edge_color = sample_color(pos, p_TexR, p_TexG, p_TexB);
-                            if (edge_color.x == 0.0 && edge_color.y == 0.0 && edge_color.z == 0.0) {
+                            if (edge_color.x == 0.0f && edge_color.y == 0.0f && edge_color.z == 0.0f) {
                                 // Make current pixel pink, filling the frame.
-                                output_color = _mix(curr_color, make_float3(1.0, 0.0, 1.0), opacity);
+                                output_color = _mix(curr_color, make_float3(1.0f, 0.0f, 1.0f), opacity);
                                 break;
                             }
                         }

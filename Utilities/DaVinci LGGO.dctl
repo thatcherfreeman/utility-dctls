@@ -42,10 +42,10 @@ __DEVICE__ float convert_gamma_to_reals(float g) {
 __DEVICE__ float convert_gamma_to_wheels(float g) {
     // Converts the exponent we have to the gamma wheel control (-1 to +1 range)
     float out;
-    if (g >= 1.0) {
-        out = (g - 1.0f) / -4.0;
+    if (g >= 1.0f) {
+        out = (g - 1.0f) / -4.0f;
     } else {
-        out = ((1.0 / g) - 1.0) / 4.0;
+        out = ((1.0f / g) - 1.0f) / 4.0f;
     }
     return out;
 }
@@ -78,27 +78,27 @@ __DEVICE__ lggo_params_reals_t make_lggo_params_reals(float lift, float gamma, f
 }
 
 // OFFSET_SCALING is a magic number measured from the default offset wheel values in Resolve.
-#define OFFSET_SCALING ((1.233137392 - 0.5) / 100.0)
-#define PRINTER_LIGHT_BASE (25.0)
+#define OFFSET_SCALING ((1.233137392f - 0.5f) / 100.0f)
+#define PRINTER_LIGHT_BASE (25.0f)
 
 __DEVICE__ lggo_params_reals_t convert_lggo_to_reals(lggo_params_t params) {
     // Convert each of the parameters from the Resolve wheels values to the underlying real values.
-    return make_lggo_params(params.lift * 2.0, convert_gamma_to_reals(params.gamma), params.gain, (params.offset - PRINTER_LIGHT_BASE) * OFFSET_SCALING);
+    return make_lggo_params(params.lift * 2.0f, convert_gamma_to_reals(params.gamma), params.gain, (params.offset - PRINTER_LIGHT_BASE) * OFFSET_SCALING);
 }
 
 __DEVICE__ lggo_params_t convert_lggo_to_wheels(lggo_params_reals_t params) {
     // Convert each of the parameters from the underlying real values to the Resolve wheels values.
-    return make_lggo_params(params.lift / 2.0, convert_gamma_to_wheels(params.gamma), params.gain, (params.offset / OFFSET_SCALING) + PRINTER_LIGHT_BASE);
+    return make_lggo_params(params.lift / 2.0f, convert_gamma_to_wheels(params.gamma), params.gain, (params.offset / OFFSET_SCALING) + PRINTER_LIGHT_BASE);
 }
 
 __DEVICE__ float apply_lggo(float x, lggo_params_reals_t params, bool invert) {
-    float white_out_x = 1.0 / params.gain;
-    float black_out_x = (1.0 - (1.0 / (1.0 - params.lift)));
-    float slope = 1.0 / (white_out_x - black_out_x);
+    float white_out_x = 1.0f / params.gain;
+    float black_out_x = (1.0f - (1.0f / (1.0f - params.lift)));
+    float slope = 1.0f / (white_out_x - black_out_x);
     float out;
 
     if (invert) {
-        out = powf(x, 1.0 / params.gamma);
+        out = powf(x, 1.0f / params.gamma);
         out = out - params.offset;
         out = out / slope;
         out = out + black_out_x;

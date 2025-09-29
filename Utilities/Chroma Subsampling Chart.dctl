@@ -3,7 +3,7 @@
 // clang-format off
 // clang-format on
 
-#define PI (3.1415926535)
+#define PI (3.1415926535f)
 
 __DEVICE__ float mod(float x, float y) {
     if (x < 0) {
@@ -15,23 +15,23 @@ __DEVICE__ float mod(float x, float y) {
 
 __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
     // assume hue is in degrees
-    hue = mod(hue, 360.0);
+    hue = mod(hue, 360.0f);
     float c = val * sat;
-    float x = c * (1.0 - _fabs(_fmod(hue / 60.0, 2.0) - 1.0));
+    float x = c * (1.0f - _fabs(_fmod(hue / 60.0f, 2.0f) - 1.0f));
     float m = val - c;
     float3 rgbp;
-    if (0.0 <= hue && hue < 60.0) {
-        rgbp = make_float3(c, x, 0.0);
-    } else if (60.0 <= hue && hue < 120.0) {
-        rgbp = make_float3(x, c, 0.0);
-    } else if (120.0 <= hue && hue < 180.0) {
-        rgbp = make_float3(0.0, c, x);
-    } else if (180.0 <= hue && hue < 240.0) {
-        rgbp = make_float3(0.0, x, c);
-    } else if (240.0 <= hue && hue < 300.0) {
-        rgbp = make_float3(x, 0.0, c);
-    } else { // if (300.0 < hue && hue < 360.0) {
-        rgbp = make_float3(c, 0.0, x);
+    if (0.0f <= hue && hue < 60.0f) {
+        rgbp = make_float3(c, x, 0.0f);
+    } else if (60.0f <= hue && hue < 120.0f) {
+        rgbp = make_float3(x, c, 0.0f);
+    } else if (120.0f <= hue && hue < 180.0f) {
+        rgbp = make_float3(0.0f, c, x);
+    } else if (180.0f <= hue && hue < 240.0f) {
+        rgbp = make_float3(0.0f, x, c);
+    } else if (240.0f <= hue && hue < 300.0f) {
+        rgbp = make_float3(x, 0.0f, c);
+    } else { // if (300.0f < hue && hue < 360.0f) {
+        rgbp = make_float3(c, 0.0f, x);
     }
     return rgbp + m;
 }
@@ -42,54 +42,54 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float x = (float)p_X / (float)(p_Width - 1);
     float y = (float)p_Y / (float)(p_Height - 1);
 
-    float3 output = make_float3(0.0, 0.0, 0.0);
+    float3 output = make_float3(0.0f, 0.0f, 0.0f);
 
-    if (x < 0.5 && y < 0.5) {
+    if (x < 0.5f && y < 0.5f) {
         // top left corner - horizontal stripes
-        if (x < 0.25) {
+        if (x < 0.25f) {
             if (p_Y % 3 == 0) {
-                output = hsv_to_rgb((y / 0.5) * 360.0, 1.0, 1.0);
+                output = hsv_to_rgb((y / 0.5f) * 360.0f, 1.0f, 1.0f);
             }
         } else {
             if (p_X % 3 == 0) {
-                output = hsv_to_rgb(((x - 0.25) / 0.25) * 360.0, 1.0, 1.0);
+                output = hsv_to_rgb(((x - 0.25f) / 0.25f) * 360.0f, 1.0f, 1.0f);
             }
         }
-    } else if (x > 0.5 && y < 0.5) {
+    } else if (x > 0.5f && y < 0.5f) {
         // Top right corner red background
-        output = make_float3(1.0, 0.0, 0.0);
-        if (x < 0.75) {
+        output = make_float3(1.0f, 0.0f, 0.0f);
+        if (x < 0.75f) {
             if (p_Y % 3 == 0) {
-                output = hsv_to_rgb((y / 0.5) * 360.0, 1.0, 1.0);
+                output = hsv_to_rgb((y / 0.5f) * 360.0f, 1.0f, 1.0f);
             }
         } else {
             if (p_X % 3 == 0) {
-                output = hsv_to_rgb(((x - 0.25) / 0.25) * 360.0, 1.0, 1.0);
+                output = hsv_to_rgb(((x - 0.25f) / 0.25f) * 360.0f, 1.0f, 1.0f);
             }
         }
-    } else if (x < 0.5 && y > 0.5) {
+    } else if (x < 0.5f && y > 0.5f) {
         // bottom left corner
-        if (x < 0.25) {
+        if (x < 0.25f) {
             // vertical grey stripes
             if (p_Y % 3 == 0) {
-                output = hsv_to_rgb(0.0, 0.0, 1.0);
+                output = hsv_to_rgb(0.0f, 0.0f, 1.0f);
             }
         } else {
             // Horizontal grey stripes
             if (p_X % 3 == 0) {
-                output = hsv_to_rgb(0.0, 0.0, 1.0);
+                output = hsv_to_rgb(0.0f, 0.0f, 1.0f);
             }
         }
     } else {
         // Bottom Right corner blue background
-        output = make_float3(0.0, 0.0, 1.0);
-        if (x < 0.75) {
+        output = make_float3(0.0f, 0.0f, 1.0f);
+        if (x < 0.75f) {
             if (p_Y % 3 == 0) {
-                output = hsv_to_rgb((y / 0.5) * 360.0, 1.0, 1.0);
+                output = hsv_to_rgb((y / 0.5f) * 360.0f, 1.0f, 1.0f);
             }
         } else {
             if (p_X % 3 == 0) {
-                output = hsv_to_rgb(((x - 0.25) / 0.25) * 360.0, 1.0, 1.0);
+                output = hsv_to_rgb(((x - 0.25f) / 0.25f) * 360.0f, 1.0f, 1.0f);
             }
         }
     }

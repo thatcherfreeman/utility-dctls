@@ -35,7 +35,7 @@ __DEVICE__ float dot_product(float3 a, float3 b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-#define PI 3.1415926535897932384626
+#define PI (3.1415926535897932384626f)
 
 __DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
     float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
@@ -47,7 +47,7 @@ __DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
 __DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
     // Adapted from Juan Pablo Zambrano's code
     // hue is in range of 0-1
-    float3 lsh = make_float3(hsv.z, hsv.y * 3.0, mod(hsv.x, 2.0 * PI));
+    float3 lsh = make_float3(hsv.z, hsv.y * 3.0f, mod(hsv.x, 2.0f * PI));
 
     float ctr = lsh.x * lsh.y * _cosf(lsh.z);
     float ctg = lsh.x;
@@ -55,9 +55,9 @@ __DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
     float3 c = make_float3(ctr, ctg, ctb);
 
     float mat[3][3] = {
-        {2.0 / 3.0, 1.0, 0.0},
-        {-1.0 / 3.0, 1.0, _sqrtf(3.0) / 3.0},
-        {-1.0 / 3.0, 1.0, -_sqrtf(3.0) / 3.0},
+        {2.0f / 3.0f, 1.0f, 0.0f},
+        {-1.0f / 3.0f, 1.0f, _sqrtf(3.0f) / 3.0f},
+        {-1.0f / 3.0f, 1.0f, -_sqrtf(3.0f) / 3.0f},
     };
 
     return mv_33_3(mat, c);
@@ -70,22 +70,22 @@ __DEVICE__ float3 rgb_to_cylindrical(float3 x) {
     // (1, 0, 0) input ends up having a red channel code value of (1).
     // outputs hue in range 0-1
     float mat[3][3] = {
-        {1.0, -1.0 / 2.0, -1.0 / 2.0},
-        {1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0},
-        {0.0, _sqrtf(3.0) / 2.0, -_sqrtf(3.0) / 2.0},
+        {1.0f, -1.0f / 2.0f, -1.0f / 2.0f},
+        {1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f},
+        {0.0f, _sqrtf(3.0f) / 2.0f, -_sqrtf(3.0f) / 2.0f},
     };
 
     float3 rotated_color = mv_33_3(mat, x);
     float l = rotated_color.y;
-    float3 hsl = make_float3(0.0, 0.0, 0.0);
+    float3 hsl = make_float3(0.0f, 0.0f, 0.0f);
 
     float3 normalized_color = rotated_color / l;
-    if (l == 0.0) {
-        hsl = make_float3(0.0, 0.0, l);
+    if (l == 0.0f) {
+        hsl = make_float3(0.0f, 0.0f, l);
     } else {
         float theta = _atan2f(normalized_color.z, normalized_color.x);
-        hsl.x = mod(theta, 2.0 * PI);
-        hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0;
+        hsl.x = mod(theta, 2.0f * PI);
+        hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0f;
         hsl.z = l;
     }
     return hsl;
@@ -113,15 +113,15 @@ __DEVICE__ bool is_near_line_segment(float2 segment_start, float2 segment_end, f
     float2 point_vector = curr_pos - segment_start;
     float segment_length = _hypotf(segment_vector.x, segment_vector.y);
     float projection_length =
-        dot_product(make_float3(segment_vector.x, segment_vector.y, 0.0), make_float3(point_vector.x, point_vector.y, 0.0)) / segment_length;
+        dot_product(make_float3(segment_vector.x, segment_vector.y, 0.0f), make_float3(point_vector.x, point_vector.y, 0.0f)) / segment_length;
     float2 projection_point = segment_start + (segment_vector * (projection_length / segment_length));
     float distance_to_segment = _hypotf(curr_pos.x - projection_point.x, curr_pos.y - projection_point.y);
 
-    return (distance_to_segment < eps && projection_length >= 0.0 && projection_length <= segment_length);
+    return (distance_to_segment < eps && projection_length >= 0.0f && projection_length <= segment_length);
 }
 
 __DEVICE__ bool draw_crosshair(float2 curr_pos, float2 crosshair_pos, float crosshair_size) {
-    float crosshair_thickness = 0.2 * crosshair_size;
+    float crosshair_thickness = 0.2f * crosshair_size;
     bool vertical = (_fabs(curr_pos.x - crosshair_pos.x) < crosshair_thickness / 2.0f) && (_fabs(curr_pos.y - crosshair_pos.y) < crosshair_size / 2.0f);
     bool horizontal = (_fabs(curr_pos.y - crosshair_pos.y) < crosshair_thickness / 2.0f) && (_fabs(curr_pos.x - crosshair_pos.x) < crosshair_size / 2.0f);
     return (vertical || horizontal);
@@ -129,7 +129,7 @@ __DEVICE__ bool draw_crosshair(float2 curr_pos, float2 crosshair_pos, float cros
 
 __DEVICE__ float linear_to_log(float x) {
     const float mid_gray = 0.18f;
-    return _log2f(_fmaxf(0.0, x / mid_gray));
+    return _log2f(_fmaxf(0.0f, x / mid_gray));
 }
 
 __DEVICE__ float4 linear_to_log_f4(float4 x) {
@@ -139,7 +139,7 @@ __DEVICE__ float4 linear_to_log_f4(float4 x) {
 
 __DEVICE__ float4 sample_color(float2 pos, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
     float3 rgb = make_float3(_tex2D(p_TexR, (int)pos.x, (int)pos.y), _tex2D(p_TexG, (int)pos.x, (int)pos.y), _tex2D(p_TexB, (int)pos.x, (int)pos.y));
-    float lum = (rgb.x + rgb.y + rgb.z) / 3.0;
+    float lum = (rgb.x + rgb.y + rgb.z) / 3.0f;
     return make_float4(rgb.x, rgb.y, rgb.z, lum);
 }
 
@@ -149,7 +149,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float4 input_color_f4 = sample_color(curr_pos_img, p_TexR, p_TexG, p_TexB);
     float3 input_color = make_float3(input_color_f4.x, input_color_f4.y, input_color_f4.z);
     float3 output_color = input_color;
-    float center_hue_rads = center_hue * (PI / 180.0);
+    float center_hue_rads = center_hue * (PI / 180.0f);
     dot_size /= 1000.0f;
 
     // Compute scope bounds
@@ -164,12 +164,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     scope_bounding_box.left_bottom.y = min(scope_bounding_box.left_bottom.y, scope_margin.left_bottom.y);
     scope_bounding_box.right_top.x = min(scope_bounding_box.right_top.x, scope_margin.right_top.x);
     scope_bounding_box.right_top.y = min(scope_bounding_box.right_top.y, scope_margin.right_top.y);
-    float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0 - p_Y);
+    float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0f - p_Y);
 
     float crosshair_size = p_Height / 100.0f;
     // All below are Image coordinates, y=0 in top left. However, the UI control endpoint_1_y is 0 in bottom left.
-    float2 endpoint1 = make_float2(endpoint_1_x * (p_Width - 1), (1.0 - endpoint_1_y) * (p_Height - 1));
-    float2 endpoint2 = make_float2(endpoint_2_x * (p_Width - 1), (1.0 - endpoint_2_y) * (p_Height - 1));
+    float2 endpoint1 = make_float2(endpoint_1_x * (p_Width - 1), (1.0f - endpoint_1_y) * (p_Height - 1));
+    float2 endpoint2 = make_float2(endpoint_2_x * (p_Width - 1), (1.0f - endpoint_2_y) * (p_Height - 1));
 
     float3 scope_color = output_color;
     if (draw_crosshairs && draw_crosshair(make_float2((float)p_X, (float)p_Y), endpoint1, crosshair_size)) {
@@ -178,7 +178,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     if (draw_crosshairs && draw_crosshair(make_float2((float)p_X, (float)p_Y), endpoint2, crosshair_size)) {
         scope_color = 1.0f - input_color;
     }
-    if (draw_line && is_near_line_segment(endpoint1, endpoint2, curr_pos_img, crosshair_size / 10.0)) {
+    if (draw_line && is_near_line_segment(endpoint1, endpoint2, curr_pos_img, crosshair_size / 10.0f)) {
         scope_color = 1.0f - input_color;
     }
 
@@ -186,7 +186,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     const float mid_gray = 0.18f;
 
     if (inside_bounding_box(curr_pos, scope_bounding_box)) {
-        scope_color = make_float3(0.0, 0.0, 0.0);
+        scope_color = make_float3(0.0f, 0.0f, 0.0f);
 
         // WAVEFORM MODE
         if (scope_type == SCOPE_WAVEFORM_LUM || scope_type == SCOPE_WAVEFORM_RGB) {
@@ -202,8 +202,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 bottom = -default_stops_above_mid_gray;
                 grid_size_y = 1.0f;
             }
-            const float2 low_bound = make_float2(0.0f, middle - (1.0 / zoom) * (middle - bottom));
-            const float2 upper_bound = make_float2(1.0f, middle + (1.0 / zoom) * (top - middle));
+            const float2 low_bound = make_float2(0.0f, middle - (1.0f / zoom) * (middle - bottom));
+            const float2 upper_bound = make_float2(1.0f, middle + (1.0f / zoom) * (top - middle));
 
             float hor_scale = upper_bound.x - low_bound.x;
             float vert_scale = upper_bound.y - low_bound.y;
@@ -216,17 +216,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 // Grid minor guidelines
                 if (_fabs(mod(position_within_scope.x, grid_size_x)) < dot_size * hor_scale ||
                     _fabs(mod(position_within_scope.y, grid_size_y)) < dot_size * vert_scale) {
-                    scope_color = make_float3(0.05, 0.05, 0.05);
+                    scope_color = make_float3(0.05f, 0.05f, 0.05f);
                 }
                 // Luminance low and high guidelines
                 if (_fabs(position_within_scope.y - top) < dot_size * 2 * vert_scale ||
                     _fabs(position_within_scope.y - bottom) < dot_size * 2 * vert_scale) {
-                    scope_color = make_float3(0.1, 0.1, 0.1);
+                    scope_color = make_float3(0.1f, 0.1f, 0.1f);
                 }
                 // Dashed mid gray line in the middle if log luminance mode
                 if (log_luminance && _fabs(position_within_scope.y - middle) < dot_size * 2 * vert_scale &&
-                    _fabs(mod(position_within_scope.x, grid_size_x / 3.0)) < grid_size_x / 6.0) {
-                    scope_color = make_float3(0.0, 0.0, 0.0);
+                    _fabs(mod(position_within_scope.x, grid_size_x / 3.0f)) < grid_size_x / 6.0f) {
+                    scope_color = make_float3(0.0f, 0.0f, 0.0f);
                 }
             }
 
@@ -240,17 +240,17 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             if (scope_type == SCOPE_WAVEFORM_LUM) {
                 float line_lum = line_color.w;
                 if (_fabs(line_lum - position_within_scope.y) < dot_size * vert_scale) {
-                    scope_color = make_float3(0.0, 1.0, 0.0);
+                    scope_color = make_float3(0.0f, 1.0f, 0.0f);
                 }
             } else if (scope_type == SCOPE_WAVEFORM_RGB) {
                 if (_fabs(line_color.x - position_within_scope.y) < dot_size * vert_scale) {
-                    scope_color += make_float3(1.0, 0.0, 0.0);
+                    scope_color += make_float3(1.0f, 0.0f, 0.0f);
                 }
                 if (_fabs(line_color.y - position_within_scope.y) < dot_size * vert_scale) {
-                    scope_color += make_float3(0.0, 1.0, 0.0);
+                    scope_color += make_float3(0.0f, 1.0f, 0.0f);
                 }
                 if (_fabs(line_color.z - position_within_scope.y) < dot_size * vert_scale) {
-                    scope_color += make_float3(0.0, 0.0, 1.0);
+                    scope_color += make_float3(0.0f, 0.0f, 1.0f);
                 }
             }
         } else if (scope_type == SCOPE_HISTOGRAM_LUM || scope_type == SCOPE_HISTOGRAM_RGB) {
@@ -267,8 +267,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 grid_size = 1.0f;
             }
 
-            const float2 low_bound = make_float2(middle - (1.0 / zoom) * (middle - left), y_middle - (1.0 / alt_zoom) * y_middle);
-            const float2 upper_bound = make_float2(middle + (1.0 / zoom) * (right - middle), y_middle + (1.0 / alt_zoom) * (1.0f - y_middle));
+            const float2 low_bound = make_float2(middle - (1.0f / zoom) * (middle - left), y_middle - (1.0f / alt_zoom) * y_middle);
+            const float2 upper_bound = make_float2(middle + (1.0f / zoom) * (right - middle), y_middle + (1.0f / alt_zoom) * (1.0f - y_middle));
 
             float hor_scale = upper_bound.x - low_bound.x;
             float vert_scale = upper_bound.y - low_bound.y;
@@ -280,7 +280,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 position_within_scope = make_float2(_mix(low_bound.x, upper_bound.x, (curr_pos.x - scope_bounding_box.left_bottom.x) / box_size),
                                                     _mix(low_bound.y, upper_bound.y, (curr_pos.y - scope_bounding_box.left_bottom.y) / box_size));
             } else if (scope_type == SCOPE_HISTOGRAM_RGB) {
-                scope_third = (int)((curr_pos.y - scope_bounding_box.left_bottom.y) / box_size * 3.0);
+                scope_third = (int)((curr_pos.y - scope_bounding_box.left_bottom.y) / box_size * 3.0f);
                 position_within_scope =
                     make_float2(_mix(low_bound.x, upper_bound.x, (curr_pos.x - scope_bounding_box.left_bottom.x) / box_size),
                                 _mix(low_bound.y, upper_bound.y, 3.0f * mod((curr_pos.y - scope_bounding_box.left_bottom.y) / (box_size), 1.0f / 3.0f)));
@@ -290,23 +290,23 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             if (draw_grid) {
                 // luminance minor guidelines
                 if (_fabs(mod(position_within_scope.x, grid_size)) < dot_size * hor_scale) {
-                    scope_color = make_float3(0.05, 0.05, 0.05);
+                    scope_color = make_float3(0.05f, 0.05f, 0.05f);
                 }
                 // Luminance low and high guidelines
                 if (_fabs(position_within_scope.x - left) < dot_size * 2 * hor_scale ||
                     _fabs(position_within_scope.x - right) < dot_size * 2 * hor_scale) {
-                    scope_color = make_float3(0.1, 0.1, 0.1);
+                    scope_color = make_float3(0.1f, 0.1f, 0.1f);
                 }
                 // Dashed mid gray line
                 if (log_luminance && _fabs(position_within_scope.x - middle) < dot_size * 2 * hor_scale &&
-                    _fabs(mod(position_within_scope.y, 0.1)) < 0.05) {
-                    scope_color = make_float3(0.0, 0.0, 0.0);
+                    _fabs(mod(position_within_scope.y, 0.1f)) < 0.05f) {
+                    scope_color = make_float3(0.0f, 0.0f, 0.0f);
                 }
             }
             float curr_bucket = position_within_scope.x;
-            float next_bucket = curr_bucket + (1.0 / box_size) * (upper_bound.x - low_bound.x);
+            float next_bucket = curr_bucket + (1.0f / box_size) * (upper_bound.x - low_bound.x);
             float4 quantity_in_curr_bucket_rgbw = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
-            for (float time_on_line = 0; time_on_line < 1.0; time_on_line += 1.0 / num_samples) {
+            for (float time_on_line = 0; time_on_line < 1.0f; time_on_line += 1.0f / num_samples) {
                 float2 line_color_pos = _mix(endpoint1, endpoint2, time_on_line);
                 float4 line_color = sample_color(line_color_pos, p_TexR, p_TexG, p_TexB);
                 if (log_luminance) {
@@ -314,53 +314,53 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 }
                 float line_lum = line_color.w;
                 if (line_lum >= curr_bucket && line_lum < next_bucket) {
-                    quantity_in_curr_bucket_rgbw.w += 1.0;
+                    quantity_in_curr_bucket_rgbw.w += 1.0f;
                 }
                 if (line_color.x >= curr_bucket && line_color.x < next_bucket) {
-                    quantity_in_curr_bucket_rgbw.x += 1.0;
+                    quantity_in_curr_bucket_rgbw.x += 1.0f;
                 }
                 if (line_color.y >= curr_bucket && line_color.y < next_bucket) {
-                    quantity_in_curr_bucket_rgbw.y += 1.0;
+                    quantity_in_curr_bucket_rgbw.y += 1.0f;
                 }
                 if (line_color.z >= curr_bucket && line_color.z < next_bucket) {
-                    quantity_in_curr_bucket_rgbw.z += 1.0;
+                    quantity_in_curr_bucket_rgbw.z += 1.0f;
                 }
             }
-            quantity_in_curr_bucket_rgbw *= 10.0 / num_samples;
+            quantity_in_curr_bucket_rgbw *= 10.0f / num_samples;
             if (scope_type == SCOPE_HISTOGRAM_LUM) {
                 if (position_within_scope.y > 0.0f && position_within_scope.y < quantity_in_curr_bucket_rgbw.w) {
-                    scope_color += make_float3(0.0, 1.0, 0.0);
+                    scope_color += make_float3(0.0f, 1.0f, 0.0f);
                 }
             }
             if (scope_type == SCOPE_HISTOGRAM_RGB) {
                 // Make it shorter so we can have three rows.
                 if (scope_third == 2 && position_within_scope.y > 0.0f && position_within_scope.y < quantity_in_curr_bucket_rgbw.x) {
-                    scope_color += make_float3(1.0, 0.0, 0.0);
+                    scope_color += make_float3(1.0f, 0.0f, 0.0f);
                 }
                 if (scope_third == 1 && position_within_scope.y > 0.0f && position_within_scope.y < quantity_in_curr_bucket_rgbw.y) {
-                    scope_color += make_float3(0.0, 1.0, 0.0);
+                    scope_color += make_float3(0.0f, 1.0f, 0.0f);
                 }
                 if (scope_third == 0 && position_within_scope.y > 0.0f && position_within_scope.y < quantity_in_curr_bucket_rgbw.z) {
-                    scope_color += make_float3(0.0, 0.0, 1.0);
+                    scope_color += make_float3(0.0f, 0.0f, 1.0f);
                 }
             }
         } else if (scope_type == SCOPE_LUM_CURVE) {
             // Only horizontal_zoom
-            float x_middle = 0.5;
-            float x_low = 0.0;
-            float x_high = 1.0;
-            float grid_size_x = 0.10;
+            float x_middle = 0.5f;
+            float x_low = 0.0f;
+            float x_high = 1.0f;
+            float grid_size_x = 0.10f;
             float grid_size_y;
             if (log_luminance) {
-                x_middle = 0.0;
+                x_middle = 0.0f;
                 x_low = -default_stops_above_mid_gray;
                 x_high = default_stops_above_mid_gray;
-                grid_size_x = 1.0;
+                grid_size_x = 1.0f;
             }
             float y_middle;
             float y_max;
             float y_min;
-            int scope_half = (int)((curr_pos.y - scope_bounding_box.left_bottom.y) / box_size * 2.0);
+            int scope_half = (int)((curr_pos.y - scope_bounding_box.left_bottom.y) / box_size * 2.0f);
             float curr_alt_zoom;
 
             if (scope_half == 0) {
@@ -369,18 +369,18 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 y_max = y_middle + 0.1f;
                 y_min = y_middle - 0.1f;
                 curr_alt_zoom = alt_zoom;
-                grid_size_y = 5.0 * (PI / 180.0); // 10 degrees
+                grid_size_y = 5.0f * (PI / 180.0f); // 10 degrees
             } else if (scope_half == 1) {
                 // lum vs sat
                 y_middle = 0.0f;
                 y_max = 1.0f;
                 y_min = 0.0f;
                 curr_alt_zoom = alt_zoom;
-                grid_size_y = 0.10;
+                grid_size_y = 0.10f;
             }
             // X axis going to be luminance, y-axis is hue or sat depending on the half of the scope.
-            const float2 low_bound = make_float2(x_middle - (1.0 / zoom) * (x_middle - x_low), y_middle - (1.0 / curr_alt_zoom) * (y_middle - y_min));
-            const float2 upper_bound = make_float2(x_middle + (1.0 / zoom) * (x_high - x_middle), y_middle + (1.0 / curr_alt_zoom) * (y_max - y_middle));
+            const float2 low_bound = make_float2(x_middle - (1.0f / zoom) * (x_middle - x_low), y_middle - (1.0f / curr_alt_zoom) * (y_middle - y_min));
+            const float2 upper_bound = make_float2(x_middle + (1.0f / zoom) * (x_high - x_middle), y_middle + (1.0f / curr_alt_zoom) * (y_max - y_middle));
             float hor_scale = upper_bound.x - low_bound.x;
             float vert_scale = upper_bound.y - low_bound.y;
 
@@ -392,41 +392,41 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             if (draw_grid) {
                 // luminance minor guidelines
                 if (_fabs(mod(position_within_scope.x, grid_size_x)) < dot_size * hor_scale) {
-                    scope_color = make_float3(0.05, 0.05, 0.05);
+                    scope_color = make_float3(0.05f, 0.05f, 0.05f);
                 }
                 // Luminance bottom and top guidelines
                 if (_fabs(position_within_scope.x - x_high) < dot_size * 2 * hor_scale ||
                     _fabs(position_within_scope.x - x_low) < dot_size * 2 * hor_scale) {
-                    scope_color = make_float3(0.1, 0.1, 0.1);
+                    scope_color = make_float3(0.1f, 0.1f, 0.1f);
                 }
                 // Dashed mid gray line in the middle if log luminance mode
                 if (log_luminance && _fabs(position_within_scope.x - x_middle) < dot_size * hor_scale &&
-                    _fabs(mod(position_within_scope.y, grid_size_y / 3.0)) < grid_size_y / 6.0) {
-                    scope_color = make_float3(0.0, 0.0, 0.0);
+                    _fabs(mod(position_within_scope.y, grid_size_y / 3.0f)) < grid_size_y / 6.0f) {
+                    scope_color = make_float3(0.0f, 0.0f, 0.0f);
                 }
                 if (scope_half == 0) {
                     // Lum v hue curve
                     // Horizontal Hue guidelines
                     if (_fabs(mod(position_within_scope.y, grid_size_y)) < dot_size * vert_scale) {
-                        scope_color = cylindrical_to_rgb(make_float3(position_within_scope.y, 0.3, mid_gray));
+                        scope_color = cylindrical_to_rgb(make_float3(position_within_scope.y, 0.3f, mid_gray));
                     }
                     // Indicator of the current hue
                     if (_fabs(position_within_scope.y - y_middle) < dot_size * vert_scale &&
-                        _fabs(mod(position_within_scope.x, grid_size_x / 3.0)) < grid_size_x / 6.0) {
-                        scope_color = make_float3(0.1, 0.1, 0.1);
+                        _fabs(mod(position_within_scope.x, grid_size_x / 3.0f)) < grid_size_x / 6.0f) {
+                        scope_color = make_float3(0.1f, 0.1f, 0.1f);
                     }
                 } else if (scope_half == 1 && _fabs(mod(position_within_scope.y, grid_size_y)) < dot_size * vert_scale) {
                     // Lum v Sat horizontal guidelines to indicate saturation levels.
-                    scope_color = cylindrical_to_rgb(make_float3(center_hue_rads, position_within_scope.y * 0.5, mid_gray));
+                    scope_color = cylindrical_to_rgb(make_float3(center_hue_rads, position_within_scope.y * 0.5f, mid_gray));
                 }
             }
             float curr_bucket = position_within_scope.x;
-            float next_bucket = curr_bucket + (1.0 / box_size) * (upper_bound.x - low_bound.x);
+            float next_bucket = curr_bucket + (1.0f / box_size) * (upper_bound.x - low_bound.x);
 
             // Move to cylindrical
-            float3 target_pixel_cylindrical = make_float3(position_within_scope.y * 2.0 * PI, position_within_scope.y, position_within_scope.x);
+            float3 target_pixel_cylindrical = make_float3(position_within_scope.y * 2.0f * PI, position_within_scope.y, position_within_scope.x);
 
-            for (float time_on_line = 0; time_on_line < 1.0; time_on_line += 1.0 / num_samples) {
+            for (float time_on_line = 0; time_on_line < 1.0f; time_on_line += 1.0f / num_samples) {
                 float2 line_color_pos = _mix(endpoint1, endpoint2, time_on_line);
                 float4 line_color_f4 = sample_color(line_color_pos, p_TexR, p_TexG, p_TexB);
                 float3 line_color = make_float3(line_color_f4.x, line_color_f4.y, line_color_f4.z);

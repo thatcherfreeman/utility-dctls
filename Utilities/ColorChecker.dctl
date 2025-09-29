@@ -7,10 +7,10 @@ DEFINE_UI_PARAMS(convert_illuminant, Adapt to, DCTLUI_COMBO_BOX, 1, {CAT_NOTHING
 __DEVICE__ float3 xy_to_XYZ(float2 xy) {
     float x = xy.x;
     float y = xy.y;
-    if (y == 0.0) {
-        return make_float3(x, 0.0, 1.0 - x);
+    if (y == 0.0f) {
+        return make_float3(x, 0.0f, 1.0f - x);
     }
-    float3 out = make_float3(x / y, 1.0, (1 - x - y) / y);
+    float3 out = make_float3(x / y, 1.0f, (1 - x - y) / y);
     return out;
 }
 
@@ -18,59 +18,59 @@ __CONSTANT__ float colors_official[24][3] = {
     // Copied from X-Rite website Colorchecker after 2014 LAB measurements
     // LAB coordinates of the 24 color chips were allegedly under M0 (tungsten) lighting condition.
     // However, this M0 seems to be untrustworthy and therefore we should assume they were under M1 (D50) conditions.
-    {37.54, 14.37, 14.92},   // Dark Skin
-    {64.66, 19.27, 17.5},    // Light skin
-    {49.32, -3.82, -22.54},  // blue sky
-    {43.46, -12.74, 22.72},  // foliage
-    {54.94, 9.61, -24.79},   // blue flower
-    {70.48, -32.26, -0.37},  // bluish green
-    {62.73, 35.83, 56.5},    // orange
-    {39.43, 10.75, -45.17},  // purplish blue
-    {50.57, 48.64, 16.67},   // moderate red
-    {30.1, 22.54, -20.87},   // purple
-    {71.77, -24.13, 58.19},  // yellow green
-    {71.51, 18.24, 67.37},   // orange yellow
-    {28.37, 15.42, -49.8},   // blue
-    {54.38, -39.72, 32.27},  // green
-    {42.43, 51.05, 28.62},   // red
-    {81.8, 2.67, 80.41},     // yellow
-    {50.63, 51.28, -14.12},  // magenta
-    {49.57, -29.71, -28.32}, // cyan
-    {95.19, -1.03, 2.93},    // white
-    {81.29, -0.57, 0.44},    // neutral 8
-    {66.89, -0.75, -0.06},   // neutral 6.5
-    {50.76, -0.13, 0.14},    // neutral 5
-    {35.63, -0.46, -0.48},   // neutral 3.5
-    {20.64, 0.07, -0.46},    // black
+    {37.54f, 14.37f, 14.92f},   // Dark Skin
+    {64.66f, 19.27f, 17.5f},    // Light skin
+    {49.32f, -3.82f, -22.54f},  // blue sky
+    {43.46f, -12.74f, 22.72f},  // foliage
+    {54.94f, 9.61f, -24.79f},   // blue flower
+    {70.48f, -32.26f, -0.37f},  // bluish green
+    {62.73f, 35.83f, 56.5f},    // orange
+    {39.43f, 10.75f, -45.17f},  // purplish blue
+    {50.57f, 48.64f, 16.67f},   // moderate red
+    {30.1f, 22.54f, -20.87f},   // purple
+    {71.77f, -24.13f, 58.19f},  // yellow green
+    {71.51f, 18.24f, 67.37f},   // orange yellow
+    {28.37f, 15.42f, -49.8f},   // blue
+    {54.38f, -39.72f, 32.27f},  // green
+    {42.43f, 51.05f, 28.62f},   // red
+    {81.8f, 2.67f, 80.41f},     // yellow
+    {50.63f, 51.28f, -14.12f},  // magenta
+    {49.57f, -29.71f, -28.32f}, // cyan
+    {95.19f, -1.03f, 2.93f},    // white
+    {81.29f, -0.57f, 0.44f},    // neutral 8
+    {66.89f, -0.75f, -0.06f},   // neutral 6.5f
+    {50.76f, -0.13f, 0.14f},    // neutral 5
+    {35.63f, -0.46f, -0.48f},   // neutral 3.5f
+    {20.64f, 0.07f, -0.46f},    // black
 };
 
 // Original Paper values
 __CONSTANT__ float colors_mccamy[24][3] = {
     // xyY coordinates of the 24 color chips.
-    {0.4002, 0.3504, 0.1005}, // Dark Skin
-    {0.3773, 0.3446, 0.3582}, // Light skin
-    {0.2470, 0.2514, 0.1933}, // blue sky
-    {0.3372, 0.4220, 0.1329}, // foliage
-    {0.2651, 0.2400, 0.2427}, // blue flower
-    {0.2608, 0.3430, 0.4306}, // bluish green
-    {0.5060, 0.4070, 0.3005}, // orange
-    {0.2110, 0.1750, 0.1200}, // purplish blue
-    {0.4533, 0.3058, 0.1977}, // moderate red
-    {0.2845, 0.2020, 0.0656}, // purple
-    {0.3800, 0.4887, 0.4429}, // yellow green
-    {0.4729, 0.4375, 0.4306}, // orange yellow
-    {0.1866, 0.1285, 0.0611}, // blue
-    {0.3046, 0.4782, 0.2339}, // green
-    {0.5385, 0.3129, 0.1200}, // red
-    {0.4480, 0.4703, 0.5910}, // yellow
-    {0.3635, 0.2325, 0.1977}, // magenta
-    {0.1958, 0.2519, 0.1977}, // cyan
-    {0.3101, 0.3163, 0.9001}, // white
-    {0.3101, 0.3163, 0.5910}, // neutral 8
-    {0.3101, 0.3163, 0.3620}, // neutral 6.5
-    {0.3101, 0.3163, 0.1977}, // neutral 5
-    {0.3101, 0.3163, 0.0900}, // neutral 3.5
-    {0.3101, 0.3163, 0.0313}, // black
+    {0.4002f, 0.3504f, 0.1005f}, // Dark Skin
+    {0.3773f, 0.3446f, 0.3582f}, // Light skin
+    {0.2470f, 0.2514f, 0.1933f}, // blue sky
+    {0.3372f, 0.4220f, 0.1329f}, // foliage
+    {0.2651f, 0.2400f, 0.2427f}, // blue flower
+    {0.2608f, 0.3430f, 0.4306f}, // bluish green
+    {0.5060f, 0.4070f, 0.3005f}, // orange
+    {0.2110f, 0.1750f, 0.1200f}, // purplish blue
+    {0.4533f, 0.3058f, 0.1977f}, // moderate red
+    {0.2845f, 0.2020f, 0.0656f}, // purple
+    {0.3800f, 0.4887f, 0.4429f}, // yellow green
+    {0.4729f, 0.4375f, 0.4306f}, // orange yellow
+    {0.1866f, 0.1285f, 0.0611f}, // blue
+    {0.3046f, 0.4782f, 0.2339f}, // green
+    {0.5385f, 0.3129f, 0.1200f}, // red
+    {0.4480f, 0.4703f, 0.5910f}, // yellow
+    {0.3635f, 0.2325f, 0.1977f}, // magenta
+    {0.1958f, 0.2519f, 0.1977f}, // cyan
+    {0.3101f, 0.3163f, 0.9001f}, // white
+    {0.3101f, 0.3163f, 0.5910f}, // neutral 8
+    {0.3101f, 0.3163f, 0.3620f}, // neutral 6.5f
+    {0.3101f, 0.3163f, 0.1977f}, // neutral 5
+    {0.3101f, 0.3163f, 0.0900f}, // neutral 3.5f
+    {0.3101f, 0.3163f, 0.0313f}, // black
 };
 
 __DEVICE__ float dot_product(float3 a, float3 b) {
@@ -104,7 +104,7 @@ __DEVICE__ void mm_33_33(float dest[3][3], float a[3][3], float b[3][3]) {
 
 __DEVICE__ void mat_inverse_33(float m[3][3]) {
     // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
-    float inv_buf[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+    float inv_buf[3][3] = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
 
     float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
                 m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
@@ -130,7 +130,7 @@ __DEVICE__ void mat_fill(float dest[3][3], float fill) {
 }
 
 __DEVICE__ void diagonal_matrix(float dest[3][3], float3 diagonal) {
-    mat_fill(dest, 0.0);
+    mat_fill(dest, 0.0f);
     dest[0][0] = diagonal.x;
     dest[1][1] = diagonal.y;
     dest[2][2] = diagonal.z;
@@ -139,9 +139,9 @@ __DEVICE__ void diagonal_matrix(float dest[3][3], float3 diagonal) {
 __DEVICE__ void cat02_adaptation_matrix(float dest[3][3], float2 source_white_xy, float2 dest_white_xy) {
 
     float cat02[3][3] = {
-        {0.7328, 0.4296, -0.1624},
-        {-0.7036, 1.6975, 0.0061},
-        {0.003, 0.0136, 0.9834},
+        {0.7328f, 0.4296f, -0.1624f},
+        {-0.7036f, 1.6975f, 0.0061f},
+        {0.003f, 0.0136f, 0.9834f},
     };
     float cat02_inv[3][3] = {};
     copy_mat_33(cat02_inv, cat02);
@@ -164,9 +164,9 @@ __DEVICE__ float powf(float base, float exp) {
 
 __DEVICE__ float3 LAB_to_XYZ(float3 lab, float2 illuminant_xy) {
     // Adapted from Jan Karow's implementation.
-    float Xr = illuminant_xy.x / illuminant_xy.y * 100.0;
-    float Yr = 100.0;
-    float Zr = (1.0 - illuminant_xy.x - illuminant_xy.y) / illuminant_xy.y * 100.0;
+    float Xr = illuminant_xy.x / illuminant_xy.y * 100.0f;
+    float Yr = 100.0f;
+    float Zr = (1.0f - illuminant_xy.x - illuminant_xy.y) / illuminant_xy.y * 100.0f;
     float E = 216.0f / 24389.0f;
     float K = 24389.0f / 27.0f;
 
@@ -192,29 +192,29 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float x = (float)p_X / (float)p_Width;
     float y = (float)p_Y / (float)p_Height;
 
-    float3 output = make_float3(0.0, 0.0, 0.0);
+    float3 output = make_float3(0.0f, 0.0f, 0.0f);
 
-    float usable_area = 1.0 - 2 * outer_border_width;
-    float col = ((x - 0.5) / usable_area + 0.5) * 6.0;
-    float row = ((y - 0.5) / usable_area + 0.5) * 4.0;
+    float usable_area = 1.0f - 2 * outer_border_width;
+    float col = ((x - 0.5f) / usable_area + 0.5f) * 6.0f;
+    float row = ((y - 0.5f) / usable_area + 0.5f) * 4.0f;
 
     if (col < 0 || row < 0 || col >= 6 || row >= 4) {
         return output;
     }
     float inner_posx = _fmod(col, 1.0f);
     float inner_posy = _fmod(row, 1.0f);
-    if (inner_posx < inner_border_width || inner_posy < inner_border_width || inner_posx >= 1.0 - inner_border_width ||
-        inner_posy >= 1.0 - inner_border_width) {
+    if (inner_posx < inner_border_width || inner_posy < inner_border_width || inner_posx >= 1.0f - inner_border_width ||
+        inner_posy >= 1.0f - inner_border_width) {
         return output;
     }
 
     // Get current color
     int idx = (int)col + ((int)row * 6);
     float3 tile_color_XYZ;
-    const float2 illuminant_d65 = make_float2(0.3127, 0.3290);    // D65
-    const float2 illuminant_d50 = make_float2(0.34567, 0.35850);  // D50
-    const float2 illuminant_c = make_float2(0.3101, 0.3163);      // C
-    const float2 illuminant_aces = make_float2(0.32168, 0.33767); // ACES
+    const float2 illuminant_d65 = make_float2(0.3127f, 0.3290f);    // D65
+    const float2 illuminant_d50 = make_float2(0.34567f, 0.35850f);  // D50
+    const float2 illuminant_c = make_float2(0.3101f, 0.3163f);      // C
+    const float2 illuminant_aces = make_float2(0.32168f, 0.33767f); // ACES
 
     float2 source_illuminant;
     if (dataset == OFFICIAL) {

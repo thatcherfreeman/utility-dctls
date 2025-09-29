@@ -260,7 +260,7 @@ __DEVICE__ void float2str(float f, char output[], int num_chars) {
     // First char is neg sign, if necessary
     char inf[] = "inf";
     char nan[] = "NaN";
-    char zero[] = "0.";
+    char zero[] = "0.f";
 
     if (f < 0) {
         output[runner] = '-';
@@ -272,7 +272,7 @@ __DEVICE__ void float2str(float f, char output[], int num_chars) {
     } else if (isnan(f)) {
         strcpy_idx(nan, output, 0, runner, strlen(nan));
         runner += strlen(nan);
-    } else if (f == 0.0) {
+    } else if (f == 0.0f) {
         strcpy_idx(zero, output, 0, runner, strlen(zero));
         // strcat(output, zero, output);
         runner += strlen(zero);
@@ -284,7 +284,7 @@ __DEVICE__ void float2str(float f, char output[], int num_chars) {
         f = _fabs(f);
         // num digits before decimal point
         int left_digits = (int)(_log10f(f) + 1);
-        if (f < 1.0) {
+        if (f < 1.0f) {
             // want to pad left side with zero.
             left_digits = 1;
         }
@@ -292,7 +292,7 @@ __DEVICE__ void float2str(float f, char output[], int num_chars) {
 
         // Extract left digits
         for (int i = left_digits; i > 0 && runner < num_chars; --i, ++runner) {
-            float base = _powf(10.0, i - 1);
+            float base = _powf(10.0f, i - 1);
             int d = (int)_truncf(f / base);
             f = _fmod(f, base);
             output[runner] = digit2char(d);
@@ -302,7 +302,7 @@ __DEVICE__ void float2str(float f, char output[], int num_chars) {
             runner += 1;
         }
         for (int i = 0; i > (-1 * right_digits) && runner < num_chars; --i, ++runner) {
-            float base = _powf(10.0, i - 1);
+            float base = _powf(10.0f, i - 1);
             int d = (int)_truncf(f / base);
             f = _fmod(f, base);
             output[runner] = digit2char(d);
@@ -333,7 +333,7 @@ __DEVICE__ void int2str(int f, char output[], int num_chars) {
 
         // Extract left digits
         for (int i = left_digits; i > 0 && runner < num_chars; --i, ++runner) {
-            float base = _powf(10.0, i - 1);
+            float base = _powf(10.0f, i - 1);
             int d = (int)_truncf(f / base);
             f = _fmod(f, base);
             output[runner] = digit2char(d);
@@ -352,8 +352,8 @@ __DEVICE__ inline int checksum_string(char str[]) {
 
 __DEVICE__ float4
 sample_color(int window_size, int width, int height, int px, int py, __TEXTURE__ tex_r, __TEXTURE__ tex_g, __TEXTURE__ tex_b, __TEXTURE__ tex_a) {
-    float weight = 0.0;
-    float4 total = make_float4(0.0, 0.0, 0.0, 0.0);
+    float weight = 0.0f;
+    float4 total = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
 
     int left_margin = window_size / 2;
     int right_margin = window_size / 2;
@@ -366,7 +366,7 @@ sample_color(int window_size, int width, int height, int px, int py, __TEXTURE__
         for (int j = py - left_margin; j <= py + right_margin; ++j) {
             // Check in bounds
             if (0 <= i && i < width && 0 <= j && j < height) {
-                weight += 1.0;
+                weight += 1.0f;
                 total += make_float4(_tex2D(tex_r, i, j), _tex2D(tex_g, i, j), _tex2D(tex_b, i, j), _tex2D(tex_a, i, j));
             }
         }
@@ -421,23 +421,23 @@ __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float4 curr_color = make_float4(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y), _tex2D(p_TexA, p_X, p_Y));
 
     float4 legend_color;
-    float lum = 0.0;
+    float lum = 0.0f;
     switch (legend_value) {
         case LEGCOL_BLACK:
-            legend_color = make_float4(0.0, 0.0, 0.0, 1.0);
+            legend_color = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
             break;
         case LEGCOL_WHITE:
-            legend_color = make_float4(1.0, 1.0, 1.0, 1.0);
+            legend_color = make_float4(1.0f, 1.0f, 1.0f, 1.0f);
             break;
         case LEGCOL_GRAY:
-            legend_color = make_float4(0.18, 0.18, 0.18, 1.0);
+            legend_color = make_float4(0.18f, 0.18f, 0.18f, 1.0f);
             break;
         case LEGCOL_INV:
             lum = (curr_color.x + curr_color.y + curr_color.z) / 3.0f;
             if (isnan(lum)) {
-                lum = 0.5;
+                lum = 0.5f;
             }
-            legend_color = make_float4(1.0, 1.0, 1.0, 1.0) - lum;
+            legend_color = make_float4(1.0f, 1.0f, 1.0f, 1.0f) - lum;
             break;
     }
 
@@ -471,7 +471,7 @@ __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     curr_pos_t curr_pos = make_curr_pos((float)p_X / ((float)p_Height - 1), // dividing by height instead of width to correct aspect ratio of characters.
                                         (float)p_Y / ((float)p_Height - 1));
     char_trans_t str_trans;
-    const float scale = 0.05;
+    const float scale = 0.05f;
 
     char red_str[] = "R: ";
     char green_str[] = "  G: ";
@@ -480,56 +480,56 @@ __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     // Guess max width from `format` and user's `num_digits`
     int num_digits_temp = num_digits;
-    convert_float4_to_format(make_float4(0.0, 0.0, 0.0, 0.0), format, &num_digits_temp);
-    float max_width = 0.45 * (strlen(red_str) + strlen(green_str) + strlen(blue_str) + strlen(alpha_str)) * scale +
-                      (0.42) * scale * num_digits_temp * 4.0; // not a rigerous solution, hardcoded for this specific font and text.
+    convert_float4_to_format(make_float4(0.0f, 0.0f, 0.0f, 0.0f), format, &num_digits_temp);
+    float max_width = 0.45f * (strlen(red_str) + strlen(green_str) + strlen(blue_str) + strlen(alpha_str)) * scale +
+                      (0.42f) * scale * num_digits_temp * 4.0f; // not a rigerous solution, hardcoded for this specific font and text.
 
     // letterbox/pillarbox calculation
-    const float target_aspect = 2.40;
+    const float target_aspect = 2.40f;
     float curr_aspect = (float)p_Width / p_Height;
     float left_margin = 0;
     float bottom_margin = 0;
     if (curr_aspect > target_aspect) {
         // pillarboxed
-        left_margin = (curr_aspect - target_aspect) / 2.0 / curr_aspect;
+        left_margin = (curr_aspect - target_aspect) / 2.0f / curr_aspect;
         left_margin *= (p_Width / p_Height);
     } else {
         // letterboxed
-        bottom_margin = (1.0 - curr_aspect / target_aspect) / 2.0;
+        bottom_margin = (1.0f - curr_aspect / target_aspect) / 2.0f;
     }
 
     // Legend position switcher
     switch (legend_position) {
         case POSITION_BOTTOM:
-            str_trans = make_char_trans(0.0, 1.0 - scale, scale);
+            str_trans = make_char_trans(0.0f, 1.0f - scale, scale);
             break;
         case POSITION_BOTTOM_LETTERBOX:
-            str_trans = make_char_trans(left_margin, 1.0 - bottom_margin - scale, scale);
+            str_trans = make_char_trans(left_margin, 1.0f - bottom_margin - scale, scale);
             break;
         case POSITION_TOP:
-            str_trans = make_char_trans(0.0, 0.0, scale);
+            str_trans = make_char_trans(0.0f, 0.0f, scale);
             break;
         case POSITION_LEFT:
-            str_trans = make_char_trans(0.0, 0.5, scale);
+            str_trans = make_char_trans(0.0f, 0.5f, scale);
             break;
         case POSITION_CROSSHAIR:
-            if (sample_y < 1.0 - scale) {
-                str_trans = make_char_trans(0.0, sample_y, scale);
+            if (sample_y < 1.0f - scale) {
+                str_trans = make_char_trans(0.0f, sample_y, scale);
             } else {
-                str_trans = make_char_trans(0.0, sample_y - scale, scale);
+                str_trans = make_char_trans(0.0f, sample_y - scale, scale);
             }
-            if ((1.0 - sample_x) * p_Width / p_Height > max_width) {
+            if ((1.0f - sample_x) * p_Width / p_Height > max_width) {
                 // right side legend, left justified
                 str_trans.x = sample_x * p_Width / p_Height;
             } else if (sample_x * p_Width / p_Height > max_width) {
                 // left side legend, right justified
                 str_trans.x = sample_x * p_Width / p_Height - max_width;
-            } else if (sample_x > 0.5) {
+            } else if (sample_x > 0.5f) {
                 // left side legend, left justified
-                str_trans.x = 0.0;
+                str_trans.x = 0.0f;
             } else {
                 // right side legend, right justified
-                str_trans.x = _fmaxf(0.0, 1.0 * p_Width / p_Height - max_width);
+                str_trans.x = _fmaxf(0.0f, 1.0f * p_Width / p_Height - max_width);
             }
             break;
     }
@@ -581,9 +581,9 @@ __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         // Draw the string
         float3 curr_color_f3 = drop_alpha(curr_color);
         draw_string(string_buffer, drop_alpha(legend_color), &str_trans, &curr_pos, &curr_color_f3);
-        curr_color = make_float4(curr_color_f3.x, curr_color_f3.y, curr_color_f3.z, 1.0);
+        curr_color = make_float4(curr_color_f3.x, curr_color_f3.y, curr_color_f3.z, 1.0f);
         curr_color.x *= net_checksum > 0;
     }
-    curr_color.w = 1.0;
+    curr_color.w = 1.0f;
     return curr_color;
 }

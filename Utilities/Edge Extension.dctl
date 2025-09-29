@@ -28,9 +28,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     // Black out the region outside the computed width and height
 
     // Figure out how large the side bars are
-    float side_bar_width = (p_Width - desired_width) / 2.0;
+    float side_bar_width = (p_Width - desired_width) / 2.0f;
     // Figure out how large the top/bottom bars are
-    float top_bar_width = (p_Height - desired_height) / 2.0;
+    float top_bar_width = (p_Height - desired_height) / 2.0f;
 
     float3 curr_color;
 

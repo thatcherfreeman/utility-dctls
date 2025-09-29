@@ -57,14 +57,14 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     if (highlight_ninfs) {
-        if ((isinf(curr_color.x) && curr_color.x < 0.0) || (isinf(curr_color.y) && curr_color.y < 0.0) || (isinf(curr_color.z) && curr_color.z < 0.0)) {
+        if ((isinf(curr_color.x) && curr_color.x < 0.0f) || (isinf(curr_color.y) && curr_color.y < 0.0f) || (isinf(curr_color.z) && curr_color.z < 0.0f)) {
             output = make_float3(highlight_r, highlight_g, highlight_b);
             flag = 1;
         }
     }
 
     if (highlight_pinfs) {
-        if ((isinf(curr_color.x) && curr_color.x > 0.0) || (isinf(curr_color.y) && curr_color.y > 0.0) || (isinf(curr_color.z) && curr_color.z > 0.0)) {
+        if ((isinf(curr_color.x) && curr_color.x > 0.0f) || (isinf(curr_color.y) && curr_color.y > 0.0f) || (isinf(curr_color.z) && curr_color.z > 0.0f)) {
             output = make_float3(highlight_r, highlight_g, highlight_b);
             flag = 1;
         }
@@ -72,7 +72,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     if (checker_size) {
         if ((p_X / checker_size + p_Y / checker_size) % 2 == 0 && flag) {
-            output = make_float3(1.0 - highlight_r, 1.0 - highlight_g, 1.0 - highlight_b);
+            output = make_float3(1.0f - highlight_r, 1.0f - highlight_g, 1.0f - highlight_b);
         }
     }
     return output;

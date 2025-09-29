@@ -39,7 +39,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         float3 curr_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
         float3 left_color = make_float3(_tex2D(p_TexR, p_X - 1, p_Y), _tex2D(p_TexG, p_X - 1, p_Y), _tex2D(p_TexB, p_X - 1, p_Y));
         if (curr_color.x < left_color.x || curr_color.y < left_color.y || curr_color.z < left_color.z) {
-            output_color = make_float3(0.0, 0.0, 0.0);
+            output_color = make_float3(0.0f, 0.0f, 0.0f);
         } else {
             output_color = curr_color;
         }

@@ -2,7 +2,7 @@
 DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {TO_SPHERICAL, TO_RGB}, {RGB To Spherical, Spherical to RGB})
 // clang-format on
 
-#define PI 3.1415926535897932384626
+#define PI 3.1415926535897932384626f
 
 __DEVICE__ float3 cross_product(float3 a, float3 b) {
     float3 out = make_float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
@@ -47,59 +47,59 @@ __DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float
     float c = _cosf(angle);
     float s = _sinf(angle);
 
-    mat[0][0] = c + pow2f(axis.x) * (1.0 - c);
-    mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
-    mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
-    mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
-    mat[1][1] = c + pow2f(axis.y) * (1.0 - c);
-    mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
-    mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
-    mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
-    mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
+    mat[0][0] = c + pow2f(axis.x) * (1.0f - c);
+    mat[0][1] = axis.x * axis.y * (1.0f - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0f - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0f - c) + axis.z * s;
+    mat[1][1] = c + pow2f(axis.y) * (1.0f - c);
+    mat[1][2] = axis.y * axis.z * (1.0f - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0f - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0f - c) + axis.x * s;
+    mat[2][2] = c + pow2f(axis.z) * (1.0f - c);
 }
 
 __DEVICE__ float3 rgb_to_spherical(float3 x) {
     // Returns hue, scaled 0-1
-    const float3 achromatic = make_float3(1.0, 1.0, 1.0);
-    const float3 red_axis = make_float3(1.0, 0.0, 0.0);
-    float rot_mat[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
-    float rot_mat2[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    const float3 achromatic = make_float3(1.0f, 1.0f, 1.0f);
+    const float3 red_axis = make_float3(1.0f, 0.0f, 0.0f);
+    float rot_mat[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
+    float rot_mat2[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
 
     // Moves the achromatic axis to the red axis.
-    make_rotation_mat_axis_angle(rot_mat, unit_vec(cross_product(red_axis, achromatic)), -1.0 * _acosf(dot_product(red_axis, unit_vec(achromatic))));
+    make_rotation_mat_axis_angle(rot_mat, unit_vec(cross_product(red_axis, achromatic)), -1.0f * _acosf(dot_product(red_axis, unit_vec(achromatic))));
     // Rotates around (1, 0, 0) so that the old red vector points to (0, 1, 0).
-    make_rotation_mat_axis_angle(rot_mat2, red_axis, 3.0 * PI / 4.0);
+    make_rotation_mat_axis_angle(rot_mat2, red_axis, 3.0f * PI / 4.0f);
 
     float3 rotated_color = mv_33_3(rot_mat, x);
     rotated_color = mv_33_3(rot_mat2, rotated_color);
     float theta = _atan2f(rotated_color.z, rotated_color.y);
 
     float value = norm_f3(rotated_color);
-    float hue = mod(theta, 2.0 * PI);
-    float sat = _atan2f(norm_f3(make_float3(rotated_color.y, rotated_color.z, 0.0)), rotated_color.x);
+    float hue = mod(theta, 2.0f * PI);
+    float sat = _atan2f(norm_f3(make_float3(rotated_color.y, rotated_color.z, 0.0f)), rotated_color.x);
 
-    if (_fabs(sat - PI) < 1e-5) {
-        hue = 0.0;
+    if (_fabs(sat - PI) < 1e-5f) {
+        hue = 0.0f;
     }
 
-    return make_float3(hue / (2.0 * PI), sat, value);
+    return make_float3(hue / (2.0f * PI), sat, value);
 }
 
 __DEVICE__ float3 spherical_to_rgb(float3 in) {
     // Expects hue to be in range 0-1
-    const float3 achromatic = make_float3(1.0, 1.0, 1.0);
-    const float3 red_axis = make_float3(1.0, 0.0, 0.0);
+    const float3 achromatic = make_float3(1.0f, 1.0f, 1.0f);
+    const float3 red_axis = make_float3(1.0f, 0.0f, 0.0f);
 
-    float rot_mat_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
-    float rot_mat2_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    float rot_mat_inv[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
+    float rot_mat2_inv[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
     make_rotation_mat_axis_angle(rot_mat_inv, unit_vec(cross_product(red_axis, achromatic)), _acosf(dot_product(red_axis, unit_vec(achromatic))));
-    make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0 * PI / 4.0);
+    make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0f * PI / 4.0f);
 
-    float hue = mod(in.x * 2.0 * PI, 2.0 * PI);
+    float hue = mod(in.x * 2.0f * PI, 2.0f * PI);
     float sat = in.y;
     float value = in.z;
 
-    float3 direction = make_float3(1.0, 1.0, 1.0);
+    float3 direction = make_float3(1.0f, 1.0f, 1.0f);
     direction.x = value * _cosf(sat);
     direction.z = value * _sinf(hue) * _sinf(sat);
     direction.y = value * _cosf(hue) * _sinf(sat);

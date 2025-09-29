@@ -5,15 +5,15 @@ DEFINE_UI_PARAMS(clip, Clip, DCTLUI_CHECK_BOX, 0)
 
 __DEVICE__ float convert_to_legal(float x, int lower, int upper) {
     float out = x;
-    out *= (upper - lower) / 1023.0;
-    out += lower / 1023.0;
+    out *= (upper - lower) / 1023.0f;
+    out += lower / 1023.0f;
     return out;
 }
 
 __DEVICE__ float convert_to_full(float x, int lower, int upper) {
     float out = x;
-    out -= lower / 1023.0;
-    out *= 1023.0 / (upper - lower);
+    out -= lower / 1023.0f;
+    out *= 1023.0f / (upper - lower);
     return out;
 }
 

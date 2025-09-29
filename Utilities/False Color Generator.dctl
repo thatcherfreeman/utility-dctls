@@ -28,7 +28,7 @@ DEFINE_UI_PARAMS(disable_clipping, Disable Clipping, DCTLUI_CHECK_BOX, 0)
 
 DEFINE_UI_PARAMS(brightness_mode, Brightness Mode, DCTLUI_COMBO_BOX, 0, {LUM, VALUE}, {Luminance, Value})
 
-#define PI (3.14159265358979323)
+#define PI (3.14159265358979323f)
 
 __DEVICE__ float mod(float x, float y) {
     if (x < 0) {
@@ -40,32 +40,32 @@ __DEVICE__ float mod(float x, float y) {
 
 __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
     // Expects hue as degrees
-    hue = mod(hue, 360.0);
+    hue = mod(hue, 360.0f);
 
     float c = val * sat;
-    float x = c * (1.0 - _fabs(mod(hue / 60.0, 2.0) - 1.0));
+    float x = c * (1.0f - _fabs(mod(hue / 60.0f, 2.0f) - 1.0f));
     float m = val - c;
-    float3 rgbp = make_float3(0.0, 0.0, 0.0);
-    if (0.0 <= hue && hue < 60.0) {
-        rgbp = make_float3(c, x, 0.0);
-    } else if (60.0 <= hue && hue < 120.0) {
-        rgbp = make_float3(x, c, 0.0);
-    } else if (120.0 <= hue && hue < 180.0) {
-        rgbp = make_float3(0.0, c, x);
-    } else if (180.0 <= hue && hue < 240.0) {
-        rgbp = make_float3(0.0, x, c);
-    } else if (240.0 <= hue && hue < 300.0) {
-        rgbp = make_float3(x, 0.0, c);
-    } else if (300.0 < hue && hue < 360.0) {
-        rgbp = make_float3(c, 0.0, x);
+    float3 rgbp = make_float3(0.0f, 0.0f, 0.0f);
+    if (0.0f <= hue && hue < 60.0f) {
+        rgbp = make_float3(c, x, 0.0f);
+    } else if (60.0f <= hue && hue < 120.0f) {
+        rgbp = make_float3(x, c, 0.0f);
+    } else if (120.0f <= hue && hue < 180.0f) {
+        rgbp = make_float3(0.0f, c, x);
+    } else if (180.0f <= hue && hue < 240.0f) {
+        rgbp = make_float3(0.0f, x, c);
+    } else if (240.0f <= hue && hue < 300.0f) {
+        rgbp = make_float3(x, 0.0f, c);
+    } else if (300.0f < hue && hue < 360.0f) {
+        rgbp = make_float3(c, 0.0f, x);
     }
     return rgbp + m;
 }
 
 __DEVICE__ float linear_to_tlog(float x, float stops, float exp) {
-    float l = _fmaxf(x, 0.0f) * (1.0 / 0.18) * _exp2f(exp); // scale middle gray to 1.0
-    float lin_max = _exp2f(stops / 2.0);
-    float lin_min = _exp2f(-1.0 * stops / 2.0);
+    float l = _fmaxf(x, 0.0f) * (1.0f / 0.18f) * _exp2f(exp); // scale middle gray to 1.0f
+    float lin_max = _exp2f(stops / 2.0f);
+    float lin_min = _exp2f(-1.0f * stops / 2.0f);
 
     return (_log2f(l) - _log2f(lin_min)) / (_log2f(lin_max) - _log2f(lin_min));
 }
@@ -74,7 +74,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     float curr_lum;
     if (brightness_mode == LUM) {
-        curr_lum = p_G * 0.7 + p_R * 0.2 + p_B * 0.1;
+        curr_lum = p_G * 0.7f + p_R * 0.2f + p_B * 0.1f;
     } else if (brightness_mode == VALUE) {
         curr_lum = _fmaxf(p_R, _fmaxf(p_G, p_B));
     }
@@ -91,22 +91,22 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         linear_output_color = make_float3(mid_gray, mid_gray, mid_gray);
         passthru = false;
     } else if (curr_stop < black_stop && !disable_blacks) {
-        linear_output_color = hsv_to_rgb(black_hue, 1.0, mid_gray * _exp2f(curr_stop - black_stop + 1));
+        linear_output_color = hsv_to_rgb(black_hue, 1.0f, mid_gray * _exp2f(curr_stop - black_stop + 1));
         passthru = false;
     } else if (black_stop <= curr_stop && curr_stop < shadow_stop && !disable_near_blacks) {
-        linear_output_color = hsv_to_rgb(dark_hue, 1.0, mid_gray * _exp2f(curr_stop - black_stop));
+        linear_output_color = hsv_to_rgb(dark_hue, 1.0f, mid_gray * _exp2f(curr_stop - black_stop));
         passthru = false;
     } else if (shadow_stop <= curr_stop && curr_stop < 0 && !disable_shadows) {
-        linear_output_color = hsv_to_rgb(shadow_hue, 1.0, mid_gray * _exp2f(curr_stop - shadow_stop));
+        linear_output_color = hsv_to_rgb(shadow_hue, 1.0f, mid_gray * _exp2f(curr_stop - shadow_stop));
         passthru = false;
     } else if (0 < curr_stop && curr_stop <= highlight_stop && !disable_highlights) {
-        linear_output_color = hsv_to_rgb(highlight_hue, 1.0, mid_gray * _exp2f(curr_stop));
+        linear_output_color = hsv_to_rgb(highlight_hue, 1.0f, mid_gray * _exp2f(curr_stop));
         passthru = false;
     } else if (highlight_stop < curr_stop && curr_stop <= white_stop && !disable_near_whites) {
-        linear_output_color = hsv_to_rgb(bright_hue, 1.0, mid_gray * _exp2f(curr_stop - highlight_stop + 1));
+        linear_output_color = hsv_to_rgb(bright_hue, 1.0f, mid_gray * _exp2f(curr_stop - highlight_stop + 1));
         passthru = false;
     } else if (white_stop < curr_stop && !disable_whites) {
-        linear_output_color = hsv_to_rgb(white_hue, 1.0, mid_gray * _exp2f(curr_stop - white_stop + 1));
+        linear_output_color = hsv_to_rgb(white_hue, 1.0f, mid_gray * _exp2f(curr_stop - white_stop + 1));
         passthru = false;
     }
 
@@ -114,19 +114,19 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         if (clip_to_white) {
             linear_output_color = make_float3(clipping_point, clipping_point, clipping_point);
         } else {
-            linear_output_color = hsv_to_rgb(clip_hue, 1.0, clipping_point);
+            linear_output_color = hsv_to_rgb(clip_hue, 1.0f, clipping_point);
         }
     }
 
     float3 output_color;
     log_stops = _fmaxf(log_stops, 16.0f);
     if (log_output && !passthru) {
-        output_color = make_float3(linear_to_tlog(linear_output_color.x, log_stops, 0.0),
-                                   linear_to_tlog(linear_output_color.y, log_stops, 0.0),
-                                   linear_to_tlog(linear_output_color.z, log_stops, 0.0));
-        output_color = make_float3(isinf(output_color.x) || isnan(output_color.x) ? 0.0 : output_color.x,
-                                   isinf(output_color.y) || isnan(output_color.y) ? 0.0 : output_color.y,
-                                   isinf(output_color.z) || isnan(output_color.z) ? 0.0 : output_color.z);
+        output_color = make_float3(linear_to_tlog(linear_output_color.x, log_stops, 0.0f),
+                                   linear_to_tlog(linear_output_color.y, log_stops, 0.0f),
+                                   linear_to_tlog(linear_output_color.z, log_stops, 0.0f));
+        output_color = make_float3(isinf(output_color.x) || isnan(output_color.x) ? 0.0f : output_color.x,
+                                   isinf(output_color.y) || isnan(output_color.y) ? 0.0f : output_color.y,
+                                   isinf(output_color.z) || isnan(output_color.z) ? 0.0f : output_color.z);
     } else {
         output_color = linear_output_color;
     }

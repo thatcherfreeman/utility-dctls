@@ -34,7 +34,7 @@ __DEVICE__ float lin2gamma(float x, gamma_params_t params) {
     if (x < y_cut) {
         return (x - params.intercept) / params.slope;
     } else {
-        return powf((x - params.offset) / params.scale, 1.0 / params.gamma);
+        return powf((x - params.offset) / params.scale, 1.0f / params.gamma);
     }
 }
 

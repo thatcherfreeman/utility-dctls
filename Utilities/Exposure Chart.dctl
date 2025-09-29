@@ -26,7 +26,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     if (opt_exp_ramp && y >= (curr_ramp) / num_ramps) {
         // make exp ramp
-        float val = mid_gray * _exp2f((float)(x / step_width) - 0.5 - middle_step);
+        float val = mid_gray * _exp2f((float)(x / step_width) - 0.5f - middle_step);
         output_color = make_float3(val, val, val);
         curr_ramp += 1;
     }

@@ -21,26 +21,26 @@ __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
     // assume hue is in degrees
     hue = _fmod(hue, 360.0f);
     float c = val * sat;
-    float x = c * (1.0 - _fabs(_fmod(hue / 60.0f, 2.0f) - 1.0f));
+    float x = c * (1.0f - _fabs(_fmod(hue / 60.0f, 2.0f) - 1.0f));
     float m = val - c;
     float3 rgbp;
-    if (0.0 <= hue && hue < 60.0) {
-        rgbp = make_float3(c, x, 0.0);
-    } else if (60.0 <= hue && hue < 120.0) {
-        rgbp = make_float3(x, c, 0.0);
-    } else if (120.0 <= hue && hue < 180.0) {
-        rgbp = make_float3(0.0, c, x);
-    } else if (180.0 <= hue && hue < 240.0) {
-        rgbp = make_float3(0.0, x, c);
-    } else if (240.0 <= hue && hue < 300.0) {
-        rgbp = make_float3(x, 0.0, c);
-    } else { // if (300.0 < hue && hue < 360.0) {
-        rgbp = make_float3(c, 0.0, x);
+    if (0.0f <= hue && hue < 60.0f) {
+        rgbp = make_float3(c, x, 0.0f);
+    } else if (60.0f <= hue && hue < 120.0f) {
+        rgbp = make_float3(x, c, 0.0f);
+    } else if (120.0f <= hue && hue < 180.0f) {
+        rgbp = make_float3(0.0f, c, x);
+    } else if (180.0f <= hue && hue < 240.0f) {
+        rgbp = make_float3(0.0f, x, c);
+    } else if (240.0f <= hue && hue < 300.0f) {
+        rgbp = make_float3(x, 0.0f, c);
+    } else { // if (300.0f < hue && hue < 360.0f) {
+        rgbp = make_float3(c, 0.0f, x);
     }
     return rgbp + m;
 }
 
-#define PI (3.1415926535)
+#define PI (3.1415926535f)
 
 // LINEAR ALGEBRA FUNCTIONS
 __DEVICE__ float3 cross_product(float3 a, float3 b) {
@@ -78,33 +78,33 @@ __DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float
     float c = _cosf(angle);
     float s = _sinf(angle);
 
-    mat[0][0] = c + pow2f(axis.x) * (1.0 - c);
-    mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
-    mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
-    mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
-    mat[1][1] = c + pow2f(axis.y) * (1.0 - c);
-    mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
-    mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
-    mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
-    mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
+    mat[0][0] = c + pow2f(axis.x) * (1.0f - c);
+    mat[0][1] = axis.x * axis.y * (1.0f - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0f - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0f - c) + axis.z * s;
+    mat[1][1] = c + pow2f(axis.y) * (1.0f - c);
+    mat[1][2] = axis.y * axis.z * (1.0f - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0f - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0f - c) + axis.x * s;
+    mat[2][2] = c + pow2f(axis.z) * (1.0f - c);
 }
 
 __DEVICE__ float3 spherical_to_rgb(float hue, float sat, float value) {
     // Assume Hue is in degrees
     // Scale saturation so that 1.0 fully saturates RGB colors.
     // Value of 1.0 scaled to (1.0, 1.0, 1.0);
-    sat *= _acosf(dot_product(unit_vec(make_float3(1.0, 1.0, 0.0)), unit_vec(make_float3(1.0, 1.0, 1.0))));
-    hue *= 2.0 * PI / 360.0;
-    value *= norm_f3(make_float3(1.0, 1.0, 1.0));
-    const float3 achromatic = make_float3(1.0, 1.0, 1.0);
-    const float3 red_axis = make_float3(1.0, 0.0, 0.0);
+    sat *= _acosf(dot_product(unit_vec(make_float3(1.0f, 1.0f, 0.0f)), unit_vec(make_float3(1.0f, 1.0f, 1.0f))));
+    hue *= 2.0f * PI / 360.0f;
+    value *= norm_f3(make_float3(1.0f, 1.0f, 1.0f));
+    const float3 achromatic = make_float3(1.0f, 1.0f, 1.0f);
+    const float3 red_axis = make_float3(1.0f, 0.0f, 0.0f);
 
-    float rot_mat_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
-    float rot_mat2_inv[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+    float rot_mat_inv[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
+    float rot_mat2_inv[3][3] = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
     make_rotation_mat_axis_angle(rot_mat_inv, unit_vec(cross_product(red_axis, achromatic)), _acosf(dot_product(red_axis, unit_vec(achromatic))));
-    make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0 * PI / 4.0);
+    make_rotation_mat_axis_angle(rot_mat2_inv, red_axis, -3.0f * PI / 4.0f);
 
-    float3 direction = make_float3(1.0, 1.0, 1.0);
+    float3 direction = make_float3(1.0f, 1.0f, 1.0f);
     direction.x = value * _cosf(sat);
     direction.z = value * _sinf(hue) * _sinf(sat);
     direction.y = value * _cosf(hue) * _sinf(sat);
@@ -182,7 +182,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     }
 
     if (band_interval == EXPONENTIAL) {
-        curr_col -= _round(num_cols / 2.0);
+        curr_col -= _round(num_cols / 2.0f);
     }
 
     float3 rgb;
@@ -192,20 +192,20 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     if (gaps != GAPS_NONE) {
         float3 gaps_color;
         if (gaps == GAPS_BLACK) {
-            gaps_color = make_float3(0.0, 0.0, 0.0);
+            gaps_color = make_float3(0.0f, 0.0f, 0.0f);
         } else if (gaps == GAPS_WHITE) {
-            gaps_color = make_float3(1.0, 1.0, 1.0);
+            gaps_color = make_float3(1.0f, 1.0f, 1.0f);
         } else if (gaps == GAPS_MID_GREY) {
             gaps_color = make_float3(mid_gray, mid_gray, mid_gray);
         } else if (gaps == GAPS_GRAYSCALE) {
             if (band_interval == EQUAL) {
-                gaps_color = hsv_to_rgb(0.0, 0.0, curr_col_cont / num_cols);
+                gaps_color = hsv_to_rgb(0.0f, 0.0f, curr_col_cont / num_cols);
             } else if (band_interval == EXPONENTIAL) {
-                gaps_color = hsv_to_rgb(0.0, 0.0, _exp2f(curr_col) * mid_gray);
+                gaps_color = hsv_to_rgb(0.0f, 0.0f, _exp2f(curr_col) * mid_gray);
             }
         }
         if (continuous == DISCRETE || continuous == CONTINUOUS_EXP) {
-            if (_fabs(curr_row_cont - curr_row) <= 0.25 || _fabs(curr_row_cont - curr_row) >= 0.75) {
+            if (_fabs(curr_row_cont - curr_row) <= 0.25f || _fabs(curr_row_cont - curr_row) >= 0.75f) {
                 is_gap = true;
                 rgb = gaps_color;
             }
@@ -214,15 +214,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     if (band_interval == EQUAL) {
         if (gray_ramp && curr_row < 0) {
-            hsv = make_float3(0.0, 0.0, curr_col / num_cols);
+            hsv = make_float3(0.0f, 0.0f, curr_col / num_cols);
         } else {
-            hsv = make_float3((curr_row / num_hues) * 360.0, saturation, curr_col / num_cols);
+            hsv = make_float3((curr_row / num_hues) * 360.0f, saturation, curr_col / num_cols);
         }
     } else if (band_interval == EXPONENTIAL) {
         if (gray_ramp && curr_row < 0) {
-            hsv = make_float3(0.0, 0.0, _exp2f(curr_col) * mid_gray);
+            hsv = make_float3(0.0f, 0.0f, _exp2f(curr_col) * mid_gray);
         } else {
-            hsv = make_float3((curr_row / num_hues) * 360.0, saturation, _exp2f(curr_col) * mid_gray);
+            hsv = make_float3((curr_row / num_hues) * 360.0f, saturation, _exp2f(curr_col) * mid_gray);
         }
     }
 

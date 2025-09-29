@@ -225,11 +225,11 @@ __DEVICE__ void draw_string_centered(
     char str[], float3 str_color, __PRIVATE__ char_trans_t* char_trans, __PRIVATE__ curr_pos_t* curr_pos, __PRIVATE__ float3* curr_color) {
     float str_width = string_width(str, char_trans->scale);
     float str_height = char_trans->scale;
-    char_trans->x -= str_width / 2.0;
-    char_trans->y -= str_height / 2.0;
+    char_trans->x -= str_width / 2.0f;
+    char_trans->y -= str_height / 2.0f;
     draw_string(str, str_color, char_trans, curr_pos, curr_color);
-    char_trans->x += str_width / 2.0;
-    char_trans->y += str_height / 2.0;
+    char_trans->x += str_width / 2.0f;
+    char_trans->y += str_height / 2.0f;
 }
 
 __DEVICE__ void strcpy_idx(char str_src[], char str_dst[], int src_start_idx, int dst_start_idx, int num_chars) {
@@ -282,7 +282,7 @@ __DEVICE__ void int2str(int f, char output[], int num_chars) {
 
         // Extract left digits
         for (int i = left_digits; i > 0 && runner < num_chars; --i, ++runner) {
-            float base = _powf(10.0, i - 1);
+            float base = _powf(10.0f, i - 1);
             int d = (int)_truncf(f / base);
             f = _fmod(f, base);
             output[runner] = digit2char(d);
@@ -295,36 +295,36 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 curr_color = make_float3(p_R, p_G, p_B);
     curr_pos_t curr_pos = make_curr_pos((float)p_X / (float)(p_Height - 1), // dividing by height instead of width to correct aspect ratio of characters.
                                         (float)p_Y / (float)(p_Height - 1));
-    float center_x = 0.5 * p_Width / p_Height;
-    float center_y = 0.5;
+    float center_x = 0.5f * p_Width / p_Height;
+    float center_y = 0.5f;
 
     float3 text_color;
     switch (text_color_selection) {
         case TEXT_WHITE:
-            text_color = make_float3(1.0, 1.0, 1.0);
+            text_color = make_float3(1.0f, 1.0f, 1.0f);
             break;
         case TEXT_BLACK:
-            text_color = make_float3(0.0, 0.0, 0.0);
+            text_color = make_float3(0.0f, 0.0f, 0.0f);
             break;
         case TEXT_GRAY:
-            text_color = make_float3(0.18, 0.18, 0.18);
+            text_color = make_float3(0.18f, 0.18f, 0.18f);
             break;
         case TEXT_INV:
-            text_color = make_float3(1.0, 1.0, 1.0) - curr_color;
+            text_color = make_float3(1.0f, 1.0f, 1.0f) - curr_color;
             break;
     }
 
-    char_trans_t str_trans = make_char_trans(center_x, 0.25, scale);
+    char_trans_t str_trans = make_char_trans(center_x, 0.25f, scale);
     char number_buffer[30];
     int num_chars = 10;
     int2str(p_Width, number_buffer, num_chars);
     draw_string_centered(number_buffer, text_color, &str_trans, &curr_pos, &curr_color);
 
-    str_trans = make_char_trans(center_x, 0.50, scale);
+    str_trans = make_char_trans(center_x, 0.50f, scale);
     char string_buffer[3] = "x";
     draw_string_centered(string_buffer, text_color, &str_trans, &curr_pos, &curr_color);
 
-    str_trans = make_char_trans(center_x, 0.75, scale);
+    str_trans = make_char_trans(center_x, 0.75f, scale);
     int2str(p_Height, number_buffer, num_chars);
     draw_string_centered(number_buffer, text_color, &str_trans, &curr_pos, &curr_color);
     str_trans.y += scale;

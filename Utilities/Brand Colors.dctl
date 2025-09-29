@@ -38,7 +38,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         output = _mix(input, highlight_color, highlight_blend);
     } else if (highlight_mode == CV_OUTSIDE_RANGE && !cv_is_within_range) {
         output = _mix(input, highlight_color, highlight_blend);
-    } else if (highlight_mode == GENERATE_COLOR && y > 0.8) {
+    } else if (highlight_mode == GENERATE_COLOR && y > 0.8f) {
         output = target_rgb;
     }
     return output;

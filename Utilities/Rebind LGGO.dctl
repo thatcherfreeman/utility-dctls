@@ -18,8 +18,8 @@ DEFINE_UI_PARAMS(offset_wheel_rebind, Offset Wheel Rebind, DCTLUI_COMBO_BOX, 5, 
 // clang-format on
 
 // OFFSET_SCALING is a magic number measured from the default offset wheel values in Resolve.
-#define OFFSET_SCALING ((1.233137392 - 0.5) / 100.0)
-#define PRINTER_LIGHT_BASE (25.0)
+#define OFFSET_SCALING ((1.233137392f - 0.5f) / 100.0f)
+#define PRINTER_LIGHT_BASE (25.0f)
 
 // typedef struct {
 //         int x;
@@ -57,10 +57,10 @@ __DEVICE__ float convert_gamma_to_reals(float g) {
 __DEVICE__ float convert_gamma_to_wheels(float g) {
     // Converts the exponent we have to the gamma wheel control (-1 to +1 range)
     float out;
-    if (g >= 1.0) {
-        out = (g - 1.0f) / -4.0;
+    if (g >= 1.0f) {
+        out = (g - 1.0f) / -4.0f;
     } else {
-        out = ((1.0 / g) - 1.0) / 4.0;
+        out = ((1.0f / g) - 1.0f) / 4.0f;
     }
     return out;
 }
@@ -82,29 +82,29 @@ __DEVICE__ float mid_gray_preserving_gamma(float x, float exp, float mid_gray) {
 }
 
 __DEVICE__ float rec709_luminance(float3 rgb) {
-    return (0.212639 * rgb.x) + (0.715169 * rgb.y) + (0.072192 * rgb.z);
+    return (0.212639f * rgb.x) + (0.715169f * rgb.y) + (0.072192f * rgb.z);
 }
 
 __DEVICE__ float printer_lights_gain(float lights, float neg_gamma) {
     // Returns exposure adjustment corresponding to this printer lights setting.
-    return _exp10f((lights - PRINTER_LIGHT_BASE) * 0.025 / neg_gamma);
+    return _exp10f((lights - PRINTER_LIGHT_BASE) * 0.025f / neg_gamma);
 }
 
 /**
  * Solve for gamma given samples of 0.0, 0.5, 1.0, respectively.
  */
 __DEVICE__ float gamma_error_function(float gamma, float a, float b, float c) {
-    float term1 = powf(c, 1.0 / gamma);
-    float term2 = powf(b, 1.0 / gamma);
-    float term3 = powf(a, 1.0 / gamma);
+    float term1 = powf(c, 1.0f / gamma);
+    float term2 = powf(b, 1.0f / gamma);
+    float term3 = powf(a, 1.0f / gamma);
     return powf(term1 - term2 + term3, gamma) - b;
 }
 
 __DEVICE__ float
 continuous_binary_search(float initial_guess, float a, float b, float c, float tolerance, int max_iterations, float lower_bound, float upper_bound) {
     float gamma = initial_guess;
-    bool pos_slope = gamma_error_function(lower_bound + 0.01, a, b, c) < gamma_error_function(upper_bound, a, b, c);
-    const float boundary_expansion = 1.01;
+    bool pos_slope = gamma_error_function(lower_bound + 0.01f, a, b, c) < gamma_error_function(upper_bound, a, b, c);
+    const float boundary_expansion = 1.01f;
     for (int i = 0; i < max_iterations; ++i) {
         float value = gamma_error_function(gamma, a, b, c);
         float error = _fabs(value);
@@ -125,11 +125,11 @@ continuous_binary_search(float initial_guess, float a, float b, float c, float t
 }
 
 __DEVICE__ float find_gamma(float black, float gray, float white) {
-    float initial_guess = _logf((gray - black) / (white - black)) / _logf(0.5);
-    float tolerance = 1e-7;
+    float initial_guess = _logf((gray - black) / (white - black)) / _logf(0.5f);
+    float tolerance = 1e-7f;
     int max_iterations = 30;
-    float lower_bound = 0.0;
-    float upper_bound = 5.0;
+    float lower_bound = 0.0f;
+    float upper_bound = 5.0f;
     return continuous_binary_search(initial_guess, black, gray, white, tolerance, max_iterations, lower_bound, upper_bound);
 }
 
@@ -180,11 +180,11 @@ __DEVICE__ ogg_params_reals_t make_ogg_params_reals(float offset, float gamma, f
 
 __DEVICE__ float apply_lgg(float x, lgg_params_reals_t params, bool invert) {
     float out = x;
-    float white_out_x = 1.0 / params.gain;
-    float black_out_x = (1.0 - (1.0 / (1.0 - params.lift)));
-    float slope = 1.0 / (white_out_x - black_out_x);
+    float white_out_x = 1.0f / params.gain;
+    float black_out_x = (1.0f - (1.0f / (1.0f - params.lift)));
+    float slope = 1.0f / (white_out_x - black_out_x);
     if (invert) {
-        out = powf(out, 1.0 / params.gamma);
+        out = powf(out, 1.0f / params.gamma);
         out = out / slope;
         out = out + black_out_x;
     } else {
@@ -197,7 +197,7 @@ __DEVICE__ float apply_lgg(float x, lgg_params_reals_t params, bool invert) {
 __DEVICE__ float apply_ogg(float x, ogg_params_reals_t params, bool invert) {
     float out = x;
     if (invert) {
-        out = powf(out, 1.0 / params.gamma);
+        out = powf(out, 1.0f / params.gamma);
         out = out - params.offset;
         out = out / params.gain;
     } else {
@@ -211,18 +211,18 @@ __DEVICE__ float apply_ogg(float x, ogg_params_reals_t params, bool invert) {
 __DEVICE__ lgg_params_reals_t ogg_to_lgg_params(ogg_params_reals_t ogg_params) {
     float gamma = ogg_params.gamma;
     float slope = ogg_params.gain;
-    float black_out_x = ogg_params.offset * -1.0 / slope;
-    float white_out_x = 1.0 / slope + black_out_x;
-    float gain = 1.0 / white_out_x;
-    float lift = 1.0 - (1.0 / (1.0 - black_out_x));
+    float black_out_x = ogg_params.offset * -1.0f / slope;
+    float white_out_x = 1.0f / slope + black_out_x;
+    float gain = 1.0f / white_out_x;
+    float lift = 1.0f - (1.0f / (1.0f - black_out_x));
     return make_lgg_params(lift, gamma, gain);
 }
 
 __DEVICE__ ogg_params_reals_t lgg_to_ogg_params(lgg_params_reals_t lgg_params) {
     float gamma = lgg_params.gamma;
-    float white_out_x = 1.0 / lgg_params.gain;
-    float black_out_x = (1.0 - (1.0 / (1.0 - lgg_params.lift)));
-    float slope = 1.0 / (white_out_x - black_out_x);
+    float white_out_x = 1.0f / lgg_params.gain;
+    float black_out_x = (1.0f - (1.0f / (1.0f - lgg_params.lift)));
+    float slope = 1.0f / (white_out_x - black_out_x);
 
     float gain = slope;
     float offset = slope * -1 * black_out_x;
@@ -231,8 +231,8 @@ __DEVICE__ ogg_params_reals_t lgg_to_ogg_params(lgg_params_reals_t lgg_params) {
 
 __DEVICE__ ogg_params_reals_t estimate_ogg(float black, float gray, float white) {
     float gamma = find_gamma(black, gray, white);
-    float offset = powf(black, 1.0 / gamma);
-    float gain = powf(white, 1.0 / gamma) - offset;
+    float offset = powf(black, 1.0f / gamma);
+    float gain = powf(white, 1.0f / gamma) - offset;
     return make_ogg_params(offset, gamma, gain);
 }
 
@@ -262,11 +262,11 @@ __DEVICE__ lggo_params_t make_lggo_params(float lift, float gamma, float mid_gam
 }
 
 __DEVICE__ lggo_params_reals_t lgg_to_lggo_params(lgg_params_reals_t lgg_params) {
-    return make_lggo_params(lgg_params.lift, lgg_params.gamma, 1.0, lgg_params.gain, 0.0);
+    return make_lggo_params(lgg_params.lift, lgg_params.gamma, 1.0f, lgg_params.gain, 0.0f);
 }
 
 __DEVICE__ lggo_params_reals_t ogg_to_lggo_params(ogg_params_reals_t ogg_params) {
-    return make_lggo_params(0.0, ogg_params.gamma, 1.0, ogg_params.gain, ogg_params.offset);
+    return make_lggo_params(0.0f, ogg_params.gamma, 1.0f, ogg_params.gain, ogg_params.offset);
 }
 
 __DEVICE__ lggo_params_reals_t make_lggo_params_reals(float lift, float gamma, float mid_gamma, float gain, float offset) {
@@ -275,7 +275,7 @@ __DEVICE__ lggo_params_reals_t make_lggo_params_reals(float lift, float gamma, f
 
 __DEVICE__ lggo_params_reals_t convert_lggo_to_reals(lggo_params_t params) {
     // Convert each of the parameters from the Resolve wheels values to the underlying real values.
-    return make_lggo_params(params.lift * 2.0,
+    return make_lggo_params(params.lift * 2.0f,
                             convert_gamma_to_reals(params.gamma),
                             convert_gamma_to_reals(params.mid_gamma),
                             params.gain,
@@ -284,7 +284,7 @@ __DEVICE__ lggo_params_reals_t convert_lggo_to_reals(lggo_params_t params) {
 
 __DEVICE__ lggo_params_t convert_lggo_to_wheels(lggo_params_reals_t params) {
     // Convert each of the parameters from the underlying real values to the Resolve wheels values.
-    return make_lggo_params(params.lift / 2.0,
+    return make_lggo_params(params.lift / 2.0f,
                             convert_gamma_to_wheels(params.gamma),
                             convert_gamma_to_wheels(params.mid_gamma),
                             params.gain,
@@ -300,14 +300,14 @@ __DEVICE__ float convert_offset_printer_lights_to_real(float offset) {
 }
 
 __DEVICE__ float apply_lggo(float x, lggo_params_reals_t params, bool invert, float mid_gray) {
-    float white_out_x = 1.0 / params.gain;
-    float black_out_x = (1.0 - (1.0 / (1.0 - params.lift)));
-    float slope = 1.0 / (white_out_x - black_out_x);
+    float white_out_x = 1.0f / params.gain;
+    float black_out_x = (1.0f - (1.0f / (1.0f - params.lift)));
+    float slope = 1.0f / (white_out_x - black_out_x);
     float out = x;
 
     if (invert) {
-        out = mid_gray_preserving_gamma(out, 1.0 / params.mid_gamma, mid_gray);
-        out = powf(out, 1.0 / params.gamma);
+        out = mid_gray_preserving_gamma(out, 1.0f / params.mid_gamma, mid_gray);
+        out = powf(out, 1.0f / params.gamma);
         out = out - params.offset;
         out = out / slope;
         out = out + black_out_x;
@@ -331,11 +331,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     if (mode == MODE_REFERENCE) {
         if (int2_eq(curr_pos, white_corner)) {
-            output_color = make_float3(1.0, 1.0, 1.0);
+            output_color = make_float3(1.0f, 1.0f, 1.0f);
         } else if (int2_eq(curr_pos, black_corner)) {
-            output_color = make_float3(0.0, 0.0, 0.0);
+            output_color = make_float3(0.0f, 0.0f, 0.0f);
         } else if (int2_eq(curr_pos, gray_corner)) {
-            output_color = make_float3(0.5, 0.5, 0.5);
+            output_color = make_float3(0.5f, 0.5f, 0.5f);
         } else {
             output_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
         }
@@ -404,13 +404,13 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         float offset_real_g = lggo_params_g.offset;
         float offset_real_b = lggo_params_b.offset;
         // New ones to write to
-        lggo_params_t default_wheels = make_lggo_params(0.0, 0.0, 0.0, 1.0, PRINTER_LIGHT_BASE);
+        lggo_params_t default_wheels = make_lggo_params(0.0f, 0.0f, 0.0f, 1.0f, PRINTER_LIGHT_BASE);
         lggo_params_t new_lggo_params_r_wheels = default_wheels;
         lggo_params_t new_lggo_params_g_wheels = default_wheels;
         lggo_params_t new_lggo_params_b_wheels = default_wheels;
 
-        float gamma_flip = invert_gamma_direction ? -1.0 : 1.0;
-        float mid_gray_gamma_flip = invert_mid_gray_gamma_direction ? -1.0 : 1.0;
+        float gamma_flip = invert_gamma_direction ? -1.0f : 1.0f;
+        float mid_gray_gamma_flip = invert_mid_gray_gamma_direction ? -1.0f : 1.0f;
 
         if (wheels == WHEELS_LGG) {
             if (lift_wheel_rebind == LIFT_REBIND_TO_LIFT) {
@@ -426,15 +426,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 new_lggo_params_g_wheels.mid_gamma += lggo_params_g_wheels.lift * mid_gray_gamma_flip;
                 new_lggo_params_b_wheels.mid_gamma += lggo_params_b_wheels.lift * mid_gray_gamma_flip;
             } else if (lift_wheel_rebind == LIFT_REBIND_TO_GAIN) {
-                new_lggo_params_r_wheels.gain *= _fmaxf(lggo_params_r_wheels.lift + 1.0, 0.0);
-                new_lggo_params_g_wheels.gain *= _fmaxf(lggo_params_g_wheels.lift + 1.0, 0.0);
-                new_lggo_params_b_wheels.gain *= _fmaxf(lggo_params_b_wheels.lift + 1.0, 0.0);
+                new_lggo_params_r_wheels.gain *= _fmaxf(lggo_params_r_wheels.lift + 1.0f, 0.0f);
+                new_lggo_params_g_wheels.gain *= _fmaxf(lggo_params_g_wheels.lift + 1.0f, 0.0f);
+                new_lggo_params_b_wheels.gain *= _fmaxf(lggo_params_b_wheels.lift + 1.0f, 0.0f);
             } else if (lift_wheel_rebind == LIFT_REBIND_TO_NORMALIZED_GAIN) {
-                float3 gains = make_float3(_fmaxf(lggo_params_r_wheels.lift + 1.0, 0.0),
-                                           _fmaxf(lggo_params_g_wheels.lift + 1.0, 0.0),
-                                           _fmaxf(lggo_params_b_wheels.lift + 1.0, 0.0));
+                float3 gains = make_float3(_fmaxf(lggo_params_r_wheels.lift + 1.0f, 0.0f),
+                                           _fmaxf(lggo_params_g_wheels.lift + 1.0f, 0.0f),
+                                           _fmaxf(lggo_params_b_wheels.lift + 1.0f, 0.0f));
                 float max_gain = _fmaxf(gains.x, _fmaxf(gains.y, gains.z));
-                float luminance = rec709_luminance(gains); // initially 1.0
+                float luminance = rec709_luminance(gains); // initially 1.0f
                 float exposure_adjustment = luminance;
                 new_lggo_params_r_wheels.gain *= (gains.x / max_gain) * exposure_adjustment;
                 new_lggo_params_g_wheels.gain *= (gains.y / max_gain) * exposure_adjustment;
@@ -446,7 +446,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             } else if (lift_wheel_rebind == LIFT_REBIND_TO_MIN_NORMALIZED_OFFSET) {
                 float3 offsets = make_float3(lggo_params_r_wheels.lift, lggo_params_g_wheels.lift, lggo_params_b_wheels.lift);
                 float min_offset = _fminf(offsets.x, _fminf(offsets.y, offsets.z));
-                float luminance = rec709_luminance(offsets); // initially 0.0.
+                float luminance = rec709_luminance(offsets); // initially 0.0f.
 
                 new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
                 new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
@@ -467,15 +467,15 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             new_lggo_params_g_wheels.mid_gamma += lggo_params_g_wheels.gamma * mid_gray_gamma_flip;
             new_lggo_params_b_wheels.mid_gamma += lggo_params_b_wheels.gamma * mid_gray_gamma_flip;
         } else if (gamma_wheel_rebind == GAMMA_REBIND_TO_GAIN) {
-            new_lggo_params_r_wheels.gain *= _fmaxf(lggo_params_r_wheels.gamma + 1.0, 0.0);
-            new_lggo_params_g_wheels.gain *= _fmaxf(lggo_params_g_wheels.gamma + 1.0, 0.0);
-            new_lggo_params_b_wheels.gain *= _fmaxf(lggo_params_b_wheels.gamma + 1.0, 0.0);
+            new_lggo_params_r_wheels.gain *= _fmaxf(lggo_params_r_wheels.gamma + 1.0f, 0.0f);
+            new_lggo_params_g_wheels.gain *= _fmaxf(lggo_params_g_wheels.gamma + 1.0f, 0.0f);
+            new_lggo_params_b_wheels.gain *= _fmaxf(lggo_params_b_wheels.gamma + 1.0f, 0.0f);
         } else if (gamma_wheel_rebind == GAMMA_REBIND_TO_NORMALIZED_GAIN) {
-            float3 gains = make_float3(_fmaxf(lggo_params_r_wheels.gamma + 1.0, 0.0),
-                                       _fmaxf(lggo_params_g_wheels.gamma + 1.0, 0.0),
-                                       _fmaxf(lggo_params_b_wheels.gamma + 1.0, 0.0));
+            float3 gains = make_float3(_fmaxf(lggo_params_r_wheels.gamma + 1.0f, 0.0f),
+                                       _fmaxf(lggo_params_g_wheels.gamma + 1.0f, 0.0f),
+                                       _fmaxf(lggo_params_b_wheels.gamma + 1.0f, 0.0f));
             float max_gain = _fmaxf(gains.x, _fmaxf(gains.y, gains.z));
-            float luminance = rec709_luminance(gains); // initially 1.0
+            float luminance = rec709_luminance(gains); // initially 1.0f
             float exposure_adjustment = luminance;
             new_lggo_params_r_wheels.gain *= (gains.x / max_gain) * exposure_adjustment;
             new_lggo_params_g_wheels.gain *= (gains.y / max_gain) * exposure_adjustment;
@@ -487,7 +487,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         } else if (gamma_wheel_rebind == GAMMA_REBIND_TO_MIN_NORMALIZED_OFFSET) {
             float3 offsets = make_float3(lggo_params_r_wheels.gamma, lggo_params_g_wheels.gamma, lggo_params_b_wheels.gamma);
             float min_offset = _fminf(offsets.x, _fminf(offsets.y, offsets.z));
-            float luminance = rec709_luminance(offsets); // initially 0.0.
+            float luminance = rec709_luminance(offsets); // initially 0.0f.
 
             new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
             new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
@@ -499,33 +499,33 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             new_lggo_params_g_wheels.gain *= lggo_params_g_wheels.gain;
             new_lggo_params_b_wheels.gain *= lggo_params_b_wheels.gain;
         } else if (gain_wheel_rebind == GAIN_REBIND_TO_LIFT) {
-            new_lggo_params_r_wheels.lift += (lggo_params_r_wheels.gain - 1.0);
-            new_lggo_params_g_wheels.lift += (lggo_params_g_wheels.gain - 1.0);
-            new_lggo_params_b_wheels.lift += (lggo_params_b_wheels.gain - 1.0);
+            new_lggo_params_r_wheels.lift += (lggo_params_r_wheels.gain - 1.0f);
+            new_lggo_params_g_wheels.lift += (lggo_params_g_wheels.gain - 1.0f);
+            new_lggo_params_b_wheels.lift += (lggo_params_b_wheels.gain - 1.0f);
         } else if (gain_wheel_rebind == GAIN_REBIND_TO_NORMALIZED_GAIN) {
             float3 gains = make_float3(lggo_params_r_wheels.gain, lggo_params_g_wheels.gain, lggo_params_b_wheels.gain);
             float max_gain = _fmaxf(gains.x, _fmaxf(gains.y, gains.z));
-            float luminance = rec709_luminance(gains); // initially 1.0
+            float luminance = rec709_luminance(gains); // initially 1.0f
             float exposure_adjustment = luminance;
             new_lggo_params_r_wheels.gain *= (gains.x / max_gain) * exposure_adjustment;
             new_lggo_params_g_wheels.gain *= (gains.y / max_gain) * exposure_adjustment;
             new_lggo_params_b_wheels.gain *= (gains.z / max_gain) * exposure_adjustment;
         } else if (gain_wheel_rebind == GAIN_REBIND_TO_GAMMA) {
-            new_lggo_params_r_wheels.gamma += _clampf(lggo_params_r_wheels.gain - 1.0, -1.0, 1.0) * gamma_flip;
-            new_lggo_params_g_wheels.gamma += _clampf(lggo_params_g_wheels.gain - 1.0, -1.0, 1.0) * gamma_flip;
-            new_lggo_params_b_wheels.gamma += _clampf(lggo_params_b_wheels.gain - 1.0, -1.0, 1.0) * gamma_flip;
+            new_lggo_params_r_wheels.gamma += _clampf(lggo_params_r_wheels.gain - 1.0f, -1.0f, 1.0f) * gamma_flip;
+            new_lggo_params_g_wheels.gamma += _clampf(lggo_params_g_wheels.gain - 1.0f, -1.0f, 1.0f) * gamma_flip;
+            new_lggo_params_b_wheels.gamma += _clampf(lggo_params_b_wheels.gain - 1.0f, -1.0f, 1.0f) * gamma_flip;
         } else if (gain_wheel_rebind == GAIN_REBIND_TO_MID_GRAY_PRESERVING_GAMMA) {
-            new_lggo_params_r_wheels.mid_gamma += _clampf(lggo_params_r_wheels.gain - 1.0, -1.0, 1.0) * mid_gray_gamma_flip;
-            new_lggo_params_g_wheels.mid_gamma += _clampf(lggo_params_g_wheels.gain - 1.0, -1.0, 1.0) * mid_gray_gamma_flip;
-            new_lggo_params_b_wheels.mid_gamma += _clampf(lggo_params_b_wheels.gain - 1.0, -1.0, 1.0) * mid_gray_gamma_flip;
+            new_lggo_params_r_wheels.mid_gamma += _clampf(lggo_params_r_wheels.gain - 1.0f, -1.0f, 1.0f) * mid_gray_gamma_flip;
+            new_lggo_params_g_wheels.mid_gamma += _clampf(lggo_params_g_wheels.gain - 1.0f, -1.0f, 1.0f) * mid_gray_gamma_flip;
+            new_lggo_params_b_wheels.mid_gamma += _clampf(lggo_params_b_wheels.gain - 1.0f, -1.0f, 1.0f) * mid_gray_gamma_flip;
         } else if (gain_wheel_rebind == GAIN_REBIND_TO_OFFSET) {
-            new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_r_wheels.gain - 1.0) - PRINTER_LIGHT_BASE;
-            new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_g_wheels.gain - 1.0) - PRINTER_LIGHT_BASE;
-            new_lggo_params_b_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_b_wheels.gain - 1.0) - PRINTER_LIGHT_BASE;
+            new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_r_wheels.gain - 1.0f) - PRINTER_LIGHT_BASE;
+            new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_g_wheels.gain - 1.0f) - PRINTER_LIGHT_BASE;
+            new_lggo_params_b_wheels.offset += convert_offset_real_to_printer_lights(lggo_params_b_wheels.gain - 1.0f) - PRINTER_LIGHT_BASE;
         } else if (gain_wheel_rebind == GAIN_REBIND_TO_MIN_NORMALIZED_OFFSET) {
-            float3 offsets = make_float3(lggo_params_r_wheels.gain - 1.0, lggo_params_g_wheels.gain - 1.0, lggo_params_b_wheels.gain - 1.0);
+            float3 offsets = make_float3(lggo_params_r_wheels.gain - 1.0f, lggo_params_g_wheels.gain - 1.0f, lggo_params_b_wheels.gain - 1.0f);
             float min_offset = _fminf(offsets.x, _fminf(offsets.y, offsets.z));
-            float luminance = rec709_luminance(offsets); // initially 0.0.
+            float luminance = rec709_luminance(offsets); // initially 0.0f.
 
             new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
             new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
@@ -550,13 +550,13 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 new_lggo_params_g_wheels.mid_gamma += offset_real_g * mid_gray_gamma_flip;
                 new_lggo_params_b_wheels.mid_gamma += offset_real_b * mid_gray_gamma_flip;
             } else if (offset_wheel_rebind == OFFSET_REBIND_TO_GAIN) {
-                new_lggo_params_r_wheels.gain *= _fmaxf(offset_real_r + 1.0, 0.0);
-                new_lggo_params_g_wheels.gain *= _fmaxf(offset_real_g + 1.0, 0.0);
-                new_lggo_params_b_wheels.gain *= _fmaxf(offset_real_b + 1.0, 0.0);
+                new_lggo_params_r_wheels.gain *= _fmaxf(offset_real_r + 1.0f, 0.0f);
+                new_lggo_params_g_wheels.gain *= _fmaxf(offset_real_g + 1.0f, 0.0f);
+                new_lggo_params_b_wheels.gain *= _fmaxf(offset_real_b + 1.0f, 0.0f);
             } else if (offset_wheel_rebind == OFFSET_REBIND_TO_NORMALIZED_GAIN) {
-                float3 gains = make_float3(_fmaxf(offset_real_r + 1.0, 0.0), _fmaxf(offset_real_g + 1.0, 0.0), _fmaxf(offset_real_b + 1.0, 0.0));
+                float3 gains = make_float3(_fmaxf(offset_real_r + 1.0f, 0.0f), _fmaxf(offset_real_g + 1.0f, 0.0f), _fmaxf(offset_real_b + 1.0f, 0.0f));
                 float max_gain = _fmaxf(gains.x, _fmaxf(gains.y, gains.z));
-                float luminance = rec709_luminance(gains); // initially 1.0
+                float luminance = rec709_luminance(gains); // initially 1.0f
                 float exposure_adjustment = luminance;
                 new_lggo_params_r_wheels.gain *= (gains.x / max_gain) * exposure_adjustment;
                 new_lggo_params_g_wheels.gain *= (gains.y / max_gain) * exposure_adjustment;
@@ -568,7 +568,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             } else if (offset_wheel_rebind == OFFSET_REBIND_TO_MIN_NORMALIZED_OFFSET) {
                 float3 offsets = make_float3(offset_real_r, offset_real_g, offset_real_b);
                 float min_offset = _fminf(offsets.x, _fminf(offsets.y, offsets.z));
-                float luminance = rec709_luminance(offsets); // initially 0.0.
+                float luminance = rec709_luminance(offsets); // initially 0.0f.
 
                 new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
                 new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;

@@ -46,10 +46,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float minor_radius;
     if (aspect > image_aspect) {
         // box is wide, 1.0 scale means that sides of box touch sides of frame
-        major_radius = p_Width * scale * 0.5;
+        major_radius = p_Width * scale * 0.5f;
         minor_radius = major_radius / aspect;
     } else {
-        minor_radius = p_Height * scale * 0.5;
+        minor_radius = p_Height * scale * 0.5f;
         major_radius = minor_radius * aspect;
     }
 

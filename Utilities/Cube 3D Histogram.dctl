@@ -21,7 +21,7 @@ DEFINE_UI_PARAMS(projection_mode, Perspective Mode, DCTLUI_COMBO_BOX, 0, {PERSPE
 DEFINE_UI_PARAMS(gang_num_samples, Gang Num X/Y Samples, DCTLUI_COMBO_BOX, 0, {GANG_UNIFORM_SPACING, GANG_EQUAL, GANG_UNGANGED}, {Uniform Spacing, Equal, Unganged})
 // clang-format on
 
-#define PI (3.14159265358979323)
+#define PI (3.14159265358979323f)
 
 __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
@@ -32,11 +32,11 @@ __DEVICE__ inline float pow2f(float base) {
 }
 
 __DEVICE__ inline float rad_to_deg(float deg) {
-    return deg * 360.0 / (2.0 * PI);
+    return deg * 360.0f / (2.0f * PI);
 }
 
 __DEVICE__ inline float deg_to_rad(float rad) {
-    return rad * (2.0 * PI) / 360.0;
+    return rad * (2.0f * PI) / 360.0f;
 }
 
 // Linalg
@@ -46,15 +46,15 @@ __DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float
     float c = _cosf(angle);
     float s = _sinf(angle);
 
-    mat[0][0] = c + pow2f(axis.x) * (1.0 - c);
-    mat[0][1] = axis.x * axis.y * (1.0 - c) - axis.z * s;
-    mat[0][2] = axis.x * axis.z * (1.0 - c) + axis.y * s;
-    mat[1][0] = axis.x * axis.y * (1.0 - c) + axis.z * s;
-    mat[1][1] = c + pow2f(axis.y) * (1.0 - c);
-    mat[1][2] = axis.y * axis.z * (1.0 - c) - axis.x * s;
-    mat[2][0] = axis.z * axis.x * (1.0 - c) - axis.y * s;
-    mat[2][1] = axis.z * axis.y * (1.0 - c) + axis.x * s;
-    mat[2][2] = c + pow2f(axis.z) * (1.0 - c);
+    mat[0][0] = c + pow2f(axis.x) * (1.0f - c);
+    mat[0][1] = axis.x * axis.y * (1.0f - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0f - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0f - c) + axis.z * s;
+    mat[1][1] = c + pow2f(axis.y) * (1.0f - c);
+    mat[1][2] = axis.y * axis.z * (1.0f - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0f - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0f - c) + axis.x * s;
+    mat[2][2] = c + pow2f(axis.z) * (1.0f - c);
 }
 
 __DEVICE__ float3 cross_product(float3 a, float3 b) {
@@ -111,7 +111,7 @@ __DEVICE__ void mm_33_33(float dest[3][3], float a[3][3], float b[3][3]) {
 
 __DEVICE__ void mat_inverse_33(float m[3][3]) {
     // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
-    float inv_buf[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+    float inv_buf[3][3] = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
 
     float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
                 m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
@@ -227,14 +227,14 @@ __DEVICE__ void mat_fill(float dest[3][3], float fill) {
 }
 
 __DEVICE__ void diagonal_matrix(float dest[3][3], float3 diagonal) {
-    mat_fill(dest, 0.0);
+    mat_fill(dest, 0.0f);
     dest[0][0] = diagonal.x;
     dest[1][1] = diagonal.y;
     dest[2][2] = diagonal.z;
 }
 
 __DEVICE__ void identity_matrix(float dest[3][3]) {
-    diagonal_matrix(dest, make_float3(1.0, 1.0, 1.0));
+    diagonal_matrix(dest, make_float3(1.0f, 1.0f, 1.0f));
 }
 
 // Inclusive on bounds. Assume left_bottom <= right_top
@@ -272,7 +272,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     histogram_bounding_box.left_bottom.y = min(histogram_bounding_box.left_bottom.y, histogram_margin.left_bottom.y);
     histogram_bounding_box.right_top.x = min(histogram_bounding_box.right_top.x, histogram_margin.right_top.x);
     histogram_bounding_box.right_top.y = min(histogram_bounding_box.right_top.y, histogram_margin.right_top.y);
-    float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0 - p_Y);
+    float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0f - p_Y);
 
     if (gang_num_samples == GANG_UNIFORM_SPACING) {
         num_y_samples = (int)_round((float)num_x_samples * p_Height / p_Width);
@@ -282,79 +282,79 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         // Do nothing
     }
 
-    float dot_size = dot_size_scale * 4.0 / _sqrtf((float)(_fmaxf(num_x_samples * num_y_samples, 400.0))) * focal_length;
-    float axis_dot_size = axis_dot_size_scale * 0.02 * focal_length;
+    float dot_size = dot_size_scale * 4.0f / _sqrtf((float)(_fmaxf(num_x_samples * num_y_samples, 400.0f))) * focal_length;
+    float axis_dot_size = axis_dot_size_scale * 0.02f * focal_length;
 
     if (rotation_style == ROTATION_AXIS_ALIGNED) {
-        focal_length *= 2.6;
+        focal_length *= 2.6f;
     } else if (rotation_style == ROTATION_DEFAULT || rotation_style == ROTATION_DIAGONAL_ALIGNED) {
-        focal_length *= 2.2;
+        focal_length *= 2.2f;
     }
 
     if (inside_bounding_box(curr_pos, histogram_bounding_box)) {
 
-        const float camera_x = 0.5;
-        const float camera_y = 0.5;
-        const float camera_z = -3.5;
+        const float camera_x = 0.5f;
+        const float camera_y = 0.5f;
+        const float camera_z = -3.5f;
 
         float3 rotation_axes[3] = {};
 
         if (rotation_style == ROTATION_DEFAULT || rotation_style == ROTATION_AXIS_ALIGNED) {
-            rotation_axes[0] = unit_vec(make_float3(0.0, 1.0, 0.0));
-            rotation_axes[1] = unit_vec(make_float3(1.0, 0.0, 0.0));
-            rotation_axes[2] = unit_vec(make_float3(0.0, 0.0, 1.0));
+            rotation_axes[0] = unit_vec(make_float3(0.0f, 1.0f, 0.0f));
+            rotation_axes[1] = unit_vec(make_float3(1.0f, 0.0f, 0.0f));
+            rotation_axes[2] = unit_vec(make_float3(0.0f, 0.0f, 1.0f));
         } else if (rotation_style == ROTATION_DIAGONAL_ALIGNED) {
-            rotation_axes[0] = unit_vec(make_float3(0.0, 1.0, 0.0));
-            rotation_axes[1] = unit_vec(make_float3(1.0, 0.0, -1.0));
-            rotation_axes[2] = unit_vec(make_float3(-1.0, 0.0, -1.0));
+            rotation_axes[0] = unit_vec(make_float3(0.0f, 1.0f, 0.0f));
+            rotation_axes[1] = unit_vec(make_float3(1.0f, 0.0f, -1.0f));
+            rotation_axes[2] = unit_vec(make_float3(-1.0f, 0.0f, -1.0f));
         }
 
         float camera_matrix[3][4] = {
             {focal_length, 0.0f, 0.0f, 0.0f},
             {0.0f, focal_length, 0.0f, 0.0f},
-            {0.0f, 0.0, 1.0, 0.0f},
+            {0.0f, 0.0f, 1.0f, 0.0f},
         };
         float affine_matrix[3][4] = {
-            {focal_length / 3.5, 0.0f, 0.0f, 0.0f},
-            {0.0f, focal_length / 3.5, 0.0f, 0.0f},
-            {0.0f, 0.0, 1.0, 1.0f},
+            {focal_length / 3.5f, 0.0f, 0.0f, 0.0f},
+            {0.0f, focal_length / 3.5f, 0.0f, 0.0f},
+            {0.0f, 0.0f, 1.0f, 1.0f},
         };
 
         // Offset middle of cube to origin so we can rotate about it
         float origin_offset[4][4] = {
-            {1.0, 0.0, 0.0, 0.5},
-            {0.0, 1.0, 0.0, 0.5},
-            {0.0, 0.0, 1.0, 0.5},
-            {0.0, 0.0, 0.0, 1.0},
+            {1.0f, 0.0f, 0.0f, 0.5f},
+            {0.0f, 1.0f, 0.0f, 0.5f},
+            {0.0f, 0.0f, 1.0f, 0.5f},
+            {0.0f, 0.0f, 0.0f, 1.0f},
         };
         // Undo cube origin offset thing.
         float origin_offset_inv[4][4] = {
-            {1.0, 0.0, 0.0, -0.5},
-            {0.0, 1.0, 0.0, -0.5},
-            {0.0, 0.0, 1.0, -0.5},
-            {0.0, 0.0, 0.0, 1.0},
+            {1.0f, 0.0f, 0.0f, -0.5f},
+            {0.0f, 1.0f, 0.0f, -0.5f},
+            {0.0f, 0.0f, 1.0f, -0.5f},
+            {0.0f, 0.0f, 0.0f, 1.0f},
         };
         // Put achromatic vertical
-        float rotation_angle = rotation_angle_1_deg * PI / 180.0;
-        float rotation_angle_2 = rotation_angle_2_deg * PI / 180.0;
-        float rotation_angle_3 = rotation_angle_3_deg * PI / 180.0;
+        float rotation_angle = rotation_angle_1_deg * PI / 180.0f;
+        float rotation_angle_2 = rotation_angle_2_deg * PI / 180.0f;
+        float rotation_angle_3 = rotation_angle_3_deg * PI / 180.0f;
 
         float rot_matrix_initial1[3][3] = {};
-        make_rotation_mat_axis_angle(rot_matrix_initial1, unit_vec(make_float3(1.0, 0.0, 0.0)), -1.0 * _atan2f(_sqrtf(0.5f), 1.0f));
+        make_rotation_mat_axis_angle(rot_matrix_initial1, unit_vec(make_float3(1.0f, 0.0f, 0.0f)), -1.0f * _atan2f(_sqrtf(0.5f), 1.0f));
         float rotation_matrix_initial1_44[4][4] = {
-            {rot_matrix_initial1[0][0], rot_matrix_initial1[0][1], rot_matrix_initial1[0][2], 0.0},
-            {rot_matrix_initial1[1][0], rot_matrix_initial1[1][1], rot_matrix_initial1[1][2], 0.0},
-            {rot_matrix_initial1[2][0], rot_matrix_initial1[2][1], rot_matrix_initial1[2][2], 0.0},
-            {0.0, 0.0, 0.0, 1.0},
+            {rot_matrix_initial1[0][0], rot_matrix_initial1[0][1], rot_matrix_initial1[0][2], 0.0f},
+            {rot_matrix_initial1[1][0], rot_matrix_initial1[1][1], rot_matrix_initial1[1][2], 0.0f},
+            {rot_matrix_initial1[2][0], rot_matrix_initial1[2][1], rot_matrix_initial1[2][2], 0.0f},
+            {0.0f, 0.0f, 0.0f, 1.0f},
         };
 
         float rot_matrix_initial2[3][3] = {};
-        make_rotation_mat_axis_angle(rot_matrix_initial2, unit_vec(make_float3(0.0, 0.0, 1.0)), PI / 4.0f);
+        make_rotation_mat_axis_angle(rot_matrix_initial2, unit_vec(make_float3(0.0f, 0.0f, 1.0f)), PI / 4.0f);
         float rotation_matrix_initial2_44[4][4] = {
-            {rot_matrix_initial2[0][0], rot_matrix_initial2[0][1], rot_matrix_initial2[0][2], 0.0},
-            {rot_matrix_initial2[1][0], rot_matrix_initial2[1][1], rot_matrix_initial2[1][2], 0.0},
-            {rot_matrix_initial2[2][0], rot_matrix_initial2[2][1], rot_matrix_initial2[2][2], 0.0},
-            {0.0, 0.0, 0.0, 1.0},
+            {rot_matrix_initial2[0][0], rot_matrix_initial2[0][1], rot_matrix_initial2[0][2], 0.0f},
+            {rot_matrix_initial2[1][0], rot_matrix_initial2[1][1], rot_matrix_initial2[1][2], 0.0f},
+            {rot_matrix_initial2[2][0], rot_matrix_initial2[2][1], rot_matrix_initial2[2][2], 0.0f},
+            {0.0f, 0.0f, 0.0f, 1.0f},
         };
         float rotation_matrix_initial_44[4][4] = {};
         mm_44_44(rotation_matrix_initial_44, rotation_matrix_initial1_44, rotation_matrix_initial2_44);
@@ -363,28 +363,28 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         float rot_matrix_33_1[3][3] = {};
         make_rotation_mat_axis_angle(rot_matrix_33_1, rotation_axes[0], rotation_angle);
         float rotation_matrix_44[4][4] = {
-            {rot_matrix_33_1[0][0], rot_matrix_33_1[0][1], rot_matrix_33_1[0][2], 0.0},
-            {rot_matrix_33_1[1][0], rot_matrix_33_1[1][1], rot_matrix_33_1[1][2], 0.0},
-            {rot_matrix_33_1[2][0], rot_matrix_33_1[2][1], rot_matrix_33_1[2][2], 0.0},
-            {0.0, 0.0, 0.0, 1.0},
+            {rot_matrix_33_1[0][0], rot_matrix_33_1[0][1], rot_matrix_33_1[0][2], 0.0f},
+            {rot_matrix_33_1[1][0], rot_matrix_33_1[1][1], rot_matrix_33_1[1][2], 0.0f},
+            {rot_matrix_33_1[2][0], rot_matrix_33_1[2][1], rot_matrix_33_1[2][2], 0.0f},
+            {0.0f, 0.0f, 0.0f, 1.0f},
         };
 
         float rot_matrix_33_2[3][3] = {};
         make_rotation_mat_axis_angle(rot_matrix_33_2, rotation_axes[1], rotation_angle_2);
         float rotation_matrix_44_2[4][4] = {
-            {rot_matrix_33_2[0][0], rot_matrix_33_2[0][1], rot_matrix_33_2[0][2], 0.0},
-            {rot_matrix_33_2[1][0], rot_matrix_33_2[1][1], rot_matrix_33_2[1][2], 0.0},
-            {rot_matrix_33_2[2][0], rot_matrix_33_2[2][1], rot_matrix_33_2[2][2], 0.0},
-            {0.0, 0.0, 0.0, 1.0},
+            {rot_matrix_33_2[0][0], rot_matrix_33_2[0][1], rot_matrix_33_2[0][2], 0.0f},
+            {rot_matrix_33_2[1][0], rot_matrix_33_2[1][1], rot_matrix_33_2[1][2], 0.0f},
+            {rot_matrix_33_2[2][0], rot_matrix_33_2[2][1], rot_matrix_33_2[2][2], 0.0f},
+            {0.0f, 0.0f, 0.0f, 1.0f},
         };
 
         float rot_matrix_33_3[3][3] = {};
         make_rotation_mat_axis_angle(rot_matrix_33_3, rotation_axes[2], rotation_angle_3);
         float rotation_matrix_44_3[4][4] = {
-            {rot_matrix_33_3[0][0], rot_matrix_33_3[0][1], rot_matrix_33_3[0][2], 0.0},
-            {rot_matrix_33_3[1][0], rot_matrix_33_3[1][1], rot_matrix_33_3[1][2], 0.0},
-            {rot_matrix_33_3[2][0], rot_matrix_33_3[2][1], rot_matrix_33_3[2][2], 0.0},
-            {0.0, 0.0, 0.0, 1.0},
+            {rot_matrix_33_3[0][0], rot_matrix_33_3[0][1], rot_matrix_33_3[0][2], 0.0f},
+            {rot_matrix_33_3[1][0], rot_matrix_33_3[1][1], rot_matrix_33_3[1][2], 0.0f},
+            {rot_matrix_33_3[2][0], rot_matrix_33_3[2][1], rot_matrix_33_3[2][2], 0.0f},
+            {0.0f, 0.0f, 0.0f, 1.0f},
         };
 
         float temp44_1[4][4] = {};
@@ -406,10 +406,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         mm_44_44(temp44_1, origin_offset, temp44_2);
 
         float translation_matrix[4][4] = {
-            {1.0, 0.0, 0.0, -camera_x},
-            {0.0, 1.0, 0.0, -camera_y},
-            {0.0, 0.0, 1.0, -camera_z},
-            {0.0, 0.0, 0.0, 1.0},
+            {1.0f, 0.0f, 0.0f, -camera_x},
+            {0.0f, 1.0f, 0.0f, -camera_y},
+            {0.0f, 0.0f, 1.0f, -camera_z},
+            {0.0f, 0.0f, 0.0f, 1.0f},
         };
         mm_44_44(temp44_2, translation_matrix, temp44_1);
         float net_matrix[3][4] = {};
@@ -420,21 +420,21 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             mm_34_44(net_matrix, affine_matrix, temp44_2);
         }
 
-        float curr_depth = 1e10;
+        float curr_depth = 1e10f;
         float3 histogram_color = make_float3(0.2f, 0.2f, 0.2f);
         float3 axes[12][2] = {
-            {make_float3(0.0, 0.0, 0.0), make_float3(1.0, 0.0, 0.0)},
-            {make_float3(0.0, 0.0, 0.0), make_float3(0.0, 1.0, 0.0)},
-            {make_float3(0.0, 0.0, 0.0), make_float3(0.0, 0.0, 1.0)},
-            {make_float3(1.0, 1.0, 0.0), make_float3(1.0, 1.0, 1.0)},
-            {make_float3(0.0, 1.0, 1.0), make_float3(1.0, 1.0, 1.0)},
-            {make_float3(1.0, 0.0, 1.0), make_float3(1.0, 1.0, 1.0)},
-            {make_float3(1.0, 0.0, 0.0), make_float3(1.0, 1.0, 0.0)},
-            {make_float3(1.0, 0.0, 0.0), make_float3(1.0, 0.0, 1.0)},
-            {make_float3(0.0, 1.0, 0.0), make_float3(1.0, 1.0, 0.0)},
-            {make_float3(0.0, 1.0, 0.0), make_float3(0.0, 1.0, 1.0)},
-            {make_float3(0.0, 0.0, 1.0), make_float3(1.0, 0.0, 1.0)},
-            {make_float3(0.0, 0.0, 1.0), make_float3(0.0, 1.0, 1.0)},
+            {make_float3(0.0f, 0.0f, 0.0f), make_float3(1.0f, 0.0f, 0.0f)},
+            {make_float3(0.0f, 0.0f, 0.0f), make_float3(0.0f, 1.0f, 0.0f)},
+            {make_float3(0.0f, 0.0f, 0.0f), make_float3(0.0f, 0.0f, 1.0f)},
+            {make_float3(1.0f, 1.0f, 0.0f), make_float3(1.0f, 1.0f, 1.0f)},
+            {make_float3(0.0f, 1.0f, 1.0f), make_float3(1.0f, 1.0f, 1.0f)},
+            {make_float3(1.0f, 0.0f, 1.0f), make_float3(1.0f, 1.0f, 1.0f)},
+            {make_float3(1.0f, 0.0f, 0.0f), make_float3(1.0f, 1.0f, 0.0f)},
+            {make_float3(1.0f, 0.0f, 0.0f), make_float3(1.0f, 0.0f, 1.0f)},
+            {make_float3(0.0f, 1.0f, 0.0f), make_float3(1.0f, 1.0f, 0.0f)},
+            {make_float3(0.0f, 1.0f, 0.0f), make_float3(0.0f, 1.0f, 1.0f)},
+            {make_float3(0.0f, 0.0f, 1.0f), make_float3(1.0f, 0.0f, 1.0f)},
+            {make_float3(0.0f, 0.0f, 1.0f), make_float3(0.0f, 1.0f, 1.0f)},
         };
 
         float2 position_within_histogram = make_float2(_mix(-0.5f, 0.5f, (curr_pos.x - histogram_bounding_box.left_bottom.x) / box_size),

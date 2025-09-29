@@ -19,21 +19,21 @@ __DEVICE__ float3 hsv_to_rgb(float hue, float sat, float val) {
     // assume hue is in degrees
     hue = _fmod(hue, 360.0f);
     float c = val * sat;
-    float x = c * (1.0 - _fabs(_fmod(hue / 60.0f, 2.0f) - 1.0f));
+    float x = c * (1.0f - _fabs(_fmod(hue / 60.0f, 2.0f) - 1.0f));
     float m = val - c;
     float3 rgbp;
-    if (0.0 <= hue && hue < 60.0) {
-        rgbp = make_float3(c, x, 0.0);
-    } else if (60.0 <= hue && hue < 120.0) {
-        rgbp = make_float3(x, c, 0.0);
-    } else if (120.0 <= hue && hue < 180.0) {
-        rgbp = make_float3(0.0, c, x);
-    } else if (180.0 <= hue && hue < 240.0) {
-        rgbp = make_float3(0.0, x, c);
-    } else if (240.0 <= hue && hue < 300.0) {
-        rgbp = make_float3(x, 0.0, c);
-    } else { // if (300.0 < hue && hue < 360.0) {
-        rgbp = make_float3(c, 0.0, x);
+    if (0.0f <= hue && hue < 60.0f) {
+        rgbp = make_float3(c, x, 0.0f);
+    } else if (60.0f <= hue && hue < 120.0f) {
+        rgbp = make_float3(x, c, 0.0f);
+    } else if (120.0f <= hue && hue < 180.0f) {
+        rgbp = make_float3(0.0f, c, x);
+    } else if (180.0f <= hue && hue < 240.0f) {
+        rgbp = make_float3(0.0f, x, c);
+    } else if (240.0f <= hue && hue < 300.0f) {
+        rgbp = make_float3(x, 0.0f, c);
+    } else { // if (300.0f < hue && hue < 360.0f) {
+        rgbp = make_float3(c, 0.0f, x);
     }
     return rgbp + m;
 }
@@ -48,26 +48,26 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         y = temp;
     }
 
-    float band_height = 1.0 / num_bands;
+    float band_height = 1.0f / num_bands;
     float curr_band = y / band_height;
     if (continuous == CONTINUOUS_MIXTURES || continuous == DISCRETE) {
         curr_band = _ceilf(curr_band);
     }
 
     // Kinda hacky max_val intended to have a roughly mid-gray center in one of the linear gradients.
-    const float max_val = 1.0 + saturation;
+    const float max_val = 1.0f + saturation;
     float curr_band_value;
     if (band_interval == EQUAL) {
         curr_band_value = max_val * ((float)curr_band / num_bands);
     } else {
-        curr_band_value = max_val * mid_gray * _exp2f(curr_band - _round(num_bands / 2.0));
+        curr_band_value = max_val * mid_gray * _exp2f(curr_band - _round(num_bands / 2.0f));
     }
 
     float mixture_amount = x;
     if (continuous == CONTINUOUS_EXP || continuous == DISCRETE) {
         mixture_amount = _floor(x * num_slices) / (num_slices - 1);
         if (num_slices == 1) {
-            mixture_amount = 0.5;
+            mixture_amount = 0.5f;
         }
     }
 

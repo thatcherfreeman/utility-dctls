@@ -21,8 +21,8 @@ __DEVICE__ rect_pos_t make_rect_pos(float x, float y, float width, float height)
 }
 
 __DEVICE__ bool draw_rect(float2 curr_pos, rect_pos_t rect_pos) {
-    return (rect_pos.x - (rect_pos.width / 2.0) < curr_pos.x && curr_pos.x < rect_pos.x + (rect_pos.width / 2.0) &&
-            rect_pos.y - (rect_pos.height / 2.0) < curr_pos.y && curr_pos.y < rect_pos.y + (rect_pos.height / 2.0));
+    return (rect_pos.x - (rect_pos.width / 2.0f) < curr_pos.x && curr_pos.x < rect_pos.x + (rect_pos.width / 2.0f) &&
+            rect_pos.y - (rect_pos.height / 2.0f) < curr_pos.y && curr_pos.y < rect_pos.y + (rect_pos.height / 2.0f));
 }
 
 /////////////////////////////////////////////
@@ -67,12 +67,12 @@ __DEVICE__ float sample_uniform(float a, float b, __PRIVATE__ rand_state* seed) 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
 
     // Obtain random seed.
-    float seed_position_x = 0.50;
-    float seed_position_y = 0.50;
+    float seed_position_x = 0.50f;
+    float seed_position_y = 0.50f;
 
     float seed = _tex2D(p_TexR, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height));
-    seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0;
-    seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0;
+    seed += _tex2D(p_TexG, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 20.0f;
+    seed += _tex2D(p_TexB, (int)(seed_position_x * p_Width), (int)(seed_position_y * p_Height)) * 400.0f;
     rand_state state_value = *((__PRIVATE__ rand_state*)&seed);
     __PRIVATE__ rand_state* state = &state_value;
 
@@ -84,7 +84,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     val = randu(state);
     val = randu(state);
     *state = *((__PRIVATE__ rand_state*)&val);
-    float output_cv = 0.0;
+    float output_cv = 0.0f;
 
     float target_lum = _powf(center_cv, target_gamma);
 
@@ -92,8 +92,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     // if (RAND((uint)(_fmod((float)p_X, 101.0) + 101.0 * _fmod((float)p_Y, 101.0))) < target_lum) {
 
     // if (RAND(p_X + p_Width * p_Y) < target_lum) {
-    if (sample_uniform(0, 1.0, state) < target_lum) {
-        output_cv = 1.0;
+    if (sample_uniform(0, 1.0f, state) < target_lum) {
+        output_cv = 1.0f;
     }
 
     float x = (float)p_X / (float)(p_Width - 1);
@@ -101,7 +101,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     float2 curr_pos = make_float2(x, y);
 
-    rect_pos_t rect_pos = make_rect_pos(0.5, 0.5, 0.25, 0.25);
+    rect_pos_t rect_pos = make_rect_pos(0.5f, 0.5f, 0.25f, 0.25f);
 
     if (draw_rect(curr_pos, rect_pos)) {
         output_cv = center_cv;

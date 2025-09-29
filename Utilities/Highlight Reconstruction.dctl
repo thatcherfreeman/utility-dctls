@@ -27,7 +27,7 @@ __DEVICE__ float powf(float base, float exp) {
 
 __DEVICE__ float smoothstep1(float x) {
     x = _clampf(x, 0.0f, 1.0f);
-    return 3.0 * powf(x, 2.0f) - 2.0 * powf(x, 3.0f);
+    return 3.0f * powf(x, 2.0f) - 2.0f * powf(x, 3.0f);
 }
 
 __DEVICE__ float highlight_mask(float input, float clipping_point, float clipping_feathering) {
@@ -37,7 +37,7 @@ __DEVICE__ float highlight_mask(float input, float clipping_point, float clippin
         return 0.0f;
     }
 
-    const float mid_gray = 0.18;
+    const float mid_gray = 0.18f;
     float clipping_point_linear = mid_gray * _exp2f(clipping_point);
     float clipping_feathering_point = mid_gray * _exp2f(clipping_point + clipping_feathering);
 

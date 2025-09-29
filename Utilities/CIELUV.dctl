@@ -15,7 +15,7 @@ __DEVICE__ float powf(float base, float exp) {
 }
 
 __DEVICE__ float2 xyz_to_xy(float3 xyz, float2 white_xy) {
-    if (xyz.y == 0.0) {
+    if (xyz.y == 0.0f) {
         return white_xy;
     }
     float x = xyz.x / (xyz.x + xyz.y + xyz.z);
@@ -24,8 +24,8 @@ __DEVICE__ float2 xyz_to_xy(float3 xyz, float2 white_xy) {
 }
 
 __DEVICE__ float2 xy_to_uv(float2 xy) {
-    float up = 4.0 * xy.x / (-2.0 * xy.x + 12.0 * xy.y + 3.0);
-    float vp = 9.0 * xy.y / (-2.0 * xy.x + 12.0 * xy.y + 3.0);
+    float up = 4.0f * xy.x / (-2.0f * xy.x + 12.0f * xy.y + 3.0f);
+    float vp = 9.0f * xy.y / (-2.0f * xy.x + 12.0f * xy.y + 3.0f);
     return make_float2(up, vp);
 }
 
@@ -34,8 +34,8 @@ __DEVICE__ inline float2 xyY_to_xy(float3 xyY) {
 }
 
 __DEVICE__ float2 uv_to_xy(float2 uv) {
-    float x = 9.0 * uv.x / (6.0 * uv.x - 16.0 * uv.y + 12.0);
-    float y = 9.0 * uv.y / (6.0 * uv.x - 16.0 * uv.y + 12.0);
+    float x = 9.0f * uv.x / (6.0f * uv.x - 16.0f * uv.y + 12.0f);
+    float y = 9.0f * uv.y / (6.0f * uv.x - 16.0f * uv.y + 12.0f);
     return make_float2(x, y);
 }
 
@@ -45,13 +45,13 @@ __DEVICE__ float3 xyz_to_luv(float3 xyz, float3 white_xyY) {
     float2 uv = xy_to_uv(xy);
     float Ls;
     float Yn = white_xyY.z;
-    if ((xyz.y / Yn) <= powf(6.0 / 29.0, 3.0)) {
-        Ls = powf(29.0 / 3.0, 3.0) * xyz.y / Yn;
+    if ((xyz.y / Yn) <= powf(6.0f / 29.0f, 3.0f)) {
+        Ls = powf(29.0f / 3.0f, 3.0f) * xyz.y / Yn;
     } else {
-        Ls = 116.0 * powf(xyz.y / Yn, 1.0 / 3.0) - 16.0;
+        Ls = 116.0f * powf(xyz.y / Yn, 1.0f / 3.0f) - 16.0f;
     }
-    float us = 13.0 * Ls * (uv.x - white_uv.x);
-    float vs = 13.0 * Ls * (uv.y - white_uv.y);
+    float us = 13.0f * Ls * (uv.x - white_uv.x);
+    float vs = 13.0f * Ls * (uv.y - white_uv.y);
 
     float3 luv = make_float3(Ls, us, vs);
     return luv;
@@ -64,44 +64,44 @@ __DEVICE__ float3 luv_to_xyz(float3 luv, float3 white_xyY) {
     float2 white_uv = xy_to_uv(xyY_to_xy(white_xyY));
     float Yn = white_xyY.z;
 
-    float up = us / (13.0 * Ls) + white_uv.x;
-    float vp = vs / (13.0 * Ls) + white_uv.y;
+    float up = us / (13.0f * Ls) + white_uv.x;
+    float vp = vs / (13.0f * Ls) + white_uv.y;
 
-    if (Ls == 0.0) {
+    if (Ls == 0.0f) {
         up = white_uv.x;
         vp = white_uv.y;
     }
 
     float Y;
-    if (Ls <= 8.0) {
-        Y = Yn * Ls * powf(3.0 / 29.0, 3.0);
+    if (Ls <= 8.0f) {
+        Y = Yn * Ls * powf(3.0f / 29.0f, 3.0f);
     } else {
-        Y = Yn * powf((Ls + 16.0) / 116.0, 3.0);
+        Y = Yn * powf((Ls + 16.0f) / 116.0f, 3.0f);
     }
-    float X = Y * 9.0 * up / (4.0 * vp);
-    float Z = Y * (12.0 - 3.0 * up - 20.0 * vp) / (4.0 * vp);
+    float X = Y * 9.0f * up / (4.0f * vp);
+    float Z = Y * (12.0f - 3.0f * up - 20.0f * vp) / (4.0f * vp);
     return make_float3(X, Y, Z);
 }
 
 __DEVICE__ float3 luv_to_lch(float3 luv) {
     float cs = _hypotf(luv.y, luv.z);
-    float hs = _atan2f(luv.z, luv.y) / (2.0 * PI);
+    float hs = _atan2f(luv.z, luv.y) / (2.0f * PI);
     if (hs < 0) {
-        hs += 1.0;
+        hs += 1.0f;
     }
     return make_float3(luv.x, cs, hs);
 }
 
 __DEVICE__ float3 lch_to_luv(float3 lch) {
-    float us = lch.y * _cosf(lch.z * 2.0 * PI);
-    float vs = lch.y * _sinf(lch.z * 2.0 * PI);
+    float us = lch.y * _cosf(lch.z * 2.0f * PI);
+    float vs = lch.y * _sinf(lch.z * 2.0f * PI);
     return make_float3(lch.x, us, vs);
 }
 
 __DEVICE__ float3 lch_to_lsh(float3 lch) {
     float s = lch.y / lch.x;
-    if (lch.x == 0.0) {
-        s = 0.0;
+    if (lch.x == 0.0f) {
+        s = 0.0f;
     }
     return make_float3(lch.x, s, lch.z);
 }

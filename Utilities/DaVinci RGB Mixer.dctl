@@ -38,7 +38,7 @@ __DEVICE__ float3 vm_3_33(float3 v, float mat[3][3]) {
 
 __DEVICE__ void mat_inverse_33(float m[3][3]) {
     // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
-    float inv_buf[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+    float inv_buf[3][3] = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
 
     float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
                 m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
@@ -57,7 +57,7 @@ __DEVICE__ void mat_inverse_33(float m[3][3]) {
 
 // Modifies the matrix in place to preserve rec709 luminance
 __DEVICE__ void preserve_mat_luminance(float input[3][3]) {
-    float3 luminance_coefficients = make_float3(0.2126, 0.7152, 0.0722);
+    float3 luminance_coefficients = make_float3(0.2126f, 0.7152f, 0.0722f);
     float3 column_luminances = vm_3_33(luminance_coefficients, input);
     float3 diff = luminance_coefficients - column_luminances;
     input[0][0] += diff.x;
