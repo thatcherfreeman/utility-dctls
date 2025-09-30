@@ -326,7 +326,7 @@ function ExtractParameters(dctl_source)
     -- FLOAT SLIDERS
     local float_sliders = {}
     local slider_float_pattern =
-        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_SLIDER_FLOAT%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*%)"
+        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*)%s*,%s*DCTLUI_SLIDER_FLOAT%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*%)"
     local ret1 = 0
     local rhs = 0
     local slider_float_counter = 0
@@ -352,7 +352,7 @@ function ExtractParameters(dctl_source)
     -- INT SLIDERS
     local int_sliders = {}
     local slider_int_pattern =
-        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_SLIDER_INT%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*%)"
+        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*)%s*,%s*DCTLUI_SLIDER_INT%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*,%s*([%-%d]+)%s*%)"
     local ret1 = 0
     local rhs = 0
     local slider_int_counter = 0
@@ -378,7 +378,7 @@ function ExtractParameters(dctl_source)
     -- VALUE BOXES
     local value_boxes = {}
     local value_box_pattern =
-        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_VALUE_BOX%s*,%s*([%-%d%.eE]+)f?%s*%)"
+        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*)%s*,%s*DCTLUI_VALUE_BOX%s*,%s*([%-%d%.eE]+)f?%s*%)"
     local ret1 = 0
     local rhs = 0
     local value_box_counter = 0
@@ -399,7 +399,7 @@ function ExtractParameters(dctl_source)
 
     -- CHECK BOXES
     local check_boxes = {}
-    local check_box_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_CHECK_BOX%s*,%s*([01])%s*%)"
+    local check_box_pattern = "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*)%s*,%s*DCTLUI_CHECK_BOX%s*,%s*([01])%s*%)"
     local ret1 = 0
     local rhs = 0
     local check_box_counter = 0
@@ -421,7 +421,7 @@ function ExtractParameters(dctl_source)
     -- COMBO BOXES
     local combo_boxes = {}
     local combo_box_pattern =
-        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_COMBO_BOX%s*,%s*([%d]+)%s*,%s*{(.-)}%s*,%s*{(.-)}%s*%)"
+        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*)%s*,%s*DCTLUI_COMBO_BOX%s*,%s*([%d]+)%s*,%s*{(.-)}%s*,%s*{(.-)}%s*%)"
     local ret1 = 0
     local rhs = 0
     local combo_box_counter = 0
@@ -466,7 +466,7 @@ function ExtractParameters(dctl_source)
     -- COLOR PICKERS
     local color_pickers = {}
     local color_picker_pattern =
-        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*),%s*DCTLUI_COLOR_PICKER%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*%)"
+        "DEFINE_UI_PARAMS%(%s*(%S+)%s*,%s*(%S[^,]*)%s*,%s*DCTLUI_COLOR_PICKER%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*,%s*([%-%d%.eE]+)f?%s*%)"
     local ret1 = 0
     local rhs = 0
     local color_picker_counter = 0
@@ -489,7 +489,7 @@ function ExtractParameters(dctl_source)
     dctl_source = string.gsub(dctl_source, color_picker_pattern, "")
 
     -- Tooltips
-    local tooltip_pattern = 'DEFINE_UI_TOOLTIP%(%s*(%S[^,]*),%s*(%b"")%)'
+    local tooltip_pattern = 'DEFINE_UI_TOOLTIP%(%s*(%S[^,]*)%s*,%s*(%b"")%s*%)'
     local tooltips = {}
     local ret1 = 0
     repeat
