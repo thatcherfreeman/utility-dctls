@@ -11,6 +11,10 @@ DEFINE_UI_PARAMS(stops_g, Gain G, DCTLUI_SLIDER_FLOAT, 0.0, -16.0, 16.0, 0.001)
 DEFINE_UI_PARAMS(stops_b, Gain B, DCTLUI_SLIDER_FLOAT, 0.0, -16.0, 16.0, 0.001)
 
 DEFINE_UI_PARAMS(highlight_desaturation, Highlight Desaturation, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+
+DEFINE_UI_PARAMS(darken_stops, Darken Stops, DCTLUI_SLIDER_FLOAT, 3.0, 0.0, 8.0, 0.001)
+DEFINE_UI_PARAMS(darken, Darken, DCTLUI_CHECK_BOX, 0)
+
 DEFINE_UI_PARAMS(highlight_desaturation_methodology, Desaturation Model, DCTLUI_COMBO_BOX, 0, {DESATURATION_MAX, DESATURATION_MEAN}, {Preserve Max, Preserve Mean})
 
 DEFINE_UI_PARAMS(output_red_channel, Output Red Channel, DCTLUI_COMBO_BOX, 0, {RED_TO_RED, GREEN_TO_RED, BLUE_TO_RED, GREEN_BLUE_TO_RED}, {Red to Red, Green to Red, Blue to Red, Green Blue to Red})
@@ -169,6 +173,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         output_color = make_float3(output_g, output_g, output_g);
     } else if (display_mode == DISPLAY_BLUE_CHANNEL) {
         output_color = make_float3(output_b, output_b, output_b);
+    }
+
+    if (darken) {
+        output_color = output_color * _exp2f(-darken_stops);
     }
 
     return output_color;

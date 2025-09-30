@@ -2186,8 +2186,7 @@ Set up the following node tree:
 
 1. Convert to linear
 2. This DCTL
-3. Optional exposure reduction via gain so that you can see what you're doing
-4. Tone map or DRT to your display's transfer function. You can delete nodes 3 and 4 when you're done, or just replace them with the rest of your grade, if desired.
+3. Tone map or DRT to your display's transfer function. You can delete nodes 3 and 4 when you're done, or just replace them with the rest of your grade, if desired.
 
 Usage of the tool:
 
@@ -2211,6 +2210,10 @@ Usage of the tool:
 **Gain R/G/B**: Amount of stops of gain to boost the reconstructed pixels within the mask, such that they match the boundaries of the clipped region.
 
 **Highlight Desaturation**: Desaturates the highlights. On some images, setting just this and the clipping point might be enough, but you'll usually get better results by going through the exercise of reconstructing the clipped regions first.
+
+**Darken Stops**: Amount of stops to darken the image when monitoring it.
+
+**Darken**: Check to darken the image by the specified amount of stops. Make sure you turn this off when rendering!
 
 **Desaturation Model**: Setting this to Max will result in Highlight Desaturation having more contrast in the highlights, whereas Preserve Mean will be a bit more muted and perhaps appear to have smoother highlight rolloff.
 
