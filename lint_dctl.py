@@ -31,6 +31,11 @@ def lint_dctl(file):
                 new_lines.append(line)
                 continue
 
+            # Skip if line has quotation marks in it (strings).
+            if '"' in stripped or "'" in stripped:
+                new_lines.append(line)
+                continue
+
             matches = re.findall(pattern, line)
             new_line, num_changes = re.subn(pattern, convert_to_float, line)
             new_lines.append(new_line)

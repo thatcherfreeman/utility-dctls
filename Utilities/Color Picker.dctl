@@ -260,7 +260,7 @@ __DEVICE__ void float2str(float f, char output[], int num_chars) {
     // First char is neg sign, if necessary
     char inf[] = "inf";
     char nan[] = "NaN";
-    char zero[] = "0.f";
+    char zero[] = "0.";
 
     if (f < 0) {
         output[runner] = '-';
