@@ -1,0 +1,58 @@
+FuRegisterClass("PingPong", CT_Tool, {
+    REGS_Name = "Ping Pong",
+    REGS_Category = "Fuses\\Util",
+    REGS_OpIconString = "PiPo",
+    REGS_OpDescription = "Ping pongs between the specified frames over time."
+})
+
+function Create()
+    StartFrame = self:AddInput("Start Frame", "StartFrame", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ScrewControl",
+        INP_Default = 0.0,
+        INP_INTEGER = true,
+        IC_DisplayedPrecision = 0
+    })
+    EndFrame = self:AddInput("End Frame", "EndFrame", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ScrewControl",
+        INP_Default = 0.0,
+        INP_INTEGER = true,
+        IC_DisplayedPrecision = 0
+    })
+    InImage = self:AddInput("Input", "Input", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1
+    })
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1
+    })
+end
+
+function Process(req)
+    -- Get values from the UI Tools
+    local start_frame = StartFrame:GetValue(req).Value
+    local end_frame = EndFrame:GetValue(req).Value
+
+    if start_frame > end_frame then
+        local tmp = start_frame
+        start_frame = end_frame
+        end_frame = tmp
+    end
+
+    if start_frame == end_frame then
+        local img = InImage:GetSource(start_frame)
+        OutImage:Set(req, img)
+        return
+    end
+
+    local period = 2 * (end_frame - start_frame)
+    local time_in_period = (req.Time - start_frame) % period
+    if time_in_period > (end_frame - start_frame) then
+        time_in_period = period - time_in_period
+    end
+
+    local img = InImage:GetSource(time_in_period + start_frame)
+    OutImage:Set(req, img)
+end

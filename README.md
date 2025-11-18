@@ -41,6 +41,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Merge Adjacent Fuse](#merge-adjacent-fuse)
         - [MTF Curve Fuse](#mtf-curve-fuse)
         - [Periodic Frame Sampler Fuse](#periodic-frame-sampler-fuse)
+        - [Ping Pong Fuse](#ping-pong-fuse)
         - [Pixel Logger Fuse](#pixel-logger-fuse)
         - [Print Dimensions Fuse](#print-dimensions-fuse)
         - [Recenter Fuse](#recenter-fuse)
@@ -372,6 +373,18 @@ Essentially, we will compute:
 **Destination Time Start**: Frame number at which we should output the `Source Time Start` frame.
 
 **Period**: As time progresses one frame, this indicates how many frames later we should sample from the source image.
+
+---
+
+### Ping Pong Fuse
+
+For the input clip, plays between the "start frame" and "end frame" back and forth forever.
+
+#### Parameters
+
+**Start Frame**: Start side of the ping pong range
+
+**End Frame**: End of the ping pong range
 
 ---
 
