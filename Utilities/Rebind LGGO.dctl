@@ -9,8 +9,8 @@ DEFINE_UI_PARAMS(invert_mid_gray_gamma_direction, Flip Mid Gray Pres. Gamma Dir,
 DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 1, {MODE_REFERENCE, MODE_CAPTURE}, {Inject Patches, Rebind Controls})
 DEFINE_UI_PARAMS(wheels, Wheels, DCTLUI_COMBO_BOX, 0, {WHEELS_LGG, WHEELS_OGG}, {Lift Gamma Gain, Gamma Gain Offset})
 
-DEFINE_UI_PARAMS(lift_wheel_rebind, Lift Wheel Rebind, DCTLUI_COMBO_BOX, 0, {LIFT_REBIND_TO_LIFT, LIFT_REBIND_TO_GAMMA, LIFT_REBIND_TO_MID_GRAY_PRESERVING_GAMMA, LIFT_REBIND_TO_GAIN, LIFT_REBIND_TO_NORMALIZED_GAIN, LIFT_REBIND_TO_OFFSET, LIFT_REBIND_TO_MIN_NORMALIZED_OFFSET}, {Lift, Gamma, Mid Gray Pres. Gamma, Gain, Max Normalized Gain, Offset, Min Normalized Offset})
-DEFINE_UI_PARAMS(gamma_wheel_rebind, Gamma Wheel Rebind, DCTLUI_COMBO_BOX, 1, {GAMMA_REBIND_TO_LIFT, GAMMA_REBIND_TO_GAMMA, GAMMA_REBIND_TO_MID_GRAY_PRESERVING_GAMMA, GAMMA_REBIND_TO_GAIN, GAMMA_REBIND_TO_NORMALIZED_GAIN, GAMMA_REBIND_TO_OFFSET, GAMMA_REBIND_TO_MIN_NORMALIZED_OFFSET,}, {Lift, Gamma, Mid Gray Pres. Gamma, Gain, Max Normalized Gain, Offset, Min Normalized Offset})
+DEFINE_UI_PARAMS(lift_wheel_rebind, Lift Wheel Rebind, DCTLUI_COMBO_BOX, 0, {LIFT_REBIND_TO_LIFT, LIFT_REBIND_TO_GAMMA, LIFT_REBIND_TO_MID_GRAY_PRESERVING_GAMMA, LIFT_REBIND_TO_GAIN, LIFT_REBIND_TO_NORMALIZED_GAIN, LIFT_REBIND_TO_OFFSET, LIFT_REBIND_TO_MIN_NORMALIZED_OFFSET, LIFT_REBIND_TO_RED_GAIN}, {Lift, Gamma, Mid Gray Pres. Gamma, Gain, Max Normalized Gain, Offset, Min Normalized Offset, Red Gain})
+DEFINE_UI_PARAMS(gamma_wheel_rebind, Gamma Wheel Rebind, DCTLUI_COMBO_BOX, 1, {GAMMA_REBIND_TO_LIFT, GAMMA_REBIND_TO_GAMMA, GAMMA_REBIND_TO_MID_GRAY_PRESERVING_GAMMA, GAMMA_REBIND_TO_GAIN, GAMMA_REBIND_TO_NORMALIZED_GAIN, GAMMA_REBIND_TO_OFFSET, GAMMA_REBIND_TO_MIN_NORMALIZED_OFFSET, GAMMA_REBIND_TO_BLUE_GAIN}, {Lift, Gamma, Mid Gray Pres. Gamma, Gain, Max Normalized Gain, Offset, Min Normalized Offset, Blue Gain})
 DEFINE_UI_PARAMS(gain_wheel_rebind, Gain Wheel Rebind, DCTLUI_COMBO_BOX, 3, {GAIN_REBIND_TO_LIFT, GAIN_REBIND_TO_GAMMA, GAIN_REBIND_TO_MID_GRAY_PRESERVING_GAMMA, GAIN_REBIND_TO_GAIN, GAIN_REBIND_TO_NORMALIZED_GAIN, GAIN_REBIND_TO_OFFSET, GAIN_REBIND_TO_MIN_NORMALIZED_OFFSET,}, {Lift, Gamma, Mid Gray Pres. Gamma, Gain, Max Normalized Gain, Offset, Min Normalized Offset})
 DEFINE_UI_PARAMS(offset_wheel_rebind, Offset Wheel Rebind, DCTLUI_COMBO_BOX, 5, {OFFSET_REBIND_TO_LIFT, OFFSET_REBIND_TO_GAMMA, OFFSET_REBIND_TO_MID_GRAY_PRESERVING_GAMMA, OFFSET_REBIND_TO_GAIN, OFFSET_REBIND_TO_NORMALIZED_GAIN, OFFSET_REBIND_TO_OFFSET, OFFSET_REBIND_TO_MIN_NORMALIZED_OFFSET, OFFSET_REBIND_TO_PRINTER_LIGHTS_EXPOSURE}, {Lift, Gamma, Mid Gray Pres. Gamma, Gain, Max Normalized Gain, Offset, Min Normalized Offset, Printer Lights Gain})
 
@@ -451,6 +451,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
                 new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
                 new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
                 new_lggo_params_b_wheels.offset += convert_offset_real_to_printer_lights(offsets.z - min_offset + luminance) - PRINTER_LIGHT_BASE;
+            } else if (lift_wheel_rebind == LIFT_REBIND_TO_RED_GAIN) {
+                float3 offsets = make_float3(lggo_params_r_wheels.lift, lggo_params_g_wheels.lift, lggo_params_b_wheels.lift);
+                float min_offset = _fminf(offsets.x, _fminf(offsets.y, offsets.z));
+                float luminance = rec709_luminance(offsets); // initially 0.0f.
+                new_lggo_params_r_wheels.gain *= _fmaxf(luminance + 1.0f, 0.0f);
             }
         }
 
@@ -492,6 +497,11 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             new_lggo_params_r_wheels.offset += convert_offset_real_to_printer_lights(offsets.x - min_offset + luminance) - PRINTER_LIGHT_BASE;
             new_lggo_params_g_wheels.offset += convert_offset_real_to_printer_lights(offsets.y - min_offset + luminance) - PRINTER_LIGHT_BASE;
             new_lggo_params_b_wheels.offset += convert_offset_real_to_printer_lights(offsets.z - min_offset + luminance) - PRINTER_LIGHT_BASE;
+        } else if (gamma_wheel_rebind == GAMMA_REBIND_TO_BLUE_GAIN) {
+            float3 offsets = make_float3(lggo_params_r_wheels.gamma, lggo_params_g_wheels.gamma, lggo_params_b_wheels.gamma);
+            float min_offset = _fminf(offsets.x, _fminf(offsets.y, offsets.z));
+            float luminance = rec709_luminance(offsets); // initially 0.0f.
+            new_lggo_params_b_wheels.gain *= _fmaxf(luminance + 1.0f, 0.0f);
         }
 
         if (gain_wheel_rebind == GAIN_REBIND_TO_GAIN) {
