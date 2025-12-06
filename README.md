@@ -120,7 +120,6 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Color Ramp DCTL](#color-ramp-dctl)
         - [Cube 3D Histogram DCTL](#cube-3d-histogram-dctl)
         - [Cube Rotate DCTL](#cube-rotate-dctl)
-        - [Current Resolution Display DCTL](#current-resolution-display-dctl)
         - [Cylindrical DCTL](#cylindrical-dctl)
         - [DaVinci HSL Curves Conversion DCTL](#davinci-hsl-curves-conversion-dctl)
         - [DaVinci LGGO DCTL](#davinci-lggo-dctl)
@@ -150,6 +149,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Quantize](#quantize)
         - [Rebind LGGO DCTL](#rebind-lggo-dctl)
         - [Resize Checker DCTL](#resize-checker-dctl)
+        - [Resolution Display DCTL](#resolution-display-dctl)
         - [RGB Chips DCTL](#rgb-chips-dctl)
         - [Safety Lines DCTL](#safety-lines-dctl)
         - [SNR Checker DCTL](#snr-checker-dctl)
@@ -1835,18 +1835,6 @@ Takes the specified vector and rotates the RGB cube (around 0,0,0) so that the g
 
 ---
 
-### Current Resolution Display DCTL
-
-Prints the resolution at the time of processing the DCTL onto the screen, for use in debugging your pipeline or figuring out what resolution Resolve is using for stuff like stills or thumbnails.
-
-#### DCTL Parameters
-
-**Text Size**: Indicate how large you want the text to be
-
-**Text Color**: Indicates what value to choose for the text.
-
----
-
 ### Cylindrical DCTL
 
 Converts between RGB and a Cylindrical color model. Outputs a 3-channel image, $(\theta, \phi \rho)$. $\rho$ represents `mean(rgb)`, $\theta$ is scaled 0-1 and represents the hue, and $\phi$ represents saturation and is scaled from 0 to 1.0 for inputs that are all nonnegative.
@@ -2526,6 +2514,18 @@ Helps you identify if you've rescaled a clip poorly, by lighting up the whole fr
 **Output Mode**: Choose what to display. If Highlight Edges is selected, then we draw a line indicating the exact pixels that will be checked in Quality mode. If any of these white pixels is black, then the entire frame will be drawn pink. Highlight Blanking simply highlights all black pixels as green. Full Screen Warning is the same as Highlight Blanking, but it also highlights the entire frame as pink if any pixel on the border of the frame is black.
 
 **Performance Mode**: "Performance" simply checks the pixels in the four corners and the midpoints of the edges, which will catch bad framing for all linear transforms (scale, aspect, panning, keystone correction). "Quality" mode instead checks every pixel along the border of the frame (indicated by Highlight Edges), which you'll need if you added pincushion lens distortion or corrected for barrel distortion. However, it has the downside that you're more likely to have a false positive if there's a spurrious black pixel.
+
+---
+
+### Resolution Display DCTL
+
+Prints the resolution at the time of processing the DCTL onto the screen, for use in debugging your pipeline or figuring out what resolution Resolve is using for stuff like stills or thumbnails.
+
+#### DCTL Parameters
+
+**Text Size**: Indicate how large you want the text to be
+
+**Text Color**: Indicates what value to choose for the text.
 
 ---
 
