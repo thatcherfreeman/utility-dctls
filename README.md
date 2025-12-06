@@ -212,6 +212,8 @@ Corner positioning tool that actually works. You place four control points on th
 
 Adds support for DCTLs within Fusion Studio rather than just Resolve. This is done by reading in a DCTL file and any headers, then rewriting several parts of the source code so it can be run natively within the Fuse DCTL framework (which is somewhat different than the Resolve DCTL framework).
 
+To get detailed compilation error messages, you must check **Fusion Settings > Global and Default Settings > GPU > Debugging > Verbose console messages**.
+
 #### Parameters
 
 **DCTL File**: Allows you to specify a .dctl file, anywhere on your system.
