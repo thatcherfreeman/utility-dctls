@@ -1641,9 +1641,11 @@ Tool to help estimate the true bit depth of a file. It works by comparing the co
 
 Helps you figure out what the pixel dimensions are of a letterboxed or pillarboxed clip. This works by searching from the middle of each edge towards the center to find a pixel that is not black. For efficiency, we use a binary search, but this can occasionally error if your image contains large patches of black regions near the edges.
 
+I would recommend putting this either at the timeline level nodes or as a node before the IDT. In Resolve, it's easy to mistakenly grade or CST your black bars away from (0, 0, 0), which would make this tool useless, but black bars are injected before the pre-clip group nodes and between the post-clip group nodes and the timeline nodes.
+
 #### DCTL Parameters
 
-**Black Threshold**: Iindicates how far from (0, 0, 0) any channel has to be to be considered not black.
+**Black Threshold**: Indicates how far from (0, 0, 0) any channel has to be to be considered not black.
 
 **Highlight Border**: Draws a box around the frame where the program has assumed the black bars end. Importantly, the white box is drawn on the first non-black pixels.
 
