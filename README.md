@@ -109,6 +109,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
     - [Utilities](#utilities)
         - [ACES Exposure DCTL](#aces-exposure-dctl)
         - [Bit Depth Estimator DCTL](#bit-depth-estimator-dctl)
+        - [Black Bar Resolution DCTL](#black-bar-resolution-dctl)
         - [Blanking Checker DCTL](#blanking-checker-dctl)
         - [Brand Colors DCTL](#brand-colors-dctl)
         - [Channel Viewer DCTL](#channel-viewer-dctl)
@@ -1633,6 +1634,22 @@ Tool to help estimate the true bit depth of a file. It works by comparing the co
 **Target Bit Depth**: When Highlight is enabled, Highlights all pixels whose effective bit depth is within 0.1 of this Target Bit Depth.
 
 **Highlight**: When checked, highlights only pixels whose bit depth is near the Target Bit Depth, otherwise all pixels are replaced with their effective bit depth.
+
+---
+
+### Black Bar Resolution DCTL
+
+Helps you figure out what the pixel dimensions are of a letterboxed or pillarboxed clip. This works by searching from the middle of each edge towards the center to find a pixel that is not black. For efficiency, we use a binary search, but this can occasionally error if your image contains large patches of black regions near the edges.
+
+#### DCTL Parameters
+
+**Black Threshold**: Iindicates how far from (0, 0, 0) any channel has to be to be considered not black.
+
+**Highlight Border**: Draws a box around the frame where the program has assumed the black bars end. Importantly, the white box is drawn on the first non-black pixels.
+
+**Assume Clip is Centered**: If checked, we will assume that the top/bottom bars are the same size and the left/right bars are the same size. Can improve accuracy on night shots, but you should uncheck this if you intend for the image to be off-center and for bars to be mismatched.
+
+**Text Color**: Choose the color of the text, to improve visibility.
 
 ---
 
