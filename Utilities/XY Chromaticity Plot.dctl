@@ -7,7 +7,7 @@ DEFINE_UI_PARAMS(scope_pos_y, Scope Position Y, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1
 DEFINE_UI_PARAMS(scope_size, Scope Size, DCTLUI_SLIDER_FLOAT, 0.3, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(scope_opacity, Scope Opacity, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(scope_saturation, Scope Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.01)
-DEFINE_UI_PARAMS(dot_size, Scope Dot Size, DCTLUI_SLIDER_FLOAT, 4.0, 0.0, 10.0, 0.01)
+DEFINE_UI_PARAMS(dot_size, Scope Dot Size, DCTLUI_SLIDER_FLOAT, 2.0, 0.0, 10.0, 0.01)
 DEFINE_UI_PARAMS(dot_opacity, Scope Dot Opacity, DCTLUI_SLIDER_FLOAT, 0.3, 0.0, 1.0, 0.01)
 DEFINE_UI_PARAMS(zoom, Zoom, DCTLUI_SLIDER_FLOAT, 1.0, 0.10, 2.0, 0.01)
 
@@ -509,8 +509,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
         float3 line_color[3] = {
             make_float3(1.0f, 1.0f, 1.0f), // current gamut
-            make_float3(0.1f, 0.1f, 0.0f), // XYZ
-            make_float3(0.3f, 0.3f, 0.3f), // overlay
+            make_float3(0.3f, 0.3f, 0.0f), // XYZ
+            make_float3(0.5f, 0.5f, 0.5f), // overlay
         };
 
         bool draw_triangle_toggle[3] = {draw_target_triangle > 0, draw_xyz_triangle > 0, draw_overlay_triangle > 0};
