@@ -2190,6 +2190,8 @@ Draws a grid or a grid of dots so you can see how the [Field Curvature DCTL](#fi
 
 **Chart Type**: Choose whether to draw the grid or to draw dots.
 
+**Grid Direction**: Choose whether to draw horizontal lines, vertical lines, or both when in grid mode.
+
 ---
 
 ### Highlight Reconstruction DCTL

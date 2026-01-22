@@ -1,11 +1,12 @@
 #line 2
 
 // clang-format off
-DEFINE_UI_PARAMS(num_grids, Number of Grids, DCTLUI_SLIDER_INT, 10, 1, 100, 1)
+DEFINE_UI_PARAMS(num_grids, Number of Grids, DCTLUI_SLIDER_INT, 11, 1, 100, 1)
 DEFINE_UI_PARAMS(grid_thickness, Grid Thickness Px, DCTLUI_SLIDER_INT, 2, 0, 100, 1)
 DEFINE_UI_PARAMS(white_level, White Level, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(chart_type, Chart Type, DCTLUI_COMBO_BOX, 0, {CHART_GRID, CHART_DOTS}, {Grid, Dots})
+DEFINE_UI_PARAMS(grid_direction, Grid Direction, DCTLUI_COMBO_BOX, 0, {GRID_BOTH, GRID_HORIZONTAL, GRID_VERTICAL}, {Both, Horizontal, Vertical})
 
 // clang-format on
 
@@ -27,8 +28,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     const int grid_offset_x = p_Width / 2.0f;
     const int grid_offset_y = p_Height / 2.0f;
 
+    bool draw_horizontal_lines = (grid_direction == GRID_BOTH || grid_direction == GRID_HORIZONTAL);
+    bool draw_vertical_lines = (grid_direction == GRID_BOTH || grid_direction == GRID_VERTICAL);
+
     if (chart_type == CHART_GRID) {
-        if (mod((p_X - grid_offset_x), grid_spacing) < grid_thickness || mod((p_Y - grid_offset_y), grid_spacing) < grid_thickness) {
+        if ((draw_vertical_lines && mod((p_X - grid_offset_x), grid_spacing) < grid_thickness) ||
+            (draw_horizontal_lines && mod((p_Y - grid_offset_y), grid_spacing) < grid_thickness)) {
             output = make_float3(white_level, white_level, white_level);
         }
     } else if (chart_type == CHART_DOTS) {
