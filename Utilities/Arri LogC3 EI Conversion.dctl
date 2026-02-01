@@ -1,0 +1,71 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(input_space, Input Transfer Function, DCTLUI_COMBO_BOX, 7, {INPUT_LOGC3_EI160, INPUT_LOGC3_EI200, INPUT_LOGC3_EI250, INPUT_LOGC3_EI320, INPUT_LOGC3_EI400, INPUT_LOGC3_EI500, INPUT_LOGC3_EI640, INPUT_LOGC3_EI800, INPUT_LOGC3_EI1000, INPUT_LOGC3_EI1280, INPUT_LOGC3_EI1600, INPUT_LINEAR}, {LogC3 EI160, LogC3 EI200, LogC3 EI250, LogC3 EI320, LogC3 EI400, LogC3 EI500, LogC3 EI640, LogC3 EI800, LogC3 EI1000, LogC3 EI1280, LogC3 EI1600, Linear})
+DEFINE_UI_PARAMS(output_space, Output Transfer Function, DCTLUI_COMBO_BOX, 7, {OUTPUT_LOGC3_EI160, OUTPUT_LOGC3_EI200, OUTPUT_LOGC3_EI250, OUTPUT_LOGC3_EI320, OUTPUT_LOGC3_EI400, OUTPUT_LOGC3_EI500, OUTPUT_LOGC3_EI640, OUTPUT_LOGC3_EI800, OUTPUT_LOGC3_EI1000, OUTPUT_LOGC3_EI1280, OUTPUT_LOGC3_EI1600, OUTPUT_LINEAR}, {LogC3 EI160, LogC3 EI200, LogC3 EI250, LogC3 EI320, LogC3 EI400, LogC3 EI500, LogC3 EI640, LogC3 EI800, LogC3 EI1000, LogC3 EI1280, LogC3 EI1600, Linear})
+// clang-format on
+
+__CONSTANT__ float logc3_parameters[11][8] = {
+    // cut, a, b, c, d, e, f, EI
+    {0.005561f, 5.555556f, 0.080216f, 0.269036f, 0.381991f, 5.842037f, 0.092778f, 160.0f},
+    {0.006208f, 5.555556f, 0.076621f, 0.266007f, 0.382478f, 5.776265f, 0.092782f, 200.0f},
+    {0.006871f, 5.555556f, 0.072941f, 0.262978f, 0.382966f, 5.710494f, 0.092786f, 250.0f},
+    {0.007622f, 5.555556f, 0.068768f, 0.259627f, 0.383508f, 5.637732f, 0.092791f, 320.0f},
+    {0.008318f, 5.555556f, 0.064901f, 0.256598f, 0.383999f, 5.571960f, 0.092795f, 400.0f},
+    {0.009031f, 5.555556f, 0.060939f, 0.253569f, 0.384493f, 5.506188f, 0.092800f, 500.0f},
+    {0.009840f, 5.555556f, 0.056443f, 0.250219f, 0.385040f, 5.433426f, 0.092805f, 640.0f},
+    {0.010591f, 5.555556f, 0.052272f, 0.247190f, 0.385537f, 5.367655f, 0.092809f, 800.0f},
+    {0.011361f, 5.555556f, 0.047996f, 0.244161f, 0.386036f, 5.301883f, 0.092814f, 1000.0f},
+    {0.012235f, 5.555556f, 0.043137f, 0.240810f, 0.386590f, 5.229121f, 0.092819f, 1280.0f},
+    {0.013047f, 5.555556f, 0.038625f, 0.237781f, 0.387093f, 5.163350f, 0.092824f, 1600.0f},
+};
+
+__DEVICE__ float linear_to_logc3(float x, int ei_index) {
+    float cut = logc3_parameters[ei_index][0];
+    float a = logc3_parameters[ei_index][1];
+    float b = logc3_parameters[ei_index][2];
+    float c = logc3_parameters[ei_index][3];
+    float d = logc3_parameters[ei_index][4];
+    float e = logc3_parameters[ei_index][5];
+    float f = logc3_parameters[ei_index][6];
+
+    if (x <= cut) {
+        return e * x + f;
+    } else {
+        return c * _log10f(a * x + b) + d;
+    }
+}
+
+__DEVICE__ float logc3_to_linear(float t, int ei_index) {
+    float cut = logc3_parameters[ei_index][0];
+    float a = logc3_parameters[ei_index][1];
+    float b = logc3_parameters[ei_index][2];
+    float c = logc3_parameters[ei_index][3];
+    float d = logc3_parameters[ei_index][4];
+    float e = logc3_parameters[ei_index][5];
+    float f = logc3_parameters[ei_index][6];
+
+    if (t <= e * cut + f) {
+        return (t - f) / e;
+    } else {
+        return (_exp10f((t - d) / c) - b) / a;
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 working_color = make_float3(p_R, p_G, p_B);
+    if (input_space != OUTPUT_LINEAR) {
+        int input_ei_index = (int)input_space;
+        working_color.x = logc3_to_linear(working_color.x, input_ei_index);
+        working_color.y = logc3_to_linear(working_color.y, input_ei_index);
+        working_color.z = logc3_to_linear(working_color.z, input_ei_index);
+    }
+
+    if (output_space != OUTPUT_LINEAR) {
+        int output_ei_index = (int)output_space;
+        working_color.x = linear_to_logc3(working_color.x, output_ei_index);
+        working_color.y = linear_to_logc3(working_color.y, output_ei_index);
+        working_color.z = linear_to_logc3(working_color.z, output_ei_index);
+    }
+    return working_color;
+}

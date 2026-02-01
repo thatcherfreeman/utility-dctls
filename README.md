@@ -108,6 +108,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Vector Norm DCTL](#vector-norm-dctl)
     - [Utilities](#utilities)
         - [ACES Exposure DCTL](#aces-exposure-dctl)
+        - [Arri LogC3 EI Conversion DCTL](#arri-logc3-ei-conversion-dctl)
         - [Bit Depth Estimator DCTL](#bit-depth-estimator-dctl)
         - [Black Bar Resolution DCTL](#black-bar-resolution-dctl)
         - [Blanking Checker DCTL](#blanking-checker-dctl)
@@ -1622,6 +1623,17 @@ Internally, this DCTL converts ACEScc or ACEScct to Linear, and then applies a g
 **ACES Gamma**: Pulldown menu in which you select from ACES (Linear), ACEScc, and ACEScct. This is where you specify the gamma of the image that is being fed into this DCTL.
 
 **Exposure Adjustment**: Specifies the number of stops to increase or decrease (negative) exposure.
+
+---
+
+### Arri LogC3 EI Conversion DCTL
+
+In Arri's LogC3 cameras, every choice of EI results in a slightly different log curve. This dctl allows you to convert between them so that you can get a consistent linearization regardless of EI selection on-set. Note that EI 800 is the default used by Resolve's CST and most other transforms.
+
+#### DCTL Parameters
+**Input Transfer Function**: Control which log curve was used during recording, as input to this node.
+
+**Output Transfer Function**: Control which transfer function to output.
 
 ---
 
