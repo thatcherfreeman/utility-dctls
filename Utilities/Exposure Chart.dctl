@@ -4,7 +4,8 @@ DEFINE_UI_PARAMS(opt_steps, Show Exponential Steps, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(opt_exp_ramp, Show Exponential Ramp, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(opt_ramp, Show Linear Ramp, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(opt_card, Show Mid Gray Card, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(mid_gray_width, Mid Gray Style, DCTLUI_COMBO_BOX, 0, {MID_GRAY_NORMAL, MID_GRAY_WIDE}, {Normal, Wide})
+DEFINE_UI_PARAMS(opt_black_card, Show Black Card, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(card_width, Card Width, DCTLUI_COMBO_BOX, 0, {MID_GRAY_NORMAL, MID_GRAY_WIDE}, {Centered, Wide})
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float x = (float)p_X / (p_Width - 1);
@@ -37,16 +38,30 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         curr_ramp += 1;
     }
 
-    if (opt_card) {
-        if (mid_gray_width == MID_GRAY_NORMAL) {
+    if (opt_card || opt_black_card) {
+        float card_value;
+        if (opt_card && !opt_black_card) {
+            card_value = mid_gray;
+        } else if (opt_black_card && !opt_card) {
+            card_value = 0.0f;
+        } else {
+            if (y < 0.50f) {
+                // Bottom half is mid gray card
+                card_value = mid_gray;
+            } else {
+                // Top half is black card
+                card_value = 0.0f;
+            }
+        }
+        if (card_width == MID_GRAY_NORMAL) {
             if (0.25f <= x && x <= 0.75f && 0.33f <= y && y <= 0.66f) {
                 // Middle box
-                output_color = make_float3(mid_gray, mid_gray, mid_gray);
+                output_color = make_float3(card_value, card_value, card_value);
             }
-        } else if (mid_gray_width == MID_GRAY_WIDE) {
+        } else if (card_width == MID_GRAY_WIDE) {
             if (0.33f <= y && y <= 0.66f) {
                 // Middle box
-                output_color = make_float3(mid_gray, mid_gray, mid_gray);
+                output_color = make_float3(card_value, card_value, card_value);
             }
         }
     }

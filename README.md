@@ -2018,7 +2018,9 @@ Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and se
 
 **Show Mid Gray Card**: Toggle to turn off the grey card in the middle.
 
-**Mid Gray Width**: Choose whether the mid gray card is wide or not.
+**Show Black Card**: Toggle to turn off the black chip in the middle that shows where the black point will be.
+
+**Card Width**: Choose whether the card in the middle is wide or not.
 
 ---
 
