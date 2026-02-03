@@ -84,6 +84,13 @@ function Create()
         INP_External = false,
         ICD_Width = 1.0
     })
+    SwapSrcDst = self:AddInput("Swap Src and Dest", "SwapSrcDst", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "ButtonControl",
+        INP_DoNotifyChanged = true,
+        INP_External = false,
+        ICD_Width = 1.0
+    })
     CopySrcDst = self:AddInput("Copy Src to Dest", "CopySrcDst", {
         LINKID_DataType = "Number",
         INPID_InputControl = "ButtonControl",
@@ -203,6 +210,21 @@ function NotifyChanged(inp, param, time)
         DestTRPos:SetSource(SrcTRPos:GetSource(time), time)
         DestBLPos:SetSource(SrcBLPos:GetSource(time), time)
         DestBRPos:SetSource(SrcBRPos:GetSource(time), time)
+    elseif inp == SwapSrcDst and param.Value == 1 then
+        local temp_values = {
+            tl = SrcTLPos:GetSource(time),
+            tr = SrcTRPos:GetSource(time),
+            bl = SrcBLPos:GetSource(time),
+            br = SrcBRPos:GetSource(time),
+        }
+        SrcTLPos:SetSource(DestTLPos:GetSource(time), time)
+        SrcTRPos:SetSource(DestTRPos:GetSource(time), time)
+        SrcBLPos:SetSource(DestBLPos:GetSource(time), time)
+        SrcBRPos:SetSource(DestBRPos:GetSource(time), time)
+        DestTLPos:SetSource(temp_values.tl, time)
+        DestTRPos:SetSource(temp_values.tr, time)
+        DestBLPos:SetSource(temp_values.bl, time)
+        DestBRPos:SetSource(temp_values.br, time)
     end
 end
 

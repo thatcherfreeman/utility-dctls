@@ -206,6 +206,8 @@ Corner positioning tool that actually works. You place four control points on th
 
 **Reset Points to Corners**: Resets the coordinates of the four corners corresponding to the currently active/modifiable control points.
 
+**Swap Src and Dest**: Swaps the source and destination parameters.
+
 **Copy Src to Dest/Dest to Src**: Copies the coordinates of one set of control points to the other.
 
 ---
