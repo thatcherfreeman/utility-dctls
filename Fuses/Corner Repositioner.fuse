@@ -106,6 +106,18 @@ function Create()
         ICD_Width = 0.5
     })
 
+    -- Special PARAMETERS
+    self:BeginControlNest("Advanced", "Advanced", false, {})
+    InvertBox = self:AddInput("Invert", "Invert", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "CheckboxControl",
+        INP_Default = 0.0,
+        INP_Integer = true,
+        IC_Visible = true,
+        INPS_StatusText = "Inverts the transform."
+    })
+    self:EndControlNest()
+
     InImage = self:AddInput("Input", "Input", {
         LINKID_DataType = "Image",
         LINK_Main = 1
@@ -215,7 +227,7 @@ function NotifyChanged(inp, param, time)
             tl = SrcTLPos:GetSource(time),
             tr = SrcTRPos:GetSource(time),
             bl = SrcBLPos:GetSource(time),
-            br = SrcBRPos:GetSource(time),
+            br = SrcBRPos:GetSource(time)
         }
         SrcTLPos:SetSource(DestTLPos:GetSource(time), time)
         SrcTRPos:SetSource(DestTRPos:GetSource(time), time)
@@ -390,6 +402,13 @@ function Process(req)
         bl = dest_bl,
         br = dest_br
     }
+
+    local invert = InvertBox:GetValue(req).Value > 0.5
+    if invert then
+        local tmp_coords = src_coords
+        src_coords = dest_coords
+        dest_coords = tmp_coords
+    end
 
     local mode = Mode:GetValue(req).Value
     local img = InImage:GetValue(req)

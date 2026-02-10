@@ -210,6 +210,8 @@ Corner positioning tool that actually works. You place four control points on th
 
 **Copy Src to Dest/Dest to Src**: Copies the coordinates of one set of control points to the other.
 
+**Invert**: Inverts source and destination, useful if you've keyframed the tracking markers.
+
 ---
 
 ### DCTL Interpreter Fuse
