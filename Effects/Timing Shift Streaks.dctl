@@ -1,0 +1,96 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(length, Length, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 0.5, 0.001)
+DEFINE_UI_PARAMS(opacity_stops, Streak Exposure, DCTLUI_SLIDER_FLOAT, -2.0, -8.0, 0.0, 0.001)
+DEFINE_UI_PARAMS(falloff, Falloff, DCTLUI_COMBO_BOX, 0, {FALLOFF_COSINE1, FALLOFF_COSINE2, FALLOFF_LINEAR, FALLOFF_BOX, FALLOFF_GAUSSIAN}, {Cosine 1, Cosine 2, Linear, Box, Gaussian})
+DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT}, {Up, Down, Left, Right})
+// clang-format on
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float linear_falloff(float r, float length) {
+    return _mix(1.0f, 0.0f, _clampf(r / length, 0.0f, 1.0f));
+}
+
+__DEVICE__ float box_falloff(float r, float length) {
+    if (r < length) {
+        return 1.0f;
+    }
+    return 0.0f;
+}
+
+__DEVICE__ float gaussian_falloff(float r, float length) {
+    return _expf(-6.0f * r * r / (length * length));
+}
+
+__DEVICE__ float cosine1_falloff(float r, float length) {
+    return (_cosf(_clampf(r / length, 0.0f, 1.0f) * (3.14159265f)) + 1.0f) * 0.5f;
+}
+
+__DEVICE__ float cosine2_falloff(float r, float length) {
+    return _cosf(_clampf(r / length, 0.0f, 1.0f) * (3.14159265f / 2.0f));
+}
+
+__DEVICE__ float falloff_switcher(float r, float length, int falloff_type) {
+    if (falloff_type == FALLOFF_LINEAR) {
+        return linear_falloff(r, length);
+    } else if (falloff_type == FALLOFF_BOX) {
+        return box_falloff(r, length);
+    } else if (falloff_type == FALLOFF_GAUSSIAN) {
+        return gaussian_falloff(r, length);
+    } else if (falloff_type == FALLOFF_COSINE1) {
+        return cosine1_falloff(r, length);
+    } else if (falloff_type == FALLOFF_COSINE2) {
+        return cosine2_falloff(r, length);
+    }
+    return 0.0f;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    float3 input_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+
+    float shorter_dim = _fminf((float)p_Width, (float)p_Height);
+    float pixel_length = length * shorter_dim;
+
+    int start_x, start_y;
+    start_x = p_X;
+    start_y = p_Y;
+    int end_x, end_y;
+    end_x = start_x;
+    end_y = start_y;
+
+    if (direction == DIRECTION_UP) {
+        end_x = p_X;
+        end_y = p_Y + (int)pixel_length;
+    } else if (direction == DIRECTION_DOWN) {
+        end_x = p_X;
+        start_y = p_Y - (int)pixel_length;
+    } else if (direction == DIRECTION_LEFT) {
+        end_x = p_X + (int)pixel_length;
+        end_y = p_Y;
+    } else if (direction == DIRECTION_RIGHT) {
+        start_x = p_X - (int)pixel_length;
+        end_y = p_Y;
+    }
+
+    float total_weight = 0.0f;
+    float3 blurred_color = make_float3(0.0f, 0.0f, 0.0f);
+    for (int i = start_x; i <= end_x; ++i) {
+        for (int j = start_y; j <= end_y; ++j) {
+            float dist = _fabs((float)((i - p_X) + (j - p_Y))); // Assume to only have vertical or horizontal component.
+            float falloff_value = falloff_switcher(dist, pixel_length, falloff);
+            float3 sample_color = make_float3(_tex2D(p_TexR, i, j), _tex2D(p_TexG, i, j), _tex2D(p_TexB, i, j));
+            total_weight += falloff_value;
+            blurred_color += sample_color * falloff_value;
+        }
+    }
+
+    blurred_color /= total_weight;
+    float opacity = _exp2f(opacity_stops);
+    float3 result_color = input_color * (1.0f - opacity) + blurred_color * opacity;
+    return result_color;
+}

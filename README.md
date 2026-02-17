@@ -79,6 +79,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [RGB Linear Contrast DCTL](#rgb-linear-contrast-dctl)
         - [Separable Gaussian Blur DCTL](#separable-gaussian-blur-dctl)
         - [Subtractive Saturation DCTL](#subtractive-saturation-dctl)
+        - [Timeshift Streaks DCTL](#timeshift-streaks-dctl)
         - [Tone Mapping DCTL](#tone-mapping-dctl)
         - [Vignette DCTL](#vignette-dctl)
     - [Operations](#operations)
@@ -1219,6 +1220,22 @@ Suppose a pixel is a color `input`. The DCTL will first compute a `Value` (IE lu
 **Value Calculation**: Allows you to select how the `Value` is computed. I don't recommend the Max or Min methods, and you should generally choose a method that runs large (Arithmetic Mean, Geometric Mean, and L2 Norm are recommended).
 
 **Density Calculation**: Allows you to choose how the `Density` is computed. Again, I don't recommend the Max or Min methods, and you should choose a method that runs small (Harmonic Mean is recommended.)
+
+---
+
+### Timeshift Streaks DCTL
+
+Creates asymmetric streaks, inspired by the effect of the Arri Timing Shift Box which would start moving the film just before the shutter has closed (or other timings). Expects a linear input state.
+
+#### DCTL Parameters
+
+**Length**: Indicate how long the streaks should be, as a proportion of the shorter dimension of the frame.
+
+**Sreak Exposure**: Controls the exposure of the streaks, effectively controlling how bright and opaque they are.
+
+**Falloff**: Controls the falloff method. I would imagine that the most realistic would be somewhere between Cosine and Linear but it would depend on how the film moves into/out of place.
+
+**Direction**: Control what direction the blur is in, eg Up/Down/Left/Right.
 
 ---
 
