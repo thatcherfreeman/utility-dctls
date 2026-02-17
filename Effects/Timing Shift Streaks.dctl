@@ -3,6 +3,8 @@
 // clang-format off
 DEFINE_UI_PARAMS(length, Length, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 0.5, 0.001)
 DEFINE_UI_PARAMS(opacity_stops, Streak Exposure, DCTLUI_SLIDER_FLOAT, -2.0, -8.0, 0.0, 0.001)
+DEFINE_UI_PARAMS(jitter_length, Jitter Length, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0f, 0.001)
+DEFINE_UI_PARAMS(jitter_exposure, Jitter Exposure, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0f, 0.001)
 DEFINE_UI_PARAMS(falloff, Falloff, DCTLUI_COMBO_BOX, 0, {FALLOFF_COSINE1, FALLOFF_COSINE2, FALLOFF_LINEAR, FALLOFF_BOX, FALLOFF_GAUSSIAN}, {Cosine 1, Cosine 2, Linear, Box, Gaussian})
 DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {DIRECTION_UP, DIRECTION_DOWN, DIRECTION_LEFT, DIRECTION_RIGHT}, {Up, Down, Left, Right})
 // clang-format on
@@ -10,6 +12,98 @@ DEFINE_UI_PARAMS(direction, Direction, DCTLUI_COMBO_BOX, 0, {DIRECTION_UP, DIREC
 __DEVICE__ float powf(float base, float exp) {
     return _copysignf(_powf(_fabs(base), exp), base);
 }
+
+/////////////////////////////////////////////
+// PDFs and CDFs
+/////////////////////////////////////////////
+
+__DEVICE__ float standard_norm_cdf(float z) {
+    // Approximation of Normal CDF function with mean 0 and var 1.
+    const float k = _sqrtf(2.0f / 3.1415926535f);
+    float output = 1.0f / (1.0f + _expf(-2.0f * k * z));
+    return output;
+}
+
+__DEVICE__ float norm_cdf(float z, float mean, float var) {
+    float output = standard_norm_cdf((z - mean) / _sqrtf(var));
+    return output;
+}
+
+__DEVICE__ float standard_norm_inv_cdf(float z) {
+    // Approximation from "Very Simply Explicitly Invertible Approximations of
+    // Normal Cumulative and Normal Quantile Function" by Alessandro Soranzo
+
+    // CDF
+    // float out = _powf(2.0, -1.0 * _powf(22, 1 - _powf(41, z / 10.0)));
+    float abs_z = _fabs(z - 0.5f) + 0.5f;
+    float out = 10.0f / _logf(41.0f) * _logf(1.0f - (_logf((-1.0f * _logf(abs_z)) / _logf(2.0f))) / _logf(22.0f));
+    if (abs_z >= 0.995f) {
+        out = 2.5758f;
+    }
+
+    if (z <= 0.5f) {
+        out *= -1.0f;
+    }
+    return out;
+}
+
+__DEVICE__ float norm_inv_cdf(float z, float mean, float var) {
+    float out = standard_norm_inv_cdf(z) * _sqrtf(var) + mean;
+    return out;
+}
+
+__DEVICE__ float norm_pdf(float z, float mean, float var) {
+    float out = _expf(-0.5f * (z - mean) * (z - mean) / var);
+    out *= 1.0f / (_sqrtf(2.0f * 3.1415926535f * var));
+    return out;
+}
+
+/////////////////////////////////////////////
+// Random Number Generator
+/////////////////////////////////////////////
+
+typedef uint rand_state;
+
+__DEVICE__ float _randu_lcg(__PRIVATE__ rand_state* seed) {
+    // Returns random number in interval [0, 1)
+    rand_state old_seed = *seed;
+    const rand_state m = (~((rand_state)0));
+    const rand_state a = 48271;
+    rand_state new_seed = (a * old_seed) % m;
+    *seed = new_seed;
+    return (((float)new_seed) / (float)m);
+}
+
+__DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
+    rand_state x = *seed;
+    x ^= (x << 13 | x >> 19);
+    x ^= (x >> 7 | x << 25);
+    x ^= (x << 15 | x >> 15);
+    *seed = x;
+    return (((float)x) / (float)(~((rand_state)0)));
+}
+
+__DEVICE__ inline float randu(__PRIVATE__ rand_state* seed) {
+    return _randu_xorshift(seed);
+}
+
+/////////////////////////////////////////////
+// Distribution Sampling functions
+/////////////////////////////////////////////
+
+__DEVICE__ float sample_uniform(float a, float b, __PRIVATE__ rand_state* seed) {
+    float range = b - a;
+    float x = randu(seed);
+    return a + range * x;
+}
+
+__DEVICE__ float sample_norm(float mean, float var, __PRIVATE__ rand_state* seed) {
+    float u_sample = randu(seed);
+    float out = norm_inv_cdf(u_sample, mean, var);
+    return out;
+}
+
+// Falloff functions
 
 __DEVICE__ float linear_falloff(float r, float length) {
     return _mix(1.0f, 0.0f, _clampf(r / length, 0.0f, 1.0f));
@@ -53,8 +147,21 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
 
     float3 input_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
 
+    // Initialize random number generator
+    float seed = TIMELINE_FRAME_INDEX;
+    rand_state state_value = *((__PRIVATE__ rand_state*)&seed);
+    __PRIVATE__ rand_state* state = &state_value;
+    float val;
+    val = randu(state);
+    val = randu(state);
+    val = randu(state);
+    val = randu(state);
+    *state = *((__PRIVATE__ rand_state*)&val);
+
+    float random_value = sample_norm(0.0f, 1.0f, state);
+
     float shorter_dim = _fminf((float)p_Width, (float)p_Height);
-    float pixel_length = length * shorter_dim;
+    float pixel_length = length * _fmaxf(0.0f, (1.0f + 0.10f * jitter_length * random_value)) * shorter_dim;
 
     int start_x, start_y;
     start_x = p_X;
@@ -90,7 +197,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     }
 
     blurred_color /= total_weight;
-    float opacity = _exp2f(opacity_stops);
+    float opacity = _fminf(_exp2f(opacity_stops + random_value * 0.10f * jitter_exposure), 1.0f);
     float3 result_color = input_color * (1.0f - opacity) + blurred_color * opacity;
     return result_color;
 }

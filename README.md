@@ -1233,6 +1233,10 @@ Creates asymmetric streaks, inspired by the effect of the Arri Timing Shift Box 
 
 **Sreak Exposure**: Controls the exposure of the streaks, effectively controlling how bright and opaque they are.
 
+**Jitter Length**: Modulates the Length randomly for each frame
+
+**Jitter Exposure**: Modulates the Exposure randomly for each frame (same random seed as Jitter Length so both go up and down together)
+
 **Falloff**: Controls the falloff method. I would imagine that the most realistic would be somewhere between Cosine and Linear but it would depend on how the film moves into/out of place.
 
 **Direction**: Control what direction the blur is in, eg Up/Down/Left/Right.
