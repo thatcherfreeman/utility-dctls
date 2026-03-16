@@ -48,6 +48,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [RotateImage Fuse](#rotateimage-fuse)
 - [The DCTLs:](#the-dctls)
     - [Effects](#effects)
+        - [Black Point DCTL](#black-point-dctl)
         - [Bleach Bypass DCTL](#bleach-bypass-dctl)
         - [Daniele Curve DCTL](#daniele-curve-dctl)
         - [Dye Simulator DCTL](#dye-simulator-dctl)
@@ -454,6 +455,23 @@ Rotate the input image in increments of 90 degrees, resizing the canvas as neces
 # The DCTLs:
 
 ## Effects
+
+---
+
+### Black Point DCTL
+
+Helps control the black point of your look via 1d curves. This tool lifts the black point by the specified amount, using a smooth curve that has slope $s$ where $0 \leq s \leq 1$. You choose the position and slope of the black point (eg $f(0)$ and $\frac{d}{dx} f(x) \vert_{x=0}$). Expects a linear state image.
+
+#### DCTL Parameters
+
+**Black Point Nits**: Controls the black point of the curve. Specifically, $f(0) = \texttt{black\_point\_nits} / 100.0$
+
+**Black Point Slope**: Controls the slope at $f(0)$.
+
+**Clamp Black**: Prepends a clamp so that nothing will be below your specified black point.
+
+**Draw Chart**: Draws the curve. I've offset the curve so that (0, 0) is in the middle, so you can see what the behavior is on negative inputs.
+
 
 ---
 

@@ -1,0 +1,83 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(black_point, Black Point Nits, DCTLUI_SLIDER_FLOAT, 0.0f, 0.0f, 10.0f, 0.001f)
+DEFINE_UI_PARAMS(black_slope, Black Point Slope, DCTLUI_SLIDER_FLOAT, 0.5f, 0.0f, 1.0f, 0.001f)
+DEFINE_UI_PARAMS(clamp_black, Clamp Black, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(draw_chart, Draw Chart, DCTLUI_CHECK_BOX, 0)
+// clang-format on
+
+#define PI (3.14159265358979323846f)
+
+__DEVICE__ float powi(float x, int exp) {
+    float out = 1.0f;
+    int abs_exp = exp < 0 ? exp * -1 : exp;
+    for (int i = 0; i < abs_exp; ++i) {
+        out *= x;
+    }
+    if (exp < 0) {
+        out = 1.0f / out;
+    }
+    return out;
+}
+
+__DEVICE__ float smooth_curve(float x, float k, float o) {
+    // https://www.desmos.com/calculator/spqly2djwz
+
+    if (x - o < 0) {
+        return k / 2.0f + o;
+    }
+    if (x - o > k) {
+        return x;
+    }
+    return k * (-0.5f * powi((x - o) / k, 4) + powi((x - o) / k, 3)) + k / 2.0f + o;
+}
+
+__DEVICE__ float curve(float x, float output_black_point, float black_slope, bool clamp_black) {
+    if (clamp_black) {
+        x = _fmaxf(0.0f, x);
+    }
+
+    if (output_black_point == 0.0f) {
+        return x;
+    }
+    black_slope = _fminf(black_slope, 0.999f);
+
+    float b0 = output_black_point;
+    float d0 = black_slope;
+    float s = 0.5f + _cosf(1.0f / 3.0f * _acosf(1.0f - 2.0f * d0) - 2.0f * PI / 3.0f);
+    float k = b0 / (-0.5f * powi(s, 4) + powi(s, 3) - s + 0.5f);
+    float o = -1.0f * k * s;
+
+    return smooth_curve(x, k, o);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 input = make_float3(p_R, p_G, p_B);
+
+    float3 output_color = input;
+
+    output_color.x = curve(input.x, black_point / 100.0f, black_slope, clamp_black);
+    output_color.y = curve(input.y, black_point / 100.0f, black_slope, clamp_black);
+    output_color.z = curve(input.z, black_point / 100.0f, black_slope, clamp_black);
+
+    if (draw_chart) {
+        float x_coord = p_X / (float)(p_Width - 1) - 0.5f;
+        float curr_y = 1.0f - p_Y / (float)(p_Height - 1) - 0.25f;
+
+        float y_coord = curve(x_coord, black_point / 100.0f, black_slope, clamp_black);
+
+        if (_fabs(curr_y - y_coord) < 0.005f) {
+            return make_float3(1.0f, 1.0f, 1.0f);
+        }
+
+        if (_fabs(x_coord) < 0.002f) {
+            return make_float3(0.18f, 0.18f, 0.18f);
+        }
+
+        if (_fabs(curr_y) < 0.005f) {
+            return make_float3(0.18f, 0.18f, 0.18f);
+        }
+    }
+    return output_color;
+}
