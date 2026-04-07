@@ -69,7 +69,7 @@ __DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     if (is_hot_pixel) {
         float4 mean_of_neighbors = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         int num_valid_neighbors = 0;
-        for (int i = 1; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i) {
             if (read_mask_from_alpha && neighbors[i].w == 0.0f) {
                 continue;
             }
