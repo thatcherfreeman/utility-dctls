@@ -3,11 +3,16 @@
 // clang-format off
 DEFINE_UI_PARAMS(black_point, Black Point Nits, DCTLUI_SLIDER_FLOAT, 0.0f, 0.0f, 10.0f, 0.001f)
 DEFINE_UI_PARAMS(black_slope, Black Point Slope, DCTLUI_SLIDER_FLOAT, 0.5f, 0.0f, 1.0f, 0.001f)
-DEFINE_UI_PARAMS(clamp_black, Clamp Black, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(clamp_black, Clamp Black, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(draw_chart, Draw Chart, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(input_transfer_function, Input Transfer Function, DCTLUI_COMBO_BOX, 0, {INPUT_LINEAR, INPUT_ARRI_LOGC3, INPUT_DI, INPUT_G22, INPUT_G24, INPUT_G26, INPUT_PQ}, {Linear, Arri LogC3, DaVinci Intermediate, Gamma 2.2, Gamma 2.4, Gamma 2.6, PQ})
 // clang-format on
 
 #define PI (3.14159265358979323846f)
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
 
 __DEVICE__ float powi(float x, int exp) {
     float out = 1.0f;
@@ -52,14 +57,140 @@ __DEVICE__ float curve(float x, float output_black_point, float black_slope, boo
     return smooth_curve(x, k, o);
 }
 
+__DEVICE__ float linear_to_logc3(float x) {
+    float cut = 0.010591f;
+    float a = 5.555556f;
+    float b = 0.052272f;
+    float c = 0.247190f;
+    float d = 0.385537f;
+    float e = 5.367655f;
+    float f = 0.092809f;
+
+    if (x > cut) {
+        return c * _log10f(a * x + b) + d;
+    } else {
+        return e * x + f;
+    }
+}
+
+__DEVICE__ float logc3_to_linear(float x) {
+    float cut = 0.010591f;
+    float a = 5.555556f;
+    float b = 0.052272f;
+    float c = 0.247190f;
+    float d = 0.385537f;
+    float e = 5.367655f;
+    float f = 0.092809f;
+    if (x > e * cut + f) {
+        return (_exp10f((x - d) / c) - b) / a;
+    } else {
+        return (x - f) / e;
+    }
+}
+
+__DEVICE__ float di_to_linear(float t) {
+    const float a = 0.0075f;
+    const float b = 7.0f;
+    const float c = 0.07329248f;
+    const float m = 10.44426855f;
+    // const float lin_cut = 0.00262409f; // Should be equal to ((cut2 - f) / e)
+    const float log_cut = 0.02740668f; // should be equal to (e * cut1 + f)
+
+    if (t > log_cut) {
+        return _exp2f((t / c) - b) - a;
+    } else {
+        return t / m;
+    }
+}
+
+__DEVICE__ float linear_to_di(float x) {
+    const float a = 0.0075f;
+    const float b = 7.0f;
+    const float c = 0.07329248f;
+    const float m = 10.44426855f;
+    const float lin_cut = 0.00262409f; // Should be equal to ((cut2 - f) / e)
+    // const float log_cut = 0.02740668f; // should be equal to (e * cut1 + f)
+
+    if (x > lin_cut) {
+        return (_log2f(x + a) + b) * c;
+    } else {
+        return x * m;
+    }
+}
+
+__DEVICE__ float st2084_to_linear(float x) {
+    // x is code value 0-1, outputs linear light with 1.0 = 100 nits.
+    const float m1 = 1305.0f / 8192.0f;
+    const float m2 = 2523.0f / 32.0f;
+    const float c1 = 3424.0f / 4096.0f;
+    const float c2 = 2413.0f / 128.0f;
+    const float c3 = 2392.0f / 128.0f;
+
+    float out_lin = 100.0f * powf(_fmaxf(powf(x, 1.0f / m2) - c1, 0.0f) / (c2 - (c3 * powf(x, 1.0f / m2))), 1.0f / m1);
+
+    return out_lin;
+}
+
+__DEVICE__ float linear_to_st2084(float y) {
+    float x = y / 100.0f;
+
+    // x is code value 0-1, y is linear light with 1.0 = 100 nits.
+    const float m1 = 1305.0f / 8192.0f;
+    const float m2 = 2523.0f / 32.0f;
+    const float c1 = 3424.0f / 4096.0f;
+    const float c2 = 2413.0f / 128.0f;
+    const float c3 = 2392.0f / 128.0f;
+
+    return powf((c1 + c2 * powf(x, m1)) / (1.0f + c3 * powf(x, m1)), m2);
+}
+
+__DEVICE__ float to_linear(float x, int transfer_function) {
+    if (transfer_function == INPUT_LINEAR) {
+        return x;
+    } else if (transfer_function == INPUT_ARRI_LOGC3) {
+        return logc3_to_linear(x);
+    } else if (transfer_function == INPUT_DI) {
+        return di_to_linear(x);
+    } else if (transfer_function == INPUT_PQ) {
+        return st2084_to_linear(x);
+    } else if (transfer_function == INPUT_G22) {
+        return powf(x, 2.2f);
+    } else if (transfer_function == INPUT_G24) {
+        return powf(x, 2.4f);
+    } else if (transfer_function == INPUT_G26) {
+        return powf(x, 2.6f);
+    }
+}
+
+__DEVICE__ float to_transfer_function(float x, int transfer_function) {
+    if (transfer_function == INPUT_LINEAR) {
+        return x;
+    } else if (transfer_function == INPUT_ARRI_LOGC3) {
+        return linear_to_logc3(x);
+    } else if (transfer_function == INPUT_DI) {
+        return linear_to_di(x);
+    } else if (transfer_function == INPUT_PQ) {
+        return linear_to_st2084(x);
+    } else if (transfer_function == INPUT_G22) {
+        return powf(x, 1.0f / 2.2f);
+    } else if (transfer_function == INPUT_G24) {
+        return powf(x, 1.0f / 2.4f);
+    } else if (transfer_function == INPUT_G26) {
+        return powf(x, 1.0f / 2.6f);
+    }
+}
+
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 input = make_float3(p_R, p_G, p_B);
 
-    float3 output_color = input;
+    float3 input_linear =
+        make_float3(to_linear(input.x, input_transfer_function), to_linear(input.y, input_transfer_function), to_linear(input.z, input_transfer_function));
 
-    output_color.x = curve(input.x, black_point / 100.0f, black_slope, clamp_black);
-    output_color.y = curve(input.y, black_point / 100.0f, black_slope, clamp_black);
-    output_color.z = curve(input.z, black_point / 100.0f, black_slope, clamp_black);
+    float3 output_color = input_linear;
+
+    output_color.x = curve(input_linear.x, black_point / 100.0f, black_slope, clamp_black);
+    output_color.y = curve(input_linear.y, black_point / 100.0f, black_slope, clamp_black);
+    output_color.z = curve(input_linear.z, black_point / 100.0f, black_slope, clamp_black);
 
     if (draw_chart) {
         float x_coord = p_X / (float)(p_Width - 1) - 0.5f;
@@ -79,5 +210,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
             return make_float3(0.18f, 0.18f, 0.18f);
         }
     }
-    return output_color;
+
+    float3 output_color_encoded = make_float3(to_transfer_function(output_color.x, input_transfer_function),
+                                              to_transfer_function(output_color.y, input_transfer_function),
+                                              to_transfer_function(output_color.z, input_transfer_function));
+    return output_color_encoded;
 }

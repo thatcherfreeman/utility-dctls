@@ -472,6 +472,8 @@ Helps control the black point of your look via 1d curves. This tool lifts the bl
 
 **Draw Chart**: Draws the curve. I've offset the curve so that (0, 0) is in the middle, so you can see what the behavior is on negative inputs.
 
+**Input Transfer Function**: Select the transfer function that encodes the image you're passing into the DCTL.
+
 
 ---
 
