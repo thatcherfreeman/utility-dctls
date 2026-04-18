@@ -6,18 +6,24 @@ DEFINE_UI_PARAMS(opt_ramp, Show Linear Ramp, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(opt_card, Show Mid Gray Card, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(opt_black_card, Show Black Card, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(card_width, Card Width, DCTLUI_COMBO_BOX, 0, {MID_GRAY_NORMAL, MID_GRAY_WIDE}, {Centered, Wide})
+DEFINE_UI_PARAMS(chart_size, Chart Size, DCTLUI_COMBO_BOX, 0, {CHART_FULLSCREEN, CHART_BOTTOM}, {Fullscreen, Bottom})
 
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float x = (float)p_X / (p_Width - 1);
     float y = (float)p_Y / (p_Height - 1);
+
+    if (chart_size == CHART_BOTTOM) {
+        const float chart_thickness = 0.10f;
+        y = (y - (1.0f - chart_thickness)) / chart_thickness;
+    }
     float step_width = 1.0f / num_steps;
     int middle_step = num_steps / 2;
-    float3 output_color = make_float3(mid_gray, mid_gray, mid_gray);
+    float3 output_color = make_float3(p_R, p_G, p_B);
 
     int num_ramps = opt_steps * 3 + opt_exp_ramp + opt_ramp;
     float curr_ramp = 0;
 
-    if (opt_steps && y >= (curr_ramp) / num_ramps) {
+    if (opt_steps && y >= (curr_ramp) / num_ramps && 0.0f <= y && y <= 1.0f) {
         // make steps as top ramp
         int curr_step = (int)(x / step_width);
         float val = mid_gray * _exp2f((float)curr_step - middle_step);
@@ -25,14 +31,14 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         curr_ramp += 3;
     }
 
-    if (opt_exp_ramp && y >= (curr_ramp) / num_ramps) {
+    if (opt_exp_ramp && y >= (curr_ramp) / num_ramps && 0.0f <= y && y <= 1.0f) {
         // make exp ramp
         float val = mid_gray * _exp2f((float)(x / step_width) - 0.5f - middle_step);
         output_color = make_float3(val, val, val);
         curr_ramp += 1;
     }
 
-    if (opt_ramp && y >= (curr_ramp) / num_ramps) {
+    if (opt_ramp && y >= (curr_ramp) / num_ramps && 0.0f <= y && y <= 1.0f) {
         // make linear ramp
         output_color = make_float3(x, x, x);
         curr_ramp += 1;
@@ -45,7 +51,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         } else if (opt_black_card && !opt_card) {
             card_value = 0.0f;
         } else {
-            if (y < 0.50f) {
+            if (0.0f <= y && y < 0.50f) {
                 // Bottom half is mid gray card
                 card_value = mid_gray;
             } else {

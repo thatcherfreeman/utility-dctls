@@ -2067,6 +2067,8 @@ Creates a middle gray exposure chart, an exponential ramp, a linear ramp, and se
 
 **Card Width**: Choose whether the card in the middle is wide or not.
 
+**Chart size**: Choose fullscreen or just the bottom 10% of the frame.
+
 ---
 
 ### Exposure Strips DCTL
