@@ -1,0 +1,81 @@
+#line 2
+// clang-format off
+DEFINE_UI_PARAMS(target_screen_size, Target Screen Size, DCTLUI_SLIDER_FLOAT, 31.5, 2.0, 65.0, 0.1)
+DEFINE_UI_PARAMS(current_screen_size, Current Screen Size, DCTLUI_SLIDER_FLOAT, 31.5, 2.0, 65.0, 0.1)
+DEFINE_UI_PARAMS(output_blanking_aspect_ratio, Blanking Aspect Ratio, DCTLUI_VALUE_BOX, 2.40)
+DEFINE_UI_PARAMS(output_blanking, Output Blanking, DCTLUI_CHECK_BOX, 0)
+// clang-format on
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float sample_point_bilinear_1ch(float x, float y, __TEXTURE__ tex, float scale) {
+    const float scale_round = _round(scale);
+    const int iX = (int)(_floor(x / scale_round) * scale_round);
+    const int iY = (int)(_floor(y / scale_round) * scale_round);
+
+    int x_low = (int)(iX);
+    int x_high = (int)(iX + scale_round);
+    int y_low = (int)(iY);
+    int y_high = (int)(iY + scale_round);
+
+    float c_ll = _tex2D(tex, x_low, y_low);
+    float c_lh = _tex2D(tex, x_low, y_high);
+    float c_hl = _tex2D(tex, x_high, y_low);
+    float c_hh = _tex2D(tex, x_high, y_high);
+
+    float c_l = _mix(c_ll, c_hl, (x - x_low) / (x_high - x_low));
+    float c_h = _mix(c_lh, c_hh, (x - x_low) / (x_high - x_low));
+    float c = _mix(c_l, c_h, (y - y_low) / (y_high - y_low));
+    return c;
+}
+
+__DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
+    float3 out = make_float3(0.0f, 0.0f, 0.0f);
+    out.x = sample_point_bilinear_1ch(x, y, p_TexR, scale);
+    out.y = sample_point_bilinear_1ch(x, y, p_TexG, scale);
+    out.z = sample_point_bilinear_1ch(x, y, p_TexB, scale);
+    return out;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    target_screen_size = _fminf(target_screen_size, current_screen_size);
+
+    float x = (float)p_X / ((float)p_Width - 1) - 0.5f;
+    float y = (float)p_Y / ((float)p_Height - 1) - 0.5f;
+    float desired_width = p_Width;
+    float desired_height = p_Height;
+    if (output_blanking) {
+        // Compute the timeline aspect ratio p_Width / p_Height
+        float timeline_aspect_ratio = (float)p_Width / (float)p_Height;
+
+        // Compare it to aspect ratio, see which one is bigger.
+        if (timeline_aspect_ratio > output_blanking_aspect_ratio) {
+            desired_height = p_Height;
+            desired_width = desired_height * output_blanking_aspect_ratio;
+        } else {
+            desired_width = p_Width;
+            desired_height = desired_width / output_blanking_aspect_ratio;
+        }
+        x *= p_Width / desired_width;
+        y *= p_Height / desired_height;
+    }
+    float side_bar_width = (p_Width - desired_width) / 2.0f;
+    float top_bar_width = (p_Height - desired_height) / 2.0f;
+
+    float scaling = target_screen_size / current_screen_size;
+
+    float x_sample = (((x / scaling) + 0.5f) * (desired_width - 1)) + side_bar_width;
+    float y_sample = (((y / scaling) + 0.5f) * (desired_height - 1)) + top_bar_width;
+
+    float3 out;
+    if (x_sample < side_bar_width || x_sample >= desired_width + side_bar_width || y_sample < top_bar_width ||
+        y_sample >= desired_height + top_bar_width) {
+        out = make_float3(0.0f, 0.0f, 0.0f);
+    } else {
+        out = sample_point_bilinear_3ch(x_sample, y_sample, p_TexR, p_TexG, p_TexB, 1.0f);
+    }
+    return out;
+}

@@ -156,6 +156,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Resolution Display DCTL](#resolution-display-dctl)
         - [RGB Chips DCTL](#rgb-chips-dctl)
         - [Safety Lines DCTL](#safety-lines-dctl)
+        - [Screen Size Simulator DCTL](#screen-size-simulator-dctl)
         - [SNR Checker DCTL](#snr-checker-dctl)
         - [Spherical DCTL](#spherical-dctl)
         - [T-Log Curve](#t-log-curve)
@@ -2662,6 +2663,22 @@ DCTL that creates a white frame to indicate safety boundaries for the image.
 **Line Thickness**: Thickness of the drawn box.
 
 **Shade Darkness**: Indicates brightness of the region outside of the box.
+
+---
+
+### Screen Size Simulator DCTL
+
+DCTL that helps you simulate what your show would look like on a smaller screen with a certain diagonal. Just slap this at the end of your pipeline, perhaps at the timeline level, and indicate the diagonal length of your screen (in inches) and the diagonal of some other screen size you're interested in. The DCTL will assume both are the same aspect ratio and appropriately shrink the image down to the size it would be at the specified target screen size (assuming you have the image fullscreen).
+
+#### DCTL Parameters
+**Target Screen Size**: In inches, the diagonal of the screen you're trying to emulate
+
+**Current Screen Size**: In inches, the diagonal of the screen you're using
+
+**Blanking Aspect Ratio**: If you're using output blanking, indicate what ratio you'd like to output blank to so that I can crop the image the same way here.
+
+**Output Blanking**: Check to enable our own output blanking to the **Blanking aspect ratio**. If you leave this unchecked, we do not do any output blanking here.
+
 
 ---
 
