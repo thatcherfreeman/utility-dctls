@@ -799,7 +799,12 @@ $y_u = y_d (1 + k_{1y} r_d^2 + k_{2y} r_d^4)$
 
 **Y Distortion Amount K2**: Chooses the value of $k_{2y}$ in the above model
 
+**Scale**: Zoom in or out of the image to correct for any issues with the edges.
+
+
 **Couple XY**: If checked, just use the same $k_{1x}, k_{2x}$ for both $x_u$ and $y_u$ calculations, keeping the lens distortion spherical.
+
+**Edge Behavior**: Choose whether pixels beyond the borders of the input image are extended, black, or magenta (to make them very visible).
 
 ---
 

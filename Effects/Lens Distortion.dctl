@@ -4,7 +4,9 @@ DEFINE_UI_PARAMS(k_1_x, X Distortion Amount K1, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 
 DEFINE_UI_PARAMS(k_1_y, Y Distortion Amount K1, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.0001)
 DEFINE_UI_PARAMS(k_2_x, X Distortion Amount K2, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.0001)
 DEFINE_UI_PARAMS(k_2_y, Y Distortion Amount K2, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.0001)
+DEFINE_UI_PARAMS(scale, Scale, DCTLUI_SLIDER_FLOAT, 1.0, 0.00, 2.0, 0.0001)
 DEFINE_UI_PARAMS(uniform_distortion, Couple XY, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(edge_behavior, Edge Behavior, DCTLUI_COMBO_BOX, 1, {EDGE_EXTEND, EDGE_BLACK, EDGE_MAGENTA}, {Extend, Black, Magenta})
 
 // clang-format on
 
@@ -54,6 +56,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float x_d = (p_x_scaled - 0.5f) * aspect_ratio;
     float y_d = p_y_scaled - 0.5f;
 
+    x_d *= scale;
+    y_d *= scale;
+
     // Compute r_d, distance of the current pixel from the center of the frame.
     float r_d = _hypotf(x_d, y_d);
 
@@ -71,8 +76,23 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float p_x_u = p_x_u_scaled * (float)(p_Width - 1);
     float p_y_u = p_y_u_scaled * (float)(p_Height - 1);
 
-    // Look up the pixel at p_X_u, p_Y_u in each of the three channels
-    float3 out = sample_point_bilinear_3ch(p_x_u, p_y_u, p_TexR, p_TexG, p_TexB, 1.0f);
+    bool outside_borders = p_x_u < 0.0f || p_x_u > (float)(p_Width - 1) || p_y_u < 0.0f || p_y_u > (float)(p_Height - 1);
+    float3 out;
+    if (outside_borders) {
+        if (edge_behavior == EDGE_BLACK) {
+            out = make_float3(0.0f, 0.0f, 0.0f);
+        } else if (edge_behavior == EDGE_MAGENTA) {
+            out = make_float3(1.0f, 0.0f, 1.0f);
+        } else if (edge_behavior == EDGE_EXTEND) {
+            // EDGE_EXTEND: Clamp p_X_u and p_Y_u to the borders of the image
+            p_x_u = _clamp(p_x_u, 0.0f, (float)(p_Width - 1));
+            p_y_u = _clamp(p_y_u, 0.0f, (float)(p_Height - 1));
+            out = sample_point_bilinear_3ch(p_x_u, p_y_u, p_TexR, p_TexG, p_TexB, 1.0f);
+        }
+    } else {
+        // Look up the pixel at p_X_u, p_Y_u in each of the three channels
+        out = sample_point_bilinear_3ch(p_x_u, p_y_u, p_TexR, p_TexG, p_TexB, 1.0f);
+    }
 
     // Return that pixel value.
     return out;
