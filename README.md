@@ -2673,7 +2673,9 @@ DCTL that creates a white frame to indicate safety boundaries for the image.
 
 ### Screen Size Simulator DCTL
 
-DCTL that helps you simulate what your show would look like on a smaller screen with a certain diagonal. Just slap this at the end of your pipeline, perhaps at the timeline level, and indicate the diagonal length of your screen (in inches) and the diagonal of some other screen size you're interested in. The DCTL will assume both are the same aspect ratio and appropriately shrink the image down to the size it would be at the specified target screen size (assuming you have the image fullscreen).
+DCTL that helps you simulate what your show would look like on a smaller screen with a certain diagonal. Just slap this at the end of your pipeline, perhaps at the timeline level and after your DRT, and indicate the diagonal length of your screen (in inches) and the diagonal of some other screen size you're interested in. The DCTL will assume both are the same aspect ratio and appropriately shrink the image down to the size it would be at the specified target screen size (assuming you have the image fullscreen).
+
+Basically the same as **White Matte DCTL** except with different units and black background by default
 
 #### DCTL Parameters
 **Target Screen Size**: In inches, the diagonal of the screen you're trying to emulate
@@ -2685,6 +2687,8 @@ DCTL that helps you simulate what your show would look like on a smaller screen 
 **Blanking Aspect Ratio**: If you're using output blanking, indicate what ratio you'd like to output blank to so that I can crop the image the same way here.
 
 **Output Blanking**: Check to enable our own output blanking to the **Blanking aspect ratio**. If you leave this unchecked, we do not do any output blanking here.
+
+**Blanking Value Units**: Indicate the metric used for Blanking Value, eg whether it's code value (0-1), nits, and what transfer function the nits are encoded in.
 
 
 ---
