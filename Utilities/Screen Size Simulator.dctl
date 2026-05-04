@@ -2,6 +2,7 @@
 // clang-format off
 DEFINE_UI_PARAMS(target_screen_size, Target Screen Size, DCTLUI_SLIDER_FLOAT, 31.5, 2.0, 65.0, 0.1)
 DEFINE_UI_PARAMS(current_screen_size, Current Screen Size, DCTLUI_SLIDER_FLOAT, 31.5, 2.0, 65.0, 0.1)
+DEFINE_UI_PARAMS(blanking_value, Blanking Value, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(output_blanking_aspect_ratio, Blanking Aspect Ratio, DCTLUI_VALUE_BOX, 2.40)
 DEFINE_UI_PARAMS(output_blanking, Output Blanking, DCTLUI_CHECK_BOX, 0)
 // clang-format on
@@ -73,7 +74,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float3 out;
     if (x_sample < side_bar_width || x_sample >= desired_width + side_bar_width || y_sample < top_bar_width ||
         y_sample >= desired_height + top_bar_width) {
-        out = make_float3(0.0f, 0.0f, 0.0f);
+        out = make_float3(blanking_value, blanking_value, blanking_value);
     } else {
         out = sample_point_bilinear_3ch(x_sample, y_sample, p_TexR, p_TexG, p_TexB, 1.0f);
     }

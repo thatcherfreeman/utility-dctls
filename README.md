@@ -2680,6 +2680,8 @@ DCTL that helps you simulate what your show would look like on a smaller screen 
 
 **Current Screen Size**: In inches, the diagonal of the screen you're using
 
+**Blanking Value**: Code value to use for the output blanking
+
 **Blanking Aspect Ratio**: If you're using output blanking, indicate what ratio you'd like to output blank to so that I can crop the image the same way here.
 
 **Output Blanking**: Check to enable our own output blanking to the **Blanking aspect ratio**. If you leave this unchecked, we do not do any output blanking here.
