@@ -170,6 +170,10 @@ __DEVICE__ float gamma_func(float x, float exp, bool use_better_gamma) {
     if (use_better_gamma) {
         // https://www.desmos.com/calculator/tgdywj6vy8
 
+        if (exp == 0.0f) {
+            return 1.0f;
+        }
+
         float better_param = 1.0f / exp;
 
         if (x <= 0.0f) {
