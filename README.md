@@ -980,7 +980,7 @@ Titled and UI designed by Misha Beare.
 
 **Temperature/Tint**: Allows you to white balance the image via RGB linear gain. You simply choose the hue corresponding to the Temperature slider using **Temperature Axis Hue**, and the Temperature slider will move along that direction, whereas the tint slider will move in a direction perpendicular to the temperature axis.
 
-**Contrast**: Applies Gamma in linear, however it is normalized so that mid gray does not move.
+**Contrast**: Applies Gamma or a custom alternative function in linear. Normalized so that mid gray does not move.
 
 **Log Lift**: Applies Lift in the selected **Log Space**. When **Mid Gray Comp Str.** is set to 100%, then gamma is simultaneously applied to restore mid gray.
 
@@ -995,6 +995,8 @@ Titled and UI designed by Misha Beare.
 **LGG Lin Mid Gray**: Indicate the linear code value for mid gray. This is used to calculate the target mid gray value in the selected **Log Space**
 
 **Normalize WB by Lum**: When checked, **Temperature** and **Tint** will attempt to preserve luminance. When unchecked, those two sliders will instead maintain `max(r,g,b)` and can only darken the image.
+
+**Use Better Contrast**: If checked, instead of the **Contrast** slider being driven by gamma (`f(x) = pow(x, gamma)`), it's controlled by a function introduced to me by Max Kiesele, which behaves similarly to gamma but behaves more like gain in the highlights and shadows. I think it looks better to leave this checked because raising contrast doesn't cook your highlights so much.
 
 **Input Transfer Function**: Indicate the image encoding of the input image, so we can transform to linear.
 
