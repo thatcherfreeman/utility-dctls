@@ -41,7 +41,6 @@ __DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR
     return out;
 }
 
-
 __DEVICE__ float st2084_nits_to_cv(float n) {
     // n is scaled so 1.0 is 1 nit.
     float Y = n / 10000.0f; // scale 10k nits to 1.0f

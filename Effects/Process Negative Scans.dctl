@@ -74,7 +74,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         make_float3(to_linear(white_balance.r, input_mode), to_linear(white_balance.g, input_mode), to_linear(white_balance.b, input_mode));
 
     float3 relative_transmittance = input_linear;
-    if (dmin.r != 1.0f || dmin.g != 1.0f || dmin.b != 1.0f) {
+    if (input_mode != INPUT_CINEON && (dmin.r != 1.0f || dmin.g != 1.0f || dmin.b != 1.0f)) {
         relative_transmittance = make_float3(input_linear.x / dmin_linear.x, input_linear.y / dmin_linear.y, input_linear.z / dmin_linear.z);
     }
     float3 relative_density =

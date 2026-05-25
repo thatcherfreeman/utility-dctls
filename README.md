@@ -62,6 +62,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Hot Pixel Noise](#hot-pixel-noise)
         - [Hue Curve DCTL](#hue-curve-dctl)
         - [Lens Distortion DCTL](#lens-distortion-dctl)
+        - [LGGO Temperature Tint DCTL](#lggo-temperature-tint-dctl)
         - [Linear Contrast DCTL](#linear-contrast-dctl)
         - [Linear Edge Blur DCTL](#linear-edge-blur-dctl)
         - [Matrix Manipulator](#matrix-manipulator)
@@ -808,6 +809,30 @@ $y_u = y_d (1 + k_{1y} r_d^2 + k_{2y} r_d^4)$
 
 ---
 
+### LGGO Temperature Tint DCTL
+Recreation of the Primaries wheels LGGO controls, but parameterized for use without trackballs by offering temperature and tint for each of the trackballs. Hopefully for most shots, you would only have to control the "global" and "temperature" sliders, reducing your decision making to only two controls.
+
+Additionally, I offer some onfiguration options. You can opt into having a "better gamma" control which switches out the usual Gamma curve `f(x) = pow(x, gamma)` for an alternative smooth function with a similar shape, but does not have infinite slope at `f(0)` and is linear outside of the 0-1 range. To my knowledge, this function was made by Max Kiesele, who deserves credit for his cleverness.
+
+You can also configure whether the temperature and tint controls keep the luminance, mean, min, or max of the parameters fixed. This is useful if you want your lift adjustment to only raise the black point, or if you want the gain adjustment to only lower the white point.
+
+Because this is similar to the Primaries wheels, it operates in whatever color space you offer it. I assume it'll feel best in some log space though.
+
+#### DCTL Parameters
+
+**Lift/Gamma/Gain/Offset Global**: Raises or lowers Lift/Gamma/Gain/Offset in all three channesl by the same amount
+
+**Lift/Gamma/Gain/Offset Temperature/Tint**: Keeps the global control fixed, but adjusts temperature and tint on the designated wheel. The temperature adjustment is in the direction of **Temperature Axis Hue**, with right being warmer.
+
+**Temperature Axis Hue**: Control what hue is associated with pushing right on any of the temperature sliders. Tint is applied at this angle plus 90 degrees.
+
+**Use Better Gamma**: If checked, uses the alternative gamma function. This will not match the Resolve Gamma wheel, but it may be preferable.
+
+**Normalize Lift/Gamma/Gain/Offset WB**: Control how you want these wheels to each behave. EG if you set **Normalize Offset WB** to Max and raise the **Offset Temperature**, then this adjustment will generally leave the red channel as-is and offset down the green and blue channels in order to make the image warmer. EG an offset balance adjustment will ensure that the maximum offset adjustment applied to the channels remains at zero.
+
+
+---
+
 ### Linear Contrast DCTL
 
 Applies a power function to the RGB channels, keeping 0.18 unchanged. This DCTL expects a scene linear image.
@@ -1019,7 +1044,7 @@ DCTL to help me with post processing my negative scans to turn them into JPGs. E
 
 **Normalize RGB Printer Lights**: If checked, ensures that **Printer Red/Green/Blue** are normalized so that these controls don't affect overall brightness much or at all, and exposure is independently controlled by **Printer Global**.
 
-**Input Mode**: Indicate the metric that you're passing to this DCTL.
+**Input Mode**: Indicate the metric that you're passing to this DCTL. If you pass in Cineon, I'll ignore your selected sample dmin and white balance because you probably had to normalize those out before outputting cineon earlier.
 
 **Output Mode**: Indicates what metric the DCTL outputs. Linear is in terms of Print transmittance.
 

@@ -1,0 +1,283 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(lift_global, Lift Global, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(lift_temp, Lift Temperature, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(lift_tint, Lift Tint, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(gamma_global, Gamma Global, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(gamma_temp, Gamma Temperature, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(gamma_tint, Gamma Tint, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(gain_global, Gain Global, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(gain_temp, Gain Temperature, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(gain_tint, Gain Tint, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(offset_global, Offset Global, DCTLUI_SLIDER_FLOAT, 25.0, -125.0, 150.0, 0.001)
+DEFINE_UI_PARAMS(offset_temp, Offset Temperature, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(offset_tint, Offset Tint, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+
+DEFINE_UI_PARAMS(_dummy, ====== CONFIG ======, DCTLUI_SLIDER_FLOAT, 0.0, -0.001, 0.001, 0.001)
+DEFINE_UI_PARAMS(temp_axis_hue, Temperature Axis Hue, DCTLUI_SLIDER_FLOAT, 18.0, -180.0, 180.0, 0.001)
+DEFINE_UI_PARAMS(use_better_gamma, Use Better Gamma, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(normalize_lift, Normalize Lift WB, DCTLUI_COMBO_BOX, 0, {LIFT_NORM_LUMINANCE, LIFT_NORM_MEAN, LIFT_NORM_MAX, LIFT_NORM_MIN}, {Luminance, Mean, Max, Min})
+DEFINE_UI_PARAMS(normalize_gamma, Normalize Gamma WB, DCTLUI_COMBO_BOX, 0, {GAMMA_NORM_LUMINANCE, GAMMA_NORM_MEAN, GAMMA_NORM_MAX, GAMMA_NORM_MIN}, {Luminance, Mean, Max, Min})
+DEFINE_UI_PARAMS(normalize_gain, Normalize Gain WB, DCTLUI_COMBO_BOX, 0, {GAIN_NORM_LUMINANCE, GAIN_NORM_MEAN, GAIN_NORM_MAX, GAIN_NORM_MIN}, {Luminance, Mean, Max, Min})
+DEFINE_UI_PARAMS(normalize_offset, Normalize Offset WB, DCTLUI_COMBO_BOX, 0, {OFFSET_NORM_LUMINANCE, OFFSET_NORM_MEAN, OFFSET_NORM_MAX, OFFSET_NORM_MIN}, {Luminance, Mean, Max, Min})
+
+// clang-format on
+
+// typedef struct {
+//         int x;
+//         int y;
+// } int2;
+
+// __DEVICE__ int2 make_int2(int x, int y) {
+//     int2 result = {};
+//     result.x = x;
+//     result.y = y;
+//     return result;
+// }
+
+#define PI (3.14159265358979323f)
+
+__DEVICE__ inline float rad_to_deg(float deg) {
+    return deg * 360.0f / (2.0f * PI);
+}
+
+__DEVICE__ inline float deg_to_rad(float rad) {
+    return rad * (2.0f * PI) / 360.0f;
+}
+
+__DEVICE__ inline bool int2_eq(int2 a, int2 b) {
+    return a.x == b.x && a.y == b.y;
+}
+
+__DEVICE__ float luminance(float3 rgb) {
+    return (0.212639f * rgb.x) + (0.715169f * rgb.y) + (0.072192f * rgb.z);
+}
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float3 hsv_to_rgb(float3 hsv) {
+    // Expects hue as radians
+    float hue = hsv.x;
+    float sat = hsv.y;
+    float val = hsv.z;
+
+    hue = rad_to_deg(mod(hue, 2.0f * PI));
+
+    float c = val * sat;
+    float x = c * (1.0f - _fabs(_fmod(hue / 60.0f, 2.0f) - 1.0f));
+    float m = val - c;
+    float3 rgbp = make_float3(0.0f, 0.0f, 0.0f);
+    if (0.0f <= hue && hue < 60.0f) {
+        rgbp = make_float3(c, x, 0.0f);
+    } else if (60.0f <= hue && hue < 120.0f) {
+        rgbp = make_float3(x, c, 0.0f);
+    } else if (120.0f <= hue && hue < 180.0f) {
+        rgbp = make_float3(0.0f, c, x);
+    } else if (180.0f <= hue && hue < 240.0f) {
+        rgbp = make_float3(0.0f, x, c);
+    } else if (240.0f <= hue && hue < 300.0f) {
+        rgbp = make_float3(x, 0.0f, c);
+    } else if (300.0f <= hue && hue < 360.0f) {
+        rgbp = make_float3(c, 0.0f, x);
+    }
+    return rgbp + m;
+}
+
+__DEVICE__ float convert_gamma_to_reals(float g) {
+    // Converts -1 to +1 range to an exponent
+    // Essentially what Resolve does with its gamma
+    // correction.
+    float out;
+    if (g <= 0) {
+        out = 1.0f + (-4.0f * g);
+    } else {
+        out = 1.0f / (4.0f * g + 1);
+    }
+    return out;
+}
+
+__DEVICE__ float convert_gamma_to_wheels(float g) {
+    // Converts the exponent we have to the gamma wheel control (-1 to +1 range)
+    float out;
+    if (g >= 1.0f) {
+        out = (g - 1.0f) / -4.0f;
+    } else {
+        out = ((1.0f / g) - 1.0f) / 4.0f;
+    }
+    return out;
+}
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+typedef struct {
+        float lift;
+        float gamma;
+        float gain;
+        float offset;
+        // Assumed to be wheels params.
+        bool use_better_gamma;
+} lggo_params_t;
+
+typedef lggo_params_t lggo_params_reals_t;
+
+__DEVICE__ lggo_params_t make_lggo_params(float lift, float gamma, float gain, float offset, bool use_better_gamma) {
+    lggo_params_t result = {};
+    result.lift = lift;
+    result.gamma = gamma;
+    result.gain = gain;
+    result.offset = offset;
+    result.use_better_gamma = use_better_gamma;
+    return result;
+}
+
+__DEVICE__ lggo_params_reals_t make_lggo_params_reals(float lift, float gamma, float gain, float offset, bool use_better_gamma) {
+    return (lggo_params_reals_t)make_lggo_params(lift, gamma, gain, offset, use_better_gamma);
+}
+
+// OFFSET_SCALING is a magic number measured from the default offset wheel values in Resolve.
+#define OFFSET_SCALING ((1.233137392f - 0.5f) / 100.0f)
+#define PRINTER_LIGHT_BASE (25.0f)
+#define OFFSET_TEMP_SCALING (50.0f)
+
+__DEVICE__ lggo_params_reals_t convert_lggo_to_reals(lggo_params_t params) {
+    // Convert each of the parameters from the Resolve wheels values to the underlying real values.
+    return make_lggo_params(params.lift * 2.0f,
+                            convert_gamma_to_reals(params.gamma),
+                            params.gain,
+                            (params.offset - PRINTER_LIGHT_BASE) * OFFSET_SCALING,
+                            params.use_better_gamma);
+}
+
+__DEVICE__ lggo_params_t convert_lggo_to_wheels(lggo_params_reals_t params) {
+    // Convert each of the parameters from the underlying real values to the Resolve wheels values.
+    return make_lggo_params(params.lift / 2.0f,
+                            convert_gamma_to_wheels(params.gamma),
+                            params.gain,
+                            (params.offset / OFFSET_SCALING) + PRINTER_LIGHT_BASE,
+                            params.use_better_gamma);
+}
+
+__DEVICE__ float gamma_func(float x, float exp, bool use_better_gamma) {
+    if (use_better_gamma) {
+        // https://www.desmos.com/calculator/tgdywj6vy8
+
+        float better_param = 1.0f / exp;
+
+        if (x <= 0.0f) {
+            return better_param * x;
+        } else if (x < 1.0f) {
+            return better_param * x / ((better_param - 1.0f) * x + 1.0f);
+        } else {
+            float slope = 1.0f - ((better_param - 1.0f) / better_param);
+            return slope * (x - 1.0f) + 1.0f;
+        }
+    } else {
+        return powf(x, exp);
+    }
+}
+
+__DEVICE__ float apply_lggo(float x, lggo_params_reals_t params) {
+    float white_out_x = 1.0f / params.gain;
+    float black_out_x = (1.0f - (1.0f / (1.0f - params.lift)));
+    float slope = 1.0f / (white_out_x - black_out_x);
+    float out;
+
+    out = slope * (x - black_out_x);
+    out = out + params.offset;
+    out = gamma_func(out, params.gamma, params.use_better_gamma);
+    return out;
+}
+
+__DEVICE__ float3 apply_lggo_f3(float3 x, lggo_params_reals_t params) {
+    return make_float3(apply_lggo(x.x, params), apply_lggo(x.y, params), apply_lggo(x.z, params));
+}
+
+__DEVICE__ float3 get_temp_tint_gains(float temperature, float tint, float temp_axis_hue) {
+    // Temperature and tint gain coefficients. This is a simplified not-colorimetric approach.
+    float temp_axis_hue_rads = deg_to_rad(temp_axis_hue);
+    float temp_sat = _fabs(temperature);
+    if (temperature < 0.0f) {
+        temp_axis_hue_rads += PI;
+    }
+    float3 temp_gains = hsv_to_rgb(make_float3(temp_axis_hue_rads, temp_sat, 1.0f));
+
+    float tint_axis_hue_rads = deg_to_rad(temp_axis_hue - 90.0f);
+    float tint_sat = _fabs(tint);
+    if (tint < 0.0f) {
+        tint_axis_hue_rads += PI;
+    }
+    float3 tint_gains = hsv_to_rgb(make_float3(tint_axis_hue_rads, tint_sat, 1.0f));
+
+    // Blend together temp gains and tint gains.
+    float3 balance_gains = temp_gains * tint_gains;
+    return balance_gains;
+}
+
+__DEVICE__ float mean_f3(float3 input) {
+    return (input.x + input.y + input.z) / 3.0f;
+}
+
+__DEVICE__ float norm_f3(float3 input, int norm_method) {
+    if (norm_method == LIFT_NORM_LUMINANCE) {
+        return luminance(input);
+    } else if (norm_method == LIFT_NORM_MEAN) {
+        return mean_f3(input);
+    } else if (norm_method == LIFT_NORM_MAX) {
+        return _fmaxf(_fmaxf(input.x, input.y), input.z);
+    } else if (norm_method == LIFT_NORM_MIN) {
+        return _fminf(_fminf(input.x, input.y), input.z);
+    } else {
+        return -1.0f;
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 curr_color = make_float3(p_R, p_G, p_B);
+
+    float3 output_color = curr_color;
+
+    // Convert from temp/tint to RGB parameters
+    float3 lift_gains = get_temp_tint_gains(lift_temp, lift_tint, temp_axis_hue);
+    float3 gamma_gains = get_temp_tint_gains(gamma_temp, gamma_tint, temp_axis_hue);
+    float3 gain_gains = get_temp_tint_gains(gain_temp, gain_tint, temp_axis_hue);
+    float3 offset_gains = get_temp_tint_gains(offset_temp, offset_tint, temp_axis_hue);
+
+    // Each must be normalized appropriately for the given control.
+
+    float lift_norm = norm_f3(lift_gains, normalize_lift);
+    float gamma_norm = norm_f3(gamma_gains, normalize_gamma);
+    float gain_norm = norm_f3(gain_gains, normalize_gain);
+    float offset_norm = norm_f3(offset_gains, normalize_offset);
+
+    lift_gains = lift_gains - lift_norm + lift_global;
+    gamma_gains = gamma_gains - gamma_norm + gamma_global;
+    gain_gains = gain_gains / gain_norm * gain_global;
+    offset_gains = (offset_gains - offset_norm) * OFFSET_TEMP_SCALING + offset_global;
+
+    // lift_gains = make_float3(lift_global, lift_global, lift_global);
+    // gamma_gains = make_float3(gamma_global, gamma_global, gamma_global);
+    // gain_gains = make_float3(gain_global, gain_global, gain_global);
+    // offset_gains = make_float3(offset_global, offset_global, offset_global);
+
+    lggo_params_t params_red = make_lggo_params_reals(lift_gains.x, gamma_gains.x, gain_gains.x, offset_gains.x, use_better_gamma);
+    lggo_params_t params_green = make_lggo_params_reals(lift_gains.y, gamma_gains.y, gain_gains.y, offset_gains.y, use_better_gamma);
+    lggo_params_t params_blue = make_lggo_params_reals(lift_gains.z, gamma_gains.z, gain_gains.z, offset_gains.z, use_better_gamma);
+    lggo_params_reals_t params_reals_red = convert_lggo_to_reals(params_red);
+    lggo_params_reals_t params_reals_green = convert_lggo_to_reals(params_green);
+    lggo_params_reals_t params_reals_blue = convert_lggo_to_reals(params_blue);
+
+    output_color.x = apply_lggo(curr_color.x, params_reals_red);
+    output_color.y = apply_lggo(curr_color.y, params_reals_green);
+    output_color.z = apply_lggo(curr_color.z, params_reals_blue);
+
+    return output_color;
+}
