@@ -81,7 +81,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
         make_float3(_log10f(1.0f / relative_transmittance.x), _log10f(1.0f / relative_transmittance.y), _log10f(1.0f / relative_transmittance.z));
 
     // Offset RGB channels in relative density so that white balance becomes neutral.
-    if (white_balance.r != 1.0f || white_balance.g != 1.0f || white_balance.b != 1.0f) {
+    // Skip this if the input is cineon because cineon already has dmin neutralized out.
+    if (input_mode != INPUT_CINEON && (white_balance.r != 1.0f || white_balance.g != 1.0f || white_balance.b != 1.0f)) {
         float3 relative_white_balance_density = -1.0f * make_float3(_log10f(white_balance_linear.x / dmin_linear.x),
                                                                     _log10f(white_balance_linear.y / dmin_linear.y),
                                                                     _log10f(white_balance_linear.z / dmin_linear.z));
