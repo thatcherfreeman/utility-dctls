@@ -111,6 +111,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Vector Norm DCTL](#vector-norm-dctl)
     - [Utilities](#utilities)
         - [ACES Exposure DCTL](#aces-exposure-dctl)
+        - [Annotate Image DCTL](#annotate-image-dctl)
         - [Arri LogC3 EI Conversion DCTL](#arri-logc3-ei-conversion-dctl)
         - [Bit Depth Estimator DCTL](#bit-depth-estimator-dctl)
         - [Black Bar Resolution DCTL](#black-bar-resolution-dctl)
@@ -1701,6 +1702,26 @@ Internally, this DCTL converts ACEScc or ACEScct to Linear, and then applies a g
 **ACES Gamma**: Pulldown menu in which you select from ACES (Linear), ACEScc, and ACEScct. This is where you specify the gamma of the image that is being fed into this DCTL.
 
 **Exposure Adjustment**: Specifies the number of stops to increase or decrease (negative) exposure.
+
+---
+
+### Annotate Image DCTL
+Draws a rectangle, ellipse, or arrow on your image to help you highlight an issue with a grade. Good for annotating a still, you can put many of these in serial to identify different problems in the frame without having to pull up a separate image editing app to draw on it.
+
+#### DCTL Parameters
+**Center X/Y**: Center position of the drawn shape, put this on the thing you want to annotate
+
+**Size**: Size of the shape you want to draw
+
+**Aspect**: Aspect ratio of the shape you want to draw
+
+**Thickness**: Outline thickness (disabled on Arrow mode)
+
+**Rotation**: Degrees to rotate the shape around the center point
+
+**Hue/Saturation/Value**: HSV color of the shape
+
+**Shape**: Indicate whether you want to draw a Rectangle, Ellipse, or Arrow.
 
 ---
 

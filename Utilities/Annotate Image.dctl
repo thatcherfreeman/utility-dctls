@@ -1,0 +1,194 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(center_x, Center X, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(center_y, Center Y, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(size, Size, DCTLUI_SLIDER_FLOAT, 0.25, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(aspect, Aspect, DCTLUI_SLIDER_FLOAT, 1.0, 0.2, 5.0, 0.001)
+DEFINE_UI_PARAMS(thickness, Thickness, DCTLUI_SLIDER_FLOAT, 0.01, 0.0, 0.5, 0.001)
+DEFINE_UI_PARAMS(rotation_deg, Rotation, DCTLUI_SLIDER_FLOAT, 0.0, -360.0, 360.0, 0.01)
+DEFINE_UI_PARAMS(hue, Hue, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 360.0, 0.01)
+DEFINE_UI_PARAMS(saturation, Saturation, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(value, Value, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(shape, Shape, DCTLUI_COMBO_BOX, 0, {SHAPE_RECTANGLE, SHAPE_ELLIPSE, SHAPE_ARROW}, {Rectangle, Ellipse, Arrow})
+// clang-format on
+
+#define PI (3.14159265358979323f)
+
+__DEVICE__ inline float rad_to_deg(float deg) {
+    return deg * 360.0f / (2.0f * PI);
+}
+
+__DEVICE__ inline float deg_to_rad(float rad) {
+    return rad * (2.0f * PI) / 360.0f;
+}
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float3 hsv_to_rgb(float3 hsv) {
+    // Expects hue as radians
+    float hue = hsv.x;
+    float sat = hsv.y;
+    float val = hsv.z;
+
+    hue = rad_to_deg(mod(hue, 2.0f * PI));
+
+    float c = val * sat;
+    float x = c * (1.0f - _fabs(_fmod(hue / 60.0f, 2.0f) - 1.0f));
+    float m = val - c;
+    float3 rgbp = make_float3(0.0f, 0.0f, 0.0f);
+    if (0.0f <= hue && hue < 60.0f) {
+        rgbp = make_float3(c, x, 0.0f);
+    } else if (60.0f <= hue && hue < 120.0f) {
+        rgbp = make_float3(x, c, 0.0f);
+    } else if (120.0f <= hue && hue < 180.0f) {
+        rgbp = make_float3(0.0f, c, x);
+    } else if (180.0f <= hue && hue < 240.0f) {
+        rgbp = make_float3(0.0f, x, c);
+    } else if (240.0f <= hue && hue < 300.0f) {
+        rgbp = make_float3(x, 0.0f, c);
+    } else if (300.0f <= hue && hue < 360.0f) {
+        rgbp = make_float3(c, 0.0f, x);
+    }
+    return rgbp + m;
+}
+
+__DEVICE__ float2 mv_22_2(float mat[2][2], float2 vec) {
+    return make_float2(mat[0][0] * vec.x + mat[0][1] * vec.y, mat[1][0] * vec.x + mat[1][1] * vec.y);
+}
+
+__DEVICE__ float is_on_rectangle(float2 pos, float thickness) {
+    if ((0.0f <= pos.x && pos.x <= thickness || 1.0f - thickness <= pos.x && pos.x <= 1.0f) && 0.0f <= pos.y && pos.y <= 1.0f) {
+        return 1.0f;
+    } else if ((0.0f <= pos.y && pos.y <= thickness || 1.0f - thickness <= pos.y && pos.y <= 1.0f) && 0.0f <= pos.x && pos.x <= 1.0f) {
+        return 1.0f;
+    } else {
+        return 0.0f;
+    }
+}
+
+__DEVICE__ float is_on_ellipse(float2 pos, float thickness) {
+    float r = _hypotf(pos.x - 0.5f, pos.y - 0.5f);
+    if (0.5f - thickness <= r && r <= 0.5f) {
+        return 1.0f;
+    } else {
+        return 0.0f;
+    }
+}
+
+__DEVICE__ float is_on_arrow(float2 pos, float thickness) {
+    thickness = 0.03f;
+    const float tip_length = 0.10f;
+    const float tip_angle = 45.0f;
+    float2 tip_dir = make_float2(_cosf(deg_to_rad(180.0f - tip_angle)), _sinf(deg_to_rad(180.0f - tip_angle))) * tip_length;
+
+    if (0.0f <= pos.x && pos.x <= 0.5f + tip_dir.x && 0.5f - thickness * 0.5f <= pos.y && pos.y <= 0.5f + thickness * 0.5f) {
+        return 1.0f;
+    } else {
+        float2 pos_relative_to_center = pos - 0.5f;
+
+        if (tip_dir.x <= pos_relative_to_center.x && pos_relative_to_center.x <= 0.0f && 0.0f <= pos_relative_to_center.y &&
+            pos_relative_to_center.y <= tip_dir.y && _fabs(pos_relative_to_center.y / pos_relative_to_center.x) <= _fabs(tip_dir.y / tip_dir.x)) {
+            return 1.0f;
+        }
+
+        tip_dir.y *= -1.0f;
+
+        if (tip_dir.x <= pos_relative_to_center.x && pos_relative_to_center.x <= 0.0f && tip_dir.y <= pos_relative_to_center.y &&
+            pos_relative_to_center.y <= 0.0f && _fabs(pos_relative_to_center.y / pos_relative_to_center.x) <= _fabs(tip_dir.y / tip_dir.x)) {
+            return 1.0f;
+        }
+        return 0.0f;
+    }
+}
+
+typedef struct {
+        float center_x;
+        float center_y;
+        float size;
+        float aspect;
+        float rotation_deg;
+} shape_params_t;
+
+__DEVICE__ shape_params_t make_shape_params(float center_x, float center_y, float size, float aspect, float rotation_deg) {
+    shape_params_t params;
+    params.center_x = center_x;
+    params.center_y = center_y;
+    params.size = size;
+    params.aspect = aspect;
+    params.rotation_deg = rotation_deg;
+    return params;
+}
+
+__DEVICE__ float2 shift_coords(float p_X, float p_Y, float p_Width, float p_Height, float aspect_ratio, shape_params_t shape_params) {
+    float curr_x = (float)p_X / (float)(p_Width - 1);
+    float curr_y = (float)p_Y / (float)(p_Height - 1);
+    float2 curr_pos = make_float2(curr_x, curr_y);
+
+    curr_pos -= make_float2(shape_params.center_x, shape_params.center_y);
+    curr_pos.x *= aspect_ratio;
+
+    float rotation_rad = deg_to_rad(shape_params.rotation_deg);
+    float rotation_mat[2][2] = {
+        {_cosf(rotation_rad), -_sinf(rotation_rad)},
+        {_sinf(rotation_rad), _cosf(rotation_rad)},
+    };
+    curr_pos = mv_22_2(rotation_mat, curr_pos);
+
+    if (shape_params.aspect >= 1.0f) {
+        curr_pos.x /= shape_params.aspect;
+    } else {
+        curr_pos.y *= shape_params.aspect;
+    }
+    curr_pos /= shape_params.size;
+
+    // Shapes are going to be set up so that 0,0 is the bottom corner
+    // and 1,1 is the top corner, the shape is centered at 0.5,0.5
+    curr_pos += 0.5f;
+    return curr_pos;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 input_color = make_float3(p_R, p_G, p_B);
+    float3 shape_color = hsv_to_rgb(make_float3(deg_to_rad(hue), saturation, value));
+    float aspect_ratio = (float)p_Width / (float)p_Height;
+
+    thickness /= size;
+    thickness = _clamp(thickness, 0.0f, 0.5f);
+
+    shape_params_t shape_params = make_shape_params(center_x, 1.0f - center_y, size, aspect, rotation_deg);
+
+    float2 samples[9] = {
+        make_float2(-0.33f, -0.33f),
+        make_float2(0.0f, -0.33f),
+        make_float2(0.33f, -0.33f),
+        make_float2(-0.33f, 0.0f),
+        make_float2(0.0f, 0.0f),
+        make_float2(0.33f, 0.0f),
+        make_float2(-0.33f, 0.33f),
+        make_float2(0.0f, 0.33f),
+        make_float2(0.33f, 0.33f),
+    };
+
+    float on_shape = 0.0f;
+    for (int i = 0; i < 9; i++) {
+        float2 curr_pos = shift_coords((float)p_X + samples[i].x, (float)p_Y + samples[i].y, (float)p_Width, (float)p_Height, aspect_ratio, shape_params);
+        if (shape == SHAPE_RECTANGLE) {
+            on_shape += is_on_rectangle(curr_pos, thickness);
+        } else if (shape == SHAPE_ELLIPSE) {
+            on_shape += is_on_ellipse(curr_pos, thickness);
+        } else if (shape == SHAPE_ARROW) {
+            on_shape += is_on_arrow(curr_pos, thickness);
+        }
+    }
+    on_shape /= 9.0f; // Average the 4 samples for anti-aliasing
+
+    float3 output_color = _mix(input_color, shape_color, on_shape);
+    return output_color;
+}
