@@ -1708,6 +1708,8 @@ Internally, this DCTL converts ACEScc or ACEScct to Linear, and then applies a g
 ### Annotate Image DCTL
 Draws a rectangle, ellipse, or arrow on your image to help you highlight an issue with a grade. Good for annotating a still, you can put many of these in serial to identify different problems in the frame without having to pull up a separate image editing app to draw on it.
 
+Thanks to Misha Beare for the idea.
+
 #### DCTL Parameters
 **Center X/Y**: Center position of the drawn shape, put this on the thing you want to annotate
 
