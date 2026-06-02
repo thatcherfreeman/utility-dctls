@@ -4,3 +4,4 @@ scipy
 Pillow
 colour-science
 opencv-python
+optuna

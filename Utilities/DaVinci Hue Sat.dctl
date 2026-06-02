@@ -1,0 +1,137 @@
+// clang-format off
+DEFINE_UI_PARAMS(hue_slider, Hue, DCTLUI_SLIDER_FLOAT, 50.0, 0.0, 100.0, 0.001)
+DEFINE_UI_PARAMS(sat_slider, Saturation, DCTLUI_SLIDER_FLOAT, 50.0, 0.0, 100.0, 0.001)
+DEFINE_UI_PARAMS(method, Hue Method, DCTLUI_COMBO_BOX, 0, {HUE_RESOLVE, HUE_IMPROVED}, {Resolve, Improved})
+
+// clang-format on
+
+#define PI (3.14159265358979323846f)
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ float2 mv_22_2(float mat[2][2], float2 v) {
+    float2 out = make_float2(mat[0][0] * v.x + mat[0][1] * v.y, mat[1][0] * v.x + mat[1][1] * v.y);
+    return out;
+}
+
+__DEVICE__ float dot_product(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__DEVICE__ float pow2f(float x) {
+    return x * x;
+}
+
+__DEVICE__ float3 unit_vector(float3 v) {
+    float magnitude = _sqrtf(dot_product(v, v));
+    return v / magnitude;
+}
+
+__DEVICE__ void make_rotation_matrix_2d(float mat[2][2], float angle) {
+    float c = _cosf(angle);
+    float s = _sinf(angle);
+
+    mat[0][0] = c;
+    mat[0][1] = -s;
+    mat[1][0] = s;
+    mat[1][1] = c;
+}
+
+__DEVICE__ void make_rotation_mat_axis_angle(float mat[3][3], float3 axis, float angle) {
+    // Axis assumed to be unit vector, angle assuemd to be in radians
+    float c = _cosf(angle);
+    float s = _sinf(angle);
+
+    mat[0][0] = c + pow2f(axis.x) * (1.0f - c);
+    mat[0][1] = axis.x * axis.y * (1.0f - c) - axis.z * s;
+    mat[0][2] = axis.x * axis.z * (1.0f - c) + axis.y * s;
+    mat[1][0] = axis.x * axis.y * (1.0f - c) + axis.z * s;
+    mat[1][1] = c + pow2f(axis.y) * (1.0f - c);
+    mat[1][2] = axis.y * axis.z * (1.0f - c) - axis.x * s;
+    mat[2][0] = axis.z * axis.x * (1.0f - c) - axis.y * s;
+    mat[2][1] = axis.z * axis.y * (1.0f - c) + axis.x * s;
+    mat[2][2] = c + pow2f(axis.z) * (1.0f - c);
+}
+
+__DEVICE__ void mat_inverse_33(float inv_buf[3][3], float m[3][3]) {
+    // from https://ardoris.wordpress.com/2008/07/18/general-formula-for-the-inverse-of-a-3x3-matrix/
+
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+    inv_buf[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
+    inv_buf[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det;
+    inv_buf[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
+    inv_buf[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det;
+    inv_buf[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
+    inv_buf[1][2] = (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det;
+    inv_buf[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
+    inv_buf[2][1] = (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det;
+    inv_buf[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
+}
+
+__DEVICE__ inline float atan2f(float y, float x) {
+    float angle = _atan2f(y, x);
+    if (isnan(angle)) {
+        // Handle NaN case
+        return 0.0f;
+    }
+    return angle;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 rgb = make_float3(p_R, p_G, p_B);
+
+    float3 lum_coeffs = make_float3(0.21f, 0.7f, 0.09f);
+
+    float curr_lum;
+
+    // Hue adjustment:
+    float hue_angle_rad = _mix(-1.0f * PI, PI, (hue_slider / 100.0f));
+
+    if (method == HUE_IMPROVED) {
+        // Improved method does not scale the saturation as you rotate hue.
+        float rot_matrix[3][3] = {};
+        make_rotation_mat_axis_angle(rot_matrix, unit_vector(lum_coeffs), -1.0f * hue_angle_rad);
+
+        // Remove luminance, rotate, then add it back in.
+        curr_lum = dot_product(rgb, lum_coeffs);
+        rgb = mv_33_3(rot_matrix, rgb - curr_lum) + curr_lum;
+    } else {
+        float transform_matrix[3][3] = {
+            // Bottom rows found via regression. Doesn't match the HSL curves matrix.
+            {0.21f, 0.7f, 0.09f},
+            {1.f, -0.60133142f, -0.39866858f},
+            {0.f, -1.07120062f, 1.07120062f},
+        };
+
+        float inv_transform_matrix[3][3] = {};
+        mat_inverse_33(inv_transform_matrix, transform_matrix);
+
+        float rot_matrix[2][2] = {};
+        make_rotation_matrix_2d(rot_matrix, hue_angle_rad);
+
+        // Rotate chroma channels
+        float3 ycc = mv_33_3(transform_matrix, rgb);
+        float2 hs = make_float2(atan2f(ycc.z, ycc.y), _hypotf(ycc.y, ycc.z));
+        hs.x += hue_angle_rad;
+
+        ycc.y = hs.y * _cosf(hs.x);
+        ycc.z = hs.y * _sinf(hs.x);
+
+        // Restore original coordinates.
+        rgb = mv_33_3(inv_transform_matrix, ycc);
+    }
+
+    // Sat Adjustment
+    float sat_factor = _mix(0.0f, 2.0f, (sat_slider / 100.0f));
+    curr_lum = dot_product(rgb, lum_coeffs);
+    rgb = (rgb - curr_lum) * sat_factor + curr_lum;
+
+    return rgb;
+}

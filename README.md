@@ -128,6 +128,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Cube Rotate DCTL](#cube-rotate-dctl)
         - [Cylindrical DCTL](#cylindrical-dctl)
         - [DaVinci HSL Curves Conversion DCTL](#davinci-hsl-curves-conversion-dctl)
+        - [DaVinci Hue Sat DCTL](#davinci-hue-sat-dctl)
         - [DaVinci LGGO DCTL](#davinci-lggo-dctl)
         - [DaVinci RGB Mixer DCTL](#davinci-rgb-mixer-dctl)
         - [DaVinci Tone Mapping DCTL](#davinci-tone-mapping-dctl)
@@ -2010,6 +2011,19 @@ Then the HSL curves will control the parameters of the desired color model.
 **Input Hue Format**: If you have selected the **Color Model** of Custom, then the tool expects you to provide channels ordered HSL as input. This controls whether the H channel represents degrees, radians, or is scaled 0 to 1.
 
 **Color Model**: If custom, then you are expected to sandwich this tool as described in the Setup section with your own color model. Otherwise, I've included some presets to allow you to use the HSL curves in the space of your choice.
+
+---
+
+### DaVinci Hue Sat DCTL
+
+Implementation matching the Resolve Primaries panel Hue and Saturation sliders.
+
+#### DCTL Parameters
+**Hue**: Matches hue slider in primaries (LGGO) panel
+
+**Saturation**: Matches saturation slider in primaries panel
+
+**Hue Method**: I found while building this tool that Resolve's hue slider doesn't preserve saturation (rotation around the neutral axis results in a change in distance from the neutral axis). Choose Resolve to match the resolve behavior, choose Improved for my alternative implementation that does preserve saturation.
 
 ---
 

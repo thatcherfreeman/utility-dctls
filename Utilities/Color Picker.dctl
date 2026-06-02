@@ -302,9 +302,10 @@ __DEVICE__ void float2str(float f, char output[], int num_chars) {
             runner += 1;
         }
         for (int i = 0; i > (-1 * right_digits) && runner < num_chars; --i, ++runner) {
-            float base = _powf(10.0f, i - 1);
-            int d = (int)_truncf(f / base);
-            f = _fmod(f, base);
+            f *= 10.0f;
+            int d = (int)_truncf(f);
+            d = d < 0 ? 0 : (d > 9 ? 9 : d);
+            f -= (float)d;
             output[runner] = digit2char(d);
         }
     }
