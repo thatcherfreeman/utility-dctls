@@ -106,8 +106,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         float transform_matrix[3][3] = {
             // Bottom rows found via regression. Doesn't match the HSL curves matrix.
             {0.21f, 0.7f, 0.09f},
-            {1.f, -0.60133142f, -0.39866858f},
-            {0.f, -1.07120062f, 1.07120062f},
+            {1.0f, -0.60133142f, -0.39866858f},
+            {0.0f, -1.07120062f, 1.07120062f},
         };
 
         float inv_transform_matrix[3][3] = {};
