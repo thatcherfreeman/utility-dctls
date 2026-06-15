@@ -80,6 +80,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Read Noise DCTL](#read-noise-dctl)
         - [RGB Linear Contrast DCTL](#rgb-linear-contrast-dctl)
         - [Separable Gaussian Blur DCTL](#separable-gaussian-blur-dctl)
+        - [Smooth Tetra DCTL](#smooth-tetra-dctl)
         - [Subtractive Saturation DCTL](#subtractive-saturation-dctl)
         - [Timeshift Streaks DCTL](#timeshift-streaks-dctl)
         - [Tone Mapping DCTL](#tone-mapping-dctl)
@@ -1247,6 +1248,24 @@ This implementation is normalized so that the strength is scaled according to th
 **Blur Amount**: Controls the overall blur strength, only active on the first node in the sequence.
 
 **Direction**: Set to horizontal or vertical to run that part of the separable kernel. Put Horizontal first in the sequence of two nodes.
+
+---
+
+### Smooth Tetra DCTL
+Smoothed version of the classic Tetra HSV dctl. Guaranteed to be C1 continuous and to leave achromatic unaffected. I tested it in linear, but you can try using it in other spaces too.
+
+#### DCTL Parameters
+**Red/Yellow/Green/Cyan/Blue/Magenta Hue**: Rotate the hue for this primary
+
+**Red/Yellow/Green/Cyan/Blue/Magenta Sat**: Add or reduce saturation for this primary
+
+**Red/Yellow/Green/Cyan/Blue/Magenta Val**: Number of stops to gain this primary up and down. The amount of stops of gain increases with saturation.
+
+**Polar Smoothness**: Controls how much falloff there is with hue. Larger means that there is **LESS** overlap between the different hue sliders, so the cutoff between one hue region and the next will be more abrupt as you sweep through the hues.
+
+**Neutral Smoothness**: This indicates the radius around the achromatic axis that we will try to smooth the adjustments. 0 means that it will NOT be C1 continuous around the achromatic. Note that inevitably, when in order to maintain smoothness around the achromatic, when this parameter is positive, then some adjustments to say the Red sliders may affect the colors of lower-saturation Cyans and other hues within the smoothed radius.
+
+**Smooth Neutrals**: Quickly toggle on and off smoothening of the achromatic axis.
 
 ---
 

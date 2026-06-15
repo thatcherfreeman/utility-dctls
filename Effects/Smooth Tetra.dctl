@@ -1,0 +1,487 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(red_hue, Red Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(red_sat, Red Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(red_val, Red Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+DEFINE_UI_PARAMS(yellow_hue, Yellow Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(yellow_sat, Yellow Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(yellow_val, Yellow Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+DEFINE_UI_PARAMS(green_hue, Green Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(green_sat, Green Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(green_val, Green Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+DEFINE_UI_PARAMS(cyan_hue, Cyan Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(cyan_sat, Cyan Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(cyan_val, Cyan Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+DEFINE_UI_PARAMS(blue_hue, Blue Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(blue_sat, Blue Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(blue_val, Blue Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+DEFINE_UI_PARAMS(magenta_hue, Magenta Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(magenta_sat, Magenta Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(magenta_val, Magenta Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+
+DEFINE_UI_PARAMS(polar_smoothness, Polar Smoothness, DCTLUI_SLIDER_FLOAT, 3.0, 0.0, 10.0, 0.001)
+DEFINE_UI_PARAMS(neutral_smoothness, Neutral Smoothness, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(smooth_neutrals, Smooth Neutrals, DCTLUI_CHECK_BOX, 1)
+
+// DEFINE_UI_PARAMS(output_plane, Output Plane, DCTLUI_COMBO_BOX, 0, {NONE, HUE, SAT, STOPS, PLANE_A, PLANE_B}, {None, Hue, Sat, Stops, plane_a, plane_b})
+// clang-format on
+
+#define PI (3.141592653589793238f)
+
+__DEVICE__ inline float rad_to_deg(float deg) {
+    return deg * 360.0f / (2.0f * PI);
+}
+
+__DEVICE__ inline float deg_to_rad(float rad) {
+    return rad * (2.0f * PI) / 360.0f;
+}
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ inline float atan2f(float y, float x) {
+    float angle = _atan2f(y, x);
+    if (isnan(angle)) {
+        // Handle NaN case
+        return 0.0f;
+    }
+    return angle;
+}
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
+    // Adapted from Juan Pablo Zambrano's code
+    // hue is in range of 0-1
+    float3 lsh = make_float3(hsv.z, hsv.y * 3.0f, mod(hsv.x, 2.0f * PI));
+
+    float ctr = lsh.x * lsh.y * _cosf(lsh.z);
+    float ctg = lsh.x;
+    float ctb = lsh.x * lsh.y * _sinf(lsh.z);
+    float3 c = make_float3(ctr, ctg, ctb);
+
+    float mat[3][3] = {
+        {2.0f / 3.0f, 1.0f, 0.0f},
+        {-1.0f / 3.0f, 1.0f, _sqrtf(3.0f) / 3.0f},
+        {-1.0f / 3.0f, 1.0f, -_sqrtf(3.0f) / 3.0f},
+    };
+
+    return mv_33_3(mat, c);
+}
+
+__DEVICE__ float3 rgb_to_cylindrical(float3 x) {
+
+    // Matrix aligns and scales achromatic white (1, 1, 1) with (0, 1, 0)
+    // Also rotates input (1, 0, 0) above the red axis and ensures that
+    // (1, 0, 0) input ends up having a red channel code value of (1).
+    // outputs hue in range 0-1
+    float mat[3][3] = {
+        {1.0f, -1.0f / 2.0f, -1.0f / 2.0f},
+        {1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f},
+        {0.0f, _sqrtf(3.0f) / 2.0f, -_sqrtf(3.0f) / 2.0f},
+    };
+
+    float3 rotated_color = mv_33_3(mat, x);
+    float l = rotated_color.y;
+    float3 hsl = make_float3(0.0f, 0.0f, 0.0f);
+
+    float3 normalized_color = rotated_color / l;
+    if (l == 0.0f) {
+        hsl = make_float3(0.0f, 0.0f, l);
+    } else {
+        float theta = atan2f(normalized_color.z, normalized_color.x);
+        hsl.x = mod(theta, 2.0f * PI);
+        hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0f;
+        hsl.z = l;
+    }
+    return hsl;
+}
+
+typedef struct {
+        float red_input_hue;
+        float yellow_input_hue;
+        float green_input_hue;
+        float cyan_input_hue;
+        float blue_input_hue;
+        float magenta_input_hue;
+
+        float red_hue;
+        float yellow_hue;
+        float green_hue;
+        float cyan_hue;
+        float blue_hue;
+        float magenta_hue;
+
+        float red_sat;
+        float yellow_sat;
+        float green_sat;
+        float cyan_sat;
+        float blue_sat;
+        float magenta_sat;
+
+        float red_val;
+        float yellow_val;
+        float green_val;
+        float cyan_val;
+        float blue_val;
+        float magenta_val;
+} tetra_params_t;
+
+__DEVICE__ tetra_params_t make_tetra_params(float red_input_hue,
+                                            float yellow_input_hue,
+                                            float green_input_hue,
+                                            float cyan_input_hue,
+                                            float blue_input_hue,
+                                            float magenta_input_hue,
+                                            float red_hue,
+                                            float yellow_hue,
+                                            float green_hue,
+                                            float cyan_hue,
+                                            float blue_hue,
+                                            float magenta_hue,
+                                            float red_sat,
+                                            float yellow_sat,
+                                            float green_sat,
+                                            float cyan_sat,
+                                            float blue_sat,
+                                            float magenta_sat,
+                                            float red_val,
+                                            float yellow_val,
+                                            float green_val,
+                                            float cyan_val,
+                                            float blue_val,
+                                            float magenta_val) {
+    tetra_params_t params;
+
+    params.red_input_hue = red_input_hue;
+    params.yellow_input_hue = yellow_input_hue;
+    params.green_input_hue = green_input_hue;
+    params.cyan_input_hue = cyan_input_hue;
+    params.blue_input_hue = blue_input_hue;
+    params.magenta_input_hue = magenta_input_hue;
+
+    params.red_hue = red_hue;
+    params.yellow_hue = yellow_hue;
+    params.green_hue = green_hue;
+    params.cyan_hue = cyan_hue;
+    params.blue_hue = blue_hue;
+    params.magenta_hue = magenta_hue;
+
+    params.red_sat = red_sat;
+    params.yellow_sat = yellow_sat;
+    params.green_sat = green_sat;
+    params.cyan_sat = cyan_sat;
+    params.blue_sat = blue_sat;
+    params.magenta_sat = magenta_sat;
+
+    params.red_val = red_val;
+    params.yellow_val = yellow_val;
+    params.green_val = green_val;
+    params.cyan_val = cyan_val;
+    params.blue_val = blue_val;
+    params.magenta_val = magenta_val;
+    return params;
+}
+
+__DEVICE__ tetra_params_t limit_tetra_params(tetra_params_t params) {
+    // For each adjacent pair of hue nodes, if their output positions collide
+    // (earlier exceeds later), snap both to their midpoint. Iterate so that
+    // cascading collisions (where fixing one pair creates a new one) fully
+    // propagate. 12 passes converges for any practical slider range.
+
+    if (params.red_input_hue > params.magenta_input_hue) {
+        params.red_input_hue -= 2.0f * PI;
+    }
+
+    float red_pos = params.red_input_hue + params.red_hue;
+    float yellow_pos = params.yellow_input_hue + params.yellow_hue;
+    float green_pos = params.green_input_hue + params.green_hue;
+    float cyan_pos = params.cyan_input_hue + params.cyan_hue;
+    float blue_pos = params.blue_input_hue + params.blue_hue;
+    float magenta_pos = params.magenta_input_hue + params.magenta_hue;
+
+    for (int i = 0; i < 12; i++) {
+        bool updated = false;
+        if (red_pos > yellow_pos) {
+            float mid = (red_pos + yellow_pos) * 0.5f;
+            red_pos = mid;
+            yellow_pos = mid;
+            updated = true;
+        }
+        if (yellow_pos > green_pos) {
+            float mid = (yellow_pos + green_pos) * 0.5f;
+            yellow_pos = mid;
+            green_pos = mid;
+            updated = true;
+        }
+        if (green_pos > cyan_pos) {
+            float mid = (green_pos + cyan_pos) * 0.5f;
+            green_pos = mid;
+            cyan_pos = mid;
+            updated = true;
+        }
+        if (cyan_pos > blue_pos) {
+            float mid = (cyan_pos + blue_pos) * 0.5f;
+            cyan_pos = mid;
+            blue_pos = mid;
+            updated = true;
+        }
+        if (blue_pos > magenta_pos) {
+            float mid = (blue_pos + magenta_pos) * 0.5f;
+            blue_pos = mid;
+            magenta_pos = mid;
+            updated = true;
+        }
+        // Polar wrap: magenta must stay within one full revolution of red.
+        // magenta_pos > red_pos + 2pi means either magenta has swept past red
+        // going clockwise, or red has shifted so far negative it has lapped
+        // magenta counterclockwise — both cases reduce to the same inequality.
+        if (magenta_pos > red_pos + 2.0f * PI) {
+            float mid = (magenta_pos + red_pos + 2.0f * PI) * 0.5f;
+            magenta_pos = mid;
+            red_pos = mid - 2.0f * PI;
+            updated = true;
+        }
+        if (!updated)
+            break;
+    }
+
+    params.red_hue = red_pos - params.red_input_hue;
+    params.yellow_hue = yellow_pos - params.yellow_input_hue;
+    params.green_hue = green_pos - params.green_input_hue;
+    params.cyan_hue = cyan_pos - params.cyan_input_hue;
+    params.blue_hue = blue_pos - params.blue_input_hue;
+    params.magenta_hue = magenta_pos - params.magenta_input_hue;
+
+    return params;
+}
+
+__DEVICE__ float interpolate(float input_rad, float2 control_points[6], float smoothness) {
+    float denom = 0.0f;
+    float num = 0.0f;
+    for (int i = 0; i < 6; i++) {
+        float weight = _expf(smoothness * _cosf(input_rad - control_points[i].x));
+        num += weight * control_points[i].y;
+        denom += weight;
+    }
+    return num / denom;
+}
+
+__DEVICE__ float hue_v_hue_curve(float input_hue_rad, tetra_params_t params, float smoothness) {
+    // For input radians, output the number of radians to adjust the angle.
+    float2 control_points[6] = {
+        make_float2(params.red_input_hue, params.red_hue),
+        make_float2(params.yellow_input_hue, params.yellow_hue),
+        make_float2(params.green_input_hue, params.green_hue),
+        make_float2(params.cyan_input_hue, params.cyan_hue),
+        make_float2(params.blue_input_hue, params.blue_hue),
+        make_float2(params.magenta_input_hue, params.magenta_hue),
+    };
+    return interpolate(input_hue_rad, control_points, smoothness);
+}
+
+__DEVICE__ float hue_v_sat_curve(float input_hue_rad, tetra_params_t params, float smoothness) {
+    // For input radians, output the multiplier to apply to saturation.
+    float2 control_points[6] = {
+        make_float2(params.red_input_hue, params.red_sat),
+        make_float2(params.yellow_input_hue, params.yellow_sat),
+        make_float2(params.green_input_hue, params.green_sat),
+        make_float2(params.cyan_input_hue, params.cyan_sat),
+        make_float2(params.blue_input_hue, params.blue_sat),
+        make_float2(params.magenta_input_hue, params.magenta_sat),
+    };
+    return interpolate(input_hue_rad, control_points, smoothness);
+}
+
+__DEVICE__ float hue_v_gain_curve(float input_hue_rad, tetra_params_t params, float smoothness) {
+    // returns stops of gain at saturation = 1.
+    float2 control_points[6] = {
+        make_float2(params.red_input_hue, params.red_val),
+        make_float2(params.yellow_input_hue, params.yellow_val),
+        make_float2(params.green_input_hue, params.green_val),
+        make_float2(params.cyan_input_hue, params.cyan_val),
+        make_float2(params.blue_input_hue, params.blue_val),
+        make_float2(params.magenta_input_hue, params.magenta_val),
+    };
+    return interpolate(input_hue_rad, control_points, smoothness);
+}
+
+__DEVICE__ float3 evaluate_hue_curves(float input_hue, tetra_params_t params, float smoothness) {
+    float hue_adj = hue_v_hue_curve(input_hue, params, smoothness);
+    float sat_mult = hue_v_sat_curve(input_hue, params, smoothness);
+    float gain_stops = hue_v_gain_curve(input_hue, params, smoothness);
+    return make_float3(hue_adj, sat_mult, gain_stops);
+}
+
+__DEVICE__ float3 tetra_unsmooth(float3 input_hsl, tetra_params_t params, float polar_smoothness) {
+    // Input hue in radians, saturation, luminance (ignored)
+    // Returns output x, y, stops adjustment
+    // x = cos(hue) * sat, y = sin(hue) * sat, z = gain in stops
+    // R^3 -> R^3 function.
+    float3 output_adj = evaluate_hue_curves(input_hsl.x, params, polar_smoothness);
+
+    float3 output_hsg = make_float3(input_hsl.x + output_adj.x, input_hsl.y * output_adj.y, _clampf(input_hsl.y, 0.0f, 2.0f) * output_adj.z);
+
+    float3 output_abz = make_float3(_cosf(output_hsg.x) * output_hsg.y, _sinf(output_hsg.x) * output_hsg.y, output_hsg.z);
+
+    return output_abz;
+}
+
+__DEVICE__ float3 best_fit_plane_3d(float2 input_coords, float2 control_points_xy[6], float3 control_points_z[6]) {
+    // Control points should be (x,y,z) values, not polar
+    // Build plane to average out those inputs.
+    float sum_xy = 0.0f;
+    float3 sum_xz = 0.0f;
+    float3 sum_yz = 0.0f;
+    float sum_yy = 0.0f;
+    float sum_xx = 0.0f;
+    for (int i = 0; i < 6; i++) {
+        float2 control_point = control_points_xy[i];
+        float3 control_point_z = control_points_z[i];
+
+        sum_xx += control_point.x * control_point.x;
+        sum_xy += control_point.x * control_point.y;
+        sum_xz += control_point.x * control_point_z;
+        sum_yy += control_point.y * control_point.y;
+        sum_yz += control_point.y * control_point_z;
+    }
+
+    float denom = sum_xx * sum_yy - sum_xy * sum_xy;
+    float3 a = (sum_yy * sum_xz - sum_xy * sum_yz) / denom;
+    float3 b = (sum_xx * sum_yz - sum_xy * sum_xz) / denom;
+
+    // Resulting gain value at point input_hsl (in stops)
+    float3 z = a * input_coords.x + b * input_coords.y;
+    return z;
+}
+
+__DEVICE__ float3 mean_value(float3 input_hsl, tetra_params_t params, float polar_smoothness) {
+    // We will build a plane best fit to go through the origin and go as close to the six points (theta, *_val) as possible.
+    // This plane will be specified as z = a * r * cos(theta) + b * r * sin(theta), though we will rework it into polar coordinates and evaluate at r =
+    // hsl.x, theta = hsl.y
+
+    float3 control_points[6] = {
+        make_float3(params.red_input_hue, 1.0f, 0.0f),
+        make_float3(params.yellow_input_hue, 1.0f, 0.0f),
+        make_float3(params.green_input_hue, 1.0f, 0.0f),
+        make_float3(params.cyan_input_hue, 1.0f, 0.0f),
+        make_float3(params.blue_input_hue, 1.0f, 0.0f),
+        make_float3(params.magenta_input_hue, 1.0f, 0.0f),
+    };
+
+    float2 input_xy = make_float2(_cosf(input_hsl.x) * input_hsl.y, _sinf(input_hsl.x) * input_hsl.y);
+
+    // Figure out what tetra unsmooth does to the six standard inputs.
+    float2 control_points_xy[6] = {};
+    float3 control_points_z[6] = {};
+    for (int i = 0; i < 6; i++) {
+        float3 color_tetra_xyz = tetra_unsmooth(control_points[i], params, polar_smoothness);
+        float2 input_control_point_xy = make_float2(_cosf(control_points[i].x) * control_points[i].y, _sinf(control_points[i].x) * control_points[i].y);
+
+        control_points_xy[i] = make_float2(input_control_point_xy.x, input_control_point_xy.y);
+        control_points_z[i] = make_float3(color_tetra_xyz.x, color_tetra_xyz.y, color_tetra_xyz.z);
+    }
+
+    // Build plane to average out those inputs.
+    float3 mean = best_fit_plane_3d(input_xy, control_points_xy, control_points_z);
+
+    float result_a = mean.x;
+    float result_b = mean.y;
+    float plane_gain = mean.z;
+
+    return make_float3(result_a, result_b, plane_gain);
+}
+
+__DEVICE__ float3 tetra_smooth_preserve_neutral(float3 input_hsl, tetra_params_t params, float polar_smoothness, float neutral_smoothness) {
+    // This is going to be the mean surface that will be smooth at r = 0. We interpolate to this for small r,
+    // Obviously better if this surface has similar behavior to the unsmooth surface for larger r.
+    float3 computed_mean_abz = mean_value(input_hsl, params, polar_smoothness);
+
+    float3 unsmooth_adjustment = tetra_unsmooth(input_hsl, params, polar_smoothness);
+
+    float curr_radius = input_hsl.y;
+    // float curr_radius = _hypotf(unsmooth_adjustment.x, unsmooth_adjustment.y);
+    float bump = _exp2f(-1.0f * curr_radius * curr_radius / (neutral_smoothness * neutral_smoothness));
+    if (neutral_smoothness == 0.0f) {
+        bump = 0.0f;
+    }
+    float3 output_abz = _mix(unsmooth_adjustment, computed_mean_abz, bump);
+    return output_abz;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 input = make_float3(p_R, p_G, p_B);
+
+    tetra_params_t params = make_tetra_params(0.0f,
+                                              PI / 3.0f,
+                                              2.0f * PI / 3.0f,
+                                              PI,
+                                              4.0f * PI / 3.0f,
+                                              5.0f * PI / 3.0f,
+                                              deg_to_rad(red_hue),
+                                              deg_to_rad(yellow_hue),
+                                              deg_to_rad(green_hue),
+                                              deg_to_rad(cyan_hue),
+                                              deg_to_rad(blue_hue),
+                                              deg_to_rad(magenta_hue),
+                                              red_sat,
+                                              yellow_sat,
+                                              green_sat,
+                                              cyan_sat,
+                                              blue_sat,
+                                              magenta_sat,
+                                              red_val,
+                                              yellow_val,
+                                              green_val,
+                                              cyan_val,
+                                              blue_val,
+                                              magenta_val);
+    params = limit_tetra_params(params);
+
+    float3 input_hsl = rgb_to_cylindrical(input);
+
+    float input_hue_rad = input_hsl.x;
+    float input_sat = input_hsl.y;
+
+    float3 output_abz = make_float3(0.0f, 0.0f, 0.0f);
+    if (smooth_neutrals) {
+        output_abz = tetra_smooth_preserve_neutral(input_hsl, params, polar_smoothness, neutral_smoothness);
+    } else {
+        output_abz = tetra_unsmooth(input_hsl, params, polar_smoothness);
+    }
+
+    float3 output_hsl;
+
+    // Bring in input luminance.
+    output_hsl =
+        make_float3(mod(atan2f(output_abz.y, output_abz.x), 2.0f * PI), _hypotf(output_abz.x, output_abz.y), input_hsl.z * powf(2.0f, output_abz.z));
+
+    float3 output = cylindrical_to_rgb(output_hsl);
+    // if (output_plane == HUE) {
+    //     output = make_float3(_cosf(input_hsl.x) * input_hsl.y, _sinf(input_hsl.x) * input_hsl.y, output_hsl.x - input_hsl.x);
+    // } else if (output_plane == SAT) {
+    //     output = make_float3(_cosf(input_hsl.x) * input_hsl.y, _sinf(input_hsl.x) * input_hsl.y, _hypotf(output_abz.x, output_abz.y));
+    // } else if (output_plane == STOPS) {
+    //     output = make_float3(_cosf(input_hsl.x) * input_hsl.y, _sinf(input_hsl.x) * input_hsl.y, output_abz.z);
+    // } else if (output_plane == PLANE_A) {
+    //     output = make_float3(_cosf(input_hsl.x) * input_hsl.y, _sinf(input_hsl.x) * input_hsl.y, output_abz.x);
+    // } else if (output_plane == PLANE_B) {
+    //     output = make_float3(_cosf(input_hsl.x) * input_hsl.y, _sinf(input_hsl.x) * input_hsl.y, output_abz.y);
+    // }
+    return output;
+}
