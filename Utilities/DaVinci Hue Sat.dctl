@@ -75,7 +75,7 @@ __DEVICE__ void mat_inverse_33(float inv_buf[3][3], float m[3][3]) {
     inv_buf[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
 }
 
-__DEVICE__ inline float atan2f(float y, float x) {
+__DEVICE__ inline float arctan2f(float y, float x) {
     float angle = _atan2f(y, x);
     if (isnan(angle)) {
         // Handle NaN case
@@ -118,7 +118,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
         // Rotate chroma channels
         float3 ycc = mv_33_3(transform_matrix, rgb);
-        float2 hs = make_float2(atan2f(ycc.z, ycc.y), _hypotf(ycc.y, ycc.z));
+        float2 hs = make_float2(arctan2f(ycc.z, ycc.y), _hypotf(ycc.y, ycc.z));
         hs.x += hue_angle_rad;
 
         ycc.y = hs.y * _cosf(hs.x);

@@ -44,7 +44,7 @@ __DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
     return out;
 }
 
-__DEVICE__ inline float atan2f(float y, float x) {
+__DEVICE__ inline float arctan2f(float y, float x) {
     float angle = _atan2f(y, x);
     if (isnan(angle)) {
         // Handle NaN case
@@ -104,7 +104,7 @@ __DEVICE__ float3 rgb_to_cylindrical(float3 x) {
     if (l == 0.0f) {
         hsl = make_float3(0.0f, 0.0f, l);
     } else {
-        float theta = atan2f(normalized_color.z, normalized_color.x);
+        float theta = arctan2f(normalized_color.z, normalized_color.x);
         hsl.x = mod(theta, 2.0f * PI);
         hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0f;
         hsl.z = l;
@@ -469,7 +469,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     // Bring in input luminance.
     output_hsl =
-        make_float3(mod(atan2f(output_abz.y, output_abz.x), 2.0f * PI), _hypotf(output_abz.x, output_abz.y), input_hsl.z * powf(2.0f, output_abz.z));
+        make_float3(mod(arctan2f(output_abz.y, output_abz.x), 2.0f * PI), _hypotf(output_abz.x, output_abz.y), input_hsl.z * powf(2.0f, output_abz.z));
 
     float3 output = cylindrical_to_rgb(output_hsl);
     // if (output_plane == HUE) {
