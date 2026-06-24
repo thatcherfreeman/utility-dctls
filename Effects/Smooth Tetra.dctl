@@ -346,8 +346,8 @@ __DEVICE__ float3 best_fit_plane_3d(float2 input_coords, float2 control_points_x
     // Control points should be (x,y,z) values, not polar
     // Build plane to average out those inputs.
     float sum_xy = 0.0f;
-    float3 sum_xz = 0.0f;
-    float3 sum_yz = 0.0f;
+    float3 sum_xz = make_float3(0.0f, 0.0f, 0.0f);
+    float3 sum_yz = make_float3(0.0f, 0.0f, 0.0f);
     float sum_yy = 0.0f;
     float sum_xx = 0.0f;
     for (int i = 0; i < 6; i++) {
@@ -455,8 +455,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
     float3 input_hsl = rgb_to_cylindrical(input);
 
-    float input_hue_rad = input_hsl.x;
-    float input_sat = input_hsl.y;
+    // float input_hue_rad = input_hsl.x;
+    // float input_sat = input_hsl.y;
 
     float3 output_abz = make_float3(0.0f, 0.0f, 0.0f);
     if (smooth_neutrals) {
