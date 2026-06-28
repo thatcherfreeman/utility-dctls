@@ -4,6 +4,9 @@
 DEFINE_UI_PARAMS(red_hue, Red Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
 DEFINE_UI_PARAMS(red_sat, Red Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
 DEFINE_UI_PARAMS(red_val, Red Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+DEFINE_UI_PARAMS(skin_hue, Skin Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(skin_sat, Skin Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(skin_val, Skin Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
 DEFINE_UI_PARAMS(yellow_hue, Yellow Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
 DEFINE_UI_PARAMS(yellow_sat, Yellow Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
 DEFINE_UI_PARAMS(yellow_val, Yellow Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
@@ -20,7 +23,7 @@ DEFINE_UI_PARAMS(magenta_hue, Magenta Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0
 DEFINE_UI_PARAMS(magenta_sat, Magenta Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
 DEFINE_UI_PARAMS(magenta_val, Magenta Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
 
-DEFINE_UI_PARAMS(polar_smoothness, Polar Smoothness, DCTLUI_SLIDER_FLOAT, 3.0, 0.0, 10.0, 0.001)
+DEFINE_UI_PARAMS(polar_smoothness, Polar Smoothness, DCTLUI_SLIDER_FLOAT, 5.0, 0.0, 10.0, 0.001)
 DEFINE_UI_PARAMS(neutral_smoothness, Neutral Smoothness, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 0.001)
 DEFINE_UI_PARAMS(smooth_neutrals, Smooth Neutrals, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_swatches, Draw Swatches, DCTLUI_CHECK_BOX, 0)
@@ -28,7 +31,8 @@ DEFINE_UI_PARAMS(draw_swatches, Draw Swatches, DCTLUI_CHECK_BOX, 0)
 // clang-format on
 
 #define PI (3.141592653589793238f)
-#define NUM_HUES 6
+
+#define NUM_HUES 7
 
 __DEVICE__ inline float rad_to_deg(float deg) {
     return deg * 360.0f / (2.0f * PI);
@@ -115,6 +119,7 @@ __DEVICE__ float3 rgb_to_cylindrical(float3 x) {
 
 typedef struct {
         float red_input_hue;
+        float skin_input_hue;
         float yellow_input_hue;
         float green_input_hue;
         float cyan_input_hue;
@@ -122,6 +127,7 @@ typedef struct {
         float magenta_input_hue;
 
         float red_hue;
+        float skin_hue;
         float yellow_hue;
         float green_hue;
         float cyan_hue;
@@ -129,6 +135,7 @@ typedef struct {
         float magenta_hue;
 
         float red_sat;
+        float skin_sat;
         float yellow_sat;
         float green_sat;
         float cyan_sat;
@@ -136,6 +143,7 @@ typedef struct {
         float magenta_sat;
 
         float red_val;
+        float skin_val;
         float yellow_val;
         float green_val;
         float cyan_val;
@@ -144,24 +152,28 @@ typedef struct {
 } tetra_params_t;
 
 __DEVICE__ tetra_params_t make_tetra_params(float red_input_hue,
+                                            float skin_input_hue,
                                             float yellow_input_hue,
                                             float green_input_hue,
                                             float cyan_input_hue,
                                             float blue_input_hue,
                                             float magenta_input_hue,
                                             float red_hue,
+                                            float skin_hue,
                                             float yellow_hue,
                                             float green_hue,
                                             float cyan_hue,
                                             float blue_hue,
                                             float magenta_hue,
                                             float red_sat,
+                                            float skin_sat,
                                             float yellow_sat,
                                             float green_sat,
                                             float cyan_sat,
                                             float blue_sat,
                                             float magenta_sat,
                                             float red_val,
+                                            float skin_val,
                                             float yellow_val,
                                             float green_val,
                                             float cyan_val,
@@ -170,6 +182,7 @@ __DEVICE__ tetra_params_t make_tetra_params(float red_input_hue,
     tetra_params_t params;
 
     params.red_input_hue = red_input_hue;
+    params.skin_input_hue = skin_input_hue;
     params.yellow_input_hue = yellow_input_hue;
     params.green_input_hue = green_input_hue;
     params.cyan_input_hue = cyan_input_hue;
@@ -177,6 +190,7 @@ __DEVICE__ tetra_params_t make_tetra_params(float red_input_hue,
     params.magenta_input_hue = magenta_input_hue;
 
     params.red_hue = red_hue;
+    params.skin_hue = skin_hue;
     params.yellow_hue = yellow_hue;
     params.green_hue = green_hue;
     params.cyan_hue = cyan_hue;
@@ -184,6 +198,7 @@ __DEVICE__ tetra_params_t make_tetra_params(float red_input_hue,
     params.magenta_hue = magenta_hue;
 
     params.red_sat = red_sat;
+    params.skin_sat = skin_sat;
     params.yellow_sat = yellow_sat;
     params.green_sat = green_sat;
     params.cyan_sat = cyan_sat;
@@ -191,6 +206,7 @@ __DEVICE__ tetra_params_t make_tetra_params(float red_input_hue,
     params.magenta_sat = magenta_sat;
 
     params.red_val = red_val;
+    params.skin_val = skin_val;
     params.yellow_val = yellow_val;
     params.green_val = green_val;
     params.cyan_val = cyan_val;
@@ -210,6 +226,7 @@ __DEVICE__ tetra_params_t limit_tetra_params(tetra_params_t params) {
     }
 
     float red_pos = params.red_input_hue + params.red_hue;
+    float skin_pos = params.skin_input_hue + params.skin_hue;
     float yellow_pos = params.yellow_input_hue + params.yellow_hue;
     float green_pos = params.green_input_hue + params.green_hue;
     float cyan_pos = params.cyan_input_hue + params.cyan_hue;
@@ -218,9 +235,15 @@ __DEVICE__ tetra_params_t limit_tetra_params(tetra_params_t params) {
 
     for (int i = 0; i < 12; i++) {
         bool updated = false;
-        if (red_pos > yellow_pos) {
-            float mid = (red_pos + yellow_pos) * 0.5f;
+        if (red_pos > skin_pos) {
+            float mid = (red_pos + skin_pos) * 0.5f;
             red_pos = mid;
+            skin_pos = mid;
+            updated = true;
+        }
+        if (skin_pos > yellow_pos) {
+            float mid = (skin_pos + yellow_pos) * 0.5f;
+            skin_pos = mid;
             yellow_pos = mid;
             updated = true;
         }
@@ -263,6 +286,7 @@ __DEVICE__ tetra_params_t limit_tetra_params(tetra_params_t params) {
     }
 
     params.red_hue = red_pos - params.red_input_hue;
+    params.skin_hue = skin_pos - params.skin_input_hue;
     params.yellow_hue = yellow_pos - params.yellow_input_hue;
     params.green_hue = green_pos - params.green_input_hue;
     params.cyan_hue = cyan_pos - params.cyan_input_hue;
@@ -287,6 +311,7 @@ __DEVICE__ float hue_v_hue_curve(float input_hue_rad, tetra_params_t params, flo
     // For input radians, output the number of radians to adjust the angle.
     float2 control_points[NUM_HUES] = {
         make_float2(params.red_input_hue, params.red_hue),
+        make_float2(params.skin_input_hue, params.skin_hue),
         make_float2(params.yellow_input_hue, params.yellow_hue),
         make_float2(params.green_input_hue, params.green_hue),
         make_float2(params.cyan_input_hue, params.cyan_hue),
@@ -300,6 +325,7 @@ __DEVICE__ float hue_v_sat_curve(float input_hue_rad, tetra_params_t params, flo
     // For input radians, output the multiplier to apply to saturation.
     float2 control_points[NUM_HUES] = {
         make_float2(params.red_input_hue, params.red_sat),
+        make_float2(params.skin_input_hue, params.skin_sat),
         make_float2(params.yellow_input_hue, params.yellow_sat),
         make_float2(params.green_input_hue, params.green_sat),
         make_float2(params.cyan_input_hue, params.cyan_sat),
@@ -313,6 +339,7 @@ __DEVICE__ float hue_v_gain_curve(float input_hue_rad, tetra_params_t params, fl
     // returns stops of gain at saturation = 1.
     float2 control_points[NUM_HUES] = {
         make_float2(params.red_input_hue, params.red_val),
+        make_float2(params.skin_input_hue, params.skin_val),
         make_float2(params.yellow_input_hue, params.yellow_val),
         make_float2(params.green_input_hue, params.green_val),
         make_float2(params.cyan_input_hue, params.cyan_val),
@@ -378,6 +405,7 @@ __DEVICE__ float3 mean_value(float3 input_hsl, tetra_params_t params, float pola
 
     float3 control_points[NUM_HUES] = {
         make_float3(params.red_input_hue, 1.0f, 0.0f),
+        make_float3(params.skin_input_hue, 1.0f, 0.0f),
         make_float3(params.yellow_input_hue, 1.0f, 0.0f),
         make_float3(params.green_input_hue, 1.0f, 0.0f),
         make_float3(params.cyan_input_hue, 1.0f, 0.0f),
@@ -429,24 +457,28 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float3 input = make_float3(p_R, p_G, p_B);
 
     tetra_params_t params = make_tetra_params(0.0f,
+                                              PI / 6.0f,
                                               PI / 3.0f,
                                               2.0f * PI / 3.0f,
                                               PI,
                                               4.0f * PI / 3.0f,
                                               5.0f * PI / 3.0f,
                                               deg_to_rad(red_hue),
+                                              deg_to_rad(skin_hue),
                                               deg_to_rad(yellow_hue),
                                               deg_to_rad(green_hue),
                                               deg_to_rad(cyan_hue),
                                               deg_to_rad(blue_hue),
                                               deg_to_rad(magenta_hue),
                                               red_sat,
+                                              skin_sat,
                                               yellow_sat,
                                               green_sat,
                                               cyan_sat,
                                               blue_sat,
                                               magenta_sat,
                                               red_val,
+                                              skin_val,
                                               yellow_val,
                                               green_val,
                                               cyan_val,
@@ -462,6 +494,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
         if (0.0f <= x && x <= 1.0f && 0.925f <= y && y <= 1.0f) {
             float input_hues[NUM_HUES] = {params.red_input_hue,
+                                          params.skin_input_hue,
                                           params.yellow_input_hue,
                                           params.green_input_hue,
                                           params.cyan_input_hue,

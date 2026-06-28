@@ -80,6 +80,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Read Noise DCTL](#read-noise-dctl)
         - [RGB Linear Contrast DCTL](#rgb-linear-contrast-dctl)
         - [Separable Gaussian Blur DCTL](#separable-gaussian-blur-dctl)
+        - [Smooth Tetra Skin DCTL](#smooth-tetra-skin-dctl)
         - [Smooth Tetra DCTL](#smooth-tetra-dctl)
         - [Subtractive Saturation DCTL](#subtractive-saturation-dctl)
         - [Timeshift Streaks DCTL](#timeshift-streaks-dctl)
@@ -1251,6 +1252,26 @@ This implementation is normalized so that the strength is scaled according to th
 
 ---
 
+### Smooth Tetra Skin DCTL
+Smoothed version of the classic Tetra HSV dctl, but with an added Skin segment. Guaranteed to be C1 continuous and to leave achromatic unaffected. I tested and developed it for linear, but you can try using it in other spaces too.
+
+#### DCTL Parameters
+**Red/Skin/Yellow/Green/Cyan/Blue/Magenta Hue**: Rotate the hue for this primary
+
+**Red/Skin/Yellow/Green/Cyan/Blue/Magenta Sat**: Add or reduce saturation for this primary
+
+**Red/Skin/Yellow/Green/Cyan/Blue/Magenta Val**: Number of stops to gain this primary up and down. The amount of stops of gain increases with saturation.
+
+**Polar Smoothness**: Controls how much falloff there is with hue. Larger means that there is **LESS** overlap between the different hue sliders, so the cutoff between one hue region and the next will be more abrupt as you sweep through the hues. Note that I've set the default in this one to be a little more targeted than in [Smooth Tetra DCTL](#smooth-tetra-dctl).
+
+**Neutral Smoothness**: This indicates the radius around the achromatic axis that we will try to smooth the adjustments. 0 means that it will NOT be C1 continuous around the achromatic. Note that inevitably, when in order to maintain smoothness around the achromatic, when this parameter is positive, then some adjustments to say the Red sliders may affect the colors of lower-saturation Cyans and other hues within the smoothed radius.
+
+**Smooth Neutrals**: Quickly toggle on and off smoothening of the achromatic axis.
+
+**Draw Swatches**: Toggles on some swatches so you can see what hues your adjustments correspond to. These swatches are drawn *upstream* of the tool, so they're affected by the Hue/Sat/Val sliders.
+
+---
+
 ### Smooth Tetra DCTL
 Smoothed version of the classic Tetra HSV dctl. Guaranteed to be C1 continuous and to leave achromatic unaffected. I tested it in linear, but you can try using it in other spaces too.
 
@@ -1266,6 +1287,8 @@ Smoothed version of the classic Tetra HSV dctl. Guaranteed to be C1 continuous a
 **Neutral Smoothness**: This indicates the radius around the achromatic axis that we will try to smooth the adjustments. 0 means that it will NOT be C1 continuous around the achromatic. Note that inevitably, when in order to maintain smoothness around the achromatic, when this parameter is positive, then some adjustments to say the Red sliders may affect the colors of lower-saturation Cyans and other hues within the smoothed radius.
 
 **Smooth Neutrals**: Quickly toggle on and off smoothening of the achromatic axis.
+
+**Draw Swatches**: Toggles on some swatches so you can see what hues your adjustments correspond to. These swatches are drawn *upstream* of the tool, so they're affected by the Hue/Sat/Val sliders.
 
 ---
 
