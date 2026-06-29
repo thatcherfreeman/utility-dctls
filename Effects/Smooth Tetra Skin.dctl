@@ -400,8 +400,9 @@ __DEVICE__ float3 best_fit_plane_3d(float2 input_coords, float2 control_points_x
 
 __DEVICE__ float3 mean_value(float3 input_hsl, tetra_params_t params, float polar_smoothness) {
     // We will build a plane best fit to go through the origin and go as close to the six points (theta, *_val) as possible.
-    // This plane will be specified as z = a * r * cos(theta) + b * r * sin(theta), though we will rework it into polar coordinates and evaluate at r =
-    // hsl.x, theta = hsl.y
+    // The input is in HSL space but we will transform to ABZ = (S*cos(H), S*sin(H), L), then simultaneously fit three planes R2 -> R1 
+    // to these ABZ space control points. We will then lookup the new ABZ values based on input_hs (transformed to input_xy) on the three
+    // planes.
 
     float3 control_points[NUM_HUES] = {
         make_float3(params.red_input_hue, 1.0f, 0.0f),
