@@ -2,7 +2,7 @@
 DEFINE_UI_PARAMS(exposure, Exposure, DCTLUI_SLIDER_FLOAT, 0.0, -10.0, 10.0, 0.001)
 DEFINE_UI_PARAMS(max_saturation, Max Saturation, DCTLUI_SLIDER_FLOAT, 1.0f, 0.0f, 5.0f, 0.01f)
 DEFINE_UI_PARAMS(num_hues, Number of Hues, DCTLUI_SLIDER_INT, 24, 3, 72, 1)
-DEFINE_UI_PARAMS(num_cols, Number of Saturations, DCTLUI_SLIDER_INT, 8, 1, 100, 1)
+DEFINE_UI_PARAMS(num_cols, Number of Saturations, DCTLUI_SLIDER_INT, 10, 1, 100, 1)
 DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
 DEFINE_UI_PARAMS(clamp_output_min, Min Clamp, DCTLUI_VALUE_BOX, 0.0)
 DEFINE_UI_PARAMS(clamp_output_max, Max Clamp, DCTLUI_VALUE_BOX, 1.0)
