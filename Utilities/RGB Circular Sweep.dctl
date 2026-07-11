@@ -1,0 +1,125 @@
+// clang-format off
+DEFINE_UI_PARAMS(exposure, Exposure, DCTLUI_SLIDER_FLOAT, 0.0, -10.0, 10.0, 0.001)
+DEFINE_UI_PARAMS(max_saturation, Max Saturation, DCTLUI_SLIDER_FLOAT, 1.0f, 0.0f, 2.0f, 0.01f)
+DEFINE_UI_PARAMS(num_hues, Number of Hues, DCTLUI_SLIDER_INT, 24, 3, 72, 1)
+DEFINE_UI_PARAMS(num_cols, Number of Saturations, DCTLUI_SLIDER_INT, 8, 1, 100, 1)
+DEFINE_UI_PARAMS(mid_gray, Mid Gray, DCTLUI_VALUE_BOX, 0.18)
+DEFINE_UI_PARAMS(clamp_output_min, Min Clamp, DCTLUI_VALUE_BOX, 0.0)
+DEFINE_UI_PARAMS(clamp_output_max, Max Clamp, DCTLUI_VALUE_BOX, 1.0)
+DEFINE_UI_PARAMS(clamp_output, Clamp Output, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(vertical, Vertical, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(shape, Shape, DCTLUI_COMBO_BOX, 0, {CIRCULAR, TRIANGULAR}, {Circular, Triangular})
+DEFINE_UI_PARAMS(continuous, Continuous Mode, DCTLUI_COMBO_BOX, 1, {DISCRETE, CONTINUOUS_HUE, CONTINUOUS_SAT, CONTINUOUS_BOTH}, {Discrete, Continuous Hue, Continuous Saturation, Fully Continuous})
+
+// clang-format on
+
+#define PI 3.1415926535897932384626f
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float3 cylindrical_to_rgb(float hue, float sat, float value) {
+    // Adapted from Juan Pablo Zambrano's code
+    // hue is in range of 0-360
+    float3 lsh = make_float3(value, sat * 3.0f, mod(hue, 360.0f) * 2.0f * PI / 360.0f);
+
+    float ctr = lsh.x * lsh.y * _cosf(lsh.z);
+    float ctg = lsh.x;
+    float ctb = lsh.x * lsh.y * _sinf(lsh.z);
+    float3 c = make_float3(ctr, ctg, ctb);
+
+    float mat[3][3] = {
+        {2.0f / 3.0f, 1.0f, 0.0f},
+        {-1.0f / 3.0f, 1.0f, _sqrtf(3.0f) / 3.0f},
+        {-1.0f / 3.0f, 1.0f, -_sqrtf(3.0f) / 3.0f},
+    };
+
+    return mv_33_3(mat, c);
+}
+
+__DEVICE__ float unmix(float y, float x1, float x2) {
+    // Return t such that (x2 - x1) * t + x1 = y
+    if (x2 == x1) {
+        return 0.0f;
+    }
+    return (y - x1) / (x2 - x1);
+}
+
+__DEVICE__ float3 rescaled_cylindrical_to_rgb(float hue, float sat, float value) {
+    // 1.0 saturation going to be rescaled to be on border of cube.
+    float3 full_sat_cylindrical = cylindrical_to_rgb(hue, 0.5f, value);
+
+    // output_point = no_sat_cylindrical + (full_sat_cylindrical - no_sat_cylindrical) * t
+
+    // Check collision with each face of the cube.
+    float min_channel = _fminf(_fminf(full_sat_cylindrical.x, full_sat_cylindrical.y), full_sat_cylindrical.z);
+    float x1 = value;
+    float x2;
+    if (min_channel == full_sat_cylindrical.x) {
+        x2 = full_sat_cylindrical.x;
+    } else if (min_channel == full_sat_cylindrical.y) {
+        x2 = full_sat_cylindrical.y;
+    } else {
+        x2 = full_sat_cylindrical.z;
+    }
+
+    // t represents saturation needed to reach cube boundary.
+    float t = unmix(0.0f, x1, x2);
+    return _mix(make_float3(value, value, value), full_sat_cylindrical, t * sat);
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+
+    float x = (float)(p_X) / (float)(p_Width);
+    float y = (float)(p_Y) / (float)(p_Height);
+
+    if (vertical) {
+        float temp = x;
+        x = y;
+        y = temp;
+    }
+
+    float curr_row_cont = y * num_hues;
+    float curr_col_cont = x * num_cols;
+    float curr_row = curr_row_cont;
+    float curr_col = curr_col_cont;
+
+    if (continuous == CONTINUOUS_HUE || continuous == DISCRETE) {
+        curr_col = _floorf(curr_col_cont);
+    }
+    if (continuous == CONTINUOUS_SAT || continuous == DISCRETE) {
+        curr_row = _floorf(curr_row_cont);
+    }
+
+    float3 rgb;
+    float3 hsv;
+
+    hsv = make_float3((curr_row / num_hues) * 360.0f, curr_col / (num_cols - 1) * max_saturation, mid_gray);
+
+    if (shape == CIRCULAR) {
+        rgb = cylindrical_to_rgb(hsv.x, hsv.y * 0.5f, hsv.z) * _exp2f(exposure);
+    } else if (shape == TRIANGULAR) {
+        rgb = rescaled_cylindrical_to_rgb(hsv.x, hsv.y, hsv.z) * _exp2f(exposure);
+    }
+
+    if (clamp_output) {
+        if (rgb.x > clamp_output_max || rgb.y > clamp_output_max || rgb.z > clamp_output_max || rgb.x < clamp_output_min || rgb.y < clamp_output_min ||
+            rgb.z < clamp_output_min) {
+            rgb = make_float3(clamp_output_min, clamp_output_min, clamp_output_min);
+        }
+    }
+
+    return rgb;
+}

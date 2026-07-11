@@ -160,6 +160,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Resize Checker DCTL](#resize-checker-dctl)
         - [Resolution Display DCTL](#resolution-display-dctl)
         - [RGB Chips DCTL](#rgb-chips-dctl)
+        - [RGB Circular Sweep DCTL](#rgb-circular-sweep-dctl)
         - [Safety Lines DCTL](#safety-lines-dctl)
         - [Screen Size Simulator DCTL](#screen-size-simulator-dctl)
         - [SNR Checker DCTL](#snr-checker-dctl)
@@ -2754,6 +2755,36 @@ Creates rows of colored chips at the specified increment of stops. Outputs a Lin
 **Continuous Mode**: Choose whether each chip should be discrete, or if hue, exposure, or both should be continuous.
 
 **Row Gaps**: If set not to None, draws neutral stripes between the colors so adjacent rows don't mess up your perception.
+
+---
+
+### RGB Circular Sweep DCTL
+
+Draws a plot where for a single exposure, we have a range of hues and saturations. This helps you identify smoothness issues at varying levels of saturation.
+
+Similar to **RGB Chips**. While RGB Chips and Gradient Smoothness Chart draw a plane in which the user needs to sweep Saturation and Hue, this draws a plane in which the user must sweep exposure. You should likely consider the output chart to be Linear, but I'm not gonna stop you.
+
+#### DCTL Parameters
+
+**Exposure**: Slider is in stops, gains up the chart so you can sweep in terms of brightness.
+
+**Max Saturation**: Control how saturated the most saturated ring is.
+
+**Number of Hues**: Number of unique hues in Continuous Saturations and Discrete modes.
+
+**Number of Saturations**: Number of unique saturations in Continuous Hue or Discrete modes.
+
+**Mid Gray**: Mid Gray value, specifies the code value of the grey row in the chart.
+
+**Min/Max Clamp**: Indicate the code value to clamp off (if Clamp Output is enabled)
+
+**Clamp Output**: Check to remove all values outside of the Min/Max Clamp range
+
+**Vertical**: Turns the chart 90 degrees so it's vertical instead
+
+**Shape**: If set to circular, then the hue sweeps will be guaranteed to be smooth. If set to Triangular, they will reach into the corners of the cube and reach 100% max hsv saturation.
+
+**Continuous Mode**: Indicate whether chips should be discrete or continuous in hue and saturation directions, or both.
 
 ---
 
