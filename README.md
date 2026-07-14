@@ -57,7 +57,8 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Film Grain DCTL](#film-grain-dctl)
         - [Fixed SNR Noise DCTL](#fixed-snr-noise-dctl)
         - [FXAA DCTL](#fxaa-dctl)
-        - [Gain Normalization](#gain-normalization)
+        - [Gain Normalization DCTL](#gain-normalization-dctl)
+        - [Gamut Compression DCTL](#gamut-compression-dctl)
         - [Halation DCTL](#halation-dctl)
         - [Hot Pixel Noise](#hot-pixel-noise)
         - [Hue Curve DCTL](#hue-curve-dctl)
@@ -688,7 +689,7 @@ Port of FXAA to DCTL. As an algorithm, FXAA is built around SDR images. Strictly
 
 ---
 
-### Gain Normalization
+### Gain Normalization DCTL
 
 **Note**: Just use the [Rebind LGGO DCTL](#rebind-lggo-dctl) below.
 
@@ -699,6 +700,18 @@ Make a sandwich of two of these DCTLs, with the first set to Reference White and
 **Mode**: If set to Reference white, this replaces the top left pixel with a (1, 1, 1) chip. If set to Normalize, this reads that chip, computes a normalization, and then applies an exposure adjustment to bring the rendered chip to 1. Also clones over the chip so that it's not visible in your image anymore.
 
 **Normalization**: Choose between Max or Mean to determine whether the max of the channels of the pixel in the corner is used, or the mean of its channels.
+
+---
+
+### Gamut Compression DCTL
+
+Moves all RGB code values to be >= 0, within the current set of primaries. This works via per-channel compression, similarly to the ACES implementation. Expects a **scene linear image** within the set of primaries that you're trying to compress into.
+
+#### How it works
+Fairly simply, we compute the L2 norm $\sqrt{R^2 + G^2 + B^2}$. Then, for each channel we divide by this norm and apply a hockey-stick shaped [curve](https://www.desmos.com/calculator/t1l5wiv0zk) that maps all inputs nonnegative. For $x >> 0$, $f(x)$ approaches $y = x$, and for $x << 0$, $f(x)$ approaches $y = 0$ from above. Afterwards, we multiply the norm back in.
+
+#### DCTL Parameters
+**Compress Cyan/Magenta/Yellow**: Controls the rolloff for the curve for each channel. Lower is more abrupt, higher will desaturate more.
 
 ---
 

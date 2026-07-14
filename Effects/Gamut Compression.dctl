@@ -1,0 +1,38 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(compress_cyan, Compress Cyan, DCTLUI_SLIDER_FLOAT, 0.07, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(compress_magenta, Compress Magenta, DCTLUI_SLIDER_FLOAT, 0.13, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(compress_yellow, Compress Yellow, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 0.001)
+// clang-format on
+
+__DEVICE__ float black_point_curve(float x, float output_black_point) {
+    // Output guaranteed to be >= 0, f(0) = output_black_point.
+    // https://www.desmos.com/calculator/t1l5wiv0zk
+
+    if (output_black_point == 0.0f) {
+        return _fmaxf(0.0f, x);
+    }
+
+    float scale = _logf(2.0f) / output_black_point;
+    return 1.0f / scale * (_logf(1.0f + _expf(-1.0f * _fabs(scale * x))) + _fmaxf(0.0f, scale * x));
+}
+
+__DEVICE__ float3 gamut_compression(float3 input, float3 curve_strength) {
+    float norm = _sqrtf(input.x * input.x + input.y * input.y + input.z * input.z);
+    if (norm == 0.0f) {
+        return make_float3(0.0f, 0.0f, 0.0f);
+    }
+
+    float3 output;
+    output.x = black_point_curve(input.x / norm, curve_strength.x) * norm;
+    output.y = black_point_curve(input.y / norm, curve_strength.y) * norm;
+    output.z = black_point_curve(input.z / norm, curve_strength.z) * norm;
+    return output;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 input = make_float3(p_R, p_G, p_B);
+    float3 output = gamut_compression(input, make_float3(compress_cyan, compress_magenta, compress_yellow));
+    return output;
+}
