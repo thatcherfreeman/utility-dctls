@@ -1259,9 +1259,13 @@ Simple Gamma/Gain saturation curve, where you can choose what sort of norm is pr
 
 #### DCTL Parameters
 
-**Sat Gamma/Gain**: Adjusts gamma and gain of Sat V Sat curve
+**Gamma/Gain**: Adjusts gamma and gain of Sat V Sat curve
 
-**Sat Gamma Pivot**: Controls pivot point for the gamam adjustment
+**Gamma Pivot**: Controls pivot point for the gamam adjustment
+
+**Rolloff Level**: Reduces the maximum saturation.
+
+**Rolloff Smoothness**: Controls the smoothness of the sat rolloff curve
 
 **Draw Curve**: Plots the sat v sat curve, with indicators for 1.0 saturation and for the gamma pivot point.
 

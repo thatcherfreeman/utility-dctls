@@ -1,7 +1,9 @@
 // clang-format off
-DEFINE_UI_PARAMS(sat_gamma, Sat Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -0.9, 0.9, 0.001)
-DEFINE_UI_PARAMS(sat_gain, Sat Gain, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
-DEFINE_UI_PARAMS(sat_gamma_control, Sat Gamma Pivot, DCTLUI_SLIDER_FLOAT, 1.0, 0.1, 2.0, 0.001)
+DEFINE_UI_PARAMS(sat_gamma, Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -0.9, 0.9, 0.001)
+DEFINE_UI_PARAMS(sat_gain, Gain, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(sat_gamma_control, Gamma Pivot, DCTLUI_SLIDER_FLOAT, 1.0, 0.1, 2.0, 0.001)
+DEFINE_UI_PARAMS(sat_rolloff_level, Rolloff Level, DCTLUI_SLIDER_FLOAT, 2.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(sat_rolloff, Rolloff Smoothness, DCTLUI_SLIDER_FLOAT, 0.05, 0.0, 2.0, 0.001)
 DEFINE_UI_PARAMS(draw_curve, Draw Curve, DCTLUI_CHECK_BOX, 0)
 DEFINE_UI_PARAMS(preserve_norm, Preserve Norm, DCTLUI_COMBO_BOX, 1, {BOLTZMAN_MAX, BOLTZMAN_MIN, MAX, MIN, GEOM, MEAN, HARMONIC, L2_NORM}, {Boltzman Soft Maximum, Boltzman Soft Minimum, Maximum Channel (Value), Minimum Channel, Geometric Mean, Arithmetic Mean, Harmonic Mean, L2 Norm})
 
@@ -54,9 +56,36 @@ __DEVICE__ float gamma_func(float x, float exp, bool use_better_gamma) {
     }
 }
 
-__DEVICE__ float saturation_curve(float x, float gamma, float gamma_control, float gain) {
+__DEVICE__ float sat_rolloff_curve(float x, float rolloff) {
+    if (rolloff == 0.0f) {
+        return x;
+    }
+    float coeff = 1.0f / rolloff;
+    return coeff * x / (coeff + x);
+}
+
+__DEVICE__ float smooth_relu(float x, float a) {
+    if (a == 0.0f) {
+        return x;
+    }
+    return 1.0f / a * _logf(1.0f + _expf(-1.0f * a * x)) + x;
+}
+
+__DEVICE__ float sat_rolloff_curve_v2(float x, float rolloff, float level) {
+    // https://www.desmos.com/calculator/bcqte45oii
+    if (rolloff == 0.0f || level == 2.0f) {
+        return x;
+    }
+    float a = _logf(2.0f) / rolloff;
+    return level - smooth_relu(level - x, a) - (level - smooth_relu(level, a));
+}
+
+__DEVICE__ float saturation_curve(float x, float gamma, float gamma_control, float gain, float rolloff, float rolloff_level) {
     // Obviously could make this more complicated later
-    return gamma_func(x / gamma_control, 1.0f - gamma, true) * gamma_control * gain;
+    float out = gamma_func(x / gamma_control, 1.0f - gamma, true) * gamma_control;
+    out = out * gain;
+    out = sat_rolloff_curve_v2(out, rolloff, rolloff_level);
+    return out;
 }
 
 __DEVICE__ float compute_norm(float3 input_rgb, int switcher) {
@@ -100,7 +129,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     float saturation_measure =
         _sqrtf(mean_normalized.x * mean_normalized.x + mean_normalized.y * mean_normalized.y + mean_normalized.z * mean_normalized.z) / mean;
 
-    float new_saturation = saturation_curve(saturation_measure, sat_gamma, sat_gamma_control, sat_gain);
+    float new_saturation = saturation_curve(saturation_measure, sat_gamma, sat_gamma_control, sat_gain, sat_rolloff, sat_rolloff_level);
     float saturation_ratio = new_saturation / saturation_measure;
     if (saturation_measure == 0.0f || isnan(saturation_measure)) {
         saturation_ratio = 1.0f;
@@ -116,7 +145,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
 
         y *= 1.5f;
         x *= 1.5f;
-        float chart_y = saturation_curve(x, sat_gamma, sat_gamma_control, sat_gain);
+        float chart_y = saturation_curve(x, sat_gamma, sat_gamma_control, sat_gain, sat_rolloff, sat_rolloff_level);
         if (_fabs(x - 1.0f) < 0.002f) {
             output = make_float3(0.5f, 0.5f, 0.5f);
         }
