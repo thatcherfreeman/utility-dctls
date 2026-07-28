@@ -1,0 +1,343 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(red_contrast, Red Contrast, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(yellow_contrast, Yellow Contrast, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(green_contrast, Green Contrast, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(cyan_contrast, Cyan Contrast, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(blue_contrast, Blue Contrast, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(magenta_contrast, Magenta Contrast, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+
+DEFINE_UI_PARAMS(polar_smoothness, Polar Smoothness, DCTLUI_SLIDER_FLOAT, 3.0, 0.0, 10.0, 0.001)
+DEFINE_UI_PARAMS(neutral_smoothness, Neutral Smoothness, DCTLUI_SLIDER_FLOAT, 0.3, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(smooth_neutrals, Smooth Neutrals, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(draw_swatches, Draw Swatches, DCTLUI_CHECK_BOX, 0)
+
+// clang-format on
+
+#define PI (3.141592653589793238f)
+#define NUM_HUES 6
+
+__DEVICE__ inline float rad_to_deg(float deg) {
+    return deg * 360.0f / (2.0f * PI);
+}
+
+__DEVICE__ inline float deg_to_rad(float rad) {
+    return rad * (2.0f * PI) / 360.0f;
+}
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ inline float arctan2f(float y, float x) {
+    float angle = _atan2f(y, x);
+    if (isnan(angle)) {
+        // Handle NaN case
+        return 0.0f;
+    }
+    return angle;
+}
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
+    // Adapted from Juan Pablo Zambrano's code
+    // hue is in range of 0-1
+    float3 lsh = make_float3(hsv.z, hsv.y * 3.0f, mod(hsv.x, 2.0f * PI));
+
+    float ctr = lsh.x * lsh.y * _cosf(lsh.z);
+    float ctg = lsh.x;
+    float ctb = lsh.x * lsh.y * _sinf(lsh.z);
+    float3 c = make_float3(ctr, ctg, ctb);
+
+    float mat[3][3] = {
+        {2.0f / 3.0f, 1.0f, 0.0f},
+        {-1.0f / 3.0f, 1.0f, _sqrtf(3.0f) / 3.0f},
+        {-1.0f / 3.0f, 1.0f, -_sqrtf(3.0f) / 3.0f},
+    };
+
+    return mv_33_3(mat, c);
+}
+
+__DEVICE__ float3 rgb_to_cylindrical(float3 x) {
+
+    // Matrix aligns and scales achromatic white (1, 1, 1) with (0, 1, 0)
+    // Also rotates input (1, 0, 0) above the red axis and ensures that
+    // (1, 0, 0) input ends up having a red channel code value of (1).
+    // outputs hue in range 0-1
+    float mat[3][3] = {
+        {1.0f, -1.0f / 2.0f, -1.0f / 2.0f},
+        {1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f},
+        {0.0f, _sqrtf(3.0f) / 2.0f, -_sqrtf(3.0f) / 2.0f},
+    };
+
+    float3 rotated_color = mv_33_3(mat, x);
+    float l = rotated_color.y;
+    float3 hsl = make_float3(0.0f, 0.0f, 0.0f);
+
+    float3 normalized_color = rotated_color / l;
+    if (l == 0.0f) {
+        hsl = make_float3(0.0f, 0.0f, l);
+    } else {
+        float theta = arctan2f(normalized_color.z, normalized_color.x);
+        hsl.x = mod(theta, 2.0f * PI);
+        hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0f;
+        hsl.z = l;
+    }
+    return hsl;
+}
+
+typedef struct {
+        float red_input_hue;
+        float yellow_input_hue;
+        float green_input_hue;
+        float cyan_input_hue;
+        float blue_input_hue;
+        float magenta_input_hue;
+
+        float red_contrast;
+        float yellow_contrast;
+        float green_contrast;
+        float cyan_contrast;
+        float blue_contrast;
+        float magenta_contrast;
+} tetra_params_t;
+
+__DEVICE__ tetra_params_t make_tetra_params(float red_input_hue,
+                                            float yellow_input_hue,
+                                            float green_input_hue,
+                                            float cyan_input_hue,
+                                            float blue_input_hue,
+                                            float magenta_input_hue,
+                                            float red_contrast,
+                                            float yellow_contrast,
+                                            float green_contrast,
+                                            float cyan_contrast,
+                                            float blue_contrast,
+                                            float magenta_contrast) {
+    tetra_params_t params;
+
+    params.red_input_hue = red_input_hue;
+    params.yellow_input_hue = yellow_input_hue;
+    params.green_input_hue = green_input_hue;
+    params.cyan_input_hue = cyan_input_hue;
+    params.blue_input_hue = blue_input_hue;
+    params.magenta_input_hue = magenta_input_hue;
+
+    params.red_contrast = red_contrast;
+    params.yellow_contrast = yellow_contrast;
+    params.green_contrast = green_contrast;
+    params.cyan_contrast = cyan_contrast;
+    params.blue_contrast = blue_contrast;
+    params.magenta_contrast = magenta_contrast;
+    return params;
+}
+
+__DEVICE__ float interpolate(float input_rad, float2 control_points[NUM_HUES], float smoothness) {
+    float denom = 0.0f;
+    float num = 0.0f;
+    for (int i = 0; i < NUM_HUES; i++) {
+        float weight = _expf(smoothness * _cosf(input_rad - control_points[i].x));
+        num += weight * control_points[i].y;
+        denom += weight;
+    }
+    return num / denom;
+}
+
+__DEVICE__ float hue_v_contrast_curve(float input_hue_rad, tetra_params_t params, float smoothness) {
+    // returns stops of gain at saturation = 1.
+    float2 control_points[NUM_HUES] = {
+        make_float2(params.red_input_hue, params.red_contrast),
+        make_float2(params.yellow_input_hue, params.yellow_contrast),
+        make_float2(params.green_input_hue, params.green_contrast),
+        make_float2(params.cyan_input_hue, params.cyan_contrast),
+        make_float2(params.blue_input_hue, params.blue_contrast),
+        make_float2(params.magenta_input_hue, params.magenta_contrast),
+    };
+    return interpolate(input_hue_rad, control_points, smoothness);
+}
+
+__DEVICE__ float evaluate_hue_curves(float input_hue, tetra_params_t params, float smoothness) {
+    float contrast = hue_v_contrast_curve(input_hue, params, smoothness);
+    return contrast;
+}
+
+__DEVICE__ float tetra_unsmooth(float3 input_hsl, tetra_params_t params, float polar_smoothness) {
+    // Input hue in radians, saturation, luminance (ignored)
+    // Returns output x, y, stops adjustment
+    // x = cos(hue) * sat, y = sin(hue) * sat, z = gain in stops
+    // R^3 -> R^3 function.
+    float output_contrast = evaluate_hue_curves(input_hsl.x, params, polar_smoothness);
+    return output_contrast;
+}
+
+__DEVICE__ float best_fit_plane_1d(float2 input_coords, float2 control_points_xy[NUM_HUES], float control_points_z[NUM_HUES]) {
+    // Control points should be (x,y,z) values, not polar
+    // Build plane to average out those inputs.
+    float sum_xy = 0.0f;
+    float sum_xz = 0.0f;
+    float sum_yz = 0.0f;
+    float sum_yy = 0.0f;
+    float sum_xx = 0.0f;
+    for (int i = 0; i < NUM_HUES; i++) {
+        float2 control_point = control_points_xy[i];
+        float control_point_z = control_points_z[i];
+
+        sum_xx += control_point.x * control_point.x;
+        sum_xy += control_point.x * control_point.y;
+        sum_xz += control_point.x * control_point_z;
+        sum_yy += control_point.y * control_point.y;
+        sum_yz += control_point.y * control_point_z;
+    }
+
+    float denom = sum_xx * sum_yy - sum_xy * sum_xy;
+    float a = (sum_yy * sum_xz - sum_xy * sum_yz) / denom;
+    float b = (sum_xx * sum_yz - sum_xy * sum_xz) / denom;
+
+    // Resulting gain value at point input_hsl (in stops)
+    float z = a * input_coords.x + b * input_coords.y;
+    return z;
+}
+
+__DEVICE__ float mean_value(float3 input_hsl, tetra_params_t params, float polar_smoothness) {
+    // We will build a plane best fit to go through the origin and go as close to the six points (theta, *_val) as possible.
+    // The input is in HSL space but we will transform to ABZ = (S*cos(H), S*sin(H), L), then simultaneously fit three planes R2 -> R1
+    // to these ABZ space control points. We will then lookup the new ABZ values based on input_hs (transformed to input_xy) on the three
+    // planes.
+
+    float3 control_points[NUM_HUES] = {
+        make_float3(params.red_input_hue, 1.0f, 0.0f),
+        make_float3(params.yellow_input_hue, 1.0f, 0.0f),
+        make_float3(params.green_input_hue, 1.0f, 0.0f),
+        make_float3(params.cyan_input_hue, 1.0f, 0.0f),
+        make_float3(params.blue_input_hue, 1.0f, 0.0f),
+        make_float3(params.magenta_input_hue, 1.0f, 0.0f),
+    };
+
+    float2 input_xy = make_float2(_cosf(input_hsl.x) * input_hsl.y, _sinf(input_hsl.x) * input_hsl.y);
+
+    // Figure out what tetra unsmooth does to the six standard inputs.
+    float2 control_points_xy[NUM_HUES] = {};
+    float control_points_z[NUM_HUES] = {};
+    for (int i = 0; i < NUM_HUES; i++) {
+        float contrast = tetra_unsmooth(control_points[i], params, polar_smoothness);
+        float2 input_control_point_xy = make_float2(_cosf(control_points[i].x) * control_points[i].y, _sinf(control_points[i].x) * control_points[i].y);
+
+        control_points_xy[i] = make_float2(input_control_point_xy.x, input_control_point_xy.y);
+        control_points_z[i] = contrast;
+    }
+
+    // Build plane to average out those inputs.
+    float plane_contrast = best_fit_plane_1d(input_xy, control_points_xy, control_points_z);
+
+    return plane_contrast;
+}
+
+__DEVICE__ float tetra_smooth_preserve_neutral(float3 input_hsl, tetra_params_t params, float polar_smoothness, float neutral_smoothness) {
+    // This is going to be the mean surface that will be smooth at r = 0. We interpolate to this for small r,
+    // Obviously better if this surface has similar behavior to the unsmooth surface for larger r.
+    float computed_mean_contrast = mean_value(input_hsl, params, polar_smoothness);
+
+    float unsmooth_adjustment = tetra_unsmooth(input_hsl, params, polar_smoothness);
+
+    float curr_radius = input_hsl.y;
+    // float curr_radius = _hypotf(unsmooth_adjustment.x, unsmooth_adjustment.y);
+    float bump = _exp2f(-1.0f * curr_radius * curr_radius / (neutral_smoothness * neutral_smoothness));
+    if (neutral_smoothness == 0.0f) {
+        bump = 0.0f;
+    }
+    float output_contrast = _mix(unsmooth_adjustment, computed_mean_contrast, bump);
+    return output_contrast;
+}
+
+__DEVICE__ float gamma_func(float x, float exp) {
+    // Use new method when raising contrast, use gamma when lowering contrast.
+    bool use_better_gamma = exp > 1.0f;
+    // use_better_gamma = true;
+
+    if (use_better_gamma) {
+        // https://www.desmos.com/calculator/tgdywj6vy8
+
+        if (exp == 0.0f) {
+            return 1.0f;
+        }
+
+        float better_param = 1.0f / exp;
+
+        if (x <= 0.0f) {
+            return better_param * x;
+        } else if (x < 1.0f) {
+            return better_param * x / ((better_param - 1.0f) * x + 1.0f);
+        } else {
+            float slope = 1.0f - ((better_param - 1.0f) / better_param);
+            return slope * (x - 1.0f) + 1.0f;
+        }
+    } else {
+        return powf(x, exp);
+    }
+}
+
+__DEVICE__ float3 gamma_func_f3(float3 x, float exp) {
+    return make_float3(gamma_func(x.x, exp), gamma_func(x.y, exp), gamma_func(x.z, exp));
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 input = make_float3(p_R, p_G, p_B);
+
+    tetra_params_t params = make_tetra_params(0.0f,
+                                              PI / 3.0f,
+                                              2.0f * PI / 3.0f,
+                                              PI,
+                                              4.0f * PI / 3.0f,
+                                              5.0f * PI / 3.0f,
+                                              red_contrast,
+                                              yellow_contrast,
+                                              green_contrast,
+                                              cyan_contrast,
+                                              blue_contrast,
+                                              magenta_contrast);
+
+    float3 input_hsl = rgb_to_cylindrical(input);
+
+    if (draw_swatches) {
+        float x = p_X / (float)(p_Width);
+        float y = p_Y / (float)(p_Height);
+
+        if (0.0f <= x && x <= 1.0f && 0.925f <= y && y <= 1.0f) {
+            float input_hues[NUM_HUES] = {params.red_input_hue,
+                                          params.yellow_input_hue,
+                                          params.green_input_hue,
+                                          params.cyan_input_hue,
+                                          params.blue_input_hue,
+                                          params.magenta_input_hue};
+
+            int index = (int)(x * (NUM_HUES));
+            input_hsl = make_float3(input_hues[index], 0.25f, 0.18f);
+        }
+    }
+
+    float output_contrast = 0.0f;
+    if (smooth_neutrals) {
+        output_contrast = tetra_smooth_preserve_neutral(input_hsl, params, polar_smoothness, neutral_smoothness);
+    } else {
+        output_contrast = tetra_unsmooth(input_hsl, params, polar_smoothness);
+    }
+
+    float3 output = gamma_func_f3(input / 0.18f, output_contrast + 1.0f) * 0.18f;
+
+    return output;
+}
