@@ -80,6 +80,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Random Linear Contrast](#random-linear-contrast)
         - [Read Noise DCTL](#read-noise-dctl)
         - [RGB Linear Contrast DCTL](#rgb-linear-contrast-dctl)
+        - [Saturation Curve DCTL](#saturation-curve-dctl)
         - [Separable Gaussian Blur DCTL](#separable-gaussian-blur-dctl)
         - [Smooth Tetra Skin DCTL](#smooth-tetra-skin-dctl)
         - [Smooth Tetra DCTL](#smooth-tetra-dctl)
@@ -1249,6 +1250,22 @@ The DCTL works in three steps:
 **Mid Gray**: Specifies the middle gray code value.
 
 **Ungroup RGB**: If unchecked, only applies the Neutral Gamma, otherwise applies both Neutral gamma and the Color Gamma, multiplying together those two powers.
+
+---
+
+### Saturation Curve DCTL
+
+Simple Gamma/Gain saturation curve, where you can choose what sort of norm is preserved. Supports a variety, generally if you're preserving Min, then adding saturation makes colors brighter and reducing saturation makes them darker. If you're preserving Max, then adding saturation makes colors darker and reducing saturation makes them brighter.
+
+#### DCTL Parameters
+
+**Sat Gamma/Gain**: Adjusts gamma and gain of Sat V Sat curve
+
+**Sat Gamma Pivot**: Controls pivot point for the gamam adjustment
+
+**Draw Curve**: Plots the sat v sat curve, with indicators for 1.0 saturation and for the gamma pivot point.
+
+**Preserve Norm**: Choose the function of R,G,B that's preserved from before/after this saturation operation.
 
 ---
 

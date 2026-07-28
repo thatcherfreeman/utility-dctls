@@ -1,0 +1,134 @@
+// clang-format off
+DEFINE_UI_PARAMS(sat_gamma, Sat Gamma, DCTLUI_SLIDER_FLOAT, 0.0, -0.9, 0.9, 0.001)
+DEFINE_UI_PARAMS(sat_gain, Sat Gain, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(sat_gamma_control, Sat Gamma Pivot, DCTLUI_SLIDER_FLOAT, 1.0, 0.1, 2.0, 0.001)
+DEFINE_UI_PARAMS(draw_curve, Draw Curve, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(preserve_norm, Preserve Norm, DCTLUI_COMBO_BOX, 1, {BOLTZMAN_MAX, BOLTZMAN_MIN, MAX, MIN, GEOM, MEAN, HARMONIC, L2_NORM}, {Boltzman Soft Maximum, Boltzman Soft Minimum, Maximum Channel (Value), Minimum Channel, Geometric Mean, Arithmetic Mean, Harmonic Mean, L2 Norm})
+
+// clang-format on
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float pow2f(float base) {
+    return powf(_fabs(base), 2.0f);
+}
+
+__DEVICE__ float maxf3(float3 x) {
+    return _fmaxf(_fmaxf(x.x, x.y), x.z);
+}
+
+__DEVICE__ float minf3(float3 x) {
+    return _fminf(_fminf(x.x, x.y), x.z);
+}
+
+__DEVICE__ float3 powf3(float3 base, float exp) {
+    return make_float3(powf(base.x, exp), powf(base.y, exp), powf(base.z, exp));
+}
+
+__DEVICE__ float3 powf3_f3(float3 base, float3 exp) {
+    return make_float3(powf(base.x, exp.x), powf(base.y, exp.y), powf(base.z, exp.z));
+}
+
+__DEVICE__ float gamma_func(float x, float exp, bool use_better_gamma) {
+    if (use_better_gamma) {
+        // https://www.desmos.com/calculator/tgdywj6vy8
+
+        if (exp == 0.0f) {
+            return 1.0f;
+        }
+
+        float better_param = 1.0f / exp;
+
+        if (x <= 0.0f) {
+            return better_param * x;
+        } else if (x < 1.0f) {
+            return better_param * x / ((better_param - 1.0f) * x + 1.0f);
+        } else {
+            float slope = 1.0f - ((better_param - 1.0f) / better_param);
+            return slope * (x - 1.0f) + 1.0f;
+        }
+    } else {
+        return powf(x, exp);
+    }
+}
+
+__DEVICE__ float saturation_curve(float x, float gamma, float gamma_control, float gain) {
+    // Obviously could make this more complicated later
+    return gamma_func(x / gamma_control, 1.0f - gamma, true) * gamma_control * gain;
+}
+
+__DEVICE__ float compute_norm(float3 input_rgb, int switcher) {
+    float lum = 0.0f;
+    if (switcher == GEOM) {
+        lum = powf(input_rgb.x * input_rgb.y * input_rgb.z, 1.0f / 3.0f);
+    } else if (switcher == MEAN) {
+        lum = (input_rgb.x + input_rgb.y + input_rgb.z) / 3.0f;
+    } else if (switcher == MAX) {
+        lum = maxf3(input_rgb);
+    } else if (switcher == MIN) {
+        lum = minf3(input_rgb);
+    } else if (switcher == HARMONIC) {
+        lum = 3.0f / ((1.0f / input_rgb.x) + (1.0f / input_rgb.y) + (1.0f / input_rgb.z));
+    } else if (switcher == L2_NORM) {
+        lum = _sqrtf(input_rgb.x * input_rgb.x + input_rgb.y * input_rgb.y + input_rgb.z * input_rgb.z);
+    } else if (switcher == BOLTZMAN_MAX) {
+        const float boltzman_parameter = 3.0f;
+        float3 weights =
+            make_float3(_expf(boltzman_parameter * input_rgb.x), _expf(boltzman_parameter * input_rgb.y), _expf(boltzman_parameter * input_rgb.z));
+        lum = (input_rgb.x * weights.x + input_rgb.y * weights.y + input_rgb.z * weights.z) / (weights.x + weights.y + weights.z);
+    } else if (switcher == BOLTZMAN_MIN) {
+        const float boltzman_parameter = -3.0f;
+        float3 weights =
+            make_float3(_expf(boltzman_parameter * input_rgb.x), _expf(boltzman_parameter * input_rgb.y), _expf(boltzman_parameter * input_rgb.z));
+        lum = (input_rgb.x * weights.x + input_rgb.y * weights.y + input_rgb.z * weights.z) / (weights.x + weights.y + weights.z);
+    }
+    return lum;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 input_rgb = make_float3(p_R, p_G, p_B);
+
+    float norm = compute_norm(input_rgb, preserve_norm);
+    float3 normalized = input_rgb - norm;
+
+    // We actually figure out the sat v sat curve according to mean-normalized saturation, but we apply it to
+    // the saturation that preserves `norm`.
+    float mean = compute_norm(input_rgb, MEAN);
+    float3 mean_normalized = input_rgb - mean;
+    float saturation_measure =
+        _sqrtf(mean_normalized.x * mean_normalized.x + mean_normalized.y * mean_normalized.y + mean_normalized.z * mean_normalized.z) / mean;
+
+    float new_saturation = saturation_curve(saturation_measure, sat_gamma, sat_gamma_control, sat_gain);
+    float saturation_ratio = new_saturation / saturation_measure;
+    if (saturation_measure == 0.0f || isnan(saturation_measure)) {
+        saturation_ratio = 1.0f;
+    }
+
+    float3 output = norm + normalized * saturation_ratio;
+
+    if (draw_curve) {
+        float x = (float)p_X / (float)(p_Width - 1);
+        float y = (float)p_Y / (float)(p_Height - 1);
+
+        y = 1.0f - y; // Flip the y-coordinate for correct orientation
+
+        y *= 1.5f;
+        x *= 1.5f;
+        float chart_y = saturation_curve(x, sat_gamma, sat_gamma_control, sat_gain);
+        if (_fabs(x - 1.0f) < 0.002f) {
+            output = make_float3(0.5f, 0.5f, 0.5f);
+        }
+        if (_fabs(x - sat_gamma_control) < 0.002f) {
+            output = make_float3(0.25f, 0.25f, 0.25f);
+        }
+        if (_fabs(y - 1.0f) < 0.002f) {
+            output = make_float3(0.5f, 0.5f, 0.5f);
+        }
+        if (_fabs(chart_y - y) < 0.002f) {
+            output = make_float3(1.0f, 1.0f, 1.0f);
+        }
+    }
+    return output;
+}
