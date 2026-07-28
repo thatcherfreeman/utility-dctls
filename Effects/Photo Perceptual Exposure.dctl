@@ -55,7 +55,7 @@ __DEVICE__ inline float deg_to_rad(float rad) {
 
 __DEVICE__ float gamma_func(float x, float exp) {
     // Use new method when raising contrast, use gamma when lowering contrast.
-    bool use_better_gamma = exp > 0.0f;
+    bool use_better_gamma = (exp >= 1.0f);
 
     if (use_better_gamma) {
         // https://www.desmos.com/calculator/tgdywj6vy8
