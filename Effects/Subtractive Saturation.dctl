@@ -5,8 +5,8 @@ DEFINE_UI_PARAMS(gamma_g, Magenta Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.0
 DEFINE_UI_PARAMS(gamma_b, Yellow Gamma, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 5.0, 0.01)
 DEFINE_UI_PARAMS(density, Density, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 1.0, 0.01)
 // MAKE SURE THESE OPERATIONS REMAIN IN THE SAME ORDER.
-DEFINE_UI_PARAMS(value_switcher, Value Calculation, DCTLUI_COMBO_BOX, 6, {BOLTZMAN, MAX, MIN, GEOM, MEAN, HARMONIC, L2_NORM}, {Boltzman Soft Maximum, Maximum Channel (Value), Minimum Channel, Geometric Mean, Arithmetic Mean, Harmonic Mean, L2 Norm})
-DEFINE_UI_PARAMS(density_switcher, Density Calculation, DCTLUI_COMBO_BOX, 5, {BOLTZMAN2, MAX2, MIN2, GEOM2, MEAN2, HARMONIC2, L2_NORM2}, {Boltzman Soft Maximum, Maximum Channel (Value), Minimum Channel, Geometric Mean, Arithmetic Mean, Harmonic Mean, L2 Norm})
+DEFINE_UI_PARAMS(value_switcher, Value Calculation, DCTLUI_COMBO_BOX, 6, {BOLTZMAN_MAX, BOLTZMAN_MIN, MAX, MIN, GEOM, MEAN, HARMONIC, L2_NORM}, {Boltzman Soft Maximum, Boltzman Soft Minimum, Maximum Channel (Value), Minimum Channel, Geometric Mean, Arithmetic Mean, Harmonic Mean, L2 Norm})
+DEFINE_UI_PARAMS(density_switcher, Density Calculation, DCTLUI_COMBO_BOX, 5, {BOLTZMAN_MAX2, BOLTZMAN_MIN2, MAX2, MIN2, GEOM2, MEAN2, HARMONIC2, L2_NORM2}, {Boltzman Soft Maximum, Boltzman Soft Minimum, Maximum Channel (Value), Minimum Channel, Geometric Mean, Arithmetic Mean, Harmonic Mean, L2 Norm})
 
 // clang-format on
 
@@ -41,7 +41,7 @@ typedef struct {
 } density_params_t;
 
 __DEVICE__ float compute_norm(float3 input_rgb, int switcher) {
-    float lum;
+    float lum = 0.0f;
     if (switcher == GEOM) {
         lum = powf(input_rgb.x * input_rgb.y * input_rgb.z, 1.0f / 3.0f);
     } else if (switcher == MEAN) {
@@ -54,10 +54,17 @@ __DEVICE__ float compute_norm(float3 input_rgb, int switcher) {
         lum = 3.0f / ((1.0f / input_rgb.x) + (1.0f / input_rgb.y) + (1.0f / input_rgb.z));
     } else if (switcher == L2_NORM) {
         lum = _sqrtf(input_rgb.x * input_rgb.x + input_rgb.y * input_rgb.y + input_rgb.z * input_rgb.z);
-    } else if (switcher == BOLTZMAN) {
+    } else if (switcher == BOLTZMAN_MAX) {
         const float boltzman_parameter = 3.0f;
-        float3 weights =
-            make_float3(_expf(boltzman_parameter * input_rgb.x), _expf(boltzman_parameter * input_rgb.y), _expf(boltzman_parameter * input_rgb.z));
+        float3 log_weights = make_float3(boltzman_parameter * input_rgb.x, boltzman_parameter * input_rgb.y, boltzman_parameter * input_rgb.z);
+        float max_weight = _fmaxf(_fmaxf(log_weights.x, log_weights.y), log_weights.z);
+        float3 weights = make_float3(_expf(log_weights.x - max_weight), _expf(log_weights.y - max_weight), _expf(log_weights.z - max_weight));
+        lum = (input_rgb.x * weights.x + input_rgb.y * weights.y + input_rgb.z * weights.z) / (weights.x + weights.y + weights.z);
+    } else if (switcher == BOLTZMAN_MIN) {
+        const float boltzman_parameter = -3.0f;
+        float3 log_weights = make_float3(boltzman_parameter * input_rgb.x, boltzman_parameter * input_rgb.y, boltzman_parameter * input_rgb.z);
+        float max_weight = _fmaxf(_fmaxf(log_weights.x, log_weights.y), log_weights.z);
+        float3 weights = make_float3(_expf(log_weights.x - max_weight), _expf(log_weights.y - max_weight), _expf(log_weights.z - max_weight));
         lum = (input_rgb.x * weights.x + input_rgb.y * weights.y + input_rgb.z * weights.z) / (weights.x + weights.y + weights.z);
     }
     return lum;

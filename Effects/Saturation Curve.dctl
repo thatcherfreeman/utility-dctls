@@ -104,13 +104,15 @@ __DEVICE__ float compute_norm(float3 input_rgb, int switcher) {
         lum = _sqrtf(input_rgb.x * input_rgb.x + input_rgb.y * input_rgb.y + input_rgb.z * input_rgb.z);
     } else if (switcher == BOLTZMAN_MAX) {
         const float boltzman_parameter = 3.0f;
-        float3 weights =
-            make_float3(_expf(boltzman_parameter * input_rgb.x), _expf(boltzman_parameter * input_rgb.y), _expf(boltzman_parameter * input_rgb.z));
+        float3 log_weights = make_float3(boltzman_parameter * input_rgb.x, boltzman_parameter * input_rgb.y, boltzman_parameter * input_rgb.z);
+        float max_weight = _fmaxf(_fmaxf(log_weights.x, log_weights.y), log_weights.z);
+        float3 weights = make_float3(_expf(log_weights.x - max_weight), _expf(log_weights.y - max_weight), _expf(log_weights.z - max_weight));
         lum = (input_rgb.x * weights.x + input_rgb.y * weights.y + input_rgb.z * weights.z) / (weights.x + weights.y + weights.z);
     } else if (switcher == BOLTZMAN_MIN) {
         const float boltzman_parameter = -3.0f;
-        float3 weights =
-            make_float3(_expf(boltzman_parameter * input_rgb.x), _expf(boltzman_parameter * input_rgb.y), _expf(boltzman_parameter * input_rgb.z));
+        float3 log_weights = make_float3(boltzman_parameter * input_rgb.x, boltzman_parameter * input_rgb.y, boltzman_parameter * input_rgb.z);
+        float max_weight = _fmaxf(_fmaxf(log_weights.x, log_weights.y), log_weights.z);
+        float3 weights = make_float3(_expf(log_weights.x - max_weight), _expf(log_weights.y - max_weight), _expf(log_weights.z - max_weight));
         lum = (input_rgb.x * weights.x + input_rgb.y * weights.y + input_rgb.z * weights.z) / (weights.x + weights.y + weights.z);
     }
     return lum;
