@@ -1,5 +1,6 @@
 
 DEFINE_UI_PARAMS(highlight_bit_depth, Target Bit Depth, DCTLUI_SLIDER_FLOAT, 8.0, 1, 24, 0.1)
+DEFINE_UI_PARAMS(search_radius, Search Radius, DCTLUI_SLIDER_INT, 3, 1, 10, 1)
 DEFINE_UI_PARAMS(highlight_on, Highlight, DCTLUI_CHECK_BOX, 0)
 
 __DEVICE__ float bit_depth_from_difference(float diff) {
@@ -15,8 +16,8 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float3 current_pixel = input_pixel;
 
     float lowest_diff = 100.0f;
-    for (int i = -1; i < 2; ++i) {
-        for (int j = -1; j < 2; ++j) {
+    for (int i = -search_radius; i <= search_radius; ++i) {
+        for (int j = -search_radius; j <= search_radius; ++j) {
             float3 candidate_pixel = make_float3(_tex2D(p_TexR, p_X + i, p_Y + j), _tex2D(p_TexG, p_X + i, p_Y + j), _tex2D(p_TexB, p_X + i, p_Y + j));
 
             float3 differences = candidate_pixel - current_pixel;

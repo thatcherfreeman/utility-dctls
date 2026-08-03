@@ -1840,6 +1840,8 @@ Tool to help estimate the true bit depth of a file. It works by comparing the co
 
 **Target Bit Depth**: When Highlight is enabled, Highlights all pixels whose effective bit depth is within 0.1 of this Target Bit Depth.
 
+**Search Radius**: Choose how far the search window should extend. Larger is slower but should be more consistent.
+
 **Highlight**: When checked, highlights only pixels whose bit depth is near the Target Bit Depth, otherwise all pixels are replaced with their effective bit depth.
 
 ---
