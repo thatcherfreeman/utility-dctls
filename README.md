@@ -1296,15 +1296,17 @@ Variation of the Smooth Tetra dctl except for each hue, the only control is the 
 #### DCTL Parameters
 **Red/Skin/Yellow/Green/Cyan/Blue/Magenta Contrast**: Adjust the contrast for the specified hue.
 
+**Input Skin Hue Adj**: Adjust what hue corrresponds to skin.
+
 **Polar Smoothness**: Controls how much falloff there is with hue. Larger means that there is **LESS** overlap between the different hue sliders, so the cutoff between one hue region and the next will be more abrupt as you sweep through the hues. Note that I've set the default in this one to be a little more targeted than in [Smooth Tetra DCTL](#smooth-tetra-dctl).
 
 **Neutral Smoothness**: This indicates the radius around the achromatic axis that we will try to smooth the adjustments. 0 means that it will NOT be C1 continuous around the achromatic. Note that inevitably, when in order to maintain smoothness around the achromatic, when this parameter is positive, then some adjustments to say the Red sliders may affect the colors of lower-saturation Cyans and other hues within the smoothed radius.
-
 
 **Smooth Neutrals**: Quickly toggle on and off smoothening of the achromatic axis.
 
 **Draw Swatches**: Toggles on some swatches so you can see what hues your adjustments correspond to. These swatches are drawn *upstream* of the tool, so they're affected by the Contrast sliders.
 
+**Input Transfer Function**: Choose the image state encoding of your image. Keep in mind that the result is not guaranteed to remain in-gamut, so be very careful about when you use this, particularly for display-referred images.
 
 ---
 
@@ -1323,6 +1325,8 @@ Variation of the Smooth Tetra dctl except for each hue, the only control is the 
 
 **Draw Swatches**: Toggles on some swatches so you can see what hues your adjustments correspond to. These swatches are drawn *upstream* of the tool, so they're affected by the Contrast sliders.
 
+**Input Transfer Function**: Choose the image state encoding of your image. Keep in mind that the result is not guaranteed to remain in-gamut, so be very careful about when you use this, particularly for display-referred images.
+
 ---
 
 ### Smooth Tetra Skin DCTL
@@ -1335,6 +1339,8 @@ Smoothed version of the classic Tetra HSV dctl, but with an added Skin segment. 
 
 **Red/Skin/Yellow/Green/Cyan/Blue/Magenta Val**: Number of stops to gain this primary up and down. The amount of stops of gain increases with saturation.
 
+**Input Skin Hue Adj**: Adjust what hue corrresponds to skin.
+
 **Polar Smoothness**: Controls how much falloff there is with hue. Larger means that there is **LESS** overlap between the different hue sliders, so the cutoff between one hue region and the next will be more abrupt as you sweep through the hues. Note that I've set the default in this one to be a little more targeted than in [Smooth Tetra DCTL](#smooth-tetra-dctl).
 
 **Neutral Smoothness**: This indicates the radius around the achromatic axis that we will try to smooth the adjustments. 0 means that it will NOT be C1 continuous around the achromatic. Note that inevitably, when in order to maintain smoothness around the achromatic, when this parameter is positive, then some adjustments to say the Red sliders may affect the colors of lower-saturation Cyans and other hues within the smoothed radius.
@@ -1342,6 +1348,8 @@ Smoothed version of the classic Tetra HSV dctl, but with an added Skin segment. 
 **Smooth Neutrals**: Quickly toggle on and off smoothening of the achromatic axis.
 
 **Draw Swatches**: Toggles on some swatches so you can see what hues your adjustments correspond to. These swatches are drawn *upstream* of the tool, so they're affected by the Hue/Sat/Val sliders.
+
+**Input Transfer Function**: Choose the image state encoding of your image. Keep in mind that the result is not guaranteed to remain in-gamut, so be very careful about when you use this, particularly for display-referred images. You can also consider incorrectly setting this to Linear while working on log state images.
 
 ---
 
@@ -1362,6 +1370,8 @@ Smoothed version of the classic Tetra HSV dctl. Guaranteed to be C1 continuous a
 **Smooth Neutrals**: Quickly toggle on and off smoothening of the achromatic axis.
 
 **Draw Swatches**: Toggles on some swatches so you can see what hues your adjustments correspond to. These swatches are drawn *upstream* of the tool, so they're affected by the Hue/Sat/Val sliders.
+
+**Input Transfer Function**: Choose the image state encoding of your image. Keep in mind that the result is not guaranteed to remain in-gamut, so be very careful about when you use this, particularly for display-referred images. You can also consider incorrectly setting this to Linear while working on log state images.
 
 ---
 

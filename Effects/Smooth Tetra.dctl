@@ -25,6 +25,8 @@ DEFINE_UI_PARAMS(neutral_smoothness, Neutral Smoothness, DCTLUI_SLIDER_FLOAT, 0.
 DEFINE_UI_PARAMS(smooth_neutrals, Smooth Neutrals, DCTLUI_CHECK_BOX, 1)
 DEFINE_UI_PARAMS(draw_swatches, Draw Swatches, DCTLUI_CHECK_BOX, 0)
 
+DEFINE_UI_PARAMS(input_tf, Input Transfer Function, DCTLUI_COMBO_BOX, 0, {INPUT_TF_LINEAR, INPUT_TF_ACESCC, INPUT_TF_ACESCCT, INPUT_TF_LOGC3, INPUT_TF_DAVINCI_INTERMEDIATE, INPUT_TF_PQ, INPUT_TF_GAMMA_24}, {Linear, ACEScc, ACEScct, Arri LogC3, DaVinci Intermediate, PQ, Gamma 2.4})
+
 // clang-format on
 
 #define PI (3.141592653589793238f)
@@ -426,8 +428,211 @@ __DEVICE__ float3 tetra_smooth_preserve_neutral(float3 input_hsl, tetra_params_t
     return output_abz;
 }
 
+__DEVICE__ float acescc_to_linear(float in) {
+    if (in < -0.3013698630f) { // (9.72f-15)/17.52f
+        return (_exp2f(in * 17.52f - 9.72f) - _exp2f(-16.0f)) * 2.0f;
+    } else {
+        return _exp2f(in * 17.52f - 9.72f);
+    }
+}
+
+__DEVICE__ float linear_to_acescc(float in) {
+    if (in <= 0.0f) {
+        return -0.3584474886f; // =(log2( pow(2.f,-16.f))+9.72f)/17.52f
+    } else if (in < _exp2f(-15.0f)) {
+        return (_log2f(_exp2f(-16.0f) + in * 0.5f) + 9.72f) / 17.52f;
+    } else {
+        return (_log2f(in) + 9.72f) / 17.52f;
+    }
+}
+
+__DEVICE__ float acescct_to_linear(float in) {
+    // const float X_BRK = 0.0078125f;
+    const float Y_BRK = 0.155251141552511f;
+    const float A = 10.5402377416545f;
+    const float B = 0.0729055341958355f;
+    if (in > Y_BRK) {
+        return _exp2f(in * 17.52f - 9.72f);
+    } else {
+        return (in - B) / A;
+    }
+}
+
+__DEVICE__ float linear_to_acescct(float in) {
+    const float X_BRK = 0.0078125f;
+    // const float Y_BRK = 0.155251141552511f;
+    const float A = 10.5402377416545f;
+    const float B = 0.0729055341958355f;
+    if (in <= X_BRK) {
+        return A * in + B;
+    } else { // (in > X_BRK)
+        return (_log2f(in) + 9.72f) / 17.52f;
+    }
+}
+
+__DEVICE__ float arri_logc3_to_linear(float x) {
+    float cut = 0.010591f;
+    float a = 5.555556f;
+    float b = 0.052272f;
+    float c = 0.247190f;
+    float d = 0.385537f;
+    float e = 5.367655f;
+    float f = 0.092809f;
+    if (x > e * cut + f) {
+        return (_exp10f((x - d) / c) - b) / a;
+    } else {
+        return (x - f) / e;
+    }
+}
+
+__DEVICE__ float linear_to_arri_logc3(float x) {
+    float cut = 0.010591f;
+    float a = 5.555556f;
+    float b = 0.052272f;
+    float c = 0.247190f;
+    float d = 0.385537f;
+    float e = 5.367655f;
+    float f = 0.092809f;
+
+    if (x > cut) {
+        return c * _log10f(a * x + b) + d;
+    } else {
+        return e * x + f;
+    }
+}
+
+__DEVICE__ float davinci_intermediate_to_linear(float t) {
+    const float a = 0.0075f;
+    const float b = 7.0f;
+    const float c = 0.07329248f;
+    const float m = 10.44426855f;
+    // const float lin_cut = 0.00262409f; // Should be equal to ((cut2 - f) / e)
+    const float log_cut = 0.02740668f; // should be equal to (e * cut1 + f)
+
+    if (t > log_cut) {
+        return _exp2f((t / c) - b) - a;
+    } else {
+        return t / m;
+    }
+}
+
+__DEVICE__ float linear_to_davinci_intermediate(float x) {
+    const float a = 0.0075f;
+    const float b = 7.0f;
+    const float c = 0.07329248f;
+    const float m = 10.44426855f;
+    const float lin_cut = 0.00262409f; // Should be equal to ((cut2 - f) / e)
+    // const float log_cut = 0.02740668f; // should be equal to (e * cut1 + f)
+
+    if (x > lin_cut) {
+        return (_log2f(x + a) + b) * c;
+    } else {
+        return x * m;
+    }
+}
+
+#define DISPLAY_MID_GRAY (0.10f)
+
+__DEVICE__ float st2084_to_linear(float x) {
+    // x is code value 0-1, outputs linear light with 1.0 = 100 nits
+    const float m1 = 1305.0f / 8192.0f;
+    const float m2 = 2523.0f / 32.0f;
+    const float c1 = 3424.0f / 4096.0f;
+    const float c2 = 2413.0f / 128.0f;
+    const float c3 = 2392.0f / 128.0f;
+
+    float out_lin = 100.0f * powf(_fmaxf(powf(x, 1.0f / m2) - c1, 0.0f) / (c2 - (c3 * powf(x, 1.0f / m2))), 1.0f / m1);
+
+    // Gain 10 nits to mid gray.
+    out_lin *= 0.18f / DISPLAY_MID_GRAY;
+    return out_lin;
+}
+
+__DEVICE__ float linear_to_st2084(float y) {
+    // Gain mid gray to 10 nits.
+    y = y * DISPLAY_MID_GRAY / 0.18f;
+    float x = y / 100.0f;
+    x = _fmaxf(x, 0.0f);
+
+    // x is code value 0-1, y is linear light with 1.0 = 100 nits.
+    const float m1 = 1305.0f / 8192.0f;
+    const float m2 = 2523.0f / 32.0f;
+    const float c1 = 3424.0f / 4096.0f;
+    const float c2 = 2413.0f / 128.0f;
+    const float c3 = 2392.0f / 128.0f;
+
+    return powf((c1 + c2 * powf(x, m1)) / (1.0f + c3 * powf(x, m1)), m2);
+}
+
+__DEVICE__ float3 log_to_lin(float3 input_rgb, int input_tf) {
+    float3 output = make_float3(0.0f, 0.0f, 0.0f);
+    if (input_tf == INPUT_TF_LINEAR) {
+        output = input_rgb;
+    } else if (input_tf == INPUT_TF_ACESCC) {
+        output.x = acescc_to_linear(input_rgb.x);
+        output.y = acescc_to_linear(input_rgb.y);
+        output.z = acescc_to_linear(input_rgb.z);
+    } else if (input_tf == INPUT_TF_ACESCCT) {
+        output.x = acescct_to_linear(input_rgb.x);
+        output.y = acescct_to_linear(input_rgb.y);
+        output.z = acescct_to_linear(input_rgb.z);
+    } else if (input_tf == INPUT_TF_LOGC3) {
+        output.x = arri_logc3_to_linear(input_rgb.x);
+        output.y = arri_logc3_to_linear(input_rgb.y);
+        output.z = arri_logc3_to_linear(input_rgb.z);
+    } else if (input_tf == INPUT_TF_DAVINCI_INTERMEDIATE) {
+        output.x = davinci_intermediate_to_linear(input_rgb.x);
+        output.y = davinci_intermediate_to_linear(input_rgb.y);
+        output.z = davinci_intermediate_to_linear(input_rgb.z);
+    } else if (input_tf == INPUT_TF_PQ) {
+        output.x = st2084_to_linear(input_rgb.x);
+        output.y = st2084_to_linear(input_rgb.y);
+        output.z = st2084_to_linear(input_rgb.z);
+    } else if (input_tf == INPUT_TF_GAMMA_24) {
+        output.x = powf(input_rgb.x, 2.4f) * 0.18f / DISPLAY_MID_GRAY;
+        output.y = powf(input_rgb.y, 2.4f) * 0.18f / DISPLAY_MID_GRAY;
+        output.z = powf(input_rgb.z, 2.4f) * 0.18f / DISPLAY_MID_GRAY;
+    }
+    return output;
+}
+
+__DEVICE__ float3 lin_to_log(float3 input_rgb, int output_tf) {
+    float3 output = make_float3(0.0f, 0.0f, 0.0f);
+    if (output_tf == INPUT_TF_LINEAR) {
+        output = input_rgb;
+    } else if (output_tf == INPUT_TF_ACESCC) {
+        output.x = linear_to_acescc(input_rgb.x);
+        output.y = linear_to_acescc(input_rgb.y);
+        output.z = linear_to_acescc(input_rgb.z);
+    } else if (output_tf == INPUT_TF_ACESCCT) {
+        output.x = linear_to_acescct(input_rgb.x);
+        output.y = linear_to_acescct(input_rgb.y);
+        output.z = linear_to_acescct(input_rgb.z);
+    } else if (output_tf == INPUT_TF_LOGC3) {
+        output.x = linear_to_arri_logc3(input_rgb.x);
+        output.y = linear_to_arri_logc3(input_rgb.y);
+        output.z = linear_to_arri_logc3(input_rgb.z);
+    } else if (output_tf == INPUT_TF_DAVINCI_INTERMEDIATE) {
+        output.x = linear_to_davinci_intermediate(input_rgb.x);
+        output.y = linear_to_davinci_intermediate(input_rgb.y);
+        output.z = linear_to_davinci_intermediate(input_rgb.z);
+    } else if (output_tf == INPUT_TF_PQ) {
+        output.x = linear_to_st2084(input_rgb.x);
+        output.y = linear_to_st2084(input_rgb.y);
+        output.z = linear_to_st2084(input_rgb.z);
+    } else if (output_tf == INPUT_TF_GAMMA_24) {
+        output.x = powf(input_rgb.x * DISPLAY_MID_GRAY / 0.18f, 1.0f / 2.4f);
+        output.y = powf(input_rgb.y * DISPLAY_MID_GRAY / 0.18f, 1.0f / 2.4f);
+        output.z = powf(input_rgb.z * DISPLAY_MID_GRAY / 0.18f, 1.0f / 2.4f);
+    }
+    return output;
+}
+
 __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
     float3 input = make_float3(p_R, p_G, p_B);
+
+    // Linearize if not already linear.
+    input = log_to_lin(input, input_tf);
 
     tetra_params_t params = make_tetra_params(0.0f,
                                               PI / 3.0f,
@@ -488,5 +693,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         make_float3(mod(arctan2f(output_abz.y, output_abz.x), 2.0f * PI), _hypotf(output_abz.x, output_abz.y), input_hsl.z * powf(2.0f, output_abz.z));
 
     float3 output = cylindrical_to_rgb(output_hsl);
+
+    // Convert from linear to the original encoding
+    output = lin_to_log(output, input_tf);
+
     return output;
 }
