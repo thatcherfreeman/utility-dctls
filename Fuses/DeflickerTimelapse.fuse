@@ -1,0 +1,75 @@
+FuRegisterClass("DeflickerTimelapse", CT_Tool, {
+    REGS_Name = "Deflicker Timelapse",
+    REGS_Category = "Fuses\\Util",
+    REGS_OpIconString = "DflTl",
+    REGS_OpDescription = "Smooths out per-frame exposure differences"
+})
+
+function Create()
+    NumFrames = self:AddInput("Number of Frames", "FramesNum", {
+        LINKID_DataType = "Number",
+        INPID_InputControl = "SliderControl",
+        INP_MinScale = 0.0,
+        INP_MaxScale = 10.0,
+        INP_Default = 1.0,
+        INP_INTEGER = true,
+        INP_MinAllowed = 1.0,
+        IC_DisplayedPrecision = 0,
+        INPS_StatusText = "Number of frames on each side to read. 0.0 to disable"
+    })
+    InImage = self:AddInput("Input", "Input", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1
+    })
+    OutImage = self:AddOutput("Output", "Output", {
+        LINKID_DataType = "Image",
+        LINK_Main = 1
+    })
+end
+
+function Process(req)
+    -- Get values from the UI Tools
+    local num_frames = NumFrames:GetValue(req).Value
+    local img = InImage:GetValue(req):Copy()
+
+    if num_frames == 0 then
+        OutImage:Set(req, img)
+    else
+        local frames_sampled = 0
+        local net_lum = 0.0
+        local curr_lum = 1.0
+        for i = -1.0 * num_frames, num_frames do
+            local thisFrame = InImage:GetSource(req.Time + i)
+            if thisFrame ~= nil then
+                local thisFrameSmall = Image({
+                    IMG_Like = thisFrame,
+                    IMG_Width = 1,
+                    IMG_Height = 1
+                })
+                frames_sampled = frames_sampled + 1
+                thisFrame:Resize(thisFrameSmall, {
+                    RSZ_Filter = "Linear",
+                    RSZ_Width = 1,
+                    RSZ_Height = 1
+                })
+                local center_coord_x = 0.0
+                local center_coord_y = 0.0
+                local p = Pixel()
+                thisFrameSmall:GetPixel(center_coord_x, center_coord_y, p)
+                local lum = (p.R + p.G + p.B) / 3.0
+                net_lum = net_lum + lum
+                -- print("Frame ", i, " lum: ", lum)
+                if i == 0 then
+                    curr_lum = lum
+                end
+            end
+        end
+        local avg_lum = net_lum / frames_sampled
+        local gain = avg_lum / curr_lum
+        if curr_lum ~= 0.0 then
+            -- print("gain: ", gain)
+            img:Gain(gain, gain, gain, 1.0)
+        end
+        OutImage:Set(req, img)
+    end
+end

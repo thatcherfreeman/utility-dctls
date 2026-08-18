@@ -31,6 +31,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
     - [Fuses](#fuses)
         - [Corner Repositioner](#corner-repositioner)
         - [DCTL Interpreter Fuse](#dctl-interpreter-fuse)
+        - [Deflicker Timelapse Fuse](#deflicker-timelapse-fuse)
         - [FrameAvg Fuse](#frameavg-fuse)
         - [HDR Blending Fuse](#hdr-blending-fuse)
         - [Linear Exposure Fuse](#linear-exposure-fuse)
@@ -244,6 +245,16 @@ To get detailed compilation error messages, you must check **Fusion Settings > G
 **Skip Duplicate Imports**: If checked, then when we read in code we will skip #include statements that already have been imported. This helps shorten the amount of code printed to the console when debugging and the amount of code compiled, but does not really seem to affect runtime at all.
 
 **Don't run the DCTL Code**: Self explanatory, If your DCTL is causing Fusion to crash, checking this box might help you help me debug it. Doesn't always stop Fusion from crashing though.
+
+---
+
+### Deflicker Timelapse Fuse
+
+Timelapses often have flickering due to inconsistency when the camera stops down the lens aperture to the target f-stop. This inconsistency results in random fluctuations in the exposure on each frame. This fuse looks at your timelapse, measures the average luminance of each frame, and applies a gain to each frame so that it has a similar luminance as the average of its neighboring frames, dramatically reducing the flicker. Obviously expects scene linear imagery.
+
+#### Parameters
+
+**Number of Frames**: Indicate the amount of frames before and after the current frame to sample. Eg if you set this to 2, we will measure the luminance of the current frame, the two previous ones, and the two subsequent ones for a net of 5 frames. The larger this is, the more that flickering will be reduced, but the slower the fuse will run.
 
 ---
 
