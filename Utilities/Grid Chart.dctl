@@ -5,7 +5,7 @@ DEFINE_UI_PARAMS(num_grids, Number of Grids, DCTLUI_SLIDER_INT, 11, 1, 100, 1)
 DEFINE_UI_PARAMS(grid_thickness, Grid Thickness Px, DCTLUI_SLIDER_INT, 2, 0, 100, 1)
 DEFINE_UI_PARAMS(white_level, White Level, DCTLUI_VALUE_BOX, 1.0)
 DEFINE_UI_PARAMS(invert, Invert, DCTLUI_CHECK_BOX, 0)
-DEFINE_UI_PARAMS(chart_type, Chart Type, DCTLUI_COMBO_BOX, 0, {CHART_GRID, CHART_DOTS}, {Grid, Dots})
+DEFINE_UI_PARAMS(chart_type, Chart Type, DCTLUI_COMBO_BOX, 0, {CHART_GRID, CHART_CHECKERBOARD, CHART_DOTS}, {Grid, Checkerboard, Dots})
 DEFINE_UI_PARAMS(grid_direction, Grid Direction, DCTLUI_COMBO_BOX, 0, {GRID_BOTH, GRID_HORIZONTAL, GRID_VERTICAL}, {Both, Horizontal, Vertical})
 
 // clang-format on
@@ -35,6 +35,20 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
         if ((draw_vertical_lines && mod((p_X - grid_offset_x), grid_spacing) < grid_thickness) ||
             (draw_horizontal_lines && mod((p_Y - grid_offset_y), grid_spacing) < grid_thickness)) {
             output = make_float3(white_level, white_level, white_level);
+        }
+    } else if (chart_type == CHART_CHECKERBOARD) {
+        int horizontal_grid_index = (int)_floorf(1.0f * (p_X - grid_offset_x) / grid_spacing);
+        int vertical_grid_index = (int)_floorf(1.0f * (p_Y - grid_offset_y) / grid_spacing);
+        if (!draw_horizontal_lines) {
+            vertical_grid_index = 0;
+        }
+        if (!draw_vertical_lines) {
+            horizontal_grid_index = 0;
+        }
+        if (mod(horizontal_grid_index + vertical_grid_index, 2) == 0) {
+            output = make_float3(white_level, white_level, white_level);
+        } else {
+            output = make_float3(0.0f, 0.0f, 0.0f);
         }
     } else if (chart_type == CHART_DOTS) {
         if (mod((p_X - grid_offset_x), grid_spacing) < grid_thickness && mod((p_Y - grid_offset_y), grid_spacing) < grid_thickness) {
