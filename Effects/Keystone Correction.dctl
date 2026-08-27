@@ -1,0 +1,335 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(endpoint_1_x, Endpoint 1 X, DCTLUI_SLIDER_FLOAT, 0.25, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(endpoint_1_y, Endpoint 1 Y, DCTLUI_SLIDER_FLOAT, 0.25, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(endpoint_2_x, Endpoint 2 X, DCTLUI_SLIDER_FLOAT, 0.25, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(endpoint_2_y, Endpoint 2 Y, DCTLUI_SLIDER_FLOAT, 0.75, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(endpoint_3_x, Endpoint 3 X, DCTLUI_SLIDER_FLOAT, 0.75, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(endpoint_3_y, Endpoint 3 Y, DCTLUI_SLIDER_FLOAT, 0.25, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(endpoint_4_x, Endpoint 4 X, DCTLUI_SLIDER_FLOAT, 0.75, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(endpoint_4_y, Endpoint 4 Y, DCTLUI_SLIDER_FLOAT, 0.75, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(transform_x, Transform X, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(transform_y, Transform Y, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(zoom, Zoom, DCTLUI_SLIDER_FLOAT, 1.0, 0.1, 3.0, 0.001)
+
+DEFINE_UI_PARAMS(show_guides, Show Guides, DCTLUI_CHECK_BOX, 1)
+
+DEFINE_UI_PARAMS(edge_behavior, Edge Behavior, DCTLUI_COMBO_BOX, 1, {EDGE_EXTEND, EDGE_BLACK, EDGE_MAGENTA}, {Extend, Black, Magenta})
+DEFINE_UI_PARAMS(correction, Correction, DCTLUI_COMBO_BOX, 0, {CORRECTION_HORIZONTAL_KEYSTONE, CORRECTION_VERTICAL_KEYSTONE, CORRECTION_BOTH_KEYSTONE}, {Horizontal Keystone, Vertical Keystone, Both Keystone})
+DEFINE_UI_PARAMS(mode, Mode, DCTLUI_COMBO_BOX, 0, {MODE_SOURCE, MODE_CORRECTED}, {Source, Corrected})
+
+// clang-format on
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float dot_product(float3 a, float3 b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+#define PI (3.1415926535897932384626f)
+
+__DEVICE__ void mv_33_3(float out[3], float mat[3][3], float vec[3]) {
+    for (int i = 0; i < 3; ++i) {
+        out[i] = 0.0f;
+        for (int j = 0; j < 3; ++j) {
+            out[i] += mat[i][j] * vec[j];
+        }
+    }
+}
+
+__DEVICE__ void mm_33_33(float dst[3][3], float a[3][3], float b[3][3]) {
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            dst[i][j] = a[i][0] * b[0][j] + a[i][1] * b[1][j] + a[i][2] * b[2][j];
+        }
+    }
+}
+
+__DEVICE__ void scale_cols_33_3(float out[3][3], float mat[3][3], float coeffs[3]) {
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            out[i][j] = mat[i][j] * coeffs[j];
+        }
+    }
+}
+
+// A homography is only defined up to scale, so rescaling intermediate results to unit magnitude is
+// mathematically free and keeps the repeated adjugates/products from overflowing float32 to inf.
+__DEVICE__ void normalize_33(float mat[3][3]) {
+    float max_abs = 0.0f;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            max_abs = _fmaxf(max_abs, _fabs(mat[i][j]));
+        }
+    }
+    if (max_abs > 0.0f) {
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                mat[i][j] /= max_abs;
+            }
+        }
+    }
+}
+
+__DEVICE__ void adjugate(float dst[3][3], float mat[3][3]) {
+    dst[0][0] = mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1];
+    dst[0][1] = mat[0][2] * mat[2][1] - mat[0][1] * mat[2][2];
+    dst[0][2] = mat[0][1] * mat[1][2] - mat[0][2] * mat[1][1];
+    dst[1][0] = mat[1][2] * mat[2][0] - mat[1][0] * mat[2][2];
+    dst[1][1] = mat[0][0] * mat[2][2] - mat[0][2] * mat[2][0];
+    dst[1][2] = mat[0][2] * mat[1][0] - mat[0][0] * mat[1][2];
+    dst[2][0] = mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0];
+    dst[2][1] = mat[0][1] * mat[2][0] - mat[0][0] * mat[2][1];
+    dst[2][2] = mat[0][0] * mat[1][1] - mat[0][1] * mat[1][0];
+}
+
+__DEVICE__ bool is_near_line_segment(float2 segment_start, float2 segment_end, float2 curr_pos, float eps, bool infinite) {
+    float2 segment_vector = segment_end - segment_start;
+    float2 point_vector = curr_pos - segment_start;
+    float segment_length = _hypotf(segment_vector.x, segment_vector.y);
+    float projection_length =
+        dot_product(make_float3(segment_vector.x, segment_vector.y, 0.0f), make_float3(point_vector.x, point_vector.y, 0.0f)) / segment_length;
+    float2 projection_point = segment_start + (segment_vector * (projection_length / segment_length));
+    float distance_to_segment = _hypotf(curr_pos.x - projection_point.x, curr_pos.y - projection_point.y);
+
+    return (distance_to_segment < eps && (infinite || (projection_length >= 0.0f && projection_length <= segment_length)));
+}
+
+__DEVICE__ bool draw_crosshair(float2 curr_pos, float2 crosshair_pos, float crosshair_size) {
+    float crosshair_thickness = 0.2f * crosshair_size;
+    bool vertical = (_fabs(curr_pos.x - crosshair_pos.x) < crosshair_thickness / 2.0f) && (_fabs(curr_pos.y - crosshair_pos.y) < crosshair_size / 2.0f);
+    bool horizontal = (_fabs(curr_pos.y - crosshair_pos.y) < crosshair_thickness / 2.0f) && (_fabs(curr_pos.x - crosshair_pos.x) < crosshair_size / 2.0f);
+    return (vertical || horizontal);
+}
+
+__DEVICE__ float sample_point_bilinear_1ch(float x, float y, __TEXTURE__ tex, float scale) {
+    const float scale_round = _round(scale);
+    const int iX = (int)(_floor(x / scale_round) * scale_round);
+    const int iY = (int)(_floor(y / scale_round) * scale_round);
+
+    int x_low = (int)(iX);
+    int x_high = (int)(iX + scale_round);
+    int y_low = (int)(iY);
+    int y_high = (int)(iY + scale_round);
+
+    float c_ll = _tex2D(tex, x_low, y_low);
+    float c_lh = _tex2D(tex, x_low, y_high);
+    float c_hl = _tex2D(tex, x_high, y_low);
+    float c_hh = _tex2D(tex, x_high, y_high);
+
+    float c_l = _mix(c_ll, c_hl, (x - x_low) / (x_high - x_low));
+    float c_h = _mix(c_lh, c_hh, (x - x_low) / (x_high - x_low));
+    float c = _mix(c_l, c_h, (y - y_low) / (y_high - y_low));
+    return c;
+}
+
+__DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
+    float3 out = make_float3(0.0f, 0.0f, 0.0f);
+    out.x = sample_point_bilinear_1ch(x, y, p_TexR, scale);
+    out.y = sample_point_bilinear_1ch(x, y, p_TexG, scale);
+    out.z = sample_point_bilinear_1ch(x, y, p_TexB, scale);
+    return out;
+}
+
+__DEVICE__ void compute_proj_transform_matrix(float output_mat[3][3], float src_coords[4][2], float dst_coords[4][2]) {
+    // https://math.stackexchange.com/questions/296794/finding-the-transform-matrix-from-4-projected-points-with-javascript
+
+    // Step 1
+    float A[3][3] = {
+        {src_coords[0][0], src_coords[1][0], src_coords[2][0]},
+        {src_coords[0][1], src_coords[1][1], src_coords[2][1]},
+        {1.0f, 1.0f, 1.0f},
+    };
+    float adj_A[3][3] = {
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+    };
+    adjugate(adj_A, A);
+    float A_target[3] = {
+        src_coords[3][0],
+        src_coords[3][1],
+        1.0f,
+    };
+    float a_coeffs[3] = {0.0f, 0.0f, 0.0f};
+    mv_33_3(a_coeffs, adj_A, A_target);
+
+    // Step 1 with dest coords
+    float B[3][3] = {
+        {dst_coords[0][0], dst_coords[1][0], dst_coords[2][0]},
+        {dst_coords[0][1], dst_coords[1][1], dst_coords[2][1]},
+        {1.0f, 1.0f, 1.0f},
+    };
+    float adj_B[3][3] = {
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+    };
+    adjugate(adj_B, B);
+    float B_target[3] = {
+        dst_coords[3][0],
+        dst_coords[3][1],
+        1.0f,
+    };
+    float b_coeffs[3] = {0.0f, 0.0f, 0.0f};
+    mv_33_3(b_coeffs, adj_B, B_target);
+
+    // step 2, scale columns of A by coeffs.
+    float scaled_A[3][3] = {
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+    };
+    scale_cols_33_3(scaled_A, A, a_coeffs);
+    normalize_33(scaled_A);
+    float scaled_B[3][3] = {
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+    };
+    scale_cols_33_3(scaled_B, B, b_coeffs);
+    normalize_33(scaled_B);
+
+    // step 3, compute C = adj(scaled_B @ adj(scaled_A))
+    float adj_scaled_A[3][3] = {
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+    };
+    ;
+    adjugate(adj_scaled_A, scaled_A);
+    normalize_33(adj_scaled_A);
+    float tmp[3][3] = {
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f},
+    };
+    ;
+    mm_33_33(tmp, scaled_B, adj_scaled_A);
+    normalize_33(tmp);
+    adjugate(output_mat, tmp);
+    normalize_33(output_mat);
+}
+
+__DEVICE__ float3 draw_line_and_crosshairs(float3 input_color, float2 curr_pos, float2 endpointa, float2 endpointb, float crosshair_size) {
+    float3 line_color = input_color;
+    if (draw_crosshair(curr_pos, endpointa, crosshair_size)) {
+        line_color = 1.0f - input_color;
+    }
+    if (draw_crosshair(curr_pos, endpointb, crosshair_size)) {
+        line_color = 1.0f - input_color;
+    }
+    if (is_near_line_segment(endpointa, endpointb, curr_pos, crosshair_size / 10.0f, true)) {
+        line_color = 1.0f - input_color;
+    }
+    return line_color;
+}
+
+__DEVICE__ inline float avg_f2(float a, float b) {
+    return (a + b) * 0.5f;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    float2 curr_pos_img = make_float2((float)p_X, (float)p_Y);
+    float3 input_color = sample_point_bilinear_3ch(curr_pos_img.x, curr_pos_img.y, p_TexR, p_TexG, p_TexB, 1.0f);
+    float3 output_color = input_color;
+
+    // Compute scope bounds
+    float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0f - p_Y);
+
+    // Transform because you'll probably have to once you keystone correct.
+    curr_pos = (curr_pos / make_float2(p_Width - 1.0f, p_Height - 1.0f) - make_float2(0.5f, 0.5f));
+    curr_pos = curr_pos / zoom - make_float2(transform_x, transform_y);
+    curr_pos = (curr_pos + make_float2(0.5f, 0.5f)) * make_float2(p_Width - 1.0f, p_Height - 1.0f);
+
+    float crosshair_size = p_Height / 100.0f;
+    // All below are Image coordinates, y=0 in top left. However, the UI control endpoint_1_y is 0 in bottom left.
+    float2 endpoint1 = make_float2(endpoint_1_x * (p_Width - 1), (1.0f - endpoint_1_y) * (p_Height - 1));
+    float2 endpoint2 = make_float2(endpoint_2_x * (p_Width - 1), (1.0f - endpoint_2_y) * (p_Height - 1));
+    float2 endpoint3 = make_float2(endpoint_3_x * (p_Width - 1), (1.0f - endpoint_3_y) * (p_Height - 1));
+    float2 endpoint4 = make_float2(endpoint_4_x * (p_Width - 1), (1.0f - endpoint_4_y) * (p_Height - 1));
+
+    float src_coords[4][2] = {
+        {endpoint1.x, endpoint1.y},
+        {endpoint2.x, endpoint2.y},
+        {endpoint3.x, endpoint3.y},
+        {endpoint4.x, endpoint4.y},
+    };
+    float dst_coords[4][2] = {
+        {endpoint1.x, endpoint1.y},
+        {endpoint2.x, endpoint2.y},
+        {endpoint3.x, endpoint3.y},
+        {endpoint4.x, endpoint4.y},
+    };
+
+    if (mode == MODE_CORRECTED) {
+        if (correction == CORRECTION_VERTICAL_KEYSTONE || correction == CORRECTION_BOTH_KEYSTONE) {
+            dst_coords[0][0] = avg_f2(endpoint1.x, endpoint2.x);
+            dst_coords[1][0] = avg_f2(endpoint1.x, endpoint2.x);
+            dst_coords[2][0] = avg_f2(endpoint3.x, endpoint4.x);
+            dst_coords[3][0] = avg_f2(endpoint3.x, endpoint4.x);
+        }
+        if (correction == CORRECTION_HORIZONTAL_KEYSTONE || correction == CORRECTION_BOTH_KEYSTONE) {
+            dst_coords[0][1] = avg_f2(endpoint1.y, endpoint3.y);
+            dst_coords[1][1] = avg_f2(endpoint2.y, endpoint4.y);
+            dst_coords[2][1] = avg_f2(endpoint1.y, endpoint3.y);
+            dst_coords[3][1] = avg_f2(endpoint2.y, endpoint4.y);
+        }
+
+        float proj_matrix[3][3] = {
+            {0.0f, 0.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f},
+        };
+        compute_proj_transform_matrix(proj_matrix, src_coords, dst_coords);
+        float curr_coords[3] = {curr_pos.x, curr_pos.y, 1.0f};
+        float transformed_coords[3] = {0.0f, 0.0f, 0.0f};
+        mv_33_3(transformed_coords, proj_matrix, curr_coords);
+
+        float2 corrected_coords = make_float2(transformed_coords[0] / transformed_coords[2], transformed_coords[1] / transformed_coords[2]);
+        corrected_coords.y = (float)(p_Height - 1) - corrected_coords.y;
+
+        bool outside_borders = corrected_coords.x < 0.0f || corrected_coords.x > (float)(p_Width - 1) || corrected_coords.y < 0.0f ||
+                               corrected_coords.y > (float)(p_Height - 1);
+        if (outside_borders) {
+            if (edge_behavior == EDGE_BLACK) {
+                output_color = make_float3(0.0f, 0.0f, 0.0f);
+            } else if (edge_behavior == EDGE_MAGENTA) {
+                output_color = make_float3(1.0f, 0.0f, 1.0f);
+            } else if (edge_behavior == EDGE_EXTEND) {
+                // EDGE_EXTEND: Clamp corrected_coords.x and corrected_coords.y to the borders of the image
+                corrected_coords.x = _clamp(corrected_coords.x, 0.0f, (float)(p_Width - 1));
+                corrected_coords.y = _clamp(corrected_coords.y, 0.0f, (float)(p_Height - 1));
+                output_color = sample_point_bilinear_3ch(corrected_coords.x, corrected_coords.y, p_TexR, p_TexG, p_TexB, 1.0f);
+            }
+        } else {
+            // Look up the pixel at corrected_coords.x, corrected_coords.y in each of the three channels
+            output_color = sample_point_bilinear_3ch(corrected_coords.x, corrected_coords.y, p_TexR, p_TexG, p_TexB, 1.0f);
+        }
+
+        // If vertical keystoning, do vertical lines, if horizontal keystoning, do horizontal lines, if both, do both.
+    }
+    if (show_guides) {
+        float2 draw_endpoint1 = make_float2(dst_coords[0][0], dst_coords[0][1]);
+        float2 draw_endpoint2 = make_float2(dst_coords[1][0], dst_coords[1][1]);
+        float2 draw_endpoint3 = make_float2(dst_coords[2][0], dst_coords[2][1]);
+        float2 draw_endpoint4 = make_float2(dst_coords[3][0], dst_coords[3][1]);
+        if (correction == CORRECTION_VERTICAL_KEYSTONE || correction == CORRECTION_BOTH_KEYSTONE) {
+            output_color = draw_line_and_crosshairs(output_color, curr_pos, draw_endpoint1, draw_endpoint2, crosshair_size);
+            output_color = draw_line_and_crosshairs(output_color, curr_pos, draw_endpoint3, draw_endpoint4, crosshair_size);
+        }
+        if (correction == CORRECTION_HORIZONTAL_KEYSTONE || correction == CORRECTION_BOTH_KEYSTONE) {
+            output_color = draw_line_and_crosshairs(output_color, curr_pos, draw_endpoint1, draw_endpoint3, crosshair_size);
+            output_color = draw_line_and_crosshairs(output_color, curr_pos, draw_endpoint2, draw_endpoint4, crosshair_size);
+        }
+    }
+
+    return output_color;
+}

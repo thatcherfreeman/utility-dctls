@@ -63,6 +63,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Halation DCTL](#halation-dctl)
         - [Hot Pixel Noise](#hot-pixel-noise)
         - [Hue Curve DCTL](#hue-curve-dctl)
+        - [Keystone Correction DCTL](#keystone-correction-dctl)
         - [Lens Distortion DCTL](#lens-distortion-dctl)
         - [LGGO Temperature Tint DCTL](#lggo-temperature-tint-dctl)
         - [Linear Contrast DCTL](#linear-contrast-dctl)
@@ -808,6 +809,28 @@ To use this DCTL, convert your image to HSV or spherical or the color model of y
 **Channel**: Indicate which channel corresponds to hue in the input image.
 
 **Max Hue Code Value**: Indicate whether the hue on the input is scaled 0-1, 0-2pi, or 0-360.
+
+---
+
+### Keystone Correction DCTL
+
+Helps you fix horizontal or vertical keystoning. Also has a resize packed in too so you can do both in a single operation and not need to follow this with node sizing.
+
+#### DCTL Parameters
+
+**Endpoint 1-4 X/Y**: Place the four points on horizontal or vertical edges in the image.
+
+**Transform X/Y**: Pan the image horizontally or vertically to help get rid of any out-of-image pixels.
+
+**Zoom**: Zoom the image to avoid out-of-image pixels. The transform and zoom are folded into the same resample as the keystone correction.
+
+**Show Guides**: Draws the guidelines and control points on the screen.
+
+**Edge Behavior**: Pixels sampled outside of the image bounds should be filled with this color. Magenta is useful to help you spot unintended blanking.
+
+**Correction**: Indicate whether you want to correct horizontal, or vertical keystoning, or both.
+
+**Mode**: Place your four control points with this set to Source, then switch it to Corrected to see the corrected result.
 
 ---
 
