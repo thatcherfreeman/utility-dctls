@@ -9,8 +9,8 @@ DEFINE_UI_PARAMS(endpoint_3_x, Endpoint 3 X, DCTLUI_SLIDER_FLOAT, 0.75, 0.0, 1.0
 DEFINE_UI_PARAMS(endpoint_3_y, Endpoint 3 Y, DCTLUI_SLIDER_FLOAT, 0.25, 0.0, 1.0, 0.001)
 DEFINE_UI_PARAMS(endpoint_4_x, Endpoint 4 X, DCTLUI_SLIDER_FLOAT, 0.75, 0.0, 1.0, 0.001)
 DEFINE_UI_PARAMS(endpoint_4_y, Endpoint 4 Y, DCTLUI_SLIDER_FLOAT, 0.75, 0.0, 1.0, 0.001)
-DEFINE_UI_PARAMS(transform_x, Transform X, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
-DEFINE_UI_PARAMS(transform_y, Transform Y, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(offset_x, Position X, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(offset_y, Position Y, DCTLUI_SLIDER_FLOAT, 0.0, -1.0, 1.0, 0.001)
 DEFINE_UI_PARAMS(zoom, Zoom, DCTLUI_SLIDER_FLOAT, 1.0, 0.1, 3.0, 0.001)
 
 DEFINE_UI_PARAMS(show_guides, Show Guides, DCTLUI_CHECK_BOX, 1)
@@ -138,8 +138,9 @@ __DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR
     return out;
 }
 
-__DEVICE__ void compute_proj_transform_matrix(float output_mat[3][3], float src_coords[4][2], float dst_coords[4][2]) {
-    // https://math.stackexchange.com/questions/296794/finding-the-transform-matrix-from-4-projected-points-with-javascript
+__DEVICE__ void compute_proj_matrix(float output_mat[3][3], float src_coords[4][2], float dst_coords[4][2]) {
+    // https://math.stackexchange.com/questions/296794/finding-the-trans
+    // form-matrix-from-4-projected-points-with-javascript
 
     // Step 1
     float A[3][3] = {
@@ -244,9 +245,9 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     // Compute scope bounds
     float2 curr_pos = make_float2((float)p_X, (float)p_Height - 1.0f - p_Y);
 
-    // Transform because you'll probably have to once you keystone correct.
+    // Position and Zoom adjustment because you'll probably have to once you keystone correct.
     curr_pos = (curr_pos / make_float2(p_Width - 1.0f, p_Height - 1.0f) - make_float2(0.5f, 0.5f));
-    curr_pos = curr_pos / zoom - make_float2(transform_x, transform_y);
+    curr_pos = curr_pos / zoom - make_float2(offset_x, offset_y);
     curr_pos = (curr_pos + make_float2(0.5f, 0.5f)) * make_float2(p_Width - 1.0f, p_Height - 1.0f);
 
     float crosshair_size = p_Height / 100.0f;
@@ -288,12 +289,12 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
             {0.0f, 0.0f, 0.0f},
             {0.0f, 0.0f, 0.0f},
         };
-        compute_proj_transform_matrix(proj_matrix, src_coords, dst_coords);
+        compute_proj_matrix(proj_matrix, src_coords, dst_coords);
         float curr_coords[3] = {curr_pos.x, curr_pos.y, 1.0f};
-        float transformed_coords[3] = {0.0f, 0.0f, 0.0f};
-        mv_33_3(transformed_coords, proj_matrix, curr_coords);
+        float projected_coords[3] = {0.0f, 0.0f, 0.0f};
+        mv_33_3(projected_coords, proj_matrix, curr_coords);
 
-        float2 corrected_coords = make_float2(transformed_coords[0] / transformed_coords[2], transformed_coords[1] / transformed_coords[2]);
+        float2 corrected_coords = make_float2(projected_coords[0] / projected_coords[2], projected_coords[1] / projected_coords[2]);
         corrected_coords.y = (float)(p_Height - 1) - corrected_coords.y;
 
         bool outside_borders = corrected_coords.x < 0.0f || corrected_coords.x > (float)(p_Width - 1) || corrected_coords.y < 0.0f ||
