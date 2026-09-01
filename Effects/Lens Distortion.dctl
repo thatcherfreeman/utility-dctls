@@ -1,12 +1,12 @@
 // clang-format off
-// Need parameter for k1
+DEFINE_DCTL_ALPHA_MODE_STRAIGHT
 DEFINE_UI_PARAMS(k_1_x, X Distortion Amount K1, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.0001)
 DEFINE_UI_PARAMS(k_1_y, Y Distortion Amount K1, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.0001)
 DEFINE_UI_PARAMS(k_2_x, X Distortion Amount K2, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.0001)
 DEFINE_UI_PARAMS(k_2_y, Y Distortion Amount K2, DCTLUI_SLIDER_FLOAT, 0.0, -2.0, 2.0, 0.0001)
 DEFINE_UI_PARAMS(scale, Scale, DCTLUI_SLIDER_FLOAT, 1.0, 0.00, 2.0, 0.0001)
 DEFINE_UI_PARAMS(uniform_distortion, Couple XY, DCTLUI_CHECK_BOX, 1)
-DEFINE_UI_PARAMS(edge_behavior, Edge Behavior, DCTLUI_COMBO_BOX, 1, {EDGE_EXTEND, EDGE_BLACK, EDGE_MAGENTA}, {Extend, Black, Magenta})
+DEFINE_UI_PARAMS(edge_behavior, Edge Behavior, DCTLUI_COMBO_BOX, 1, {EDGE_EXTEND, EDGE_BLACK, EDGE_MAGENTA, EDGE_TRANSPARENT}, {Extend, Black, Magenta, Transparent})
 
 // clang-format on
 
@@ -39,15 +39,17 @@ __DEVICE__ float sample_point_bilinear_1ch(float x, float y, __TEXTURE__ tex, fl
     return c;
 }
 
-__DEVICE__ float3 sample_point_bilinear_3ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, float scale) {
-    float3 out = make_float3(0.0f, 0.0f, 0.0f);
+__DEVICE__ float4
+sample_point_bilinear_4ch(float x, float y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, __TEXTURE__ p_TexA, float scale) {
+    float4 out = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
     out.x = sample_point_bilinear_1ch(x, y, p_TexR, scale);
     out.y = sample_point_bilinear_1ch(x, y, p_TexG, scale);
     out.z = sample_point_bilinear_1ch(x, y, p_TexB, scale);
+    out.w = sample_point_bilinear_1ch(x, y, p_TexA, scale);
     return out;
 }
 
-__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+__DEVICE__ float4 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB, __TEXTURE__ p_TexA) {
     // Transform p_X and p_Y into x_d, y_d, where the center is now 0.0, 0.0, and the height of the image is 1.0 (bottom middle is 0.0,
     // 0.5).
     float aspect_ratio = (float)p_Width / (float)p_Height;
@@ -77,21 +79,23 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTU
     float p_y_u = p_y_u_scaled * (float)(p_Height - 1);
 
     bool outside_borders = p_x_u < 0.0f || p_x_u > (float)(p_Width - 1) || p_y_u < 0.0f || p_y_u > (float)(p_Height - 1);
-    float3 out;
+    float4 out;
     if (outside_borders) {
         if (edge_behavior == EDGE_BLACK) {
-            out = make_float3(0.0f, 0.0f, 0.0f);
+            out = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
         } else if (edge_behavior == EDGE_MAGENTA) {
-            out = make_float3(1.0f, 0.0f, 1.0f);
+            out = make_float4(1.0f, 0.0f, 1.0f, 1.0f);
+        } else if (edge_behavior == EDGE_TRANSPARENT) {
+            out = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         } else if (edge_behavior == EDGE_EXTEND) {
             // EDGE_EXTEND: Clamp p_X_u and p_Y_u to the borders of the image
             p_x_u = _clamp(p_x_u, 0.0f, (float)(p_Width - 1));
             p_y_u = _clamp(p_y_u, 0.0f, (float)(p_Height - 1));
-            out = sample_point_bilinear_3ch(p_x_u, p_y_u, p_TexR, p_TexG, p_TexB, 1.0f);
+            out = sample_point_bilinear_4ch(p_x_u, p_y_u, p_TexR, p_TexG, p_TexB, p_TexA, 1.0f);
         }
     } else {
         // Look up the pixel at p_X_u, p_Y_u in each of the three channels
-        out = sample_point_bilinear_3ch(p_x_u, p_y_u, p_TexR, p_TexG, p_TexB, 1.0f);
+        out = sample_point_bilinear_4ch(p_x_u, p_y_u, p_TexR, p_TexG, p_TexB, p_TexA, 1.0f);
     }
 
     // Return that pixel value.
