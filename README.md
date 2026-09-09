@@ -1942,6 +1942,8 @@ Helps you spot pixels with NaN, infinity, negative, zero, or superwhite channels
 
 **Checkerboard Size**: Square size of the generated checkerboard, if set to zero, just uses the Highlight Color.
 
+**Search Radius**: For context, Resolve generates a mask where the input is NaN and blacks out those pixels, so we can't actually highlight NaNs anymore directly. Thus, the workaround is that we highlight a pixel if its neighbor is NaN. This slider choose how many pixels (radius) to search for an offending code value.
+
 **Lower Bound**: Indicates the lower bound used as a comparison point for some of the below sliders.
 
 **Upper Bound**: Indicates the upper bound used as a comparison point for some of the below sliders
