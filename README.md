@@ -1365,7 +1365,7 @@ Variation of the Smooth Tetra dctl except for each hue, the only control is the 
 ---
 
 ### Smooth Tetra Sat v Sat Skin DCTL
-Variation of the Smooth Tetra dctl except for each hue, there are sat v sat controls. Plus there's a skin section.
+Variation of the Smooth Tetra dctl except for each hue, there are sat v sat controls. Plus there's a skin section. It goes without saying that the more surgical you are, the less smooth the result is.
 
 #### DCTL Parameters
 **Red/Skin/Yellow/Green/Cyan/Blue/Magenta Hue**: Adjust the hue for each hue range
@@ -1392,7 +1392,7 @@ Variation of the Smooth Tetra dctl except for each hue, there are sat v sat cont
 ---
 
 ### Smooth Tetra Sat v Sat DCTL
-Variation of the Smooth Tetra dctl except for each hue, there are sat v sat controls.
+Variation of the Smooth Tetra dctl except for each hue, there are sat v sat controls. It goes without saying that the more surgical you are, the less smooth the result is.
 
 #### DCTL Parameters
 **Red/Yellow/Green/Cyan/Blue/Magenta Hue**: Adjust the hue for each hue range
