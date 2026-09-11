@@ -313,7 +313,10 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     } else if (normalize_balance == WB_MAX) {
         balance_lum = _fmaxf(_fmaxf(balance_gains.x, balance_gains.y), balance_gains.z);
     } else if (normalize_balance == WB_L2_NORM) {
-        balance_lum = _sqrtf(balance_gains.x * balance_gains.x + balance_gains.y * balance_gains.y + balance_gains.z * balance_gains.z) / _sqrtf(3.0f);
+        // Totally unscientific but throwing in the luminance weights makes it so that
+        // lowering tint (greener) doesn't become brighter.
+        balance_lum = _sqrtf(0.212639f * balance_gains.x * balance_gains.x + 0.715169f * balance_gains.y * balance_gains.y +
+                             0.072192f * balance_gains.z * balance_gains.z);
     }
     balance_gains /= balance_lum;
 
