@@ -1049,7 +1049,7 @@ Titled and UI designed by Misha Beare.
 
 **LGG Lin Mid Gray**: Indicate the linear code value for mid gray. This is used to calculate the target mid gray value in the selected **Log Space**
 
-**Normalize WB by Lum**: When checked, **Temperature** and **Tint** will attempt to preserve luminance. When unchecked, those two sliders will instead maintain `max(r,g,b)` and can only darken the image.
+**Normalize WB**: Specify what metric the **Temperature** and **Tint** controls attempt to preserve. Luminance will try to keep the same brightness (loosely speaking), maximum will make it so that it only makes the image darker, and L2 Norm behaves kinda like luminance but at extreme values of the sliders it makes the image darker instead of brighter.
 
 **Input Transfer Function**: Indicate the image encoding of the input image, so we can transform to linear.
 
