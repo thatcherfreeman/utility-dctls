@@ -86,6 +86,8 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Separable Gaussian Blur DCTL](#separable-gaussian-blur-dctl)
         - [Smooth Tetra Contrast Skin DCTL](#smooth-tetra-contrast-skin-dctl)
         - [Smooth Tetra Contrast DCTL](#smooth-tetra-contrast-dctl)
+        - [Smooth Tetra Sat v Sat Skin DCTL](#smooth-tetra-sat-v-sat-skin-dctl)
+        - [Smooth Tetra Sat v Sat DCTL](#smooth-tetra-sat-v-sat-dctl)
         - [Smooth Tetra Skin DCTL](#smooth-tetra-skin-dctl)
         - [Smooth Tetra DCTL](#smooth-tetra-dctl)
         - [Subtractive Saturation DCTL](#subtractive-saturation-dctl)
@@ -1325,7 +1327,7 @@ This implementation is normalized so that the strength is scaled according to th
 ---
 
 ### Smooth Tetra Contrast Skin DCTL
-Variation of the Smooth Tetra dctl except for each hue, the only control is the amount of contrast applied for that hue. Expects a scene linear image. Plus there's a skin slider.
+Variation of the Smooth Tetra dctl except for each hue, the only control is the amount of contrast applied for that hue. Plus there's a skin slider.
 
 #### DCTL Parameters
 **Red/Skin/Yellow/Green/Cyan/Blue/Magenta Contrast**: Adjust the contrast for the specified hue.
@@ -1345,7 +1347,7 @@ Variation of the Smooth Tetra dctl except for each hue, the only control is the 
 ---
 
 ### Smooth Tetra Contrast DCTL
-Variation of the Smooth Tetra dctl except for each hue, the only control is the amount of contrast applied for that hue. Expects a scene linear image.
+Variation of the Smooth Tetra dctl except for each hue, the only control is the amount of contrast applied for that hue.
 
 #### DCTL Parameters
 **Red/Yellow/Green/Cyan/Blue/Magenta Contrast**: Adjust the contrast for the specified hue.
@@ -1354,12 +1356,63 @@ Variation of the Smooth Tetra dctl except for each hue, the only control is the 
 
 **Neutral Smoothness**: This indicates the radius around the achromatic axis that we will try to smooth the adjustments. 0 means that it will NOT be C1 continuous around the achromatic. Note that inevitably, when in order to maintain smoothness around the achromatic, when this parameter is positive, then some adjustments to say the Red sliders may affect the colors of lower-saturation Cyans and other hues within the smoothed radius.
 
-
 **Smooth Neutrals**: Quickly toggle on and off smoothening of the achromatic axis.
 
 **Draw Swatches**: Toggles on some swatches so you can see what hues your adjustments correspond to. These swatches are drawn *upstream* of the tool, so they're affected by the Contrast sliders.
 
 **Input Transfer Function**: Choose the image state encoding of your image. Keep in mind that the result is not guaranteed to remain in-gamut, so be very careful about when you use this, particularly for display-referred images.
+
+---
+
+### Smooth Tetra Sat v Sat Skin DCTL
+Variation of the Smooth Tetra dctl except for each hue, there are sat v sat controls. Plus there's a skin section.
+
+#### DCTL Parameters
+**Red/Skin/Yellow/Green/Cyan/Blue/Magenta Hue**: Adjust the hue for each hue range
+
+**Red/Skin/Yellow/Green/Cyan/Blue/Magenta Low/Mid/High/Max Sat**: Adjust the sat v sat curve for each hue range
+
+**Red/Skin/Yellow/Green/Cyan/Blue/Magenta Val**: Adjust the brightness
+
+**Input Skin Hue Adj**: Adjust what hue corrresponds to skin.
+
+**Polar Smoothness**: Controls how much falloff there is with hue. Larger means that there is **LESS** overlap between the different hue sliders, so the cutoff between one hue region and the next will be more abrupt as you sweep through the hues. Note that I've set the default in this one to be a little more targeted than in [Smooth Tetra DCTL](#smooth-tetra-dctl).
+
+**Neutral Smoothness**: This indicates the radius around the achromatic axis that we will try to smooth the adjustments. 0 means that it will NOT be C1 continuous around the achromatic. Note that inevitably, when in order to maintain smoothness around the achromatic, when this parameter is positive, then some adjustments to say the Red sliders may affect the colors of lower-saturation Cyans and other hues within the smoothed radius.
+
+**Smooth Neutrals**: Quickly toggle on and off smoothening of the achromatic axis.
+
+**Draw Swatches**: Toggles on some swatches so you can see what hues your adjustments correspond to. These swatches are drawn *upstream* of the tool, so they're affected by the Contrast sliders.
+
+**Draw Sat curve**: Shows you the sat v sat curve for each color.
+
+**Input Transfer Function**: Choose the image state encoding of your image. Keep in mind that the result is not guaranteed to remain in-gamut, so be very careful about when you use this, particularly for display-referred images.
+
+
+---
+
+### Smooth Tetra Sat v Sat DCTL
+Variation of the Smooth Tetra dctl except for each hue, there are sat v sat controls.
+
+#### DCTL Parameters
+**Red/Yellow/Green/Cyan/Blue/Magenta Hue**: Adjust the hue for each hue range
+
+**Red/Yellow/Green/Cyan/Blue/Magenta Low/Mid/High/Max Sat**: Adjust the sat v sat curve for each hue range
+
+**Red/Yellow/Green/Cyan/Blue/Magenta Val**: Adjust the brightness
+
+**Polar Smoothness**: Controls how much falloff there is with hue. Larger means that there is **LESS** overlap between the different hue sliders, so the cutoff between one hue region and the next will be more abrupt as you sweep through the hues. Note that I've set the default in this one to be a little more targeted than in [Smooth Tetra DCTL](#smooth-tetra-dctl).
+
+**Neutral Smoothness**: This indicates the radius around the achromatic axis that we will try to smooth the adjustments. 0 means that it will NOT be C1 continuous around the achromatic. Note that inevitably, when in order to maintain smoothness around the achromatic, when this parameter is positive, then some adjustments to say the Red sliders may affect the colors of lower-saturation Cyans and other hues within the smoothed radius.
+
+**Smooth Neutrals**: Quickly toggle on and off smoothening of the achromatic axis.
+
+**Draw Swatches**: Toggles on some swatches so you can see what hues your adjustments correspond to. These swatches are drawn *upstream* of the tool, so they're affected by the Contrast sliders.
+
+**Draw Sat curve**: Shows you the sat v sat curve for each color.
+
+**Input Transfer Function**: Choose the image state encoding of your image. Keep in mind that the result is not guaranteed to remain in-gamut, so be very careful about when you use this, particularly for display-referred images.
+
 
 ---
 

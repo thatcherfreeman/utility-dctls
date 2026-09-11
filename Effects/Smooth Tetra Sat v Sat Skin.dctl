@@ -1,0 +1,1044 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(red_hue, Red Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(red_sat_low, Red Low Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(red_sat_mid, Red Mid Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(red_sat_high, Red High Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(red_sat_max, Red Max Sat, DCTLUI_SLIDER_FLOAT, 2.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(red_val, Red Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+DEFINE_UI_PARAMS(skin_hue, Skin Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(skin_sat_low, Skin Low Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(skin_sat_mid, Skin Mid Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(skin_sat_high, Skin High Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(skin_sat_max, Skin Max Sat, DCTLUI_SLIDER_FLOAT, 2.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(skin_val, Skin Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+DEFINE_UI_PARAMS(yellow_hue, Yellow Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(yellow_sat_low, Yellow Low Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(yellow_sat_mid, Yellow Mid Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(yellow_sat_high, Yellow High Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(yellow_sat_max, Yellow Max Sat, DCTLUI_SLIDER_FLOAT, 2.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(yellow_val, Yellow Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+DEFINE_UI_PARAMS(green_hue, Green Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(green_sat_low, Green Low Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(green_sat_mid, Green Mid Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(green_sat_high, Green High Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(green_sat_max, Green Max Sat, DCTLUI_SLIDER_FLOAT, 2.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(green_val, Green Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+DEFINE_UI_PARAMS(cyan_hue, Cyan Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(cyan_sat_low, Cyan Low Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(cyan_sat_mid, Cyan Mid Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(cyan_sat_high, Cyan High Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(cyan_sat_max, Cyan Max Sat, DCTLUI_SLIDER_FLOAT, 2.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(cyan_val, Cyan Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+DEFINE_UI_PARAMS(blue_hue, Blue Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(blue_sat_low, Blue Low Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(blue_sat_mid, Blue Mid Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(blue_sat_high, Blue High Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(blue_sat_max, Blue Max Sat, DCTLUI_SLIDER_FLOAT, 2.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(blue_val, Blue Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+DEFINE_UI_PARAMS(magenta_hue, Magenta Hue, DCTLUI_SLIDER_FLOAT, 0.0, -60.0, 60.0, 0.001)
+DEFINE_UI_PARAMS(magenta_sat_low, Magenta Low Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(magenta_sat_mid, Magenta Mid Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(magenta_sat_high, Magenta High Sat, DCTLUI_SLIDER_FLOAT, 1.0, 0.0, 2.0, 0.001)
+DEFINE_UI_PARAMS(magenta_sat_max, Magenta Max Sat, DCTLUI_SLIDER_FLOAT, 3.0, 0.0, 3.0, 0.001)
+DEFINE_UI_PARAMS(magenta_val, Magenta Val, DCTLUI_SLIDER_FLOAT, 0.0, -4.0, 4.0, 0.001)
+
+DEFINE_UI_PARAMS(input_skin_hue_adj, Input Skin Hue Adj, DCTLUI_SLIDER_FLOAT, 0.0, -29.9, 29.9, 0.01)
+DEFINE_UI_PARAMS(polar_smoothness, Polar Smoothness, DCTLUI_SLIDER_FLOAT, 5.0, 0.0, 10.0, 0.001)
+DEFINE_UI_PARAMS(neutral_smoothness, Neutral Smoothness, DCTLUI_SLIDER_FLOAT, 0.1, 0.0, 1.0, 0.001)
+DEFINE_UI_PARAMS(smooth_neutrals, Smooth Neutrals, DCTLUI_CHECK_BOX, 1)
+DEFINE_UI_PARAMS(draw_swatches, Draw Swatches, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(draw_sat_curve, Draw Sat Curve, DCTLUI_CHECK_BOX, 0)
+
+DEFINE_UI_PARAMS(input_tf, Input Transfer Function, DCTLUI_COMBO_BOX, 0, {INPUT_TF_LINEAR, INPUT_TF_ACESCC, INPUT_TF_ACESCCT, INPUT_TF_LOGC3, INPUT_TF_DAVINCI_INTERMEDIATE, INPUT_TF_PQ, INPUT_TF_GAMMA_24}, {Linear, ACEScc, ACEScct, Arri LogC3, DaVinci Intermediate, PQ, Gamma 2.4})
+
+// clang-format on
+
+#define PI (3.141592653589793238f)
+
+#define NUM_HUES 7
+#define NUM_SATVSAT_CONTROL_POINTS 3
+
+// Changing this, or the control point positions in sat_v_sat_curve, invalidates
+// svs_monotonic_normals below. Regenerate with
+// Documentation/python_prototypes/sat_v_sat_monotonicity.py
+#define SAT_V_SAT_SMOOTHNESS (20.0f)
+
+__DEVICE__ inline float rad_to_deg(float deg) {
+    return deg * 360.0f / (2.0f * PI);
+}
+
+__DEVICE__ inline float deg_to_rad(float rad) {
+    return rad * (2.0f * PI) / 360.0f;
+}
+
+__DEVICE__ inline float pow2(float x) {
+    return x * x;
+}
+
+__DEVICE__ float3 mv_33_3(float mat[3][3], float3 v) {
+    float3 out = make_float3(mat[0][0] * v.x + mat[0][1] * v.y + mat[0][2] * v.z,
+                             mat[1][0] * v.x + mat[1][1] * v.y + mat[1][2] * v.z,
+                             mat[2][0] * v.x + mat[2][1] * v.y + mat[2][2] * v.z);
+    return out;
+}
+
+__DEVICE__ inline float arctan2f(float y, float x) {
+    float angle = _atan2f(y, x);
+    if (isnan(angle)) {
+        // Handle NaN case
+        return 0.0f;
+    }
+    return angle;
+}
+
+__DEVICE__ float mod(float x, float y) {
+    if (x < 0) {
+        return y + _fmod(x, y);
+    } else {
+        return _fmod(x, y);
+    }
+}
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+__DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
+    // Adapted from Juan Pablo Zambrano's code
+    // hue is in range of 0-1
+    float3 lsh = make_float3(hsv.z, hsv.y * 3.0f, mod(hsv.x, 2.0f * PI));
+
+    float ctr = lsh.x * lsh.y * _cosf(lsh.z);
+    float ctg = lsh.x;
+    float ctb = lsh.x * lsh.y * _sinf(lsh.z);
+    float3 c = make_float3(ctr, ctg, ctb);
+
+    float mat[3][3] = {
+        {2.0f / 3.0f, 1.0f, 0.0f},
+        {-1.0f / 3.0f, 1.0f, _sqrtf(3.0f) / 3.0f},
+        {-1.0f / 3.0f, 1.0f, -_sqrtf(3.0f) / 3.0f},
+    };
+
+    return mv_33_3(mat, c);
+}
+
+__DEVICE__ float3 rgb_to_cylindrical(float3 x) {
+
+    // Matrix aligns and scales achromatic white (1, 1, 1) with (0, 1, 0)
+    // Also rotates input (1, 0, 0) above the red axis and ensures that
+    // (1, 0, 0) input ends up having a red channel code value of (1).
+    // outputs hue in range 0-1
+    float mat[3][3] = {
+        {1.0f, -1.0f / 2.0f, -1.0f / 2.0f},
+        {1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f},
+        {0.0f, _sqrtf(3.0f) / 2.0f, -_sqrtf(3.0f) / 2.0f},
+    };
+
+    float3 rotated_color = mv_33_3(mat, x);
+    float l = rotated_color.y;
+    float3 hsl = make_float3(0.0f, 0.0f, 0.0f);
+
+    float3 normalized_color = rotated_color / l;
+    if (l == 0.0f) {
+        hsl = make_float3(0.0f, 0.0f, l);
+    } else {
+        float theta = arctan2f(normalized_color.z, normalized_color.x);
+        hsl.x = mod(theta, 2.0f * PI);
+        hsl.y = _hypotf(normalized_color.x, normalized_color.z) / 3.0f;
+        hsl.z = l;
+    }
+    return hsl;
+}
+
+typedef struct {
+        float red_input_hue;
+        float skin_input_hue;
+        float yellow_input_hue;
+        float green_input_hue;
+        float cyan_input_hue;
+        float blue_input_hue;
+        float magenta_input_hue;
+
+        float red_hue;
+        float skin_hue;
+        float yellow_hue;
+        float green_hue;
+        float cyan_hue;
+        float blue_hue;
+        float magenta_hue;
+
+        float red_sat_low;
+        float skin_sat_low;
+        float yellow_sat_low;
+        float green_sat_low;
+        float cyan_sat_low;
+        float blue_sat_low;
+        float magenta_sat_low;
+
+        float red_sat_mid;
+        float skin_sat_mid;
+        float yellow_sat_mid;
+        float green_sat_mid;
+        float cyan_sat_mid;
+        float blue_sat_mid;
+        float magenta_sat_mid;
+
+        float red_sat_high;
+        float skin_sat_high;
+        float yellow_sat_high;
+        float green_sat_high;
+        float cyan_sat_high;
+        float blue_sat_high;
+        float magenta_sat_high;
+
+        float red_sat_max;
+        float skin_sat_max;
+        float yellow_sat_max;
+        float green_sat_max;
+        float cyan_sat_max;
+        float blue_sat_max;
+        float magenta_sat_max;
+
+        float red_val;
+        float skin_val;
+        float yellow_val;
+        float green_val;
+        float cyan_val;
+        float blue_val;
+        float magenta_val;
+} tetra_params_t;
+
+__DEVICE__ tetra_params_t make_tetra_params(float red_input_hue,
+                                            float skin_input_hue,
+                                            float yellow_input_hue,
+                                            float green_input_hue,
+                                            float cyan_input_hue,
+                                            float blue_input_hue,
+                                            float magenta_input_hue,
+                                            float red_hue,
+                                            float skin_hue,
+                                            float yellow_hue,
+                                            float green_hue,
+                                            float cyan_hue,
+                                            float blue_hue,
+                                            float magenta_hue,
+                                            float red_sat_low,
+                                            float skin_sat_low,
+                                            float yellow_sat_low,
+                                            float green_sat_low,
+                                            float cyan_sat_low,
+                                            float blue_sat_low,
+                                            float magenta_sat_low,
+                                            float red_sat_mid,
+                                            float skin_sat_mid,
+                                            float yellow_sat_mid,
+                                            float green_sat_mid,
+                                            float cyan_sat_mid,
+                                            float blue_sat_mid,
+                                            float magenta_sat_mid,
+                                            float red_sat_high,
+                                            float skin_sat_high,
+                                            float yellow_sat_high,
+                                            float green_sat_high,
+                                            float cyan_sat_high,
+                                            float blue_sat_high,
+                                            float magenta_sat_high,
+                                            float red_sat_max,
+                                            float skin_sat_max,
+                                            float yellow_sat_max,
+                                            float green_sat_max,
+                                            float cyan_sat_max,
+                                            float blue_sat_max,
+                                            float magenta_sat_max,
+                                            float red_val,
+                                            float skin_val,
+                                            float yellow_val,
+                                            float green_val,
+                                            float cyan_val,
+                                            float blue_val,
+                                            float magenta_val) {
+    tetra_params_t params;
+
+    params.red_input_hue = red_input_hue;
+    params.skin_input_hue = skin_input_hue;
+    params.yellow_input_hue = yellow_input_hue;
+    params.green_input_hue = green_input_hue;
+    params.cyan_input_hue = cyan_input_hue;
+    params.blue_input_hue = blue_input_hue;
+    params.magenta_input_hue = magenta_input_hue;
+
+    params.red_hue = red_hue;
+    params.skin_hue = skin_hue;
+    params.yellow_hue = yellow_hue;
+    params.green_hue = green_hue;
+    params.cyan_hue = cyan_hue;
+    params.blue_hue = blue_hue;
+    params.magenta_hue = magenta_hue;
+
+    params.red_sat_low = red_sat_low;
+    params.skin_sat_low = skin_sat_low;
+    params.yellow_sat_low = yellow_sat_low;
+    params.green_sat_low = green_sat_low;
+    params.cyan_sat_low = cyan_sat_low;
+    params.blue_sat_low = blue_sat_low;
+    params.magenta_sat_low = magenta_sat_low;
+
+    params.red_sat_mid = red_sat_mid;
+    params.skin_sat_mid = skin_sat_mid;
+    params.yellow_sat_mid = yellow_sat_mid;
+    params.green_sat_mid = green_sat_mid;
+    params.cyan_sat_mid = cyan_sat_mid;
+    params.blue_sat_mid = blue_sat_mid;
+    params.magenta_sat_mid = magenta_sat_mid;
+
+    params.red_sat_high = red_sat_high;
+    params.skin_sat_high = skin_sat_high;
+    params.yellow_sat_high = yellow_sat_high;
+    params.green_sat_high = green_sat_high;
+    params.cyan_sat_high = cyan_sat_high;
+    params.blue_sat_high = blue_sat_high;
+    params.magenta_sat_high = magenta_sat_high;
+
+    params.red_sat_max = red_sat_max;
+    params.skin_sat_max = skin_sat_max;
+    params.yellow_sat_max = yellow_sat_max;
+    params.green_sat_max = green_sat_max;
+    params.cyan_sat_max = cyan_sat_max;
+    params.blue_sat_max = blue_sat_max;
+    params.magenta_sat_max = magenta_sat_max;
+
+    params.red_val = red_val;
+    params.skin_val = skin_val;
+    params.yellow_val = yellow_val;
+    params.green_val = green_val;
+    params.cyan_val = cyan_val;
+    params.blue_val = blue_val;
+    params.magenta_val = magenta_val;
+    return params;
+}
+
+// Headroom limits that keep the sat v sat curve from folding back on itself. The curve
+// is s * (weighted average of sat_low, sat_mid, sat_high), so its slope is linear in
+// those three and the monotonic settings form a convex cone; these two inequalities are a
+// simple conservative box inside that cone. Derived and verified in
+// Documentation/python_prototypes/sat_v_sat_monotonicity.py -- regenerate them if
+// SAT_V_SAT_SMOOTHNESS or the control point positions change.
+//
+// Both are slack at ordinary settings: with High Sat at its 1.0 default, Mid Sat still
+// reaches the top of its slider, and Low Sat is capped at 3.0 against a slider that
+// stops at 2.0.
+#define SVS_MID_PER_HIGH (2.0f)
+#define SVS_LOW_PER_MID (1.5f)
+#define SVS_LOW_PER_HIGH (1.5f)
+
+__DEVICE__ float3 limit_sat_v_sat(float3 sats) {
+    // sats = (low, mid, high). Caps mid against high and then low against both, so the
+    // curve can never come back down. Deliberately cascades from the top: High Sat is
+    // always honored exactly, and dropping it drags Mid Sat (and in turn Low Sat) down
+    // with it rather than being ignored.
+    sats.y = _fminf(sats.y, SVS_MID_PER_HIGH * sats.z);
+    sats.x = _fminf(sats.x, SVS_LOW_PER_MID * sats.y + SVS_LOW_PER_HIGH * sats.z);
+    return sats;
+}
+
+__DEVICE__ tetra_params_t limit_tetra_params(tetra_params_t params) {
+    // For each adjacent pair of hue nodes, if their output positions collide
+    // (earlier exceeds later), snap both to their midpoint. Iterate so that
+    // cascading collisions (where fixing one pair creates a new one) fully
+    // propagate. 12 passes converges for any practical slider range.
+
+    if (params.red_input_hue > params.magenta_input_hue) {
+        params.red_input_hue -= 2.0f * PI;
+    }
+
+    float red_pos = params.red_input_hue + params.red_hue;
+    float skin_pos = params.skin_input_hue + params.skin_hue;
+    float yellow_pos = params.yellow_input_hue + params.yellow_hue;
+    float green_pos = params.green_input_hue + params.green_hue;
+    float cyan_pos = params.cyan_input_hue + params.cyan_hue;
+    float blue_pos = params.blue_input_hue + params.blue_hue;
+    float magenta_pos = params.magenta_input_hue + params.magenta_hue;
+
+    for (int i = 0; i < 12; i++) {
+        bool updated = false;
+        if (red_pos > skin_pos) {
+            float mid = (red_pos + skin_pos) * 0.5f;
+            red_pos = mid;
+            skin_pos = mid;
+            updated = true;
+        }
+        if (skin_pos > yellow_pos) {
+            float mid = (skin_pos + yellow_pos) * 0.5f;
+            skin_pos = mid;
+            yellow_pos = mid;
+            updated = true;
+        }
+        if (yellow_pos > green_pos) {
+            float mid = (yellow_pos + green_pos) * 0.5f;
+            yellow_pos = mid;
+            green_pos = mid;
+            updated = true;
+        }
+        if (green_pos > cyan_pos) {
+            float mid = (green_pos + cyan_pos) * 0.5f;
+            green_pos = mid;
+            cyan_pos = mid;
+            updated = true;
+        }
+        if (cyan_pos > blue_pos) {
+            float mid = (cyan_pos + blue_pos) * 0.5f;
+            cyan_pos = mid;
+            blue_pos = mid;
+            updated = true;
+        }
+        if (blue_pos > magenta_pos) {
+            float mid = (blue_pos + magenta_pos) * 0.5f;
+            blue_pos = mid;
+            magenta_pos = mid;
+            updated = true;
+        }
+        // Polar wrap: magenta must stay within one full revolution of red.
+        // magenta_pos > red_pos + 2pi means either magenta has swept past red
+        // going clockwise, or red has shifted so far negative it has lapped
+        // magenta counterclockwise — both cases reduce to the same inequality.
+        if (magenta_pos > red_pos + 2.0f * PI) {
+            float mid = (magenta_pos + red_pos + 2.0f * PI) * 0.5f;
+            magenta_pos = mid;
+            red_pos = mid - 2.0f * PI;
+            updated = true;
+        }
+        if (!updated)
+            break;
+    }
+
+    params.red_hue = red_pos - params.red_input_hue;
+    params.skin_hue = skin_pos - params.skin_input_hue;
+    params.yellow_hue = yellow_pos - params.yellow_input_hue;
+    params.green_hue = green_pos - params.green_input_hue;
+    params.cyan_hue = cyan_pos - params.cyan_input_hue;
+    params.blue_hue = blue_pos - params.blue_input_hue;
+    params.magenta_hue = magenta_pos - params.magenta_input_hue;
+
+    // Hold each hue's sat v sat curve monotonic. sat_max needs no limiting:
+    // max_sat_curve is non-decreasing, so it cannot introduce a negative slope.
+    float3 red_sats = limit_sat_v_sat(make_float3(params.red_sat_low, params.red_sat_mid, params.red_sat_high));
+    params.red_sat_low = red_sats.x;
+    params.red_sat_mid = red_sats.y;
+    params.red_sat_high = red_sats.z;
+
+    float3 skin_sats = limit_sat_v_sat(make_float3(params.skin_sat_low, params.skin_sat_mid, params.skin_sat_high));
+    params.skin_sat_low = skin_sats.x;
+    params.skin_sat_mid = skin_sats.y;
+    params.skin_sat_high = skin_sats.z;
+
+    float3 yellow_sats = limit_sat_v_sat(make_float3(params.yellow_sat_low, params.yellow_sat_mid, params.yellow_sat_high));
+    params.yellow_sat_low = yellow_sats.x;
+    params.yellow_sat_mid = yellow_sats.y;
+    params.yellow_sat_high = yellow_sats.z;
+
+    float3 green_sats = limit_sat_v_sat(make_float3(params.green_sat_low, params.green_sat_mid, params.green_sat_high));
+    params.green_sat_low = green_sats.x;
+    params.green_sat_mid = green_sats.y;
+    params.green_sat_high = green_sats.z;
+
+    float3 cyan_sats = limit_sat_v_sat(make_float3(params.cyan_sat_low, params.cyan_sat_mid, params.cyan_sat_high));
+    params.cyan_sat_low = cyan_sats.x;
+    params.cyan_sat_mid = cyan_sats.y;
+    params.cyan_sat_high = cyan_sats.z;
+
+    float3 blue_sats = limit_sat_v_sat(make_float3(params.blue_sat_low, params.blue_sat_mid, params.blue_sat_high));
+    params.blue_sat_low = blue_sats.x;
+    params.blue_sat_mid = blue_sats.y;
+    params.blue_sat_high = blue_sats.z;
+
+    float3 magenta_sats = limit_sat_v_sat(make_float3(params.magenta_sat_low, params.magenta_sat_mid, params.magenta_sat_high));
+    params.magenta_sat_low = magenta_sats.x;
+    params.magenta_sat_mid = magenta_sats.y;
+    params.magenta_sat_high = magenta_sats.z;
+
+    return params;
+}
+
+__DEVICE__ float interpolate(float input_rad, float2 control_points[NUM_HUES], float smoothness) {
+    float denom = 0.0f;
+    float num = 0.0f;
+    for (int i = 0; i < NUM_HUES; i++) {
+        float weight = _expf(smoothness * _cosf(input_rad - control_points[i].x));
+        num += weight * control_points[i].y;
+        denom += weight;
+    }
+    return num / denom;
+}
+
+__DEVICE__ void interpolate_weights(float output_weights[NUM_HUES], float input_rad, float control_hues[NUM_HUES], float smoothness) {
+    for (int i = 0; i < NUM_HUES; i++) {
+        output_weights[i] = _expf(smoothness * _cosf(input_rad - control_hues[i]));
+    }
+}
+
+__DEVICE__ inline float smooth_relu(float x, float a) {
+    return 1.0f / a * (_logf(1.0f + _expf(-_fabs(a * x))) + _fmaxf(0.0f, a * x));
+}
+
+__DEVICE__ float max_sat_curve(float x, float sat_max, float rolloff) {
+    if (sat_max < rolloff * 2.0f) {
+        rolloff = sat_max / 2.0f;
+    }
+    if (rolloff == 0.0f) {
+        return _fminf(x, sat_max);
+    }
+    float a = _logf(2.0f) / rolloff;
+    float k = sat_max;
+    return k - smooth_relu(k - x, a) - (k - smooth_relu(k, a));
+}
+
+__DEVICE__ float sat_v_sat_curve(float x, float sat_low, float sat_mid, float sat_high, float sat_max, float svs_smoothness) {
+    // https://www.desmos.com/calculator/fb3doxsgvo
+    float2 control_points[NUM_SATVSAT_CONTROL_POINTS] = {
+        make_float2(0.0f, sat_low),
+        make_float2(0.25f, sat_mid),
+        make_float2(0.50f, sat_high),
+    };
+
+    // Avoid crazy stability issues when x ~ 2000
+    x = _fminf(x, 10.0f);
+
+    // Numerical stability fix:
+    float max_exponent = -1.0f * svs_smoothness * pow2(x - control_points[NUM_SATVSAT_CONTROL_POINTS - 1].x);
+
+    float num = 0.0f;
+    float denom = 0.0f;
+    for (int i = 0; i < NUM_SATVSAT_CONTROL_POINTS; i++) {
+        float2 curr_point = control_points[i];
+        float weight = _expf(-1.0f * svs_smoothness * pow2(x - curr_point.x) - max_exponent);
+        num += weight * curr_point.y;
+        denom += weight;
+    }
+
+    x = x * num / denom;
+    float max_sat_rolloff = 0.06f;
+    return max_sat_curve(x, sat_max, max_sat_rolloff);
+}
+
+__DEVICE__ float hue_v_hue_curve(float input_hue_rad, tetra_params_t params, float smoothness) {
+    // For input radians, output the number of radians to adjust the angle.
+    float2 control_points[NUM_HUES] = {
+        make_float2(params.red_input_hue, params.red_hue),
+        make_float2(params.skin_input_hue, params.skin_hue),
+        make_float2(params.yellow_input_hue, params.yellow_hue),
+        make_float2(params.green_input_hue, params.green_hue),
+        make_float2(params.cyan_input_hue, params.cyan_hue),
+        make_float2(params.blue_input_hue, params.blue_hue),
+        make_float2(params.magenta_input_hue, params.magenta_hue),
+    };
+    return interpolate(input_hue_rad, control_points, smoothness);
+}
+
+__DEVICE__ float hue_v_sat_v_sat_curve(float input_hue_rad, float input_sat, tetra_params_t params, float smoothness) {
+    // For input radians and saturation, output new saturation.
+    // Interpolating between saturation amounts works better than interpolation between parameters due ot sat_max parameter being unbounded
+    // and therefore potentially much larger for some hues than for others.
+    float2 control_points[NUM_HUES] = {
+        make_float2(params.red_input_hue,
+                    sat_v_sat_curve(input_sat, params.red_sat_low, params.red_sat_mid, params.red_sat_high, params.red_sat_max, SAT_V_SAT_SMOOTHNESS)),
+        make_float2(params.skin_input_hue,
+                    sat_v_sat_curve(input_sat, params.skin_sat_low, params.skin_sat_mid, params.skin_sat_high, params.skin_sat_max, SAT_V_SAT_SMOOTHNESS)),
+        make_float2(
+            params.yellow_input_hue,
+            sat_v_sat_curve(input_sat, params.yellow_sat_low, params.yellow_sat_mid, params.yellow_sat_high, params.yellow_sat_max, SAT_V_SAT_SMOOTHNESS)),
+        make_float2(
+            params.green_input_hue,
+            sat_v_sat_curve(input_sat, params.green_sat_low, params.green_sat_mid, params.green_sat_high, params.green_sat_max, SAT_V_SAT_SMOOTHNESS)),
+        make_float2(params.cyan_input_hue,
+                    sat_v_sat_curve(input_sat, params.cyan_sat_low, params.cyan_sat_mid, params.cyan_sat_high, params.cyan_sat_max, SAT_V_SAT_SMOOTHNESS)),
+        make_float2(params.blue_input_hue,
+                    sat_v_sat_curve(input_sat, params.blue_sat_low, params.blue_sat_mid, params.blue_sat_high, params.blue_sat_max, SAT_V_SAT_SMOOTHNESS)),
+        make_float2(params.magenta_input_hue,
+                    sat_v_sat_curve(
+                        input_sat, params.magenta_sat_low, params.magenta_sat_mid, params.magenta_sat_high, params.magenta_sat_max, SAT_V_SAT_SMOOTHNESS)),
+    };
+
+    return interpolate(input_hue_rad, control_points, smoothness);
+}
+
+__DEVICE__ float hue_v_gain_curve(float input_hue_rad, tetra_params_t params, float smoothness) {
+    // returns stops of gain at saturation = 1.
+    float2 control_points[NUM_HUES] = {
+        make_float2(params.red_input_hue, params.red_val),
+        make_float2(params.skin_input_hue, params.skin_val),
+        make_float2(params.yellow_input_hue, params.yellow_val),
+        make_float2(params.green_input_hue, params.green_val),
+        make_float2(params.cyan_input_hue, params.cyan_val),
+        make_float2(params.blue_input_hue, params.blue_val),
+        make_float2(params.magenta_input_hue, params.magenta_val),
+    };
+    return interpolate(input_hue_rad, control_points, smoothness);
+}
+
+__DEVICE__ float3 evaluate_hue_curves(float input_hue, float input_sat, tetra_params_t params, float smoothness) {
+    float hue_adj = hue_v_hue_curve(input_hue, params, smoothness);
+    float new_sat = hue_v_sat_v_sat_curve(input_hue, input_sat, params, smoothness);
+    float gain_stops = hue_v_gain_curve(input_hue, params, smoothness);
+    return make_float3(hue_adj, new_sat, gain_stops);
+}
+
+__DEVICE__ float3 tetra_unsmooth(float3 input_hsl, tetra_params_t params, float polar_smoothness) {
+    // Input hue in radians, saturation, luminance (ignored)
+    // Returns output x, y, stops adjustment
+    // x = cos(hue) * sat, y = sin(hue) * sat, z = gain in stops
+    // R^3 -> R^3 function.
+    float3 output_adj = evaluate_hue_curves(input_hsl.x, input_hsl.y, params, polar_smoothness);
+
+    float3 output_hsg = make_float3(input_hsl.x + output_adj.x, output_adj.y, _clampf(input_hsl.y, 0.0f, 2.0f) * output_adj.z);
+
+    float3 output_abz = make_float3(_cosf(output_hsg.x) * output_hsg.y, _sinf(output_hsg.x) * output_hsg.y, output_hsg.z);
+
+    return output_abz;
+}
+
+__DEVICE__ float3 best_fit_plane_3d(float2 input_coords, float2 control_points_xy[NUM_HUES], float3 control_points_z[NUM_HUES]) {
+    // Control points should be (x,y,z) values, not polar
+    // Build plane to average out those inputs.
+    float sum_xy = 0.0f;
+    float3 sum_xz = make_float3(0.0f, 0.0f, 0.0f);
+    float3 sum_yz = make_float3(0.0f, 0.0f, 0.0f);
+    float sum_yy = 0.0f;
+    float sum_xx = 0.0f;
+    for (int i = 0; i < NUM_HUES; i++) {
+        float2 control_point = control_points_xy[i];
+        float3 control_point_z = control_points_z[i];
+
+        sum_xx += control_point.x * control_point.x;
+        sum_xy += control_point.x * control_point.y;
+        sum_xz += control_point.x * control_point_z;
+        sum_yy += control_point.y * control_point.y;
+        sum_yz += control_point.y * control_point_z;
+    }
+
+    float denom = sum_xx * sum_yy - sum_xy * sum_xy;
+    float3 a = (sum_yy * sum_xz - sum_xy * sum_yz) / denom;
+    float3 b = (sum_xx * sum_yz - sum_xy * sum_xz) / denom;
+
+    // Resulting gain value at point input_hsl (in stops)
+    float3 z = a * input_coords.x + b * input_coords.y;
+    return z;
+}
+
+__DEVICE__ float3 mean_value(float3 input_hsl, tetra_params_t params, float polar_smoothness, float control_point_radius) {
+    // We will build a plane best fit to go through the origin and go as close to the six points (theta, *_val) as possible.
+    // The input is in HSL space but we will transform to ABZ = (S*cos(H), S*sin(H), L), then simultaneously fit three planes R2 -> R1
+    // to these ABZ space control points. We will then lookup the new ABZ values based on input_hs (transformed to input_xy) on the three
+    // planes.
+    control_point_radius = _fmaxf(control_point_radius, 0.001f);
+
+    float3 control_points[NUM_HUES] = {
+        make_float3(params.red_input_hue, control_point_radius, 0.0f),
+        make_float3(params.skin_input_hue, control_point_radius, 0.0f),
+        make_float3(params.yellow_input_hue, control_point_radius, 0.0f),
+        make_float3(params.green_input_hue, control_point_radius, 0.0f),
+        make_float3(params.cyan_input_hue, control_point_radius, 0.0f),
+        make_float3(params.blue_input_hue, control_point_radius, 0.0f),
+        make_float3(params.magenta_input_hue, control_point_radius, 0.0f),
+    };
+
+    float2 input_xy = make_float2(_cosf(input_hsl.x) * input_hsl.y, _sinf(input_hsl.x) * input_hsl.y);
+
+    // Figure out what tetra unsmooth does to the six standard inputs.
+    float2 control_points_xy[NUM_HUES] = {};
+    float3 control_points_z[NUM_HUES] = {};
+    for (int i = 0; i < NUM_HUES; i++) {
+        float3 color_tetra_xyz = tetra_unsmooth(control_points[i], params, polar_smoothness);
+        float2 input_control_point_xy = make_float2(_cosf(control_points[i].x) * control_points[i].y, _sinf(control_points[i].x) * control_points[i].y);
+
+        control_points_xy[i] = make_float2(input_control_point_xy.x, input_control_point_xy.y);
+        control_points_z[i] = make_float3(color_tetra_xyz.x, color_tetra_xyz.y, color_tetra_xyz.z);
+    }
+
+    // Build plane to average out those inputs.
+    float3 mean = best_fit_plane_3d(input_xy, control_points_xy, control_points_z);
+
+    float result_a = mean.x;
+    float result_b = mean.y;
+    float plane_gain = mean.z;
+
+    return make_float3(result_a, result_b, plane_gain);
+}
+
+__DEVICE__ float3 tetra_smooth_preserve_neutral(float3 input_hsl, tetra_params_t params, float polar_smoothness, float neutral_smoothness) {
+    // This is going to be the mean surface that will be smooth at r = 0. We interpolate to this for small r,
+    // Obviously better if this surface has similar behavior to the unsmooth surface for larger r.
+    float3 computed_mean_abz = mean_value(input_hsl, params, polar_smoothness, neutral_smoothness);
+
+    float3 unsmooth_adjustment = tetra_unsmooth(input_hsl, params, polar_smoothness);
+
+    float curr_radius = input_hsl.y;
+    // float curr_radius = _hypotf(unsmooth_adjustment.x, unsmooth_adjustment.y);
+    float bump = _exp2f(-1.0f * curr_radius * curr_radius / (neutral_smoothness * neutral_smoothness));
+    if (neutral_smoothness == 0.0f) {
+        bump = 0.0f;
+    }
+    float3 output_abz = _mix(unsmooth_adjustment, computed_mean_abz, bump);
+    return output_abz;
+}
+
+__DEVICE__ float acescc_to_linear(float in) {
+    if (in < -0.3013698630f) { // (9.72f-15)/17.52f
+        return (_exp2f(in * 17.52f - 9.72f) - _exp2f(-16.0f)) * 2.0f;
+    } else {
+        return _exp2f(in * 17.52f - 9.72f);
+    }
+}
+
+__DEVICE__ float linear_to_acescc(float in) {
+    if (in <= 0.0f) {
+        return -0.3584474886f; // =(log2( pow(2.f,-16.f))+9.72f)/17.52f
+    } else if (in < _exp2f(-15.0f)) {
+        return (_log2f(_exp2f(-16.0f) + in * 0.5f) + 9.72f) / 17.52f;
+    } else {
+        return (_log2f(in) + 9.72f) / 17.52f;
+    }
+}
+
+__DEVICE__ float acescct_to_linear(float in) {
+    // const float X_BRK = 0.0078125f;
+    const float Y_BRK = 0.155251141552511f;
+    const float A = 10.5402377416545f;
+    const float B = 0.0729055341958355f;
+    if (in > Y_BRK) {
+        return _exp2f(in * 17.52f - 9.72f);
+    } else {
+        return (in - B) / A;
+    }
+}
+
+__DEVICE__ float linear_to_acescct(float in) {
+    const float X_BRK = 0.0078125f;
+    // const float Y_BRK = 0.155251141552511f;
+    const float A = 10.5402377416545f;
+    const float B = 0.0729055341958355f;
+    if (in <= X_BRK) {
+        return A * in + B;
+    } else { // (in > X_BRK)
+        return (_log2f(in) + 9.72f) / 17.52f;
+    }
+}
+
+__DEVICE__ float arri_logc3_to_linear(float x) {
+    float cut = 0.010591f;
+    float a = 5.555556f;
+    float b = 0.052272f;
+    float c = 0.247190f;
+    float d = 0.385537f;
+    float e = 5.367655f;
+    float f = 0.092809f;
+    if (x > e * cut + f) {
+        return (_exp10f((x - d) / c) - b) / a;
+    } else {
+        return (x - f) / e;
+    }
+}
+
+__DEVICE__ float linear_to_arri_logc3(float x) {
+    float cut = 0.010591f;
+    float a = 5.555556f;
+    float b = 0.052272f;
+    float c = 0.247190f;
+    float d = 0.385537f;
+    float e = 5.367655f;
+    float f = 0.092809f;
+
+    if (x > cut) {
+        return c * _log10f(a * x + b) + d;
+    } else {
+        return e * x + f;
+    }
+}
+
+__DEVICE__ float davinci_intermediate_to_linear(float t) {
+    const float a = 0.0075f;
+    const float b = 7.0f;
+    const float c = 0.07329248f;
+    const float m = 10.44426855f;
+    // const float lin_cut = 0.00262409f; // Should be equal to ((cut2 - f) / e)
+    const float log_cut = 0.02740668f; // should be equal to (e * cut1 + f)
+
+    if (t > log_cut) {
+        return _exp2f((t / c) - b) - a;
+    } else {
+        return t / m;
+    }
+}
+
+__DEVICE__ float linear_to_davinci_intermediate(float x) {
+    const float a = 0.0075f;
+    const float b = 7.0f;
+    const float c = 0.07329248f;
+    const float m = 10.44426855f;
+    const float lin_cut = 0.00262409f; // Should be equal to ((cut2 - f) / e)
+    // const float log_cut = 0.02740668f; // should be equal to (e * cut1 + f)
+
+    if (x > lin_cut) {
+        return (_log2f(x + a) + b) * c;
+    } else {
+        return x * m;
+    }
+}
+
+#define DISPLAY_MID_GRAY (0.10f)
+
+__DEVICE__ float st2084_to_linear(float x) {
+    // x is code value 0-1, outputs linear light with 1.0 = 100 nits
+    const float m1 = 1305.0f / 8192.0f;
+    const float m2 = 2523.0f / 32.0f;
+    const float c1 = 3424.0f / 4096.0f;
+    const float c2 = 2413.0f / 128.0f;
+    const float c3 = 2392.0f / 128.0f;
+
+    float out_lin = 100.0f * powf(_fmaxf(powf(x, 1.0f / m2) - c1, 0.0f) / (c2 - (c3 * powf(x, 1.0f / m2))), 1.0f / m1);
+
+    // Gain 10 nits to mid gray.
+    out_lin *= 0.18f / DISPLAY_MID_GRAY;
+    return out_lin;
+}
+
+__DEVICE__ float linear_to_st2084(float y) {
+    // Gain mid gray to 10 nits.
+    y = y * DISPLAY_MID_GRAY / 0.18f;
+    float x = y / 100.0f;
+    x = _fmaxf(x, 0.0f);
+
+    // x is code value 0-1, y is linear light with 1.0 = 100 nits.
+    const float m1 = 1305.0f / 8192.0f;
+    const float m2 = 2523.0f / 32.0f;
+    const float c1 = 3424.0f / 4096.0f;
+    const float c2 = 2413.0f / 128.0f;
+    const float c3 = 2392.0f / 128.0f;
+
+    return powf((c1 + c2 * powf(x, m1)) / (1.0f + c3 * powf(x, m1)), m2);
+}
+
+__DEVICE__ float3 log_to_lin(float3 input_rgb, int input_tf) {
+    float3 output = make_float3(0.0f, 0.0f, 0.0f);
+    if (input_tf == INPUT_TF_LINEAR) {
+        output = input_rgb;
+    } else if (input_tf == INPUT_TF_ACESCC) {
+        output.x = acescc_to_linear(input_rgb.x);
+        output.y = acescc_to_linear(input_rgb.y);
+        output.z = acescc_to_linear(input_rgb.z);
+    } else if (input_tf == INPUT_TF_ACESCCT) {
+        output.x = acescct_to_linear(input_rgb.x);
+        output.y = acescct_to_linear(input_rgb.y);
+        output.z = acescct_to_linear(input_rgb.z);
+    } else if (input_tf == INPUT_TF_LOGC3) {
+        output.x = arri_logc3_to_linear(input_rgb.x);
+        output.y = arri_logc3_to_linear(input_rgb.y);
+        output.z = arri_logc3_to_linear(input_rgb.z);
+    } else if (input_tf == INPUT_TF_DAVINCI_INTERMEDIATE) {
+        output.x = davinci_intermediate_to_linear(input_rgb.x);
+        output.y = davinci_intermediate_to_linear(input_rgb.y);
+        output.z = davinci_intermediate_to_linear(input_rgb.z);
+    } else if (input_tf == INPUT_TF_PQ) {
+        output.x = st2084_to_linear(input_rgb.x);
+        output.y = st2084_to_linear(input_rgb.y);
+        output.z = st2084_to_linear(input_rgb.z);
+    } else if (input_tf == INPUT_TF_GAMMA_24) {
+        output.x = powf(input_rgb.x, 2.4f) * 0.18f / DISPLAY_MID_GRAY;
+        output.y = powf(input_rgb.y, 2.4f) * 0.18f / DISPLAY_MID_GRAY;
+        output.z = powf(input_rgb.z, 2.4f) * 0.18f / DISPLAY_MID_GRAY;
+    }
+    return output;
+}
+
+__DEVICE__ float3 lin_to_log(float3 input_rgb, int output_tf) {
+    float3 output = make_float3(0.0f, 0.0f, 0.0f);
+    if (output_tf == INPUT_TF_LINEAR) {
+        output = input_rgb;
+    } else if (output_tf == INPUT_TF_ACESCC) {
+        output.x = linear_to_acescc(input_rgb.x);
+        output.y = linear_to_acescc(input_rgb.y);
+        output.z = linear_to_acescc(input_rgb.z);
+    } else if (output_tf == INPUT_TF_ACESCCT) {
+        output.x = linear_to_acescct(input_rgb.x);
+        output.y = linear_to_acescct(input_rgb.y);
+        output.z = linear_to_acescct(input_rgb.z);
+    } else if (output_tf == INPUT_TF_LOGC3) {
+        output.x = linear_to_arri_logc3(input_rgb.x);
+        output.y = linear_to_arri_logc3(input_rgb.y);
+        output.z = linear_to_arri_logc3(input_rgb.z);
+    } else if (output_tf == INPUT_TF_DAVINCI_INTERMEDIATE) {
+        output.x = linear_to_davinci_intermediate(input_rgb.x);
+        output.y = linear_to_davinci_intermediate(input_rgb.y);
+        output.z = linear_to_davinci_intermediate(input_rgb.z);
+    } else if (output_tf == INPUT_TF_PQ) {
+        output.x = linear_to_st2084(input_rgb.x);
+        output.y = linear_to_st2084(input_rgb.y);
+        output.z = linear_to_st2084(input_rgb.z);
+    } else if (output_tf == INPUT_TF_GAMMA_24) {
+        output.x = powf(input_rgb.x * DISPLAY_MID_GRAY / 0.18f, 1.0f / 2.4f);
+        output.y = powf(input_rgb.y * DISPLAY_MID_GRAY / 0.18f, 1.0f / 2.4f);
+        output.z = powf(input_rgb.z * DISPLAY_MID_GRAY / 0.18f, 1.0f / 2.4f);
+    }
+    return output;
+}
+
+__DEVICE__ float3 draw_sat_v_sat_curves(float3 output, tetra_params_t params, int p_Width, int p_Height, int p_X, int p_Y) {
+    const float chart_range = 1.5f;
+
+    float x = chart_range * (float)p_X / (float)(p_Width - 1);
+    float y = chart_range * (1.0f - ((float)p_Y / (float)(p_Height - 1)));
+
+    float input_hues[NUM_HUES] = {params.red_input_hue,
+                                  params.skin_input_hue,
+                                  params.yellow_input_hue,
+                                  params.green_input_hue,
+                                  params.cyan_input_hue,
+                                  params.blue_input_hue,
+                                  params.magenta_input_hue};
+    float sat_lows[NUM_HUES] = {params.red_sat_low,
+                                params.skin_sat_low,
+                                params.yellow_sat_low,
+                                params.green_sat_low,
+                                params.cyan_sat_low,
+                                params.blue_sat_low,
+                                params.magenta_sat_low};
+    float sat_mids[NUM_HUES] = {params.red_sat_mid,
+                                params.skin_sat_mid,
+                                params.yellow_sat_mid,
+                                params.green_sat_mid,
+                                params.cyan_sat_mid,
+                                params.blue_sat_mid,
+                                params.magenta_sat_mid};
+    float sat_highs[NUM_HUES] = {params.red_sat_high,
+                                 params.skin_sat_high,
+                                 params.yellow_sat_high,
+                                 params.green_sat_high,
+                                 params.cyan_sat_high,
+                                 params.blue_sat_high,
+                                 params.magenta_sat_high};
+    float sat_maxes[NUM_HUES] = {params.red_sat_max,
+                                 params.skin_sat_max,
+                                 params.yellow_sat_max,
+                                 params.green_sat_max,
+                                 params.cyan_sat_max,
+                                 params.blue_sat_max,
+                                 params.magenta_sat_max};
+
+    for (int i = 0; i < NUM_HUES; i++) {
+        // Sample a pixel apart and light the pixel wherever the curve crosses its
+        // column. Testing the span rather than a single value keeps steep segments
+        // connected instead of breaking them into dots.
+        float curve_y = sat_v_sat_curve(x, sat_lows[i], sat_mids[i], sat_highs[i], sat_maxes[i], SAT_V_SAT_SMOOTHNESS);
+
+        if (_fabs(y - curve_y) < 0.002f) {
+            // Saturation 0.5 sits right on the gamut boundary here, so the seven lines
+            // come out as distinct as they can while staying in range.
+            output = cylindrical_to_rgb(make_float3(input_hues[i], 0.5f, 0.3f));
+        }
+    }
+
+    return output;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p_R, float p_G, float p_B) {
+    float3 input = make_float3(p_R, p_G, p_B);
+
+    // Linearize if not already linear.
+    input = log_to_lin(input, input_tf);
+
+    tetra_params_t params = make_tetra_params(0.0f,
+                                              PI / 6.0f + deg_to_rad(input_skin_hue_adj),
+                                              PI / 3.0f,
+                                              2.0f * PI / 3.0f,
+                                              PI,
+                                              4.0f * PI / 3.0f,
+                                              5.0f * PI / 3.0f,
+                                              deg_to_rad(red_hue),
+                                              deg_to_rad(skin_hue),
+                                              deg_to_rad(yellow_hue),
+                                              deg_to_rad(green_hue),
+                                              deg_to_rad(cyan_hue),
+                                              deg_to_rad(blue_hue),
+                                              deg_to_rad(magenta_hue),
+                                              red_sat_low,
+                                              skin_sat_low,
+                                              yellow_sat_low,
+                                              green_sat_low,
+                                              cyan_sat_low,
+                                              blue_sat_low,
+                                              magenta_sat_low,
+                                              red_sat_mid,
+                                              skin_sat_mid,
+                                              yellow_sat_mid,
+                                              green_sat_mid,
+                                              cyan_sat_mid,
+                                              blue_sat_mid,
+                                              magenta_sat_mid,
+                                              red_sat_high,
+                                              skin_sat_high,
+                                              yellow_sat_high,
+                                              green_sat_high,
+                                              cyan_sat_high,
+                                              blue_sat_high,
+                                              magenta_sat_high,
+                                              red_sat_max,
+                                              skin_sat_max,
+                                              yellow_sat_max,
+                                              green_sat_max,
+                                              cyan_sat_max,
+                                              blue_sat_max,
+                                              magenta_sat_max,
+                                              red_val,
+                                              skin_val,
+                                              yellow_val,
+                                              green_val,
+                                              cyan_val,
+                                              blue_val,
+                                              magenta_val);
+    params = limit_tetra_params(params);
+
+    float3 input_hsl = rgb_to_cylindrical(input);
+
+    if (draw_swatches) {
+        float x = p_X / (float)(p_Width);
+        float y = p_Y / (float)(p_Height);
+
+        if (0.0f <= x && x <= 1.0f && 0.925f <= y && y <= 1.0f) {
+            float input_hues[NUM_HUES] = {params.red_input_hue,
+                                          params.skin_input_hue,
+                                          params.yellow_input_hue,
+                                          params.green_input_hue,
+                                          params.cyan_input_hue,
+                                          params.blue_input_hue,
+                                          params.magenta_input_hue};
+
+            int index = (int)(x * (NUM_HUES));
+            input_hsl = make_float3(input_hues[index], 0.25f, 0.18f);
+        }
+    }
+
+    float3 output_abz = make_float3(0.0f, 0.0f, 0.0f);
+    if (smooth_neutrals) {
+        output_abz = tetra_smooth_preserve_neutral(input_hsl, params, polar_smoothness, neutral_smoothness);
+    } else {
+        output_abz = tetra_unsmooth(input_hsl, params, polar_smoothness);
+    }
+
+    float3 output_hsl;
+
+    // Bring in input luminance.
+    output_hsl =
+        make_float3(mod(arctan2f(output_abz.y, output_abz.x), 2.0f * PI), _hypotf(output_abz.x, output_abz.y), input_hsl.z * powf(2.0f, output_abz.z));
+
+    float3 output = cylindrical_to_rgb(output_hsl);
+
+    if (draw_sat_curve) {
+        output = draw_sat_v_sat_curves(output, params, p_Width, p_Height, p_X, p_Y);
+    }
+
+    // Convert from linear to the original encoding
+    output = lin_to_log(output, input_tf);
+
+    return output;
+}
