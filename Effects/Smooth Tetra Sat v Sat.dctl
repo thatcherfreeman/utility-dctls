@@ -103,9 +103,9 @@ __DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
     // hue is in range of 0-1
     float3 lsh = make_float3(hsv.z, hsv.y * 3.0f, mod(hsv.x, 2.0f * PI));
 
-    float ctr = lsh.x * lsh.y * _cosf(lsh.z);
+    float ctr = _fabs(lsh.x) * lsh.y * _cosf(lsh.z);
     float ctg = lsh.x;
-    float ctb = lsh.x * lsh.y * _sinf(lsh.z);
+    float ctb = _fabs(lsh.x) * lsh.y * _sinf(lsh.z);
     float3 c = make_float3(ctr, ctg, ctb);
 
     float mat[3][3] = {
@@ -133,7 +133,7 @@ __DEVICE__ float3 rgb_to_cylindrical(float3 x) {
     float l = rotated_color.y;
     float3 hsl = make_float3(0.0f, 0.0f, 0.0f);
 
-    float3 normalized_color = rotated_color / l;
+    float3 normalized_color = rotated_color / _fabs(l);
     if (l == 0.0f) {
         hsl = make_float3(0.0f, 0.0f, l);
     } else {
@@ -442,6 +442,9 @@ __DEVICE__ inline float smooth_relu(float x, float a) {
 }
 
 __DEVICE__ float max_sat_curve(float x, float sat_max, float rolloff) {
+    if (sat_max >= 2.0f) {
+        return x;
+    }
     if (sat_max < rolloff * 2.0f) {
         rolloff = sat_max / 2.0f;
     }
@@ -460,9 +463,6 @@ __DEVICE__ float sat_v_sat_curve(float x, float sat_low, float sat_mid, float sa
         make_float2(0.25f, sat_mid),
         make_float2(0.50f, sat_high),
     };
-
-    // Avoid crazy stability issues when x ~ 2000
-    x = _fminf(x, 10.0f);
 
     // Numerical stability fix:
     float max_exponent = -1.0f * svs_smoothness * pow2(x - control_points[NUM_SATVSAT_CONTROL_POINTS - 1].x);
@@ -921,6 +921,7 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     params = limit_tetra_params(params);
 
     float3 input_hsl = rgb_to_cylindrical(input);
+    // return make_float3(input_hsl.y, input_hsl.z, input_hsl.y * input_hsl.z);
 
     if (draw_swatches) {
         float x = p_X / (float)(p_Width);
