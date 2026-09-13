@@ -75,7 +75,7 @@ __DEVICE__ float powf(float base, float exp) {
 
 __DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
     // Adapted from Juan Pablo Zambrano's code
-    // hue is in range of 0-1
+    // hue is in radians
     float3 lsh = make_float3(hsv.z, hsv.y * 3.0f, mod(hsv.x, 2.0f * PI));
 
     float ctr = _fabs(lsh.x) * lsh.y * _cosf(lsh.z);
@@ -97,7 +97,7 @@ __DEVICE__ float3 rgb_to_cylindrical(float3 x) {
     // Matrix aligns and scales achromatic white (1, 1, 1) with (0, 1, 0)
     // Also rotates input (1, 0, 0) above the red axis and ensures that
     // (1, 0, 0) input ends up having a red channel code value of (1).
-    // outputs hue in range 0-1
+    // outputs hue in radians
     float mat[3][3] = {
         {1.0f, -1.0f / 2.0f, -1.0f / 2.0f},
         {1.0f / 3.0f, 1.0f / 3.0f, 1.0f / 3.0f},

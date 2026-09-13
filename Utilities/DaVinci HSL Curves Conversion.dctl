@@ -217,9 +217,9 @@ __DEVICE__ float3 cylindrical_to_rgb(float3 hsv) {
     // Adapted from Juan Pablo Zambrano's code
     float3 lsh = make_float3(hsv.z, hsv.y * 3.0f, mod(hsv.x, 2.0f * PI));
 
-    float ctr = lsh.x * lsh.y * _cosf(lsh.z);
+    float ctr = _fabs(lsh.x) * lsh.y * _cosf(lsh.z);
     float ctg = lsh.x;
-    float ctb = lsh.x * lsh.y * _sinf(lsh.z);
+    float ctb = _fabs(lsh.x) * lsh.y * _sinf(lsh.z);
     float3 c = make_float3(ctr, ctg, ctb);
 
     float mat[3][3] = {
@@ -247,7 +247,7 @@ __DEVICE__ float3 rgb_to_cylindrical(float3 x) {
     float l = rotated_color.y;
     float3 hsl = make_float3(0.0f, 0.0f, 0.0f);
 
-    float3 normalized_color = rotated_color / l;
+    float3 normalized_color = rotated_color / _fabs(l);
     if (l == 0.0f) {
         hsl = make_float3(0.0f, 0.0f, l);
     } else {
