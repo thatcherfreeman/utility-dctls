@@ -463,16 +463,29 @@ __DEVICE__ float sat_v_sat_curve(float x, float sat_low, float sat_mid, float sa
         make_float2(0.25f, sat_mid),
         make_float2(0.50f, sat_high),
     };
+    const float midpoints[NUM_SATVSAT_CONTROL_POINTS - 1] = {(control_points[0].x + control_points[1].x) / 2.0f,
+                                                             (control_points[1].x + control_points[2].x) / 2.0f};
 
-    // Numerical stability fix:
-    float max_exponent = -1.0f * svs_smoothness * pow2(x - control_points[NUM_SATVSAT_CONTROL_POINTS - 1].x);
+    // Reference = nearest control point. Compare x against constant midpoints:
+    // exact at any magnitude, unlike comparing computed distances.
+    int m = 0;
+    for (int i = 0; i < NUM_SATVSAT_CONTROL_POINTS - 1; i++) {
+        if (x >= midpoints[i])
+            m = i + 1;
+    }
+    // Control point closest to x.
+    float cm = control_points[m].x;
 
     float num = 0.0f;
     float denom = 0.0f;
     for (int i = 0; i < NUM_SATVSAT_CONTROL_POINTS; i++) {
-        float2 curr_point = control_points[i];
-        float weight = _expf(-1.0f * svs_smoothness * pow2(x - curr_point.x) - max_exponent);
-        num += weight * curr_point.y;
+        float ci = control_points[i].x;
+        // We're going to attain numerical stability by subtracting (x-cm)^2 from the exponents, thus normalizing
+        // the weights so that at least one is 1.0f (when ci == cm) and the rest will decrease to zero.
+        // (x - ci)^2 - (x - cm)^2, expanded so the large products never form.
+        float dsq = (ci - cm) * (ci + cm - 2.0f * x);
+        float weight = _expf(_fminf(-1.0f * svs_smoothness * dsq, 0.0f));
+        num += weight * control_points[i].y;
         denom += weight;
     }
 
@@ -921,7 +934,6 @@ __DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, float p
     params = limit_tetra_params(params);
 
     float3 input_hsl = rgb_to_cylindrical(input);
-    // return make_float3(input_hsl.y, input_hsl.z, input_hsl.y * input_hsl.z);
 
     if (draw_swatches) {
         float x = p_X / (float)(p_Width);
