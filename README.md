@@ -61,6 +61,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [Gain Normalization DCTL](#gain-normalization-dctl)
         - [Gamut Compression DCTL](#gamut-compression-dctl)
         - [Halation DCTL](#halation-dctl)
+        - [Halftone Dot Printing DCTL](#halftone-dot-printing-dctl)
         - [Hot Pixel Noise](#hot-pixel-noise)
         - [Hue Curve DCTL](#hue-curve-dctl)
         - [Keystone Correction DCTL](#keystone-correction-dctl)
@@ -763,6 +764,33 @@ Thanks to Caleb Keller for his thoughts in adding a few more controls to this to
 **Blur Type**: Choose which kernel to use when emulating the diffusion step.
 
 **Red Shift Correction**: Because Halation re-exposes the red channel first, it will make the exposed negative more red than it originally was. This allows you to choose how you want to correct for this red tint. If you select Matrix, then it will fully correct, otherwise RGB Gain just corrects the white point and No Correction skips this step and leaves the red tint.
+
+---
+
+### Halftone Dot Printing DCTL
+
+Emulates the appearance of [halftone dot printing](https://en.wikipedia.org/wiki/Halftone), a system where the image is made by grids of cyan, magenta, yellow, and perhaps black (Key) dots of varying sizes.
+
+This DCTL expects a display-linear image with a 1.0 white point. Thus, the standard setup would be to use it like this:
+
+1. DRT
+2. Conversion from the display transfer function to linear, no ootf or tone mapping
+3. Halftone dot printing dctl
+4. conversion from linear to display encoding, no ootf or tone mapping
+
+#### DCTL Parameters
+
+**K/CMY Resolution**: Quantity of dots to render the image out of. It's potentially reasonable to have higher K resolution than CMY resolution, but I think in general people just make these equal.
+
+**K/C/M/Y Grid Angle**: Indicate the base angle of this layer's dots. Some combinations of these may result in more or less moire.
+
+**K/C/M/Y Grid Offset X/Y**: Offset the corresponding layers dots horizontally or vertically.
+
+**Circle Smoothening**: For your viewing pleasure, this adjusts how soft the circle edges are. Unfortunately, it may tend to affect the overall brightness of the image, so I've set a reasonable default. Generally the best results are attained by running this dctl at a high resolution and perhaps downsampling at the deliver page.
+
+**Jitter**: Adjusts the grid offset and adds a random angle to the grid angle parameters on a per-frame basis, so that each frame has a different position and angel of the grids.
+
+**Color Mode**: Choose whether you want black and white, CMY, or CMYK rendering.
 
 ---
 

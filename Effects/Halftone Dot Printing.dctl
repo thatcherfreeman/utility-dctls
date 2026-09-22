@@ -1,0 +1,288 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(k_grid_resolution, K Resolution, DCTLUI_SLIDER_FLOAT, 100.0, 1.0, 1000.0, 0.001)
+DEFINE_UI_PARAMS(cmy_grid_resolution, CMY Resolution, DCTLUI_SLIDER_FLOAT, 100.0, 1.0, 1000.0, 0.001)
+DEFINE_UI_PARAMS(k_grid_angle, K Grid Angle, DCTLUI_SLIDER_FLOAT, 15.0, 0.0, 45.0, 0.001)
+DEFINE_UI_PARAMS(k_grid_offset_x, K Grid Offset X, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(k_grid_offset_y, K Grid Offset Y, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(c_grid_angle, C Grid Angle, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 45.0, 0.001)
+DEFINE_UI_PARAMS(c_grid_offset_x, C Grid Offset X, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(c_grid_offset_y, C Grid Offset Y, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(m_grid_angle, M Grid Angle, DCTLUI_SLIDER_FLOAT, 45.0, 0.0, 45.0, 0.001)
+DEFINE_UI_PARAMS(m_grid_offset_x, M Grid Offset X, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(m_grid_offset_y, M Grid Offset Y, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(y_grid_angle, Y Grid Angle, DCTLUI_SLIDER_FLOAT, 30.0, 0.0, 45.0, 0.001)
+DEFINE_UI_PARAMS(y_grid_offset_x, Y Grid Offset X, DCTLUI_SLIDER_FLOAT, 0.5, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(y_grid_offset_y, Y Grid Offset Y, DCTLUI_SLIDER_FLOAT, 0.0, 0.0, 1.0, 0.01)
+DEFINE_UI_PARAMS(circle_smoothening, Circle Smoothening, DCTLUI_SLIDER_FLOAT, 0.125, 0.0, 0.50, 0.001)
+DEFINE_UI_PARAMS(jitter, Jitter, DCTLUI_CHECK_BOX, 0)
+DEFINE_UI_PARAMS(color_mode, Color Mode, DCTLUI_COMBO_BOX, 2, {MODE_K, MODE_CMY, MODE_CMYK}, {K, CMY, CMYK})
+// clang-format on
+
+#define PI (3.14159265358979323f)
+
+__DEVICE__ float powf(float base, float exp) {
+    return _copysignf(_powf(_fabs(base), exp), base);
+}
+
+// Represents position/scale of the grid.
+typedef struct {
+        float x;
+        float y;
+        float rotation_rad;
+        float scale; // quantity of pixels per grid interval
+} reposition_params_t;
+
+__DEVICE__ reposition_params_t make_reposition_params(float x, float y, float rotation_rad, float scale) {
+    reposition_params_t params;
+    params.x = x;
+    params.y = y;
+    params.rotation_rad = rotation_rad;
+    params.scale = scale;
+    return params;
+}
+
+__DEVICE__ float2 mv_22_2(float mat[2][2], float2 vec) {
+    return make_float2(mat[0][0] * vec.x + mat[0][1] * vec.y, mat[1][0] * vec.x + mat[1][1] * vec.y);
+}
+
+__DEVICE__ void make_rot_matrix(float dst[2][2], float angle_rad) {
+    dst[0][0] = _cosf(angle_rad);
+    dst[0][1] = -_sinf(angle_rad);
+    dst[1][0] = _sinf(angle_rad);
+    dst[1][1] = _cosf(angle_rad);
+}
+
+__DEVICE__ float2 reposition_to_grid(float2 pos, reposition_params_t params) {
+    float2 result = pos;
+    float rot_mat[2][2];
+    make_rot_matrix(rot_mat, params.rotation_rad);
+    result = mv_22_2(rot_mat, result);
+    result /= params.scale;
+    result -= make_float2(params.x, params.y);
+    return result;
+}
+
+__DEVICE__ float2 reposition_from_grid(float2 grid_pos, reposition_params_t params) {
+    float rot_mat[2][2];
+    make_rot_matrix(rot_mat, -1.0f * params.rotation_rad);
+
+    float2 result = grid_pos + make_float2(params.x, params.y);
+    result *= params.scale;
+    result = mv_22_2(rot_mat, result);
+    return result;
+}
+
+__DEVICE__ inline float radius(float2 difference) {
+    return _hypotf(difference.x, difference.y);
+}
+
+__DEVICE__ inline float mixf(float x, float y, float a) {
+    return x * (1.0f - a) + y * a;
+}
+
+__DEVICE__ inline float smoothstep1(float start, float end, float alpha) {
+    // alpha expected to be from 0 to 1
+    // https://www.desmos.com/calculator/0ooohl3bpb
+    alpha = _clampf(alpha, 0.0f, 1.0f);
+    float alpha2 = alpha * alpha;
+    float factor = alpha2 * alpha * (6.0f * alpha2 - 15.0f * alpha + 10.0f);
+    return mixf(start, end, factor);
+}
+
+__DEVICE__ float draw_circle_aa(float curr_radius, float dot_size, float circle_smoothening) {
+
+    float smoothening_radius = circle_smoothening;
+
+    return smoothstep1(1.0f, 0.0f, (curr_radius - (dot_size - smoothening_radius)) / (smoothening_radius));
+}
+
+// Naive approach, doesn't factor in that the circles overlap and thus
+// for low reflectances, it returns a radius that's too big.
+__DEVICE__ float reflectance_to_radius(float reflectance) {
+    reflectance = _clampf(reflectance, 0.0f, 1.0f);
+    return _sqrtf((1.0f - reflectance) / PI);
+}
+
+// The more accurate estimate needs to involve an estimation of
+// how much area overlaps between the radius of the circles
+// when it's greater than 0.5. The exact function is provided
+// in this desmos, calculating the radius to reflectance transfer
+// function. However, the inverse is a polynomial fit to that
+// curve.
+// https://www.desmos.com/calculator/73lp8fpc4h
+__DEVICE__ float reflectance_to_radius_v2(float reflectance) {
+    reflectance = _clampf(reflectance, 0.0f, 1.0f);
+    if (reflectance >= 1.0f - (PI / 4.0f)) {
+        return _sqrtf((1.0f - reflectance) / PI);
+    } else {
+        return 1.0f / _sqrtf(2.0f) - (0.5f * _sqrtf(reflectance) - 0.0175f * reflectance - 0.2089f * _powf(reflectance, 1.5f));
+    }
+}
+
+enum channel_e { SAMPLE_AVG, SAMPLE_MIN, SAMPLE_RED, SAMPLE_GREEN, SAMPLE_BLUE, SAMPLE_RED_MINUS_MAX, SAMPLE_GREEN_MINUS_MAX, SAMPLE_BLUE_MINUS_MAX };
+
+__DEVICE__ float
+sample_grid_point(float2 grid_pos, reposition_params_t grid_params, enum channel_e channel, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    float2 grid_image_coord = reposition_from_grid(grid_pos, grid_params);
+    int2 grid_image_coord_int = make_int2((int)grid_image_coord.x, (int)grid_image_coord.y);
+    float result = 0.0f;
+    if (channel == SAMPLE_AVG) {
+        float3 sample_color = make_float3(_tex2D(p_TexR, grid_image_coord_int.x, grid_image_coord_int.y),
+                                          _tex2D(p_TexG, grid_image_coord_int.x, grid_image_coord_int.y),
+                                          _tex2D(p_TexB, grid_image_coord_int.x, grid_image_coord_int.y));
+        result = (sample_color.x + sample_color.y + sample_color.z) / 3.0f;
+    } else if (channel == SAMPLE_RED) {
+        result = _tex2D(p_TexR, grid_image_coord_int.x, grid_image_coord_int.y);
+    } else if (channel == SAMPLE_GREEN) {
+        result = _tex2D(p_TexG, grid_image_coord_int.x, grid_image_coord_int.y);
+    } else if (channel == SAMPLE_BLUE) {
+        result = _tex2D(p_TexB, grid_image_coord_int.x, grid_image_coord_int.y);
+    } else if (channel == SAMPLE_MIN || channel == SAMPLE_RED_MINUS_MAX || channel == SAMPLE_GREEN_MINUS_MAX || channel == SAMPLE_BLUE_MINUS_MAX) {
+        float3 sample_color = make_float3(_tex2D(p_TexR, grid_image_coord_int.x, grid_image_coord_int.y),
+                                          _tex2D(p_TexG, grid_image_coord_int.x, grid_image_coord_int.y),
+                                          _tex2D(p_TexB, grid_image_coord_int.x, grid_image_coord_int.y));
+        float max_value = _fmaxf(sample_color.x, _fmaxf(sample_color.y, sample_color.z));
+        if (channel == SAMPLE_MIN) {
+            result = max_value;
+        } else if (channel == SAMPLE_RED_MINUS_MAX) {
+            result = sample_color.x / max_value;
+        } else if (channel == SAMPLE_GREEN_MINUS_MAX) {
+            result = sample_color.y / max_value;
+        } else if (channel == SAMPLE_BLUE_MINUS_MAX) {
+            result = sample_color.z / max_value;
+        }
+    }
+    return result;
+}
+
+__DEVICE__ float get_ink_amount(float2 curr_pos,
+                                reposition_params_t grid_params,
+                                enum channel_e channel,
+                                __TEXTURE__ p_TexR,
+                                __TEXTURE__ p_TexG,
+                                __TEXTURE__ p_TexB,
+                                float circle_smoothening) {
+    // Sample four positions around curr_pos and return whether we're covered by ink or not.
+    float2 grid_pos = reposition_to_grid(curr_pos, grid_params);
+
+    float2 grid_points[4] = {
+        make_float2(_floorf(grid_pos.x), _floorf(grid_pos.y)),
+        make_float2(_floorf(grid_pos.x) + 1.0f, _floorf(grid_pos.y)),
+        make_float2(_floorf(grid_pos.x), _floorf(grid_pos.y) + 1.0f),
+        make_float2(_floorf(grid_pos.x) + 1.0f, _floorf(grid_pos.y) + 1.0f),
+    };
+    float max_ink_amount = 0.0f;
+    for (int i = 0; i < 4; ++i) {
+        float curr_point_distance = radius(grid_pos - grid_points[i]);
+        float result = sample_grid_point(grid_points[i], grid_params, channel, p_TexR, p_TexG, p_TexB);
+        float dot_size = reflectance_to_radius_v2(result);
+        float ink_amount = draw_circle_aa(curr_point_distance, dot_size, circle_smoothening);
+        max_ink_amount = _fmaxf(max_ink_amount, ink_amount);
+    }
+    return max_ink_amount;
+}
+
+__DEVICE__ float3 exp10_f3(float3 exp) {
+    return make_float3(_exp10f(exp.x), _exp10f(exp.y), _exp10f(exp.z));
+}
+
+typedef uint rand_state;
+
+__DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
+    rand_state x = *seed;
+    x ^= (x << 13 | x >> 19);
+    x ^= (x >> 7 | x << 25);
+    x ^= (x << 15 | x >> 15);
+    *seed = x;
+    return (((float)x) / (float)(~((rand_state)0)));
+}
+
+__DEVICE__ inline float randu(__PRIVATE__ rand_state* seed) {
+    return _randu_xorshift(seed);
+}
+
+__DEVICE__ float sample_uniform(float a, float b, __PRIVATE__ rand_state* seed) {
+    float range = b - a;
+    float x = randu(seed);
+    return a + range * x;
+}
+
+__DEVICE__ float sample_uniform_conditional(float a, float b, __PRIVATE__ rand_state* seed, bool enable) {
+    if (enable) {
+        return sample_uniform(a, b, seed);
+    } else {
+        return 0.0f;
+    }
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+    float3 input = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+
+    float k_spacing_px = _fmaxf((float)p_Width, (float)p_Height) / k_grid_resolution;
+    float cmy_spacing_px = _fmaxf((float)p_Width, (float)p_Height) / cmy_grid_resolution;
+
+    float2 curr_pos = make_float2((float)p_X, (float)p_Y);
+
+    // Obtain random seed.
+    float seed = 420.69f + TIMELINE_FRAME_INDEX;
+    rand_state state_value = *((__PRIVATE__ rand_state*)&seed);
+    __PRIVATE__ rand_state* state = &state_value;
+
+    float val;
+    *state ^= p_Width * p_Height;
+    val = randu(state);
+    val = randu(state);
+    val = randu(state);
+    val = randu(state);
+    *state = *((__PRIVATE__ rand_state*)&val);
+
+    // Get curr_pos as expressed in grid coordinates.
+    // Jitter angle of everything by the same amount to avoid moire problems
+    float jittered_angle = sample_uniform_conditional(-90.0f, 90.0f, state, jitter);
+    reposition_params_t k_grid_params = make_reposition_params(k_grid_offset_x + sample_uniform_conditional(0.0f, 1.0f, state, jitter),
+                                                               k_grid_offset_y + sample_uniform_conditional(0.0f, 1.0f, state, jitter),
+                                                               (k_grid_angle + jittered_angle) * PI / 180.0f,
+                                                               k_spacing_px);
+    reposition_params_t c_grid_params = make_reposition_params(c_grid_offset_x + sample_uniform_conditional(0.0f, 1.0f, state, jitter),
+                                                               c_grid_offset_y + sample_uniform_conditional(0.0f, 1.0f, state, jitter),
+                                                               (c_grid_angle + jittered_angle) * PI / 180.0f,
+                                                               cmy_spacing_px);
+    reposition_params_t m_grid_params = make_reposition_params(m_grid_offset_x + sample_uniform_conditional(0.0f, 1.0f, state, jitter),
+                                                               m_grid_offset_y + sample_uniform_conditional(0.0f, 1.0f, state, jitter),
+                                                               (m_grid_angle + jittered_angle) * PI / 180.0f,
+                                                               cmy_spacing_px);
+    reposition_params_t y_grid_params = make_reposition_params(y_grid_offset_x + sample_uniform_conditional(0.0f, 1.0f, state, jitter),
+                                                               y_grid_offset_y + sample_uniform_conditional(0.0f, 1.0f, state, jitter),
+                                                               (y_grid_angle + jittered_angle) * PI / 180.0f,
+                                                               cmy_spacing_px);
+
+    float k_ink_amount = 0.0f;
+    if (color_mode == MODE_K) {
+        k_ink_amount = get_ink_amount(curr_pos, k_grid_params, SAMPLE_AVG, p_TexR, p_TexG, p_TexB, circle_smoothening);
+    }
+    float3 cmy_ink_amount = make_float3(0.0f, 0.0f, 0.0f);
+    if (color_mode == MODE_CMY) {
+        cmy_ink_amount.x = get_ink_amount(curr_pos, c_grid_params, SAMPLE_RED, p_TexR, p_TexG, p_TexB, circle_smoothening);
+        cmy_ink_amount.y = get_ink_amount(curr_pos, m_grid_params, SAMPLE_GREEN, p_TexR, p_TexG, p_TexB, circle_smoothening);
+        cmy_ink_amount.z = get_ink_amount(curr_pos, y_grid_params, SAMPLE_BLUE, p_TexR, p_TexG, p_TexB, circle_smoothening);
+    } else if (color_mode == MODE_CMYK) {
+        cmy_ink_amount.x = get_ink_amount(curr_pos, c_grid_params, SAMPLE_RED_MINUS_MAX, p_TexR, p_TexG, p_TexB, circle_smoothening);
+        cmy_ink_amount.y = get_ink_amount(curr_pos, m_grid_params, SAMPLE_GREEN_MINUS_MAX, p_TexR, p_TexG, p_TexB, circle_smoothening);
+        cmy_ink_amount.z = get_ink_amount(curr_pos, y_grid_params, SAMPLE_BLUE_MINUS_MAX, p_TexR, p_TexG, p_TexB, circle_smoothening);
+        k_ink_amount = get_ink_amount(curr_pos, k_grid_params, SAMPLE_MIN, p_TexR, p_TexG, p_TexB, circle_smoothening);
+    }
+
+    float3 output_color = make_float3(1.0f, 1.0f, 1.0f);
+    const float3 cyan_ink_density = make_float3(1.0f, 0.0f, 0.0f);
+    const float3 magenta_ink_density = make_float3(0.0f, 1.0f, 0.0f);
+    const float3 yellow_ink_density = make_float3(0.0f, 0.0f, 1.0f);
+    const float3 k_ink_density = make_float3(1.0f, 1.0f, 1.0f);
+    float ink_density = 5.0f;
+    output_color = output_color * exp10_f3(-ink_density * cyan_ink_density * cmy_ink_amount.x);
+    output_color = output_color * exp10_f3(-ink_density * magenta_ink_density * cmy_ink_amount.y);
+    output_color = output_color * exp10_f3(-ink_density * yellow_ink_density * cmy_ink_amount.z);
+    output_color = output_color * exp10_f3(-ink_density * k_ink_density * k_ink_amount);
+    return output_color;
+}
