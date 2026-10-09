@@ -124,6 +124,7 @@ Either let me know and I'll consider it, or implement the feature yourself and m
         - [ACES Exposure DCTL](#aces-exposure-dctl)
         - [Annotate Image DCTL](#annotate-image-dctl)
         - [Arri LogC3 EI Conversion DCTL](#arri-logc3-ei-conversion-dctl)
+        - [Banding Suppression DCTL](#banding-suppression-dctl)
         - [Bit Depth Estimator DCTL](#bit-depth-estimator-dctl)
         - [Black Bar Resolution DCTL](#black-bar-resolution-dctl)
         - [Blanking Checker DCTL](#blanking-checker-dctl)
@@ -1974,6 +1975,46 @@ In Arri's LogC3 cameras, every choice of EI results in a slightly different log 
 **Input Transfer Function**: Control which log curve was used during recording, as input to this node.
 
 **Output Transfer Function**: Control which transfer function to output.
+
+---
+### Banding Suppression DCTL
+
+Tool to help make your terrible 8-bit compressed footage more usable, softening banding edges introduced in the channels.
+
+#### How It Works
+
+The general idea is that we run a bilateral blur to estimate what color each pixel would be if the image wasn't banded (think of us taking an average over a large region). We use bilateral blur instead of gaussian blur because bilateral blur does a better job of not bleeding over edges, which would contaminate the estimate for a pixel that's near an edge. Once we've done that, we replace the current pixel with the blurred pixel at the same coordinate, only if the blurred version of the pixel is within $$\frac{1}{256}$$ of the current code value, which is the requirement that helps us only correct issues with rounding without destroying detail too much. Finally, we add some random variation to all pixels to help break up the smoothed regions of the frame.
+
+#### How you should use it
+
+I recommend that you put this at the very start of your node tree, in the original camera space. This will help ensure that the rounding errors introduced during quantization are still their original sizes and haven't been stretched or compressed in the highlights or shadows. Specifically, most compressed files are actually quantized to 8 or 10 bit in YCbCr, so we should smooth out banding in that space as well in order to soften the edges of purple or orange chroma blocks. Thus, you'd set up the following three nodes:
+
+1. My Chroma Subsampling DCTL, set to 4:4:4, from RGB to YCbCr.
+2. Banding Suppression DCTL
+3. Chroma Subsampling DCTL, set to 4:4:4, from YCbCr to RGB
+
+Nodes (1) and (3) there are optional, but I found that doing it this way gives better results in general because otherwise those chroma blocks won't get smoothed out.
+
+**Other Notes:**
+* If the bands are smoothed out slightly but not enough, raise the Radius parameter first. I usually find the 20-40 range does a good job.
+* There may be some regions where the original banding peeks through, usually near defocused areas or gradients. This may also look like a sharpening artifact/halo of some kind. For these, I recommend raising Feather upwards, to 1.0 or 1.5 or so. The downside to raising this parameter is that it expands the range of pixels for which we replace the input pixel with the blurred one, so there may be a loss of detail in other regions.
+* Node caching the banding suppression node (or node (3) in the previous section) is recommended for smooth playback performance
+* Set up the parameters and cache at the full resolution. I can't guarantee that the effect looks exactly the same at all timeline resolutions, though I do try to scale the radius of the blur based on timeline res.
+* You should likely adjust the parameters on a shot by shot basis rather than copying this across all shots.
+* There is no shame in having a couple instances of this under qualifiers or masks if different parts of a shot require different treatment.
+
+#### DCTL Parameters
+
+**Radius**: Radius of the bilateral blur. When the bands are very wide, you'll want to increase this.
+
+**Edge Detection**: Indicates the code value difference which bilateral blur will ignore, or how much the blur will blur edges. The effect of this slider is more obvious when the output mode is set to "Blur Only".
+
+**Feather**: Controls the threshold of how different a code value must be from the blurred code value to not be replaced by the blurred code value. Larger means that more detail will be lost, but smaller could result in some artifacts where banding isn't cleaned up in some regions.
+
+**Bit Depth**: Ideally set this to the effective bit depth of the footage, but sometimes going a little lower by one or two bits can help if the banding is very bad.
+
+**Output Mode**: Choose whether to view the Debanded result, the debanded result with some grain added (each code value modulated by somewhere between -1 and +1 step size for this **Bit Depth**), the bilateral blur, or the original input image.
+
 
 ---
 

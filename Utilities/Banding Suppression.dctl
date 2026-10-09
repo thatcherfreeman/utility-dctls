@@ -1,0 +1,136 @@
+#line 2
+
+// clang-format off
+DEFINE_UI_PARAMS(radius, Radius, DCTLUI_SLIDER_FLOAT, 20.0, 1.0, 100.0, 0.01)
+DEFINE_UI_PARAMS(edge_detection, Edge Detection, DCTLUI_SLIDER_FLOAT, 0.05, 0.01, 0.20, 0.01)
+DEFINE_UI_PARAMS(feather, Feather, DCTLUI_SLIDER_FLOAT, 0.3, 0.01, 2.0, 0.01)
+DEFINE_UI_PARAMS(bit_depth, Bit Depth, DCTLUI_SLIDER_INT, 8, 1, 16, 1)
+DEFINE_UI_PARAMS(output_mode, Output Mode, DCTLUI_COMBO_BOX, 1, {OUTPUT_DEBAND, OUTPUT_DEBAND_GRAIN, OUTPUT_BLUR, OUTPUT_ORIGINAL}, {Debanded, Debanded with Grain, Blur Only, Original})
+// clang-format on
+
+typedef uint rand_state;
+
+__DEVICE__ float _randu_xorshift(__PRIVATE__ rand_state* seed) {
+    rand_state x = *seed;
+    x ^= (x << 13 | x >> 19);
+    x ^= (x >> 7 | x << 25);
+    x ^= (x << 15 | x >> 15);
+    *seed = x;
+    return (((float)x) / (float)(~((rand_state)0)));
+}
+
+__DEVICE__ inline float randu(__PRIVATE__ rand_state* seed) {
+    return _randu_xorshift(seed);
+}
+
+__DEVICE__ inline float bernoulli(float p, __PRIVATE__ rand_state* seed) {
+    if (randu(seed) < p) {
+        return 1.0f;
+    }
+    return 0.0f;
+}
+
+__DEVICE__ inline float gaussian_weight(float r, float k) {
+    return _expf(-r * r / (k * k));
+}
+
+__DEVICE__ inline float signf(float x) {
+    if (x >= 0) {
+        return 1.0f;
+    } else {
+        return -1.0f;
+    }
+}
+
+__DEVICE__ float smoothstep(float x) {
+    if (x <= 0.0f) {
+        return 0.0f;
+    } else if (x >= 1.0f) {
+        return 1.0f;
+    }
+    return 3.0f * x * x - 2.0f * x * x * x;
+}
+
+__DEVICE__ float smooth_switch(float a, float b, float threshold, float feather) {
+    // smoothed version of:
+    // (fabs(a - b) < threshold) ? b : a;
+    // so a is what we want when a, b are far apart, and b is what we want
+    // when they're close to each other.
+
+    // https://www.desmos.com/3d/urfr5hijno
+
+    const float base = 0.5f;
+
+    float difference = _fabs(a - b) / threshold;
+    float mix_factor = gaussian_weight(_fmaxf(difference, base) - base, feather);
+    // float mix_factor = 1.0f - (smoothstep(_fmaxf(difference, base) - base) / feather);
+    float result = _mix(a, b, mix_factor);
+    return result;
+}
+
+__DEVICE__ float3 transform(int p_Width, int p_Height, int p_X, int p_Y, __TEXTURE__ p_TexR, __TEXTURE__ p_TexG, __TEXTURE__ p_TexB) {
+
+    float3 input_color = make_float3(_tex2D(p_TexR, p_X, p_Y), _tex2D(p_TexG, p_X, p_Y), _tex2D(p_TexB, p_X, p_Y));
+
+    if (output_mode == OUTPUT_ORIGINAL) {
+        return input_color;
+    }
+
+    // Bilateral blur
+    float3 blurred_px = make_float3(0.0f, 0.0f, 0.0f);
+
+    const int radius_int = (int)(radius * _fmaxf((float)p_Width, (float)p_Height) / 3840.0f);
+    const float k = radius / 2.0f;
+    const float lum_k = edge_detection;
+    float3 weight_total = make_float3(0.0f, 0.0f, 0.0f);
+    for (int i = -radius; i < radius; ++i) {
+        for (int j = -radius; j < radius; ++j) {
+            float r = _hypotf((float)i, (float)j);
+            float3 curr_px = make_float3(_tex2D(p_TexR, p_X + i, p_Y + j), _tex2D(p_TexG, p_X + i, p_Y + j), _tex2D(p_TexB, p_X + i, p_Y + j));
+            float3 weight = make_float3(gaussian_weight(curr_px.x - input_color.x, lum_k),
+                                        gaussian_weight(curr_px.y - input_color.y, lum_k),
+                                        gaussian_weight(curr_px.z - input_color.z, lum_k)) *
+                            gaussian_weight(r, k);
+            blurred_px += weight * curr_px;
+            weight_total += weight;
+        }
+    }
+    blurred_px /= weight_total;
+
+    float bit_interval = 1.0f / _exp2f((float)bit_depth);
+
+    float3 result = input_color;
+
+    // Output blurred_px when close to input_color. Otherwise, just output input_color.
+    result.x = smooth_switch(input_color.x, blurred_px.x, bit_interval, feather);
+    result.y = smooth_switch(input_color.y, blurred_px.y, bit_interval, feather);
+    result.z = smooth_switch(input_color.z, blurred_px.z, bit_interval, feather);
+
+    if (output_mode == OUTPUT_BLUR) {
+        return blurred_px;
+    } else if (output_mode == OUTPUT_DEBAND) {
+        return result;
+    } else if (output_mode == OUTPUT_DEBAND_GRAIN) {
+        // initialize seed.
+        float val;
+        float seed = input_color.x + (input_color.y * 20.0f) + (input_color.z * 400.0f);
+        rand_state state_value = *((__PRIVATE__ rand_state*)&seed);
+        __PRIVATE__ rand_state* state = &state_value;
+        *state ^= p_Width * p_Height;
+        *state ^= (p_Width * p_Y + p_X) << 5;
+        val = randu(state);
+        val = randu(state);
+        val = randu(state);
+        val = randu(state);
+        *state = *((__PRIVATE__ rand_state*)&val);
+
+        // Modulate by somewhere in the range of -bit_interval to +bit_interval.
+        result.x += bit_interval * 2.0f * (randu(state) - 0.5f);
+        result.y += bit_interval * 2.0f * (randu(state) - 0.5f);
+        result.z += bit_interval * 2.0f * (randu(state) - 0.5f);
+    } else if (output_mode == OUTPUT_ORIGINAL) {
+        return input_color;
+    }
+
+    return result;
+}
